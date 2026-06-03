@@ -1352,7 +1352,7 @@ class _EmployeeQuickActions extends StatelessWidget {
     final actions = [
       {'icon': Iconsax.document_text, 'label': 'Apply Leave', 'color': Colors.green, 'onTap': () => Get.to(() => const ApplyLeaveScreen())},
       {'icon': Iconsax.note_text, 'label': 'My Leaves', 'color': Colors.purple, 'onTap': () => Get.to(() => const MyLeavesScreen())},
-      {'icon': Iconsax.calendar_tick, 'label': 'Attendance History', 'color': AppColors.primaryColor, 'onTap': null},
+      {'icon': Iconsax.calendar_tick, 'label': 'Attendance History', 'color': AppColors.primaryColor, 'onTap': () =>Get.to(() => const AttendanceHistoryScreen())},
       {'icon': Iconsax.wallet, 'label': 'Payslip', 'color': Colors.orange, 'onTap': () => Get.to(() => const PayslipHistoryScreen())},
     ];
 

@@ -15,9 +15,13 @@ import '../../leads/views/leads_dashboard_shell.dart';
 import '../../payroll/views/salary_employee_list_screen.dart';
 import '../../clients/views/client_list_screen.dart';
 import '../../hr/views/hr_portal_dashboard.dart';
-import '../../hr/views/policies_screen.dart';
+import '../../compliance/views/compliance_dashboard_screen.dart';
 import '../../hr/views/announcements_screen.dart';
 import '../../followup/views/followup_dashboard_screen.dart';
+import '../../reports/views/reports_dashboard_screen.dart';
+import '../../security/views/security_dashboard_screen.dart';
+import '../../chat/views/chat_list_screen.dart';
+import '../../documents/views/documents_dashboard_screen.dart';
 
 
 class AllModulesScreen extends StatelessWidget {
@@ -515,26 +519,26 @@ class _ModulesGrid extends StatelessWidget {
         icon: Iconsax.profile_2user,
         color: Color(0xFF3B82F6), // Blue
       ),
-      const _ModuleItem(
-        label: 'Attendance',
-        icon: Iconsax.calendar_tick,
-        color: Color(0xFF10B981), // Emerald
-      ),
-      const _ModuleItem(
-        label: 'Leaves',
-        icon: Iconsax.sun_1,
-        color: Color(0xFFF97316), // Orange
-      ),
+      // const _ModuleItem(
+      //   label: 'Attendance',
+      //   icon: Iconsax.calendar_tick,
+      //   color: Color(0xFF10B981), // Emerald
+      // ),
+      // const _ModuleItem(
+      //   label: 'Leaves',
+      //   icon: Iconsax.sun_1,
+      //   color: Color(0xFFF97316), // Orange
+      // ),
       const _ModuleItem(
         label: 'Payroll / Salary',
         icon: Iconsax.wallet,
         color: Color(0xFF10B981), // Emerald
       ),
-      const _ModuleItem(
-        label: 'Shifts & Roster',
-        icon: Iconsax.clock,
-        color: Color(0xFF8B5CF6), // Purple
-      ),
+      // const _ModuleItem(
+      //   label: 'Shifts & Roster',
+      //   icon: Iconsax.clock,
+      //   color: Color(0xFF8B5CF6), // Purple
+      // ),
 
       const _ModuleItem(
         label: 'Clients',
@@ -561,11 +565,11 @@ class _ModulesGrid extends StatelessWidget {
         icon: Iconsax.message_text,
         color: Color(0xFF0EA5E9), // Sky
       ),
-      const _ModuleItem(
-        label: 'Announcements',
-        icon: Iconsax.volume_high,
-        color: Color(0xFF8B5CF6), // Purple
-      ),
+      // const _ModuleItem(
+      //   label: 'Announcements',
+      //   icon: Iconsax.volume_high,
+      //   color: Color(0xFF8B5CF6), // Purple
+      // ),
       const _ModuleItem(
         label: 'Documents',
         icon: Iconsax.document_text,
@@ -577,8 +581,8 @@ class _ModulesGrid extends StatelessWidget {
         color: Color(0xFFEF4444), // Red
       ),
       const _ModuleItem(
-        label: 'Time Tracking',
-        icon: Iconsax.timer,
+        label: 'security',
+        icon: Iconsax.shield,
         color: Color(0xFF3B82F6), // Blue
       ),
 
@@ -597,21 +601,21 @@ class _ModulesGrid extends StatelessWidget {
         icon: Iconsax.graph,
         color: Color(0xFF6366F1), // Indigo
       ),
-      const _ModuleItem(
-        label: 'Settings',
-        icon: Iconsax.setting,
-        color: Color(0xFF64748B), // Slate Grey
-      ),
+      // const _ModuleItem(
+      //   label: 'Settings',
+      //   icon: Iconsax.setting,
+      //   color: Color(0xFF64748B), // Slate Grey
+      // ),
       // const _ModuleItem(
       //   label: 'Roles & Permissions',
       //   icon: Iconsax.shield,
       //   color: Color(0xFF2563EB), // Deep Blue
       // ),
-      const _ModuleItem(
-        label: 'More',
-        icon: Iconsax.element_equal,
-        color: Color(0xFF6366F1), // Indigo
-      ),
+      // const _ModuleItem(
+      //   label: 'More',
+      //   icon: Iconsax.element_equal,
+      //   color: Color(0xFF6366F1), // Indigo
+      // ),
     ];
 
     return GridView.builder(
@@ -693,11 +697,19 @@ class _ModuleCard extends StatelessWidget {
             } else if (item.label.trim() == 'Hr') {
               Get.to(() => const HrPortalDashboard());
             } else if (item.label == 'Policies') {
-              Get.to(() => const PoliciesScreen());
+              Get.to(() => const ComplianceDashboardScreen());
             } else if (item.label == 'Announcements') {
               Get.to(() => const AnnouncementsScreen());
             } else if (item.label == 'Follow-ups') {
               Get.to(() => const FollowupDashboardScreen());
+            } else if (item.label == 'Reports') {
+              Get.to(() => const ReportsDashboardScreen());
+            } else if (item.label == 'security') {
+              Get.to(() => const SecurityDashboardScreen());
+            } else if (item.label == 'Chat') {
+              Get.to(() => const ChatListScreen());
+            } else if (item.label == 'Documents') {
+              Get.to(() => const DocumentsDashboardScreen());
             } else {
               Get.snackbar(
                 item.label,
