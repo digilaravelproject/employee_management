@@ -347,6 +347,91 @@ class RolePermissionsController extends GetxController {
     }
   }
 
+  // Assign users to a role
+  void assignUsersToRole(Role role, List<AppUser> usersToAssign) {
+    int roleIndex = roles.indexWhere((r) => r.id == role.id);
+    if (roleIndex != -1) {
+      final updatedUsers = List<AppUser>.from(roles[roleIndex].assignedUsers)..addAll(usersToAssign);
+      final updatedRole = roles[roleIndex].copyWith(assignedUsers: updatedUsers);
+      roles[roleIndex] = updatedRole;
+      selectedRole.value = updatedRole;
+      roles.refresh();
+      
+      Get.snackbar(
+        'Users Assigned',
+        '${usersToAssign.length} user(s) assigned to ${role.name}',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+      );
+    }
+  }
+
+  // Setup edit form
+  void setupEditForm(Role role) {
+    nameController.text = role.name;
+    descriptionController.text = role.description;
+    isActive.value = role.isActive;
+    selectedUsers.value = List<AppUser>.from(role.assignedUsers);
+  }
+
+  // Update role details
+  void updateRole(String id) {
+    if (nameController.text.trim().isEmpty) {
+      Get.snackbar(
+        'Required Field',
+        'Please enter a role name',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.redAccent,
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    int index = roles.indexWhere((r) => r.id == id);
+    if (index != -1) {
+      final updatedRole = roles[index].copyWith(
+        name: nameController.text.trim(),
+        description: descriptionController.text.trim().isEmpty
+            ? 'No description provided'
+            : descriptionController.text.trim(),
+        isActive: isActive.value,
+        assignedUsers: List<AppUser>.from(selectedUsers),
+      );
+      roles[index] = updatedRole;
+      if (selectedRole.value?.id == id) {
+        selectedRole.value = updatedRole;
+      }
+      roles.refresh();
+      clearForm();
+      Get.back();
+      Get.snackbar(
+        'Role Updated',
+        'Role details updated successfully',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+      );
+    }
+  }
+
+  // Delete role
+  void deleteRole(Role role) {
+    roles.removeWhere((r) => r.id == role.id);
+    if (selectedRole.value?.id == role.id) {
+      selectedRole.value = null;
+    }
+    roles.refresh();
+    Get.back(); // Go back from Role Details Screen to Role List Screen
+    Get.snackbar(
+      'Role Deleted',
+      '${role.name} has been deleted successfully',
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: Colors.redAccent,
+      colorText: Colors.white,
+    );
+  }
+
   @override
   void onClose() {
     nameController.dispose();

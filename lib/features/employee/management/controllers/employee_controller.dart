@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import '../models/employee_model.dart';
+import '../../designation/controllers/designation_controller.dart';
 
 class EmployeeController extends GetxController {
   var employees = <EmployeeModel>[].obs;
@@ -8,7 +9,13 @@ class EmployeeController extends GetxController {
   // Form State
   var selectedSkills = <String>[].obs;
   var availableSkills = ['Flutter', 'React Native', 'PHP', 'Python', 'Node.js', 'UI/UX', 'Marketing', 'Sales'].obs;
-  var designations = ['Senior Flutter Developer', 'HR Manager', 'PHP Developer', 'Sales Executive', 'Project Manager'].obs;
+  
+  List<String> get designations {
+    if (Get.isRegistered<DesignationController>()) {
+      return Get.find<DesignationController>().designations.map((d) => d.name).toList();
+    }
+    return ['Senior Flutter Developer', 'HR Manager', 'PHP Developer', 'Sales Executive', 'Project Manager'];
+  }
   
   @override
   void onInit() {

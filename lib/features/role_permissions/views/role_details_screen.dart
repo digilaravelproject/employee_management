@@ -6,6 +6,7 @@ import '../../../core/widgets/app_text.dart';
 import '../controllers/role_permissions_controller.dart';
 import '../models/role_permission_models.dart';
 import 'role_permissions_screen.dart';
+import 'edit_role_screen.dart';
 
 class RoleDetailsScreen extends StatelessWidget {
   const RoleDetailsScreen({super.key});
@@ -42,20 +43,64 @@ class RoleDetailsScreen extends StatelessWidget {
           Obx(() {
             final role = controller.selectedRole.value;
             if (role == null) return const SizedBox();
-            return TextButton(
-              onPressed: () {
-                controller.editPermissions(role);
-                Get.to(() => const RolePermissionsScreen());
+            return PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert, color: AppColors.textColorPrimary),
+              onSelected: (value) {
+                if (value == 'edit_permissions') {
+                  controller.editPermissions(role);
+                  Get.to(() => const RolePermissionsScreen());
+                } else if (value == 'edit_details') {
+                  controller.setupEditForm(role);
+                  Get.to(() => EditRoleScreen(role: role));
+                } else if (value == 'delete') {
+                  Get.defaultDialog(
+                    title: 'Delete Role',
+                    titleStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    middleText: 'Are you sure you want to delete the "${role.name}" role? This action cannot be undone.',
+                    middleTextStyle: const TextStyle(fontSize: 13, color: AppColors.textColorSecondary),
+                    textCancel: 'Cancel',
+                    textConfirm: 'Delete',
+                    confirmTextColor: Colors.white,
+                    buttonColor: AppColors.errorColor,
+                    onConfirm: () {
+                      Get.back(); // close dialog
+                      controller.deleteRole(role);
+                    },
+                  );
+                }
               },
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                child: AppText(
-                  'Edit Role',
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.primaryColor,
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'edit_permissions',
+                  child: Row(
+                    children: [
+                      Icon(Iconsax.shield_tick, size: 18, color: AppColors.textColorPrimary),
+                      SizedBox(width: 8),
+                      AppText('Edit Permissions', fontSize: 13),
+                    ],
+                  ),
                 ),
-              ),
+                const PopupMenuItem(
+                  value: 'edit_details',
+                  child: Row(
+                    children: [
+                      Icon(Iconsax.edit, size: 18, color: AppColors.textColorPrimary),
+                      SizedBox(width: 8),
+                      AppText('Edit Details', fontSize: 13),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'delete',
+                  child: Row(
+                    children: [
+                      Icon(Iconsax.trash, size: 18, color: AppColors.errorColor),
+                      SizedBox(width: 8),
+                      AppText('Delete Role', fontSize: 13, color: AppColors.errorColor),
+                    ],
+                  ),
+                ),
+              ],
             );
           }),
         ],
@@ -209,22 +254,42 @@ class RoleDetailsScreen extends StatelessWidget {
                     fontWeight: FontWeight.w800,
                     color: AppColors.textColorPrimary,
                   ),
-                  GestureDetector(
-                    onTap: () {
-                      Get.snackbar(
-                        'Assigned Users',
-                        'Total of ${role.assignedUsers.length} users belong to this role.',
-                        snackPosition: SnackPosition.BOTTOM,
-                        backgroundColor: AppColors.primaryColor,
-                        colorText: Colors.white,
-                      );
-                    },
-                    child: const AppText(
-                      'View All',
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primaryColor,
-                    ),
+                  Row(
+                    children: [
+                      GestureDetector(
+                        onTap: () => _showAssignUsersSheet(context, role, controller),
+                        child: const Row(
+                          children: [
+                            Icon(Iconsax.user_add, size: 14, color: AppColors.primaryColor),
+                            SizedBox(width: 4),
+                            AppText(
+                              'Assign Users',
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primaryColor,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      GestureDetector(
+                        onTap: () {
+                          Get.snackbar(
+                            'Assigned Users',
+                            'Total of ${role.assignedUsers.length} users belong to this role.',
+                            snackPosition: SnackPosition.BOTTOM,
+                            backgroundColor: AppColors.primaryColor,
+                            colorText: Colors.white,
+                          );
+                        },
+                        child: const AppText(
+                          'View All',
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primaryColor,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -479,6 +544,141 @@ class RoleDetailsScreen extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  void _showAssignUsersSheet(BuildContext context, Role role, RolePermissionsController controller) {
+    // Users that are not already assigned to this role
+    final availableUsers = controller.allUsers.where((u) => !role.assignedUsers.any((au) => au.email == u.email)).toList();
+    final selectedUsersForAssignment = <AppUser>[].obs;
+    
+    Get.bottomSheet(
+      Container(
+        height: MediaQuery.of(context).size.height * 0.6,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(24),
+            topRight: Radius.circular(24),
+          ),
+        ),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                AppText(
+                  'Assign Users',
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textColorPrimary,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close, color: AppColors.textColorSecondary),
+                  onPressed: () => Get.back(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            AppText(
+              'Assign team members to ${role.name}.',
+              fontSize: 12,
+              color: AppColors.textColorHint,
+            ),
+            const SizedBox(height: 20),
+            Expanded(
+              child: availableUsers.isEmpty
+                  ? const Center(
+                      child: AppText(
+                        'All users are already assigned to this role',
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textColorSecondary,
+                      ),
+                    )
+                  : ListView.builder(
+                      physics: const BouncingScrollPhysics(),
+                      itemCount: availableUsers.length,
+                      itemBuilder: (context, index) {
+                        final user = availableUsers[index];
+                        return Obx(() {
+                          final isSelected = selectedUsersForAssignment.contains(user);
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: isSelected ? AppColors.primaryLight : AppColors.slate50,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: isSelected ? AppColors.primaryColor.withValues(alpha: 0.3) : AppColors.slate100,
+                                width: 1,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 20,
+                                  backgroundImage: NetworkImage(user.avatarUrl),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      AppText(user.name, fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textColorPrimary),
+                                      AppText(user.email, fontSize: 10, color: AppColors.textColorHint),
+                                    ],
+                                  ),
+                                ),
+                                Checkbox(
+                                  value: isSelected,
+                                  activeColor: AppColors.primaryColor,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  onChanged: (val) {
+                                    if (isSelected) {
+                                      selectedUsersForAssignment.remove(user);
+                                    } else {
+                                      selectedUsersForAssignment.add(user);
+                                    }
+                                  },
+                                ),
+                              ],
+                            ),
+                          );
+                        });
+                      },
+                    ),
+            ),
+            const SizedBox(height: 16),
+            if (availableUsers.isNotEmpty)
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    if (selectedUsersForAssignment.isNotEmpty) {
+                      controller.assignUsersToRole(role, selectedUsersForAssignment);
+                    }
+                    Get.back();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryColor,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: const AppText('Assign Selected', fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+              ),
+          ],
+        ),
+      ),
+      isScrollControlled: true,
     );
   }
 }
