@@ -14,12 +14,15 @@ import '../../payslip/views/payslip_history_screen.dart';
 import '../../attendance/views/attendance_history_screen.dart';
 import '../../notification/views/notification_screen.dart';
 import '../../notification/controllers/notification_controller.dart';
+import '../../../core/controllers/app_controller.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final appController = Get.find<AppController>();
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       body: SafeArea(
@@ -32,106 +35,115 @@ class HomeScreen extends StatelessWidget {
               const _HomeHeader(),
               const SizedBox(height: 24),
 
-              // ── Today's Summary Card ──
-              const _TodaySummaryCard(),
-              const SizedBox(height: 24),
+              Obx(() {
+                final isAdmin = appController.userRole.value == 'admin';
 
-              // ── Current Shift Card ──
-              const _CurrentShiftCard(),
-              const SizedBox(height: 24),
+                if (isAdmin) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // ── Today's Summary Card ──
+                      const _TodaySummaryCard(),
+                      const SizedBox(height: 24),
 
-              // ── Quick Actions ──
-              const AppText(
-                'Quick Actions',
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-              ),
-              const SizedBox(height: 16),
-              const _QuickActionsGrid(),
-              const SizedBox(height: 24),
+                      // ── Current Shift Card ──
+                      const _CurrentShiftCard(),
+                      const SizedBox(height: 24),
 
-              // ── Recent Activities ──
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const AppText(
-                    'Recent Activities',
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                  ),
-                  TextButton(
-                    onPressed: () {},
-                    child: const AppText(
-                      'View all >',
-                      fontSize: 12,
-                      color: AppColors.primaryColor,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-              const _RecentActivitiesList(),
-              const SizedBox(height: 20),
+                      // ── Quick Actions ──
+                      const AppText(
+                        'Quick Actions',
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      const SizedBox(height: 16),
+                      const _QuickActionsGrid(),
+                      const SizedBox(height: 24),
 
-              // ── EMPLOYEE SCREEN SECTION ──────────────────────────────────
-              const Divider(height: 40, color: AppColors.slate200),
-              const AppText(
-                'Employee Perspective',
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textColorPrimary,
-              ),
-              const SizedBox(height: 16),
+                      // ── Recent Activities ──
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const AppText(
+                            'Recent Activities',
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                          TextButton(
+                            onPressed: () {},
+                            child: const AppText(
+                              'View all >',
+                              fontSize: 12,
+                              color: AppColors.primaryColor,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const _RecentActivitiesList(),
+                      const SizedBox(height: 20),
+                    ],
+                  );
+                } else {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // ── EMPLOYEE SCREEN SECTION ──────────────────────────────────
+                      const AppText(
+                        'Employee Perspective',
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textColorPrimary,
+                      ),
+                      const SizedBox(height: 16),
 
+                      const EmployeeShiftAttendanceCard(),
+                      const SizedBox(height: 24),
 
-              EmployeeShiftAttendanceCard(),
+                      const _TodayBirthdayCard(),
+                      const SizedBox(height: 24),
 
-              // const _EmployeeShiftCard(),
-              // const SizedBox(height: 24),
-              //
-              // const _AttendanceActionCard(),
-              const SizedBox(height: 24),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const AppText("Today's Summary", fontSize: 15, fontWeight: FontWeight.w700),
+                          TextButton(onPressed: () {}, child: const AppText('View all >', fontSize: 12, color: AppColors.primaryColor)),
+                        ],
+                      ),
+                      const _TodayWorkSummary(),
+                      const SizedBox(height: 24),
 
-              const _TodayBirthdayCard(),
-              const SizedBox(height: 24),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const AppText("My Attendance (This Week)", fontSize: 15, fontWeight: FontWeight.w700),
+                          TextButton(
+                            onPressed: () => Get.to(() => const AttendanceHistoryScreen()),
+                            child: const AppText('View calendar >', fontSize: 12, color: AppColors.primaryColor),
+                          ),
+                        ],
+                      ),
+                      const _WeeklyAttendanceStrip(),
+                      const SizedBox(height: 24),
 
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const AppText("Today's Summary", fontSize: 15, fontWeight: FontWeight.w700),
-                  TextButton(onPressed: () {}, child: const AppText('View all >', fontSize: 12, color: AppColors.primaryColor)),
-                ],
-              ),
-              const _TodayWorkSummary(),
-              const SizedBox(height: 24),
+                      const AppText("Quick Actions", fontSize: 15, fontWeight: FontWeight.w700),
+                      const SizedBox(height: 16),
+                      const _EmployeeQuickActions(),
+                      const SizedBox(height: 24),
 
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const AppText("My Attendance (This Week)", fontSize: 15, fontWeight: FontWeight.w700),
-                  TextButton(
-                    onPressed: () => Get.to(() => const AttendanceHistoryScreen()),
-                    child: const AppText('View calendar >', fontSize: 12, color: AppColors.primaryColor),
-                  ),
-                ],
-              ),
-              const _WeeklyAttendanceStrip(),
-              const SizedBox(height: 24),
-
-              const AppText("Quick Actions", fontSize: 15, fontWeight: FontWeight.w700),
-              const SizedBox(height: 16),
-              const _EmployeeQuickActions(),
-              const SizedBox(height: 24),
-
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const AppText("Recent Announcements", fontSize: 15, fontWeight: FontWeight.w700),
-                  TextButton(onPressed: () {}, child: const AppText('View all >', fontSize: 12, color: AppColors.primaryColor)),
-                ],
-              ),
-              const _AnnouncementsCard(),
-              const SizedBox(height: 30),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const AppText("Recent Announcements", fontSize: 15, fontWeight: FontWeight.w700),
+                          TextButton(onPressed: () {}, child: const AppText('View all >', fontSize: 12, color: AppColors.primaryColor)),
+                        ],
+                      ),
+                      const _AnnouncementsCard(),
+                      const SizedBox(height: 30),
+                    ],
+                  );
+                }
+              }),
             ],
           ),
         ),
@@ -1239,7 +1251,7 @@ class _WeeklyAttendanceStrip extends StatelessWidget {
     final status = ['P', 'P', 'A', 'P', 'P', '–', '–'];
 
     return SizedBox(
-      height: 110,
+      height: 125,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -1261,7 +1273,7 @@ class _WeeklyAttendanceStrip extends StatelessWidget {
           return AnimatedContainer(
             duration: const Duration(milliseconds: 250),
             width: 72,
-            padding: const EdgeInsets.symmetric(vertical: 14),
+            padding: const EdgeInsets.symmetric(vertical: 12),
             decoration: BoxDecoration(
               gradient: isToday
                   ? const LinearGradient(
@@ -1292,6 +1304,7 @@ class _WeeklyAttendanceStrip extends StatelessWidget {
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 AppText(
                   days[index],

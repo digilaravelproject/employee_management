@@ -3,11 +3,13 @@ import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_text.dart';
+import '../../../core/controllers/app_controller.dart';
 import '../controllers/dashboard_controller.dart';
 import 'home_screen.dart';
 import '../../attendance/views/attendance_screen.dart';
 import '../../profile/views/profile_screen.dart';
 import 'all_modules_screen.dart';
+import 'employee_more_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -15,26 +17,31 @@ class DashboardScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = Get.put(DashboardController());
+    final appController = Get.find<AppController>();
 
-    final List<Widget> screens = [
-      const HomeScreen(),
-      const AttendanceScreen(),
-    //  const MyLeavesScreen(),
-      const AllModulesScreen(),
-      const ProfileScreen(),
-    ];
+    return Obx(() {
+      final isAdmin = appController.userRole.value == 'admin';
 
-    return Scaffold(
-      extendBody: false, // Content does not flow behind the floating bar
-      body: Obx(() => screens[controller.currentIndex.value]),
-      bottomNavigationBar: _CustomBottomNavBar(controller: controller),
-    );
+      final List<Widget> screens = [
+        const HomeScreen(),
+        const AttendanceScreen(),
+        isAdmin ? const AllModulesScreen() : const EmployeeMoreScreen(),
+        const ProfileScreen(),
+      ];
+
+      return Scaffold(
+        extendBody: false, // Content does not flow behind the floating bar
+        body: screens[controller.currentIndex.value],
+        bottomNavigationBar: _CustomBottomNavBar(controller: controller, isAdmin: isAdmin),
+      );
+    });
   }
 }
 
 class _CustomBottomNavBar extends StatelessWidget {
   final DashboardController controller;
-  const _CustomBottomNavBar({required this.controller});
+  final bool isAdmin;
+  const _CustomBottomNavBar({required this.controller, required this.isAdmin});
 
   @override
   Widget build(BuildContext context) {
@@ -71,17 +78,10 @@ class _CustomBottomNavBar extends StatelessWidget {
               isSelected: controller.currentIndex.value == 1,
               onTap: () => controller.changeIndex(1),
             ),
-            // _NavItem(
-            //   icon: Iconsax.calendar_1,
-            //   activeIcon: Iconsax.calendar5,
-            //   label: 'Leaves',
-            //   isSelected: controller.currentIndex.value == 2,
-            //   onTap: () => controller.changeIndex(2),
-            // ),
             _NavItem(
-              icon: Iconsax.graph,
-              activeIcon: Iconsax.graph5,
-              label: 'more',
+              icon: isAdmin ? Iconsax.element_4 : Iconsax.category,
+              activeIcon: isAdmin ? Iconsax.element_4 : Iconsax.category5,
+              label: 'More',
               isSelected: controller.currentIndex.value == 2,
               onTap: () => controller.changeIndex(2),
             ),

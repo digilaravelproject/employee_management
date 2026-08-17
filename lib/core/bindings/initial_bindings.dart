@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import '../controllers/app_controller.dart';
 import '../services/network/api_client.dart';
 import '../services/network/network_info.dart';
 import 'package:dio/dio.dart';
@@ -15,6 +16,6 @@ class InitialBindings extends Bindings {
     Get.lazyPut(() => Connectivity(), fenix: true);
     Get.lazyPut(() => NetworkInfo(Get.find<Connectivity>()), fenix: true);
     Get.lazyPut(() => LocalizationController(), fenix: true);
-
+    Get.put(AppController(), permanent: true);
   }
 }

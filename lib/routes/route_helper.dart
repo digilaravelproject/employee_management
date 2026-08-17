@@ -9,6 +9,7 @@ import '../features/auth/domain/repositories/auth_repository.dart';
 import '../features/auth/domain/services/auth_service.dart';
 import '../features/auth/view/login.dart';
 import '../features/auth/view/signup.dart';
+import '../features/auth/view/role_selection_screen.dart';
 import '../features/auth/view/forgot_password.dart';
 import '../features/auth/view/otp_verification.dart';
 import '../features/auth/view/reset_password.dart';
@@ -26,6 +27,7 @@ class RouteHelper {
   static String getSplashRoute() => AppRoutes.splash;
   static String getLoginRoute() => AppRoutes.login;
   static String getSignupRoute() => AppRoutes.signup;
+  static String getRoleSelectionRoute() => AppRoutes.roleSelection;
   static String getOtpRoute() => AppRoutes.otp;
   static String getIntroRoute() => AppRoutes.intro;
   static String getForgotPasswordRoute() => AppRoutes.forgotPassword;
@@ -71,6 +73,13 @@ class RouteHelper {
       binding: BindingsBuilder(() {
         Get.lazyPut(() => IntroController(), fenix: true);
       }),
+      transition: Transition.fadeIn,
+    ),
+
+    // ── Role Selection ──────────────────────────────────────────────────────────────
+    GetPage(
+      name: AppRoutes.roleSelection,
+      page: () => const RoleSelectionScreen(),
       transition: Transition.fadeIn,
     ),
 
