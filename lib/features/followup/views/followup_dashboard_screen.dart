@@ -8,7 +8,8 @@ import 'sub_views/employee_dashboard_view.dart';
 import 'sub_views/admin_dashboard_view.dart';
 
 class FollowupDashboardScreen extends StatelessWidget {
-  const FollowupDashboardScreen({super.key});
+  final bool isEmployeeOnly;
+  const FollowupDashboardScreen({super.key, this.isEmployeeOnly = false});
 
   @override
   Widget build(BuildContext context) {
@@ -36,95 +37,20 @@ class FollowupDashboardScreen extends StatelessWidget {
               ),
             ),
           ),
-          title: _buildRoleSwitcher(controller),
+          title: const AppText('Followups', fontSize: 16, fontWeight: FontWeight.bold),
           centerTitle: true,
           actions: const [
             Icon(Iconsax.notification, color: AppColors.textColorPrimary),
             SizedBox(width: 16),
           ],
         ),
-        body: role == 'Employee' 
+        body: isEmployeeOnly 
             ? const EmployeeDashboardView() 
             : const AdminDashboardView(),
       );
     });
   }
-
-  Widget _buildRoleSwitcher(FollowupController controller) {
-    return Obx(() {
-      final isEmployee = controller.selectedRole.value == 'Employee';
-
-      return Container(
-        height: 38,
-        width: 210,
-        decoration: BoxDecoration(
-          color: AppColors.slate100,
-          borderRadius: BorderRadius.circular(14),
-        ),
-        padding: const EdgeInsets.all(3),
-        child: Row(
-          children: [
-            Expanded(
-              child: GestureDetector(
-                onTap: () => controller.changeRole('Employee'),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  decoration: BoxDecoration(
-                    color: isEmployee ? Colors.white : Colors.transparent,
-                    borderRadius: BorderRadius.circular(11),
-                    boxShadow: isEmployee
-                        ? [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.05),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            )
-                          ]
-                        : null,
-                  ),
-                  child: Center(
-                    child: AppText(
-                      'Employee',
-                      fontSize: 12,
-                      fontWeight: isEmployee ? FontWeight.bold : FontWeight.w600,
-                      color: isEmployee ? AppColors.textColorPrimary : AppColors.textColorSecondary,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            Expanded(
-              child: GestureDetector(
-                onTap: () => controller.changeRole('Admin'),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  decoration: BoxDecoration(
-                    color: !isEmployee ? Colors.white : Colors.transparent,
-                    borderRadius: BorderRadius.circular(11),
-                    boxShadow: !isEmployee
-                        ? [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.05),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            )
-                          ]
-                        : null,
-                  ),
-                  child: Center(
-                    child: AppText(
-                      'Admin',
-                      fontSize: 12,
-                      fontWeight: !isEmployee ? FontWeight.bold : FontWeight.w600,
-                      color: !isEmployee ? AppColors.textColorPrimary : AppColors.textColorSecondary,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    });
-  }
 }
+
+
+

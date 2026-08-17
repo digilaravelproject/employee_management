@@ -3,8 +3,10 @@ import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_text.dart';
+import '../../../core/controllers/app_controller.dart';
 import 'edit_profile_screen.dart';
 import 'change_password_screen.dart';
+import 'employee_documents_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -192,54 +194,62 @@ class ProfileScreen extends StatelessWidget {
                 
                 const SizedBox(height: 16),
                 
-                _buildSectionCard(
-                  icon: Iconsax.bank,
-                  title: 'Bank Details',
+                Obx(() => Get.find<AppController>().userRole.value != 'admin' ? Column(
                   children: [
-                    Row(
+                    _buildSectionCard(
+                      icon: Iconsax.bank,
+                      title: 'Bank Details',
                       children: [
-                        Expanded(child: _buildDetailItem('Bank Name', 'HDFC Bank')),
-                        Expanded(child: _buildDetailItem('Account Number', '5010 1234 5678 90')),
+                        Row(
+                          children: [
+                            Expanded(child: _buildDetailItem('Bank Name', 'HDFC Bank')),
+                            Expanded(child: _buildDetailItem('Account Number', '5010 1234 5678 90')),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(child: _buildDetailItem('Account Holder Name', 'Rahul Sharma')),
+                            Expanded(child: _buildDetailItem('IFSC Code', 'HDFC0001234')),
+                          ],
+                        ),
                       ],
                     ),
+                    
                     const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(child: _buildDetailItem('Account Holder Name', 'Rahul Sharma')),
-                        Expanded(child: _buildDetailItem('IFSC Code', 'HDFC0001234')),
-                      ],
+                    
+                    // View Documents Button
+                    InkWell(
+                      onTap: () => Get.to(() => const EmployeeDocumentsScreen()),
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.borderColor),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: AppColors.primaryColor.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(Iconsax.document, color: AppColors.primaryColor, size: 20),
+                            ),
+                            const SizedBox(width: 16),
+                            const Expanded(
+                              child: AppText('View Documents', fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primaryColor),
+                            ),
+                            const Icon(Icons.keyboard_arrow_right, color: AppColors.textColorSecondary),
+                          ],
+                        ),
+                      ),
                     ),
                   ],
-                ),
-                
-                const SizedBox(height: 16),
-                
-                // View Documents Button
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.borderColor),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryColor.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(Iconsax.document, color: AppColors.primaryColor, size: 20),
-                      ),
-                      const SizedBox(width: 16),
-                      const Expanded(
-                        child: AppText('View Documents', fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primaryColor),
-                      ),
-                      const Icon(Icons.keyboard_arrow_right, color: AppColors.textColorSecondary),
-                    ],
-                  ),
-                ),
+                ) : const SizedBox.shrink()),
                 
                 const SizedBox(height: 24), // Small spacing at the bottom of list
               ],

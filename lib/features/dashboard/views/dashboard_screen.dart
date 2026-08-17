@@ -7,6 +7,7 @@ import '../../../core/controllers/app_controller.dart';
 import '../controllers/dashboard_controller.dart';
 import 'home_screen.dart';
 import '../../attendance/views/attendance_screen.dart';
+import '../../attendance/views/attendance_history_screen.dart';
 import '../../profile/views/profile_screen.dart';
 import 'all_modules_screen.dart';
 import 'employee_more_screen.dart';
@@ -24,7 +25,7 @@ class DashboardScreen extends StatelessWidget {
 
       final List<Widget> screens = [
         const HomeScreen(),
-        const AttendanceScreen(),
+        isAdmin ? const AttendanceScreen() : const AttendanceHistoryScreen(showBackButton: false),
         isAdmin ? const AllModulesScreen() : const EmployeeMoreScreen(),
         const ProfileScreen(),
       ];

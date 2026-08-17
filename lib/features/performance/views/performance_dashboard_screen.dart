@@ -8,9 +8,11 @@ import '../controllers/performance_controller.dart';
 import '../models/performance_model.dart';
 import 'my_targets_screen.dart';
 import 'target_details_screen.dart';
+import 'team_member_performance_screen.dart';
 
 class PerformanceDashboardScreen extends StatelessWidget {
-  const PerformanceDashboardScreen({super.key});
+  final bool isEmployeeOnly;
+  const PerformanceDashboardScreen({super.key, this.isEmployeeOnly = false});
 
   @override
   Widget build(BuildContext context) {
@@ -45,100 +47,11 @@ class PerformanceDashboardScreen extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            // ── CUSTOM SEGMENT SELECTOR (My Overview / Team Overview) ──
-            Container(
-              color: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              child: Container(
-                height: 46,
-                decoration: BoxDecoration(
-                  color: AppColors.slate100,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                padding: const EdgeInsets.all(4),
-                child: Row(
-                  children: [
-                    // My Overview Tab
-                    Expanded(
-                      child: Obx(() {
-                        final isActive = controller.selectedDashboardTab.value == 0;
-                        return GestureDetector(
-                          onTap: () => controller.selectedDashboardTab.value = 0,
-                          behavior: HitTestBehavior.opaque,
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            decoration: BoxDecoration(
-                              color: isActive ? AppColors.primaryColor : Colors.transparent,
-                              borderRadius: BorderRadius.circular(10),
-                              boxShadow: isActive
-                                  ? [
-                                      BoxShadow(
-                                        color: AppColors.primaryColor.withValues(alpha: 0.25),
-                                        blurRadius: 10,
-                                        offset: const Offset(0, 4),
-                                      )
-                                    ]
-                                  : null,
-                            ),
-                            alignment: Alignment.center,
-                            child: AppText(
-                              'My Overview',
-                              fontSize: 13,
-                              fontWeight: isActive ? FontWeight.w700 : FontWeight.w600,
-                              color: isActive ? Colors.white : AppColors.textColorSecondary,
-                            ),
-                          ),
-                        );
-                      }),
-                    ),
-
-                    // Team Overview Tab
-                    Expanded(
-                      child: Obx(() {
-                        final isActive = controller.selectedDashboardTab.value == 1;
-                        return GestureDetector(
-                          onTap: () => controller.selectedDashboardTab.value = 1,
-                          behavior: HitTestBehavior.opaque,
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            decoration: BoxDecoration(
-                              color: isActive ? AppColors.primaryColor : Colors.transparent,
-                              borderRadius: BorderRadius.circular(10),
-                              boxShadow: isActive
-                                  ? [
-                                      BoxShadow(
-                                        color: AppColors.primaryColor.withValues(alpha: 0.25),
-                                        blurRadius: 10,
-                                        offset: const Offset(0, 4),
-                                      )
-                                    ]
-                                  : null,
-                            ),
-                            alignment: Alignment.center,
-                            child: AppText(
-                              'Team Overview',
-                              fontSize: 13,
-                              fontWeight: isActive ? FontWeight.w700 : FontWeight.w600,
-                              color: isActive ? Colors.white : AppColors.textColorSecondary,
-                            ),
-                          ),
-                        );
-                      }),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
             // ── BODY MAIN VIEWS ──
             Expanded(
-              child: Obx(() {
-                if (controller.selectedDashboardTab.value == 0) {
-                  return const _MyOverviewTab();
-                } else {
-                  return const _TeamOverviewTab();
-                }
-              }),
+              child: isEmployeeOnly 
+                ? const _MyOverviewTab() 
+                : const _TeamOverviewTab(),
             ),
           ],
         ),
@@ -781,30 +694,31 @@ class _TeamOverviewTab extends StatelessWidget {
           child: Row(
             children: [
               Expanded(
-                child: Container(
+                child: SizedBox(
                   height: 44,
-                  decoration: BoxDecoration(
-                    color: AppColors.slate100,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Row(
-                    children: [
-                      const Icon(Iconsax.search_normal, color: AppColors.textColorHint, size: 18),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: TextField(
-                          onChanged: (val) => controller.searchQuery.value = val,
-                          style: const TextStyle(fontSize: 13, color: AppColors.textColorPrimary, fontWeight: FontWeight.w600),
-                          decoration: const InputDecoration(
-                            border: InputBorder.none,
-                            hintText: 'Search employee...',
-                            hintStyle: TextStyle(color: AppColors.textColorHint, fontSize: 13),
-                            isDense: true,
-                          ),
-                        ),
+                  child: TextField(
+                    onChanged: (val) => controller.searchQuery.value = val,
+                    style: const TextStyle(fontSize: 13, color: AppColors.textColorPrimary, fontWeight: FontWeight.w600),
+                    decoration: InputDecoration(
+                      hintText: 'Search employee...',
+                      hintStyle: const TextStyle(color: AppColors.textColorHint, fontSize: 13),
+                      prefixIcon: const Icon(Iconsax.search_normal, color: AppColors.textColorHint, size: 18),
+                      filled: true,
+                      fillColor: AppColors.slate100,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
                       ),
-                    ],
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -1008,15 +922,17 @@ class _EmployeePerformanceCard extends StatelessWidget {
         badgeTextColor = AppColors.warningColor;
     }
 
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.slate200),
-      ),
-      child: Row(
-        children: [
+    return GestureDetector(
+      onTap: () => Get.to(() => TeamMemberPerformanceScreen(emp: emp)),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: AppColors.slate200),
+        ),
+        child: Row(
+          children: [
           // Rank Badge Indicator
           Container(
             width: 24,
@@ -1084,6 +1000,6 @@ class _EmployeePerformanceCard extends StatelessWidget {
           Icon(Icons.arrow_forward_ios, size: 10, color: AppColors.textColorHint.withValues(alpha: 0.6)),
         ],
       ),
-    );
+    ));
   }
 }

@@ -10,7 +10,9 @@ import '../models/attendance_history_model.dart';
 import 'attendance_day_details_screen.dart';
 
 class AttendanceHistoryScreen extends StatelessWidget {
-  const AttendanceHistoryScreen({super.key});
+  final bool showBackButton;
+
+  const AttendanceHistoryScreen({super.key, this.showBackButton = true});
 
   @override
   Widget build(BuildContext context) {
@@ -22,10 +24,12 @@ class AttendanceHistoryScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: AppColors.white,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.textColorPrimary, size: 18),
-          onPressed: () => Get.back(),
-        ),
+        leading: showBackButton 
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.textColorPrimary, size: 18),
+                onPressed: () => Get.back(),
+              )
+            : null,
         title: const AppText(
           'Attendance History',
           fontSize: 18,

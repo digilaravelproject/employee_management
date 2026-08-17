@@ -15,7 +15,8 @@ import '../../attendance/views/attendance_history_screen.dart';
 import '../../notification/views/notification_screen.dart';
 import '../../notification/controllers/notification_controller.dart';
 import '../../../core/controllers/app_controller.dart';
-
+import '../controllers/dashboard_controller.dart';
+import 'upcoming_birthdays_screen.dart';
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
@@ -216,9 +217,17 @@ class _HomeHeader extends StatelessWidget {
           );
         }),
         const SizedBox(width: 12),
-        const CircleAvatar(
-          radius: 22,
-          backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=manager'),
+        InkWell(
+          onTap: () {
+            if (Get.isRegistered<DashboardController>()) {
+              Get.find<DashboardController>().changeIndex(3);
+            }
+          },
+          borderRadius: BorderRadius.circular(22),
+          child: const CircleAvatar(
+            radius: 22,
+            backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=manager'),
+          ),
         ),
       ],
     );
@@ -1117,7 +1126,7 @@ class _TodayBirthdayCard extends StatelessWidget {
                   AppText('🎂', fontSize: 14),
                 ],
               ),
-              TextButton(onPressed: () {}, child: const AppText('View all >', fontSize: 12, color: AppColors.primaryColor)),
+              TextButton(onPressed: () => Get.to(() => const UpcomingBirthdaysScreen()), child: const AppText('View all >', fontSize: 12, color: AppColors.primaryColor)),
             ],
           ),
           const Row(

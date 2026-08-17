@@ -13,6 +13,8 @@ import '../../payroll/views/employee_my_salary_screen.dart';
 import '../../tasks/views/employee_projects_for_update_screen.dart';
 import '../../compliance/views/compliance_dashboard_screen.dart';
 import '../../assets/views/employee_my_assets_screen.dart';
+import '../../followup/views/followup_dashboard_screen.dart';
+import '../../performance/views/performance_dashboard_screen.dart';
 
 class EmployeeMoreScreen extends StatelessWidget {
   const EmployeeMoreScreen({super.key});
@@ -63,6 +65,24 @@ class EmployeeMoreScreen extends StatelessWidget {
               iconColor: Colors.orange,
               onTap: () {
                 Get.to(() => const EmployeeProjectsForUpdateScreen());
+              },
+            ),
+            _MoreMenuItem(
+              icon: Iconsax.chart,
+              title: 'Performance',
+              subtitle: 'View your performance metrics',
+              iconColor: Colors.deepPurple,
+              onTap: () {
+                Get.to(() => const PerformanceDashboardScreen(isEmployeeOnly: true));
+              },
+            ),
+            _MoreMenuItem(
+              icon: Iconsax.call,
+              title: 'Followups',
+              subtitle: 'Check your pending followups',
+              iconColor: Colors.deepOrange,
+              onTap: () {
+                Get.to(() => const FollowupDashboardScreen(isEmployeeOnly: true));
               },
             ),
 
