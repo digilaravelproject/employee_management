@@ -8,6 +8,8 @@ abstract class AdminSignupRepositoryInterface {
       AdminForgotPasswordRequestModel request);
   Future<AdminResetPasswordResponseModel> adminResetPassword(
       AdminResetPasswordRequestModel request);
+  Future<AdminUpdatePasswordResponseModel> adminUpdatePassword(
+      AdminUpdatePasswordRequestModel request);
 }
 
 

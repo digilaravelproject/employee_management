@@ -17,16 +17,19 @@ class AdminSignupController extends GetxController {
   final AdminLoginUseCase? _adminLoginUseCase;
   final AdminForgotPasswordUseCase? _adminForgotPasswordUseCase;
   final AdminResetPasswordUseCase? _adminResetPasswordUseCase;
+  final AdminUpdatePasswordUseCase? _adminUpdatePasswordUseCase;
 
   AdminSignupController({
     required AdminSignupUseCase adminSignupUseCase,
     AdminLoginUseCase? adminLoginUseCase,
     AdminForgotPasswordUseCase? adminForgotPasswordUseCase,
     AdminResetPasswordUseCase? adminResetPasswordUseCase,
+    AdminUpdatePasswordUseCase? adminUpdatePasswordUseCase,
   })  : _adminSignupUseCase = adminSignupUseCase,
         _adminLoginUseCase = adminLoginUseCase,
         _adminForgotPasswordUseCase = adminForgotPasswordUseCase,
-        _adminResetPasswordUseCase = adminResetPasswordUseCase;
+        _adminResetPasswordUseCase = adminResetPasswordUseCase,
+        _adminUpdatePasswordUseCase = adminUpdatePasswordUseCase;
 
   // ── Signup Form Key & Controllers ─────────────────────
   final signupFormKey = GlobalKey<FormState>();
@@ -53,6 +56,12 @@ class AdminSignupController extends GetxController {
   final resetNewPasswordController = TextEditingController();
   final resetConfirmPasswordController = TextEditingController();
 
+  // ── Update Password Form Key & Controllers ────────────
+  final updatePasswordFormKey = GlobalKey<FormState>();
+  final currentPasswordController = TextEditingController();
+  final newPasswordController = TextEditingController();
+  final confirmNewPasswordController = TextEditingController();
+
   // ── Observables ──────────────────────────────────────
   final isLoading = false.obs;
   final isPasswordVisible = false.obs;
@@ -69,6 +78,11 @@ class AdminSignupController extends GetxController {
   final isResetNewPasswordVisible = false.obs;
   final isResetConfirmPasswordVisible = false.obs;
 
+  final isUpdatePasswordLoading = false.obs;
+  final isCurrentPasswordVisible = false.obs;
+  final isNewPasswordVisible = false.obs;
+  final isConfirmNewPasswordVisible = false.obs;
+
   @override
   void onClose() {
     companyNameController.dispose();
@@ -84,6 +98,9 @@ class AdminSignupController extends GetxController {
     resetOtpController.dispose();
     resetNewPasswordController.dispose();
     resetConfirmPasswordController.dispose();
+    currentPasswordController.dispose();
+    newPasswordController.dispose();
+    confirmNewPasswordController.dispose();
     super.onClose();
   }
 
@@ -536,6 +553,108 @@ class AdminSignupController extends GetxController {
       CustomSnackbar.showError('An unexpected error occurred. Please try again.');
     } finally {
       isResetPasswordLoading.value = false;
+    }
+  }
+
+  // ── Update Password Methods & Validators ─────────────
+  void toggleCurrentPasswordVisibility() {
+    isCurrentPasswordVisible.value = !isCurrentPasswordVisible.value;
+  }
+
+  void toggleNewPasswordVisibility() {
+    isNewPasswordVisible.value = !isNewPasswordVisible.value;
+  }
+
+  void toggleConfirmNewPasswordVisibility() {
+    isConfirmNewPasswordVisible.value = !isConfirmNewPasswordVisible.value;
+  }
+
+  String? validateCurrentPassword(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Please enter your current password';
+    }
+    if (value.length < 6) {
+      return 'Password must be at least 6 characters';
+    }
+    return null;
+  }
+
+  String? validateNewPassword(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Please enter your new password';
+    }
+    if (value.length < 6) {
+      return 'Password must be at least 6 characters';
+    }
+    return null;
+  }
+
+  String? validateConfirmNewPassword(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Please confirm your new password';
+    }
+    if (value != newPasswordController.text) {
+      return 'Passwords do not match';
+    }
+    return null;
+  }
+
+  Future<void> updatePassword() async {
+    // 1. Form validation (checks only min 6 chars and match)
+    if (!updatePasswordFormKey.currentState!.validate()) {
+      return;
+    }
+
+    if (_adminUpdatePasswordUseCase == null) {
+      CustomSnackbar.showError('Update password service is not configured');
+      return;
+    }
+
+    try {
+      isUpdatePasswordLoading.value = true;
+
+      // 2. Build request model
+      final request = AdminUpdatePasswordRequestModel(
+        currentPassword: currentPasswordController.text,
+        newPassword: newPasswordController.text,
+        confirmPassword: confirmNewPasswordController.text,
+      );
+
+      Logger.d('AdminSignupController => Submitting update-password request: ${request.toJson()}');
+
+      // 3. Call usecase
+      final AdminUpdatePasswordResponseModel response =
+          await _adminUpdatePasswordUseCase.execute(request);
+
+      Logger.d('AdminSignupController => Received update-password response: status=${response.status}, msg=${response.message}');
+
+      // 4. Handle response
+      if (response.status) {
+        final successMsg = response.message.isNotEmpty
+            ? response.message
+            : 'Password updated successfully.';
+
+        // Green snackbar on success
+        CustomSnackbar.showSuccess(successMsg);
+
+        // Clear input fields
+        currentPasswordController.clear();
+        newPasswordController.clear();
+        confirmNewPasswordController.clear();
+
+        await Future.delayed(const Duration(milliseconds: 600));
+        Get.back();
+      } else {
+        // Red snackbar on failure
+        final errorMessage = response.getFirstErrorMessage();
+        Logger.w('AdminSignupController => UpdatePassword Error: $errorMessage');
+        CustomSnackbar.showError(errorMessage);
+      }
+    } catch (e) {
+      Logger.e('AdminSignupController => Unexpected UpdatePassword Exception: $e');
+      CustomSnackbar.showError('An unexpected error occurred. Please try again.');
+    } finally {
+      isUpdatePasswordLoading.value = false;
     }
   }
 }

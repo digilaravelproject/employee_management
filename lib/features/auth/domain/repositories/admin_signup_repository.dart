@@ -177,7 +177,50 @@ class AdminSignupRepository implements AdminSignupRepositoryInterface {
       );
     }
   }
+
+  @override
+  Future<AdminUpdatePasswordResponseModel> adminUpdatePassword(
+      AdminUpdatePasswordRequestModel request) async {
+    try {
+      Logger.d('AdminSignupRepository => Calling update-password endpoint: ${AppConstants.adminUpdatePasswordUrl}');
+      Logger.d('AdminSignupRepository => Payload: ${request.toJson()}');
+
+      final response = await _apiClient.post(
+        AppConstants.adminUpdatePasswordUrl,
+        data: request.toJson(),
+        handleError: false,
+        showToaster: false,
+      );
+
+      Logger.d('AdminSignupRepository => UpdatePassword Status: ${response.statusCode}, isSuccess: ${response.isSuccess}');
+      Logger.d('AdminSignupRepository => UpdatePassword Raw Json: ${response.json}');
+
+      if (response.json != null) {
+        return AdminUpdatePasswordResponseModel.fromJson(response.json!);
+      } else if (response.body is Map<String, dynamic>) {
+        return AdminUpdatePasswordResponseModel.fromJson(
+            response.body as Map<String, dynamic>);
+      } else {
+        return AdminUpdatePasswordResponseModel(
+          status: response.isSuccess,
+          message: response.message.isNotEmpty
+              ? response.message
+              : (response.isSuccess
+                  ? 'Password updated successfully.'
+                  : 'Failed to update password.'),
+        );
+      }
+    } catch (e, stackTrace) {
+      Logger.e('AdminSignupRepository => UpdatePassword Exception: $e');
+      Logger.e('AdminSignupRepository => StackTrace: $stackTrace');
+      return AdminUpdatePasswordResponseModel(
+        status: false,
+        message: 'Something went wrong: ${e.toString()}',
+      );
+    }
+  }
 }
+
 
 
 

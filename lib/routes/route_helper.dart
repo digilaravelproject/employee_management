@@ -18,6 +18,7 @@ import '../features/auth/view/role_selection_screen.dart';
 import '../features/auth/view/forgot_password.dart';
 import '../features/auth/view/otp_verification.dart';
 import '../features/auth/view/reset_password.dart';
+import '../features/profile/views/change_password_screen.dart';
 import '../features/intro/controllers/intro_controller.dart';
 import '../features/intro/views/intro_screen.dart';
 import '../features/dashboard/views/dashboard_screen.dart';
@@ -37,6 +38,7 @@ class RouteHelper {
   static String getIntroRoute() => AppRoutes.intro;
   static String getForgotPasswordRoute() => AppRoutes.forgotPassword;
   static String getResetPasswordRoute() => AppRoutes.resetPassword;
+  static String getChangePasswordRoute() => AppRoutes.changePassword;
   static String getDashboardRoute() => AppRoutes.dashboard;
   static String getDesignationListRoute() => AppRoutes.designationList;
   static String getAddDesignationRoute() => AppRoutes.addDesignation;
@@ -78,17 +80,20 @@ class RouteHelper {
           final adminLoginUseCase = AdminLoginUseCase(adminRepo);
           final adminForgotPasswordUseCase = AdminForgotPasswordUseCase(adminRepo);
           final adminResetPasswordUseCase = AdminResetPasswordUseCase(adminRepo);
+          final adminUpdatePasswordUseCase = AdminUpdatePasswordUseCase(adminRepo);
           Get.lazyPut<AdminSignupRepositoryInterface>(() => adminRepo, fenix: true);
           Get.lazyPut<AdminSignupUseCase>(() => adminSignupUseCase, fenix: true);
           Get.lazyPut<AdminLoginUseCase>(() => adminLoginUseCase, fenix: true);
           Get.lazyPut<AdminForgotPasswordUseCase>(() => adminForgotPasswordUseCase, fenix: true);
           Get.lazyPut<AdminResetPasswordUseCase>(() => adminResetPasswordUseCase, fenix: true);
+          Get.lazyPut<AdminUpdatePasswordUseCase>(() => adminUpdatePasswordUseCase, fenix: true);
           Get.lazyPut<AdminSignupController>(
             () => AdminSignupController(
               adminSignupUseCase: adminSignupUseCase,
               adminLoginUseCase: adminLoginUseCase,
               adminForgotPasswordUseCase: adminForgotPasswordUseCase,
               adminResetPasswordUseCase: adminResetPasswordUseCase,
+              adminUpdatePasswordUseCase: adminUpdatePasswordUseCase,
             ),
             fenix: true,
           );
@@ -148,6 +153,14 @@ class RouteHelper {
     GetPage(
       name: AppRoutes.resetPassword,
       page: () => const ResetPasswordScreen(),
+      binding: AdminSignupBinding(),
+      transition: Transition.rightToLeft,
+    ),
+
+    // ── Change Password ──────────────────────────────────────────────────────
+    GetPage(
+      name: AppRoutes.changePassword,
+      page: () => const ChangePasswordScreen(),
       binding: AdminSignupBinding(),
       transition: Transition.rightToLeft,
     ),

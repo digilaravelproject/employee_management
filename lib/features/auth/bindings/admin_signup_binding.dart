@@ -37,12 +37,18 @@ class AdminSignupBinding extends Bindings {
       fenix: true,
     );
 
+    Get.lazyPut<AdminUpdatePasswordUseCase>(
+      () => AdminUpdatePasswordUseCase(Get.find<AdminSignupRepositoryInterface>()),
+      fenix: true,
+    );
+
     Get.lazyPut<AdminSignupController>(
       () => AdminSignupController(
         adminSignupUseCase: Get.find<AdminSignupUseCase>(),
         adminLoginUseCase: Get.find<AdminLoginUseCase>(),
         adminForgotPasswordUseCase: Get.find<AdminForgotPasswordUseCase>(),
         adminResetPasswordUseCase: Get.find<AdminResetPasswordUseCase>(),
+        adminUpdatePasswordUseCase: Get.find<AdminUpdatePasswordUseCase>(),
       ),
       fenix: true,
     );

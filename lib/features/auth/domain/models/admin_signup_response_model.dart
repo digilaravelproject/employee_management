@@ -340,5 +340,75 @@ class AdminResetPasswordResponseModel {
   }
 }
 
+class AdminUpdatePasswordResponseModel {
+  final bool status;
+  final String message;
+  final Map<String, List<String>>? errors;
+
+  AdminUpdatePasswordResponseModel({
+    required this.status,
+    required this.message,
+    this.errors,
+  });
+
+  factory AdminUpdatePasswordResponseModel.fromJson(Map<String, dynamic> json) {
+    bool isStatusSuccess = false;
+    final statusVal = json['status'];
+    if (statusVal is bool) {
+      isStatusSuccess = statusVal;
+    } else if (statusVal != null) {
+      isStatusSuccess = statusVal.toString().toLowerCase() == 'true';
+    } else if (json['success'] is bool) {
+      isStatusSuccess = json['success'];
+    }
+
+    Map<String, List<String>>? parsedErrors;
+    if (json['errors'] is Map) {
+      parsedErrors = {};
+      final rawErrors = json['errors'] as Map;
+      rawErrors.forEach((key, value) {
+        if (value is List) {
+          parsedErrors![key.toString()] =
+              value.map((item) => item.toString()).toList();
+        } else if (value != null) {
+          parsedErrors![key.toString()] = [value.toString()];
+        }
+      });
+    }
+
+    return AdminUpdatePasswordResponseModel(
+      status: isStatusSuccess,
+      message: json['message']?.toString() ??
+          (isStatusSuccess
+              ? 'Password updated successfully.'
+              : 'Failed to update password.'),
+      errors: parsedErrors,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'status': status,
+      'message': message,
+      if (errors != null) 'errors': errors,
+    };
+  }
+
+  String getFirstErrorMessage() {
+    if (errors != null && errors!.isNotEmpty) {
+      for (final messages in errors!.values) {
+        if (messages.isNotEmpty) {
+          return messages.first;
+        }
+      }
+    }
+    if (message.isNotEmpty) {
+      return message;
+    }
+    return 'An unexpected error occurred. Please try again.';
+  }
+}
+
+
 
 

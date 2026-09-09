@@ -44,6 +44,7 @@ class AppConstants {
   static const String adminLoginUrl = 'https://yellowgreen-stork-427223.hostingersite.com/public/api/admin/login';
   static const String adminForgotPasswordUrl = 'https://yellowgreen-stork-427223.hostingersite.com/public/api/admin/forgot-password';
   static const String adminResetPasswordUrl = 'https://yellowgreen-stork-427223.hostingersite.com/public/api/admin/reset-password';
+  static const String adminUpdatePasswordUrl = 'https://yellowgreen-stork-427223.hostingersite.com/public/api/admin/update-password';
   static const String userLoginUrl = '/api/user_login';
   static const String otpVerifyUrl = '/api/otp_verify';
   static const String documentTemplatesEndpoint = '/api/v1/document-templates/';

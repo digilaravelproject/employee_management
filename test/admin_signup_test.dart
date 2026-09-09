@@ -39,6 +39,15 @@ class MockAdminSignupRepository implements AdminSignupRepositoryInterface {
       message: mockResponse.message,
     );
   }
+
+  @override
+  Future<AdminUpdatePasswordResponseModel> adminUpdatePassword(
+      AdminUpdatePasswordRequestModel request) async {
+    return AdminUpdatePasswordResponseModel(
+      status: mockResponse.status,
+      message: mockResponse.message,
+    );
+  }
 }
 
 void main() {
@@ -377,6 +386,74 @@ void main() {
       expect(result.status, true);
       expect(result.message,
           'Password updated successfully. Please login with your new password.');
+    });
+
+    test('AdminUpdatePasswordRequestModel serializes correctly to JSON', () {
+      final request = AdminUpdatePasswordRequestModel(
+        currentPassword: '1NewSecurePassword@123',
+        newPassword: 'Password@123',
+        confirmPassword: 'Password@123',
+      );
+
+      final json = request.toJson();
+      expect(json['current_password'], '1NewSecurePassword@123');
+      expect(json['new_password'], 'Password@123');
+      expect(json['confirm_password'], 'Password@123');
+    });
+
+    test('AdminUpdatePasswordResponseModel parses success response correctly', () {
+      final successJson = {
+        "status": true,
+        "message": "Password updated successfully."
+      };
+
+      final response = AdminUpdatePasswordResponseModel.fromJson(successJson);
+      expect(response.status, true);
+      expect(response.message, "Password updated successfully.");
+    });
+
+    test('AdminUpdatePasswordResponseModel parses incorrect current password error correctly', () {
+      final errorJson = {
+        "status": false,
+        "message": "The current password provided is incorrect."
+      };
+
+      final response = AdminUpdatePasswordResponseModel.fromJson(errorJson);
+      expect(response.status, false);
+      expect(response.message, "The current password provided is incorrect.");
+      expect(response.getFirstErrorMessage(), "The current password provided is incorrect.");
+    });
+
+    test('AdminUpdatePasswordResponseModel parses validation error correctly', () {
+      final errorJson = {
+        "status": false,
+        "message": "Validation error",
+        "errors": {
+          "new_password": ["New password and confirm password do not match."]
+        }
+      };
+
+      final response = AdminUpdatePasswordResponseModel.fromJson(errorJson);
+      expect(response.status, false);
+      expect(response.getFirstErrorMessage(), "New password and confirm password do not match.");
+    });
+
+    test('AdminUpdatePasswordUseCase executes and returns response', () async {
+      final expectedResponse = AdminSignupResponseModel(
+        status: true,
+        message: 'Password updated successfully.',
+      );
+      final mockRepo = MockAdminSignupRepository(expectedResponse);
+      final useCase = AdminUpdatePasswordUseCase(mockRepo);
+
+      final result = await useCase.execute(AdminUpdatePasswordRequestModel(
+        currentPassword: '1NewSecurePassword@123',
+        newPassword: 'Password@123',
+        confirmPassword: 'Password@123',
+      ));
+
+      expect(result.status, true);
+      expect(result.message, 'Password updated successfully.');
     });
   });
 }

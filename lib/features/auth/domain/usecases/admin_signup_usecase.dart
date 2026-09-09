@@ -44,5 +44,17 @@ class AdminResetPasswordUseCase {
   }
 }
 
+class AdminUpdatePasswordUseCase {
+  final AdminSignupRepositoryInterface _repository;
+
+  AdminUpdatePasswordUseCase(this._repository);
+
+  Future<AdminUpdatePasswordResponseModel> execute(
+      AdminUpdatePasswordRequestModel request) async {
+    return await _repository.adminUpdatePassword(request);
+  }
+}
+
+
 
 

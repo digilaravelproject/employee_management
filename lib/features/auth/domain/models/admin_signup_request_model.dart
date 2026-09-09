@@ -164,4 +164,45 @@ class AdminResetPasswordRequestModel {
   }
 }
 
+class AdminUpdatePasswordRequestModel {
+  final String currentPassword;
+  final String newPassword;
+  final String confirmPassword;
+
+  AdminUpdatePasswordRequestModel({
+    required this.currentPassword,
+    required this.newPassword,
+    required this.confirmPassword,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'current_password': currentPassword,
+      'new_password': newPassword,
+      'confirm_password': confirmPassword,
+    };
+  }
+
+  factory AdminUpdatePasswordRequestModel.fromJson(Map<String, dynamic> json) {
+    return AdminUpdatePasswordRequestModel(
+      currentPassword: json['current_password']?.toString() ?? '',
+      newPassword: json['new_password']?.toString() ?? '',
+      confirmPassword: json['confirm_password']?.toString() ?? '',
+    );
+  }
+
+  AdminUpdatePasswordRequestModel copyWith({
+    String? currentPassword,
+    String? newPassword,
+    String? confirmPassword,
+  }) {
+    return AdminUpdatePasswordRequestModel(
+      currentPassword: currentPassword ?? this.currentPassword,
+      newPassword: newPassword ?? this.newPassword,
+      confirmPassword: confirmPassword ?? this.confirmPassword,
+    );
+  }
+}
+
+
 
