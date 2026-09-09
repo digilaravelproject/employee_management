@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../core/theme/app_colors.dart';
@@ -15,27 +16,138 @@ import 'employee_more_screen.dart';
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
 
+  Future<bool> _showExitDialog(BuildContext context) async {
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        backgroundColor: Colors.white,
+        contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppColors.errorColor.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Iconsax.logout,
+                color: AppColors.errorColor,
+                size: 28,
+              ),
+            ),
+            const SizedBox(height: 16),
+            const AppText(
+              'Exit Application',
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textColorPrimary,
+            ),
+            const SizedBox(height: 8),
+            const AppText(
+              'Are you sure you want to exit the app?',
+              fontSize: 13,
+              color: AppColors.textColorSecondary,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.of(context).pop(false),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      side: const BorderSide(color: AppColors.borderColor),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const AppText(
+                      'Cancel',
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textColorSecondary,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.of(context).pop(true),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.errorColor,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const AppText(
+                      'Exit',
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+    return result ?? false;
+  }
+
   @override
   Widget build(BuildContext context) {
     final controller = Get.put(DashboardController());
     final appController = Get.find<AppController>();
 
-    return Obx(() {
-      final isAdmin = appController.userRole.value == 'admin';
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (bool didPop, dynamic result) async {
+        if (didPop) return;
 
-      final List<Widget> screens = [
-        const HomeScreen(),
-        isAdmin ? const AttendanceScreen() : const AttendanceHistoryScreen(showBackButton: false),
-        isAdmin ? const AllModulesScreen() : const EmployeeMoreScreen(),
-        const ProfileScreen(),
-      ];
+        // If any dialog or bottom sheet is open, close it first
+        if (Get.isDialogOpen == true || Get.isBottomSheetOpen == true) {
+          Get.back();
+          return;
+        }
 
-      return Scaffold(
-        extendBody: false, // Content does not flow behind the floating bar
-        body: screens[controller.currentIndex.value],
-        bottomNavigationBar: _CustomBottomNavBar(controller: controller, isAdmin: isAdmin),
-      );
-    });
+        // If user is on any other tab (Attendance, More, Profile), switch to Home (Dashboard) first
+        if (controller.currentIndex.value != 0) {
+          controller.changeIndex(0);
+          return;
+        }
+
+        // If user is already on Home screen, show exit confirmation dialog
+        final shouldExit = await _showExitDialog(context);
+        if (shouldExit) {
+          SystemNavigator.pop();
+        }
+      },
+      child: Obx(() {
+        final isAdmin = appController.userRole.value == 'admin';
+
+        final List<Widget> screens = [
+          const HomeScreen(),
+          isAdmin ? const AttendanceScreen() : const AttendanceHistoryScreen(showBackButton: false),
+          isAdmin ? const AllModulesScreen() : const EmployeeMoreScreen(),
+          const ProfileScreen(),
+        ];
+
+        return Scaffold(
+          extendBody: false, // Content does not flow behind the floating bar
+          body: screens[controller.currentIndex.value],
+          bottomNavigationBar: _CustomBottomNavBar(controller: controller, isAdmin: isAdmin),
+        );
+      }),
+    );
   }
 }
 

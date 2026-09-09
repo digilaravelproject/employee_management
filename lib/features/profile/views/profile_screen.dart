@@ -7,6 +7,7 @@ import '../../../core/controllers/app_controller.dart';
 import 'edit_profile_screen.dart';
 import 'change_password_screen.dart';
 import 'employee_documents_screen.dart';
+import '../controllers/user_document_controller.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -156,27 +157,33 @@ class ProfileScreen extends StatelessWidget {
                   ],
                 ),
                 
-                const SizedBox(height: 16),
-                
-                _buildSectionCard(
-                  icon: Iconsax.briefcase,
-                  title: 'Professional Details',
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(child: _buildDetailItem('Department', 'Design')),
-                        Expanded(child: _buildDetailItem('Designation', 'UI/UX Designer')),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(child: _buildDetailItem('Employee ID', 'EMP1025')),
-                        Expanded(child: _buildDetailItem('Date of Joining', '15 Jan 2024')),
-                      ],
-                    ),
-                  ],
-                ),
+                // Professional Details (Hide for Admin)
+                Obx(() => Get.find<AppController>().userRole.value != 'admin'
+                    ? Column(
+                        children: [
+                          const SizedBox(height: 16),
+                          _buildSectionCard(
+                            icon: Iconsax.briefcase,
+                            title: 'Professional Details',
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(child: _buildDetailItem('Department', 'Design')),
+                                  Expanded(child: _buildDetailItem('Designation', 'UI/UX Designer')),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              Row(
+                                children: [
+                                  Expanded(child: _buildDetailItem('Employee ID', 'EMP1025')),
+                                  Expanded(child: _buildDetailItem('Date of Joining', '15 Jan 2024')),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ],
+                      )
+                    : const SizedBox.shrink()),
                 
                 const SizedBox(height: 16),
                 
@@ -192,64 +199,99 @@ class ProfileScreen extends StatelessWidget {
                   ],
                 ),
                 
+                // Bank Details (Hide for Admin)
+                Obx(() => Get.find<AppController>().userRole.value != 'admin'
+                    ? Column(
+                        children: [
+                          const SizedBox(height: 16),
+                          _buildSectionCard(
+                            icon: Iconsax.bank,
+                            title: 'Bank Details',
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(child: _buildDetailItem('Bank Name', 'HDFC Bank')),
+                                  Expanded(child: _buildDetailItem('Account Number', '5010 1234 5678 90')),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              Row(
+                                children: [
+                                  Expanded(child: _buildDetailItem('Account Holder Name', 'Rahul Sharma')),
+                                  Expanded(child: _buildDetailItem('IFSC Code', 'HDFC0001234')),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ],
+                      )
+                    : const SizedBox.shrink()),
+
                 const SizedBox(height: 16),
-                
-                Obx(() => Get.find<AppController>().userRole.value != 'admin' ? Column(
-                  children: [
-                    _buildSectionCard(
-                      icon: Iconsax.bank,
-                      title: 'Bank Details',
+
+                // View Documents Button
+                InkWell(
+                  onTap: () => Get.to(() => const EmployeeDocumentsScreen()),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.borderColor),
+                    ),
+                    child: Row(
                       children: [
-                        Row(
-                          children: [
-                            Expanded(child: _buildDetailItem('Bank Name', 'HDFC Bank')),
-                            Expanded(child: _buildDetailItem('Account Number', '5010 1234 5678 90')),
-                          ],
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColors.slate100,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Iconsax.folder_open, color: AppColors.textColorPrimary, size: 20),
                         ),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(child: _buildDetailItem('Account Holder Name', 'Rahul Sharma')),
-                            Expanded(child: _buildDetailItem('IFSC Code', 'HDFC0001234')),
-                          ],
+                        const SizedBox(width: 14),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              AppText(
+                                'View Documents',
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textColorPrimary,
+                              ),
+                              SizedBox(height: 2),
+                              AppText(
+                                'View, zoom & review uploaded documents',
+                                fontSize: 11,
+                                color: AppColors.textColorSecondary,
+                              ),
+                            ],
+                          ),
                         ),
+                        Obx(() {
+                          final docController = Get.put(UserDocumentController());
+                          return Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: AppText(
+                              '${docController.documents.length} Files',
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primaryColor,
+                            ),
+                          );
+                        }),
+                        const SizedBox(width: 6),
+                        const Icon(Icons.keyboard_arrow_right, color: AppColors.textColorSecondary),
                       ],
                     ),
-                    
-                    const SizedBox(height: 16),
-                    
-                    // View Documents Button
-                    InkWell(
-                      onTap: () => Get.to(() => const EmployeeDocumentsScreen()),
-                      borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppColors.borderColor),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: AppColors.primaryColor.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Icon(Iconsax.document, color: AppColors.primaryColor, size: 20),
-                            ),
-                            const SizedBox(width: 16),
-                            const Expanded(
-                              child: AppText('View Documents', fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primaryColor),
-                            ),
-                            const Icon(Icons.keyboard_arrow_right, color: AppColors.textColorSecondary),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ) : const SizedBox.shrink()),
+                  ),
+                ),
                 
                 const SizedBox(height: 24), // Small spacing at the bottom of list
               ],
