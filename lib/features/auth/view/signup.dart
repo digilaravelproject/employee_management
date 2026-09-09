@@ -5,9 +5,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_input_field.dart';
-
 import '../../../core/widgets/app_text.dart';
-import '../controllers/auth_controller.dart';
+import '../controllers/admin_signup_controller.dart';
 import '../../../routes/route_helper.dart';
 
 class SignupScreen extends StatelessWidget {
@@ -15,7 +14,7 @@ class SignupScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.find<AuthController>();
+    final controller = Get.find<AdminSignupController>();
     final size = MediaQuery.of(context).size;
 
     return Scaffold(
@@ -23,7 +22,7 @@ class SignupScreen extends StatelessWidget {
       body: Stack(
         children: [
           // ── Compact top blue header ──
-          _TopHeader(height: size.height * 0.3),
+          _TopHeader(height: size.height * 0.28),
 
           // ── Scrollable content ──
           SafeArea(
@@ -46,7 +45,7 @@ class SignupScreen extends StatelessWidget {
                 // Logo + title
                 _HeaderContent(),
 
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
 
                 // ── White card form (scrollable) ──
                 Expanded(
@@ -68,7 +67,8 @@ class SignupScreen extends StatelessWidget {
                               color: AppColors.textColorSecondary,
                             ),
                             GestureDetector(
-                              onTap: () => Get.offNamed(RouteHelper.getLoginRoute()),
+                              onTap: () =>
+                                  Get.offNamed(RouteHelper.getLoginRoute()),
                               child: AppText(
                                 'Login',
                                 fontSize: 14,
@@ -188,20 +188,20 @@ class _HeaderContent extends StatelessWidget {
   Widget build(BuildContext context) {
     return const Column(
       children: [
-        SizedBox(height: 10),
+        SizedBox(height: 6),
         AppText(
-          'Create Account',
+          'Create Admin Account',
           style: AppTextStyle.heading,
-          fontSize: 28,
+          fontSize: 26,
           fontWeight: FontWeight.w800,
           color: Colors.white,
           textAlign: TextAlign.center,
         ),
         SizedBox(height: 6),
         AppText(
-          'Join us and start tracking your staff easily',
+          'Register your company and manage everything easily',
           style: AppTextStyle.body,
-          fontSize: 14,
+          fontSize: 13,
           color: Colors.white70,
           textAlign: TextAlign.center,
         ),
@@ -211,16 +211,9 @@ class _HeaderContent extends StatelessWidget {
 }
 
 // ── Signup form card ──────────────────────────────────────────────────────────
-class _SignupCard extends StatefulWidget {
-  final AuthController controller;
+class _SignupCard extends StatelessWidget {
+  final AdminSignupController controller;
   const _SignupCard({required this.controller});
-
-  @override
-  State<_SignupCard> createState() => _SignupCardState();
-}
-
-class _SignupCardState extends State<_SignupCard> {
-  bool _agreedToTerms = false;
 
   @override
   Widget build(BuildContext context) {
@@ -246,13 +239,13 @@ class _SignupCardState extends State<_SignupCard> {
           ],
         ),
         child: Form(
-          key: widget.controller.signupFormKey,
+          key: controller.signupFormKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Card title
               AppText(
-                'Register',
+                'Company Registration',
                 style: AppTextStyle.subheading,
                 fontSize: 20,
                 fontWeight: FontWeight.w800,
@@ -260,7 +253,7 @@ class _SignupCardState extends State<_SignupCard> {
               ),
               const SizedBox(height: 4),
               AppText(
-                'Fill in your details to create an account',
+                'Fill in the details below to create your admin account',
                 style: AppTextStyle.caption,
                 fontSize: 13,
                 color: AppColors.textColorHint,
@@ -268,195 +261,201 @@ class _SignupCardState extends State<_SignupCard> {
 
               const SizedBox(height: 24),
 
-              // ── Company / Vendor Name ──
-              _FieldLabel('Company Name'),
+              // ── Company Name ──
+              const _FieldLabel('Company Name'),
               const SizedBox(height: 8),
               AppInputField(
-                hint: 'Enter your company name',
-                controller: widget.controller.companyNameController,
+                hint: 'e.g. Acme Solutions',
+                controller: controller.companyNameController,
                 keyboardType: TextInputType.text,
                 icon: Icons.business_outlined,
-                validator: widget.controller.validateCompanyName,
+                validator: controller.validateCompanyName,
               ),
 
               const SizedBox(height: 18),
 
-              // ── Owner / Full Name ──
-              _FieldLabel('Owner Name'),
+              // ── Owner Name ──
+              const _FieldLabel('Owner Name'),
               const SizedBox(height: 8),
               AppInputField(
-                hint: 'Enter owner full name',
-                controller: widget.controller.nameController,
+                hint: 'e.g. Darshan Kondekar',
+                controller: controller.ownerNameController,
                 keyboardType: TextInputType.name,
                 icon: Icons.person_outline_rounded,
-                validator: (v) => (v == null || v.trim().isEmpty)
-                    ? 'Please enter owner name'
-                    : null,
+                validator: controller.validateOwnerName,
               ),
 
               const SizedBox(height: 18),
 
-              // ── Phone Number ──
-              _FieldLabel('Mobile Number'),
+              // ── Mobile Number ──
+              const _FieldLabel('Mobile Number'),
               const SizedBox(height: 8),
               AppInputField(
-                hint: 'Enter 10-digit mobile number',
-                controller: widget.controller.phoneController,
+                hint: 'e.g. 9876543210',
+                controller: controller.mobileNumberController,
                 keyboardType: TextInputType.phone,
                 icon: Icons.phone_outlined,
-                validator: (v) {
-                  if (v == null || v.trim().isEmpty) {
-                    return 'Please enter mobile number';
-                  }
-                  if (v.trim().length != 10) {
-                    return 'Enter a valid 10-digit number';
-                  }
-                  return null;
-                },
+                validator: controller.validateMobileNumber,
               ),
 
               const SizedBox(height: 18),
 
               // ── Email ──
-              _FieldLabel('Email Address'),
+              const _FieldLabel('Email Address'),
               const SizedBox(height: 8),
               AppInputField(
-                hint: 'Enter your email address',
-                controller: widget.controller.emailController,
+                hint: 'e.g. owner@acmesolutions.com',
+                controller: controller.emailController,
                 keyboardType: TextInputType.emailAddress,
                 icon: Icons.email_outlined,
-                validator: widget.controller.validateEmail,
+                validator: controller.validateEmail,
               ),
+
+              const SizedBox(height: 18),
+
+              // ── Password ──
+              const _FieldLabel('Password'),
+              const SizedBox(height: 8),
+              Obx(() => AppInputField(
+                    hint: 'Enter your password',
+                    controller: controller.passwordController,
+                    keyboardType: TextInputType.visiblePassword,
+                    isPassword: true,
+                    obscureText: !controller.isPasswordVisible.value,
+                    icon: Icons.lock_outline_rounded,
+                    validator: controller.validatePassword,
+                    suffixIcon: GestureDetector(
+                      onTap: controller.togglePasswordVisibility,
+                      child: Icon(
+                        controller.isPasswordVisible.value
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
+                        size: 20,
+                        color: AppColors.textColorHint,
+                      ),
+                    ),
+                  )),
+
+              const SizedBox(height: 18),
+
+              // ── Confirm Password ──
+              const _FieldLabel('Confirm Password'),
+              const SizedBox(height: 8),
+              Obx(() => AppInputField(
+                    hint: 'Re-enter your password',
+                    controller: controller.confirmPasswordController,
+                    keyboardType: TextInputType.visiblePassword,
+                    isPassword: true,
+                    obscureText: !controller.isConfirmPasswordVisible.value,
+                    icon: Icons.lock_outline_rounded,
+                    validator: controller.validateConfirmPassword,
+                    suffixIcon: GestureDetector(
+                      onTap: controller.toggleConfirmPasswordVisibility,
+                      child: Icon(
+                        controller.isConfirmPasswordVisible.value
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
+                        size: 20,
+                        color: AppColors.textColorHint,
+                      ),
+                    ),
+                  )),
 
               const SizedBox(height: 20),
 
               // ── Terms checkbox ──
-              GestureDetector(
-                onTap: () => setState(() => _agreedToTerms = !_agreedToTerms),
-                behavior: HitTestBehavior.opaque,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      width: 22,
-                      height: 22,
-                      decoration: BoxDecoration(
-                        color: _agreedToTerms
-                            ? AppColors.primaryColor
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(
-                          color: _agreedToTerms
+              Obx(() {
+                final isChecked = controller.agreedToTerms.value;
+                return GestureDetector(
+                  onTap: () => controller.toggleTermsAgreement(null),
+                  behavior: HitTestBehavior.opaque,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        width: 22,
+                        height: 22,
+                        decoration: BoxDecoration(
+                          color: isChecked
                               ? AppColors.primaryColor
-                              : AppColors.slate300,
-                          width: 1.5,
-                        ),
-                      ),
-                      child: _agreedToTerms
-                          ? const Icon(Icons.check_rounded,
-                              size: 14, color: Colors.white)
-                          : null,
-                    ),
-                    const SizedBox(width: 10),
-                    /*Expanded(
-                      child: RichText(
-                        text: TextSpan(
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: AppColors.textColorSecondary,
-                            height: 1.5,
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: isChecked
+                                ? AppColors.primaryColor
+                                : AppColors.slate300,
+                            width: 1.5,
                           ),
-                          children: [
-                            const TextSpan(text: 'I agree to the '),
-                            TextSpan(
-                              text: 'Terms of Service',
-                            //  style: AppTextStyle.heading,
-                              style: const TextStyle(
-                                color: AppColors.primaryColor,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const TextSpan(text: ' and '),
-                            TextSpan(
-                              text: 'Privacy Policy',
-                              style: const TextStyle(
-                                color: AppColors.primaryColor,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
                         ),
+                        child: isChecked
+                            ? const Icon(Icons.check_rounded,
+                                size: 14, color: Colors.white)
+                            : null,
                       ),
-                    ),*/
-
-                    Expanded(
-                      child: RichText(
-                        text: TextSpan(
-                          style: TextStyle(
-                            fontSize: 13,
-                            height: 1.5,
-                            color: AppColors.textColorSecondary,
-                            fontFamily: GoogleFonts.outfit().fontFamily,
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: RichText(
+                          text: TextSpan(
+                            style: TextStyle(
+                              fontSize: 13,
+                              height: 1.5,
+                              color: AppColors.textColorSecondary,
+                              fontFamily: GoogleFonts.outfit().fontFamily,
+                            ),
+                            children: [
+                              const TextSpan(text: 'I agree to the '),
+                              TextSpan(
+                                text: 'Terms of Service',
+                                style: TextStyle(
+                                  color: AppColors.primaryColor,
+                                  fontWeight: FontWeight.w600,
+                                  fontFamily: GoogleFonts.outfit().fontFamily,
+                                ),
+                              ),
+                              const TextSpan(text: ' and '),
+                              TextSpan(
+                                text: 'Privacy Policy',
+                                style: TextStyle(
+                                  color: AppColors.primaryColor,
+                                  fontWeight: FontWeight.w600,
+                                  fontFamily: GoogleFonts.outfit().fontFamily,
+                                ),
+                              ),
+                            ],
                           ),
-                          children: [
-                            TextSpan(
-                              text: 'I agree to the ',
-                              style: TextStyle(
-                                fontFamily: GoogleFonts.outfit().fontFamily,
-                              ),
-                            ),
-
-                            TextSpan(
-                              text: 'Terms of Service',
-                              style: TextStyle(
-                                color: AppColors.primaryColor,
-                                fontWeight: FontWeight.w200,
-                                fontFamily: GoogleFonts.outfit().fontFamily,
-                              ),
-                            ),
-
-                            const TextSpan(text: ' and '),
-
-                            TextSpan(
-                              text: 'Privacy Policy',
-                              style: TextStyle(
-                                color: AppColors.primaryColor,
-                                fontWeight: FontWeight.w200,
-                                fontFamily: GoogleFonts.outfit().fontFamily,
-                              ),
-                            ),
-                          ],
                         ),
                       ),
-                    )
-                  ],
-                ),
-              ),
+                    ],
+                  ),
+                );
+              }),
 
               const SizedBox(height: 28),
 
               // ── Register button ──
               Obx(() => AppButton(
                     text: 'Create Account',
-                    onPressed: _agreedToTerms
-                        ? widget.controller.register
+                    onPressed: controller.agreedToTerms.value
+                        ? controller.signup
                         : null,
-                    isLoading: widget.controller.isLoading.value,
+                    isLoading: controller.isLoading.value,
                     height: 50,
                     borderRadius: 16,
                   )),
 
-              if (!_agreedToTerms) ...[
-                const SizedBox(height: 8),
-                Center(
-                  child: AppText(
-                    'Please accept the terms to continue',
-                    fontSize: 12,
-                    color: AppColors.textColorHint,
-                  ),
-                ),
-              ],
+              Obx(() => (!controller.agreedToTerms.value)
+                  ? Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Center(
+                        child: AppText(
+                          'Please accept the terms to continue',
+                          fontSize: 12,
+                          color: AppColors.textColorHint,
+                        ),
+                      ),
+                    )
+                  : const SizedBox.shrink()),
             ],
           ),
         ),

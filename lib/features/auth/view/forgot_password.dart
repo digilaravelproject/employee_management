@@ -5,14 +5,14 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_input_field.dart';
 import '../../../core/widgets/app_text.dart';
-import '../controllers/auth_controller.dart';
+import '../controllers/admin_signup_controller.dart';
 
 class ForgotPasswordScreen extends StatelessWidget {
   const ForgotPasswordScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.find<AuthController>();
+    final controller = Get.find<AdminSignupController>();
     final size = MediaQuery.of(context).size;
 
     return Scaffold(
@@ -155,7 +155,8 @@ class _HeaderContent extends StatelessWidget {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: Colors.white.withValues(alpha: 0.15),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1.5),
+            border: Border.all(
+                color: Colors.white.withValues(alpha: 0.3), width: 1.5),
           ),
           child: const Icon(
             Icons.lock_reset_rounded,
@@ -174,7 +175,7 @@ class _HeaderContent extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         const AppText(
-          'No worries! Enter your email to reset it',
+          'No worries! Enter your email to receive a code',
           style: AppTextStyle.body,
           fontSize: 14,
           color: Colors.white70,
@@ -186,7 +187,7 @@ class _HeaderContent extends StatelessWidget {
 }
 
 class _ForgotCard extends StatelessWidget {
-  final AuthController controller;
+  final AdminSignupController controller;
   const _ForgotCard({required this.controller});
 
   @override
@@ -206,52 +207,62 @@ class _ForgotCard extends StatelessWidget {
             ),
           ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const AppText(
-              'Reset Password',
-              style: AppTextStyle.subheading,
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textColorPrimary,
-            ),
-            const SizedBox(height: 20),
-            const AppText(
-              'Email Address',
-              style: AppTextStyle.label,
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-            ),
-            const SizedBox(height: 8),
-            AppInputField(
-              hint: 'Enter your registered email',
-              controller: controller.emailController,
-              keyboardType: TextInputType.emailAddress,
-              icon: Icons.email_outlined,
-              validator: controller.validateEmail,
-            ),
-            const SizedBox(height: 32),
-            Obx(() => AppButton(
-                  text: 'Send Reset Link',
-                  onPressed: controller.forgotPassword,
-                  isLoading: controller.isLoading.value,
-                  height: 50,
-                  borderRadius: 16,
-                )),
-            const SizedBox(height: 20),
-            Center(
-              child: GestureDetector(
-                onTap: () => Get.back(),
-                child: const AppText(
-                  'Back to Login',
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.primaryColor,
+        child: Form(
+          key: controller.forgotPasswordFormKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const AppText(
+                'Reset Password',
+                style: AppTextStyle.subheading,
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textColorPrimary,
+              ),
+              const SizedBox(height: 8),
+              const AppText(
+                'Enter your registered email address and we will send you a 6-digit verification code.',
+                style: AppTextStyle.caption,
+                fontSize: 13,
+                color: AppColors.textColorHint,
+              ),
+              const SizedBox(height: 20),
+              const AppText(
+                'Email Address',
+                style: AppTextStyle.label,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+              const SizedBox(height: 8),
+              AppInputField(
+                hint: 'Enter your registered email',
+                controller: controller.forgotEmailController,
+                keyboardType: TextInputType.emailAddress,
+                icon: Icons.email_outlined,
+                validator: controller.validateForgotEmail,
+              ),
+              const SizedBox(height: 32),
+              Obx(() => AppButton(
+                    text: 'Send Verification Code',
+                    onPressed: controller.forgotPassword,
+                    isLoading: controller.isForgotPasswordLoading.value,
+                    height: 50,
+                    borderRadius: 16,
+                  )),
+              const SizedBox(height: 20),
+              Center(
+                child: GestureDetector(
+                  onTap: () => Get.back(),
+                  child: const AppText(
+                    'Back to Login',
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primaryColor,
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

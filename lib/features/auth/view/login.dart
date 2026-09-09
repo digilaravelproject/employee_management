@@ -6,7 +6,7 @@ import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_input_field.dart';
 import '../../../core/widgets/app_logo.dart';
 import '../../../core/widgets/app_text.dart';
-import '../controllers/auth_controller.dart';
+import '../controllers/admin_signup_controller.dart';
 import '../../../routes/route_helper.dart';
 
 class LoginScreen extends StatelessWidget {
@@ -14,7 +14,7 @@ class LoginScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.find<AuthController>();
+    final controller = Get.find<AdminSignupController>();
     final size = MediaQuery.of(context).size;
 
     return Scaffold(
@@ -165,7 +165,7 @@ class _WaveClipper extends CustomClipper<Path> {
   bool shouldReclip(_WaveClipper oldClipper) => false;
 }
 
-// ── Logo + headline on the blue section ───────────────────────────────────────
+// ── Logo + header titles ──────────────────────────────────────────────────────
 class _HeaderSection extends StatelessWidget {
   final double screenHeight;
   const _HeaderSection({required this.screenHeight});
@@ -174,39 +174,46 @@ class _HeaderSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Logo with white border ring
+        // App icon badge
         Container(
-          padding: const EdgeInsets.all(4),
+          width: 72,
+          height: 72,
           decoration: BoxDecoration(
-            shape: BoxShape.circle,
             color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.12),
+                color: Colors.black.withValues(alpha: 0.15),
                 blurRadius: 20,
                 offset: const Offset(0, 8),
               ),
             ],
           ),
-          child: const AppLogo(size: 84, showShadow: false),
+          child: const Center(
+            child: AppLogo(size: 44),
+          ),
         ),
 
         const SizedBox(height: 16),
 
-        AppText(
-          'Welcome Back!',
+        // App name
+        const AppText(
+          'Admin Portal',
           style: AppTextStyle.heading,
           fontSize: 26,
           fontWeight: FontWeight.w800,
           color: Colors.white,
-          textAlign: TextAlign.center,
+          letterSpacing: -0.5,
         ),
+
         const SizedBox(height: 6),
-        AppText(
-          'Sign in to continue to your account',
+
+        // Subtitle
+        const AppText(
+          'Sign in to manage your company dashboard',
           style: AppTextStyle.body,
           fontSize: 14,
-          color: Colors.white.withValues(alpha: 0.82),
+          color: Colors.white70,
           textAlign: TextAlign.center,
         ),
       ],
@@ -214,17 +221,10 @@ class _HeaderSection extends StatelessWidget {
   }
 }
 
-// ── White form card ───────────────────────────────────────────────────────────
-class _LoginCard extends StatefulWidget {
-  final AuthController controller;
+// ── White login card ──────────────────────────────────────────────────────────
+class _LoginCard extends StatelessWidget {
+  final AdminSignupController controller;
   const _LoginCard({required this.controller});
-
-  @override
-  State<_LoginCard> createState() => _LoginCardState();
-}
-
-class _LoginCardState extends State<_LoginCard> {
-  bool _obscurePassword = true;
 
   @override
   Widget build(BuildContext context) {
@@ -250,13 +250,13 @@ class _LoginCardState extends State<_LoginCard> {
           ],
         ),
         child: Form(
-          key: widget.controller.loginFormKey,
+          key: controller.loginFormKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Title inside card
               AppText(
-                'Login',
+                'Admin Login',
                 style: AppTextStyle.subheading,
                 fontSize: 20,
                 fontWeight: FontWeight.w800,
@@ -264,7 +264,7 @@ class _LoginCardState extends State<_LoginCard> {
               ),
               const SizedBox(height: 4),
               AppText(
-                'Enter your credentials to access the dashboard',
+                'Enter your email and password to access dashboard',
                 style: AppTextStyle.caption,
                 fontSize: 13,
                 color: AppColors.textColorHint,
@@ -283,15 +283,15 @@ class _LoginCardState extends State<_LoginCard> {
               const SizedBox(height: 8),
               AppInputField(
                 hint: 'Enter your email',
-                controller: widget.controller.emailController,
+                controller: controller.loginEmailController,
                 keyboardType: TextInputType.emailAddress,
                 icon: Icons.email_outlined,
-                validator: widget.controller.validateEmail,
+                validator: controller.validateLoginEmail,
               ),
 
               const SizedBox(height: 20),
 
-              // Password field (hidden for now since flow uses OTP)
+              // Password field
               AppText(
                 'Password',
                 style: AppTextStyle.label,
@@ -300,24 +300,25 @@ class _LoginCardState extends State<_LoginCard> {
                 color: AppColors.textColorPrimary,
               ),
               const SizedBox(height: 8),
-              AppInputField(
-                hint: 'Enter your password',
-                controller: widget.controller.passwordController,
-                keyboardType: TextInputType.visiblePassword,
-                isPassword: true,
-                obscureText: _obscurePassword,
-                icon: Icons.lock_outline_rounded,
-                suffixIcon: GestureDetector(
-                  onTap: () => setState(() => _obscurePassword = !_obscurePassword),
-                  child: Icon(
-                    _obscurePassword
-                        ? Icons.visibility_off_outlined
-                        : Icons.visibility_outlined,
-                    size: 20,
-                    color: AppColors.textColorHint,
-                  ),
-                ),
-              ),
+              Obx(() => AppInputField(
+                    hint: 'Enter your password',
+                    controller: controller.loginPasswordController,
+                    keyboardType: TextInputType.visiblePassword,
+                    isPassword: true,
+                    obscureText: !controller.isLoginPasswordVisible.value,
+                    icon: Icons.lock_outline_rounded,
+                    validator: controller.validateLoginPassword,
+                    suffixIcon: GestureDetector(
+                      onTap: controller.toggleLoginPasswordVisibility,
+                      child: Icon(
+                        controller.isLoginPasswordVisible.value
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
+                        size: 20,
+                        color: AppColors.textColorHint,
+                      ),
+                    ),
+                  )),
 
               const SizedBox(height: 12),
 
@@ -339,47 +340,12 @@ class _LoginCardState extends State<_LoginCard> {
 
               // Login button
               Obx(() => AppButton(
-                text: 'Continue',
-                //onPressed: widget.controller.login,
-                onPressed: (){
-                  Get.toNamed(RouteHelper.getDashboardRoute());
-                },
-                isLoading: widget.controller.isLoading.value,
-                height: 50,
-                borderRadius: 16,
-               // icon: const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 20),
-              )),
-
-              const SizedBox(height: 20),
-
-              // Divider
-              /*Row(
-                children: [
-                  const Expanded(child: Divider(color: AppColors.slate200)),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: AppText(
-                      'OR',
-                      style: AppTextStyle.label,
-                      fontSize: 12,
-                      color: AppColors.textColorHint,
-                    ),
-                  ),
-                  const Expanded(child: Divider(color: AppColors.slate200)),
-                ],
-              ),
-
-              const SizedBox(height: 20),
-
-              // OTP login button
-              AppButton.outline(
-                text: 'Login with OTP',
-                onPressed: widget.controller.login,
-                icon: const Icon(Icons.sms_outlined, size: 18),
-                height: 54,
-                borderRadius: 16,
-                color: AppColors.primaryColor,
-              ),*/
+                    text: 'Login',
+                    onPressed: controller.login,
+                    isLoading: controller.isLoginLoading.value,
+                    height: 50,
+                    borderRadius: 16,
+                  )),
             ],
           ),
         ),

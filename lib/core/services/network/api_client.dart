@@ -41,9 +41,12 @@ class ApiClient {
         options.headers["Accept"] = "application/json";
 
         // Detailed request logging
+        final requestUrl = options.path.startsWith('http')
+            ? options.path
+            : '${options.baseUrl}${options.path}';
         Logger.d('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         Logger.d('|🌐 API REQUEST');
-        Logger.d('|📍 URL: ${options.baseUrl}${options.path}');
+        Logger.d('|📍 URL: $requestUrl');
         Logger.d('|🔧 Method: ${options.method}');
         Logger.d('|🔑 Token: ${token.isNotEmpty ? "${token.substring(0, token.length > 20 ? 20 : token.length)}..." : "No Token"}');
         Logger.d('|📋 Headers: ${options.headers}');
@@ -57,9 +60,12 @@ class ApiClient {
         return handler.next(options);
       },
       onResponse: (response, handler) {
+        final responseUrl = response.requestOptions.path.startsWith('http')
+            ? response.requestOptions.path
+            : '${response.requestOptions.baseUrl}${response.requestOptions.path}';
         // Detailed response logging
         Logger.d('|✅ API RESPONSE');
-        Logger.d('|📍 URL: ${response.requestOptions.baseUrl}${response.requestOptions.path}');
+        Logger.d('|📍 URL: $responseUrl');
         Logger.d('|📊 Status Code: ${response.statusCode}');
         Logger.d('|📨 Response: ${response.data}');
         Logger.d('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -67,9 +73,12 @@ class ApiClient {
         return handler.next(response);
       },
       onError: (error, handler) {
+        final errorUrl = error.requestOptions.path.startsWith('http')
+            ? error.requestOptions.path
+            : '${error.requestOptions.baseUrl}${error.requestOptions.path}';
         // Detailed error logging
         Logger.e('|❌ API ERROR');
-        Logger.e('|📍 URL: ${error.requestOptions.baseUrl}${error.requestOptions.path}');
+        Logger.e('|📍 URL: $errorUrl');
         Logger.e('|🔧 Method: ${error.requestOptions.method}');
         Logger.e('|⚠️ Error Type: ${error.type}');
         Logger.e('|💬 Error Message: ${error.message}');

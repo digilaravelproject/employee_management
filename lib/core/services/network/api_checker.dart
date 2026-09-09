@@ -28,13 +28,20 @@ class ApiChecker {
         }
         return response;
       case 401:
-        _showErrorMessage(response, 'Unauthorized');
-        _logout();
+        final path = response.requestOptions.path;
+        final isAuthRoute = path.contains('login') || path.contains('signup') || path.contains('admin');
+        if (!isAuthRoute) {
+          _showErrorMessage(response, 'Unauthorized');
+          _logout();
+        }
+        final errorMsg = response.data is Map
+            ? (response.data['message'] ?? response.data['msg'] ?? 'Unauthorized')
+            : 'Unauthorized';
         throw DioException(
           requestOptions: response.requestOptions,
           response: response,
           type: DioExceptionType.badResponse,
-          error: 'Unauthorized',
+          error: errorMsg,
         );
       case 403:
         _showErrorMessage(response, 'Forbidden');
@@ -143,7 +150,9 @@ class ApiChecker {
           );
 
         case DioExceptionType.badResponse:
-          if (error.response?.statusCode == 401) {
+          final path = error.requestOptions.path;
+          final isAuthRoute = path.contains('login') || path.contains('signup') || path.contains('admin');
+          if (error.response?.statusCode == 401 && !isAuthRoute) {
             CustomSnackbar.showError('Session expired. Please login again.');
             _logout();
             return const ResponseModel(
@@ -271,8 +280,10 @@ class ApiChecker {
 
   static ResponseModel checkApi(Response response, {bool showToaster = false}) {
     final statusCode = response.statusCode ?? 500;
+    final path = response.requestOptions.path;
+    final isAuthRoute = path.contains('login') || path.contains('signup') || path.contains('admin');
 
-    if (statusCode == 401) {
+    if (statusCode == 401 && !isAuthRoute) {
       if (showToaster) {
         CustomSnackbar.showError('Session expired. Please login again.');
       }

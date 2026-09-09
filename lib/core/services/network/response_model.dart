@@ -19,10 +19,17 @@ class ResponseModel {
     // Check for success in multiple ways
     final res = json['res']?.toString().toLowerCase();
     final successValue = json['success'];
+    final statusValue = json['status'];
     
     bool success = false;
     if (res == 'success') {
       success = true;
+    } else if (res == 'error') {
+      success = false;
+    } else if (statusValue is bool) {
+      success = statusValue;
+    } else if (statusValue != null && (statusValue.toString().toLowerCase() == 'true' || statusValue.toString().toLowerCase() == 'false')) {
+      success = statusValue.toString().toLowerCase() == 'true';
     } else if (successValue is bool) {
       success = successValue;
     } else if (successValue != null) {

@@ -1,15 +1,10 @@
 import 'package:attendence_tracking_app/routes/route_helper.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get_core/src/get_main.dart';
-import 'package:get/get_instance/src/extension_instance.dart';
-import 'package:get/get_navigation/src/extension_navigation.dart';
 import 'package:get/get_navigation/src/root/get_material_app.dart';
 import 'package:get/get_navigation/src/routes/transitions_type.dart';
 
 import 'core/bindings/initial_bindings.dart';
 import 'core/constants/app_constants.dart';
-import 'core/services/translations/localization_controller.dart';
-import 'core/services/translations/messages.dart';
 import 'core/theme/light_theme.dart';
 import 'core/utils/custom_snackbar.dart';
 import 'init_app.dart';
@@ -32,6 +27,7 @@ class MyApp extends StatelessWidget {
     return GetMaterialApp(
       title: AppConstants.appName,
       debugShowCheckedModeBanner: false,
+      scaffoldMessengerKey: CustomSnackbar.messengerKey,
       initialBinding: InitialBindings(),
      // translations: Messages(languages: languages),
       //locale: localizationController.locale,

@@ -24,7 +24,7 @@ class AppConstants {
   ];
 
   // API base URLs
-  static  String imageUrl = '$baseUrl';
+  static  String imageUrl = baseUrl;
 
   // API endpoints
   static const String sendOtpUrl = '/api/auth/send-otp';
@@ -40,6 +40,10 @@ class AppConstants {
   static const String profileUrl = '/api/v1/auth/me';
   static const String updateProfileUrl = '/api/v1/auth/profile/update';
   static const String userSignupUrl = '/api/user_signup';
+  static const String adminSignupUrl = 'https://yellowgreen-stork-427223.hostingersite.com/public/api/admin/signup';
+  static const String adminLoginUrl = 'https://yellowgreen-stork-427223.hostingersite.com/public/api/admin/login';
+  static const String adminForgotPasswordUrl = 'https://yellowgreen-stork-427223.hostingersite.com/public/api/admin/forgot-password';
+  static const String adminResetPasswordUrl = 'https://yellowgreen-stork-427223.hostingersite.com/public/api/admin/reset-password';
   static const String userLoginUrl = '/api/user_login';
   static const String otpVerifyUrl = '/api/otp_verify';
   static const String documentTemplatesEndpoint = '/api/v1/document-templates/';

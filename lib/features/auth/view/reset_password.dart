@@ -6,7 +6,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_input_field.dart';
 import '../../../core/widgets/app_text.dart';
-import '../controllers/auth_controller.dart';
+import '../controllers/admin_signup_controller.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
   const ResetPasswordScreen({super.key});
@@ -20,8 +20,32 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   bool _obscureConfirm = true;
 
   @override
+  void initState() {
+    super.initState();
+    final controller = Get.find<AdminSignupController>();
+    if (Get.arguments is Map) {
+      final args = Get.arguments as Map;
+      if (args['email'] != null && args['email'].toString().isNotEmpty) {
+        controller.resetEmailController.text = args['email'].toString();
+      }
+      if (args['otp'] != null && args['otp'].toString().isNotEmpty) {
+        controller.resetOtpController.text = args['otp'].toString();
+      }
+    } else if (controller.forgotEmailController.text.isNotEmpty &&
+        controller.resetEmailController.text.isEmpty) {
+      controller.resetEmailController.text =
+          controller.forgotEmailController.text.trim();
+    }
+    if (controller.forgotPasswordOtpDebug.value.isNotEmpty &&
+        controller.resetOtpController.text.isEmpty) {
+      controller.resetOtpController.text =
+          controller.forgotPasswordOtpDebug.value;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final controller = Get.find<AuthController>();
+    final controller = Get.find<AdminSignupController>();
     final size = MediaQuery.of(context).size;
 
     return Scaffold(
@@ -201,7 +225,7 @@ class _HeaderContent extends StatelessWidget {
 }
 
 class _ResetCard extends StatelessWidget {
-  final AuthController controller;
+  final AdminSignupController controller;
   final bool obscurePass;
   final bool obscureConfirm;
   final VoidCallback onTogglePass;
@@ -232,78 +256,107 @@ class _ResetCard extends StatelessWidget {
             ),
           ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const AppText(
-              'Verification Code',
-              style: AppTextStyle.label,
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-            ),
-            const SizedBox(height: 8),
-            AppInputField(
-              hint: 'Enter 6-digit OTP',
-              controller: controller.otpController,
-              keyboardType: TextInputType.number,
-              icon:Iconsax.password_check
-            //  maxLength: 6,
-            ),
-            const SizedBox(height: 20),
-            const AppText(
-              'New Password',
-              style: AppTextStyle.label,
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-            ),
-            const SizedBox(height: 8),
-            AppInputField(
-              hint: 'Enter new password',
-              controller: controller.passwordController,
-              isPassword: true,
-              obscureText: obscurePass,
-              icon: Icons.lock_outline_rounded,
-              suffixIcon: IconButton(
-                onPressed: onTogglePass,
-                icon: Icon(
-                  obscurePass ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                  size: 20,
-                  color: AppColors.textColorHint,
+        child: Form(
+          key: controller.resetPasswordFormKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── Email ──
+              const AppText(
+                'Email Address',
+                style: AppTextStyle.label,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+              const SizedBox(height: 8),
+              AppInputField(
+                hint: 'Enter registered email',
+                controller: controller.resetEmailController,
+                keyboardType: TextInputType.emailAddress,
+                icon: Icons.email_outlined,
+                validator: controller.validateResetEmail,
+              ),
+              const SizedBox(height: 20),
+
+              // ── Verification Code ──
+              const AppText(
+                'Verification Code',
+                style: AppTextStyle.label,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+              const SizedBox(height: 8),
+              AppInputField(
+                hint: 'Enter 6-digit OTP',
+                controller: controller.resetOtpController,
+                keyboardType: TextInputType.number,
+                icon: Iconsax.password_check,
+                validator: controller.validateResetOtp,
+              ),
+              const SizedBox(height: 20),
+
+              // ── New Password ──
+              const AppText(
+                'New Password',
+                style: AppTextStyle.label,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+              const SizedBox(height: 8),
+              AppInputField(
+                hint: 'Enter new password',
+                controller: controller.resetNewPasswordController,
+                isPassword: true,
+                obscureText: obscurePass,
+                icon: Icons.lock_outline_rounded,
+                validator: controller.validateResetNewPassword,
+                suffixIcon: IconButton(
+                  onPressed: onTogglePass,
+                  icon: Icon(
+                    obscurePass ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                    size: 20,
+                    color: AppColors.textColorHint,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 20),
-            const AppText(
-              'Confirm Password',
-              style: AppTextStyle.label,
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-            ),
-            const SizedBox(height: 8),
-            AppInputField(
-              hint: 'Re-enter new password',
-              controller: controller.confirmPasswordController,
-              isPassword: true,
-              obscureText: obscureConfirm,
-              icon: Icons.lock_reset_rounded,
-              suffixIcon: IconButton(
-                onPressed: onToggleConfirm,
-                icon: Icon(
-                  obscureConfirm ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                  size: 20,
-                  color: AppColors.textColorHint,
+              const SizedBox(height: 20),
+
+              // ── Confirm Password ──
+              const AppText(
+                'Confirm Password',
+                style: AppTextStyle.label,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+              const SizedBox(height: 8),
+              AppInputField(
+                hint: 'Re-enter new password',
+                controller: controller.resetConfirmPasswordController,
+                isPassword: true,
+                obscureText: obscureConfirm,
+                icon: Icons.lock_reset_rounded,
+                validator: controller.validateResetConfirmPassword,
+                suffixIcon: IconButton(
+                  onPressed: onToggleConfirm,
+                  icon: Icon(
+                    obscureConfirm ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                    size: 20,
+                    color: AppColors.textColorHint,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 32),
-            Obx(() => AppButton(
-                  text: 'Update Password',
-                  onPressed: controller.resetPassword,
-                  isLoading: controller.isLoading.value,
-                  height: 50,
-                  borderRadius: 16,
-                )),
-          ],
+              const SizedBox(height: 32),
+
+              // ── Submit Button ──
+              Obx(() => AppButton(
+                    text: 'Update Password',
+                    onPressed: controller.resetPassword,
+                    isLoading: controller.isResetPasswordLoading.value,
+                    height: 50,
+                    borderRadius: 16,
+                  )),
+            ],
+          ),
         ),
       ),
     );

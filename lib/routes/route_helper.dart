@@ -4,9 +4,14 @@ import 'package:get/get_instance/src/extension_instance.dart';
 import 'package:get/get_navigation/src/routes/get_route.dart';
 import 'package:get/get_navigation/src/routes/transitions_type.dart';
 
+import '../features/auth/bindings/admin_signup_binding.dart';
+import '../features/auth/controllers/admin_signup_controller.dart';
 import '../features/auth/controllers/auth_controller.dart';
+import '../features/auth/domain/repositories/admin_signup_repository.dart';
+import '../features/auth/domain/repositories/admin_signup_repository_interface.dart';
 import '../features/auth/domain/repositories/auth_repository.dart';
 import '../features/auth/domain/services/auth_service.dart';
+import '../features/auth/domain/usecases/admin_signup_usecase.dart';
 import '../features/auth/view/login.dart';
 import '../features/auth/view/signup.dart';
 import '../features/auth/view/role_selection_screen.dart';
@@ -42,6 +47,9 @@ class RouteHelper {
 
   /// Shared binding builder for AuthController – reused across login/signup/otp
   static BindingsBuilder _authBinding() => BindingsBuilder(() {
+        if (!Get.isRegistered<ApiClient>()) {
+          Get.lazyPut<ApiClient>(() => ApiClient(), fenix: true);
+        }
         if (!Get.isRegistered<AuthController>()) {
           final apiClient = Get.find<ApiClient>();
           final authRepo = AuthRepository(apiClient);
@@ -61,6 +69,28 @@ class RouteHelper {
               getUserInfoUseCase: GetUserInfoUseCase(authService),
             ),
             permanent: false,
+          );
+        }
+        if (!Get.isRegistered<AdminSignupController>()) {
+          final apiClient = Get.find<ApiClient>();
+          final adminRepo = AdminSignupRepository(apiClient);
+          final adminSignupUseCase = AdminSignupUseCase(adminRepo);
+          final adminLoginUseCase = AdminLoginUseCase(adminRepo);
+          final adminForgotPasswordUseCase = AdminForgotPasswordUseCase(adminRepo);
+          final adminResetPasswordUseCase = AdminResetPasswordUseCase(adminRepo);
+          Get.lazyPut<AdminSignupRepositoryInterface>(() => adminRepo, fenix: true);
+          Get.lazyPut<AdminSignupUseCase>(() => adminSignupUseCase, fenix: true);
+          Get.lazyPut<AdminLoginUseCase>(() => adminLoginUseCase, fenix: true);
+          Get.lazyPut<AdminForgotPasswordUseCase>(() => adminForgotPasswordUseCase, fenix: true);
+          Get.lazyPut<AdminResetPasswordUseCase>(() => adminResetPasswordUseCase, fenix: true);
+          Get.lazyPut<AdminSignupController>(
+            () => AdminSignupController(
+              adminSignupUseCase: adminSignupUseCase,
+              adminLoginUseCase: adminLoginUseCase,
+              adminForgotPasswordUseCase: adminForgotPasswordUseCase,
+              adminResetPasswordUseCase: adminResetPasswordUseCase,
+            ),
+            fenix: true,
           );
         }
       });
@@ -87,7 +117,7 @@ class RouteHelper {
     GetPage(
       name: AppRoutes.login,
       page: () => const LoginScreen(),
-      binding: _authBinding(),
+      binding: AdminSignupBinding(),
       transition: Transition.fadeIn,
     ),
 
@@ -95,14 +125,14 @@ class RouteHelper {
     GetPage(
       name: AppRoutes.signup,
       page: () => const SignupScreen(),
-      binding: _authBinding(),
+      binding: AdminSignupBinding(),
       transition: Transition.rightToLeft,
     ),
     // ── Forgot Password ──────────────────────────────────────────────────────
     GetPage(
       name: AppRoutes.forgotPassword,
       page: () => const ForgotPasswordScreen(),
-      binding: _authBinding(),
+      binding: AdminSignupBinding(),
       transition: Transition.rightToLeft,
     ),
 
@@ -118,7 +148,7 @@ class RouteHelper {
     GetPage(
       name: AppRoutes.resetPassword,
       page: () => const ResetPasswordScreen(),
-      binding: _authBinding(),
+      binding: AdminSignupBinding(),
       transition: Transition.rightToLeft,
     ),
 

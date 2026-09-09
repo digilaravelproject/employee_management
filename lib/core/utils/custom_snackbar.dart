@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:get/get.dart';
@@ -125,8 +124,22 @@ class CustomSnackbar {
       duration: const Duration(seconds: 3),
     );
 
-    messengerKey.currentState?.hideCurrentSnackBar();
-    messengerKey.currentState?.showSnackBar(snackBar);
+    if (messengerKey.currentState != null) {
+      messengerKey.currentState?.hideCurrentSnackBar();
+      messengerKey.currentState?.showSnackBar(snackBar);
+    } else {
+      Get.snackbar(
+        title,
+        message,
+        backgroundColor: backgroundColor,
+        colorText: effectiveTextColor,
+        icon: Icon(icon, color: effectiveTextColor, size: 24),
+        snackPosition: SnackPosition.BOTTOM,
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12,
+        duration: const Duration(seconds: 3),
+      );
+    }
   }
 
   static void showSuccess(String message, {String title = 'Success'}) {
