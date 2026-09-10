@@ -283,6 +283,55 @@ class _RoleCard extends StatelessWidget {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
+                          const SizedBox(height: 6),
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 4,
+                            children: [
+                              if (role.departmentName != null && role.departmentName!.isNotEmpty)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primaryColor.withValues(alpha: 0.08),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Iconsax.hierarchy_2, size: 10, color: AppColors.primaryColor),
+                                      const SizedBox(width: 4),
+                                      AppText(
+                                        role.departmentName!,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.primaryColor,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              if (role.designationName != null && role.designationName!.isNotEmpty)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.slate100,
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Iconsax.briefcase, size: 10, color: AppColors.textColorSecondary),
+                                      const SizedBox(width: 4),
+                                      AppText(
+                                        role.designationName!,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.textColorSecondary,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                            ],
+                          ),
                         ],
                       ),
                     ),
@@ -299,33 +348,37 @@ class _RoleCard extends StatelessWidget {
                   ],
                 ),
                 
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
                 const Divider(height: 1, color: Color(0xFFF1F5F9)),
                 const SizedBox(height: 12),
                 
-                // Bottom row showing User count and Permissions count
+                // Bottom row showing Modules count and Granular Permissions count
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    // Users Assigned Count
-                    Icon(Iconsax.profile_2user, size: 14, color: AppColors.textColorHint),
-                    const SizedBox(width: 6),
-                    AppText(
-                      '${role.assignedUsers.length} Users',
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textColorSecondary,
+                    Row(
+                      children: [
+                        const Icon(Iconsax.category, size: 13, color: AppColors.textColorHint),
+                        const SizedBox(width: 5),
+                        AppText(
+                          '${role.permissionGroups.length} Modules',
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textColorSecondary,
+                        ),
+                      ],
                     ),
-                    
-                    const SizedBox(width: 24),
-                    
-                    // Permissions Allowed Count
-                    Icon(Iconsax.shield_tick, size: 14, color: AppColors.textColorHint),
-                    const SizedBox(width: 6),
-                    AppText(
-                      '${role.totalPermissionsCount} Permissions',
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textColorSecondary,
+                    Row(
+                      children: [
+                        const Icon(Iconsax.shield_tick, size: 13, color: AppColors.primaryColor),
+                        const SizedBox(width: 5),
+                        AppText(
+                          '${role.totalPermissionsCount} / ${role.maxPermissionsCount} Allowed',
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primaryColor,
+                        ),
+                      ],
                     ),
                   ],
                 ),
