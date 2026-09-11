@@ -26,9 +26,11 @@ class AppInputField extends StatefulWidget {
   final bool isRequired;
   final String? errorText;
   final bool autoFocus;
+  final TextInputAction? textInputAction;
+  final void Function(String)? onFieldSubmitted;
 
   const AppInputField({
-    Key? key,
+    super.key,
     this.label,
     required this.hint,
     this.controller,
@@ -52,7 +54,9 @@ class AppInputField extends StatefulWidget {
     this.isRequired = false,
     this.errorText,
     this.autoFocus = false,
-  }) : super(key: key);
+    this.textInputAction,
+    this.onFieldSubmitted,
+  });
 
   @override
   State<AppInputField> createState() => _AppInputFieldState();
@@ -102,6 +106,8 @@ class _AppInputFieldState extends State<AppInputField> {
           autofocus: widget.autoFocus,
           controller: widget.controller,
           keyboardType: widget.keyboardType,
+          textInputAction: widget.textInputAction,
+          onFieldSubmitted: widget.onFieldSubmitted,
           obscureText: widget.obscureText ?? (widget.isPassword || widget.obscure),
           validator: (val) {
             if (widget.validator != null) {
@@ -159,7 +165,7 @@ class _AppInputFieldState extends State<AppInputField> {
             
             disabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: AppColors.slate200.withOpacity(0.5), width: 1),
+              borderSide: BorderSide(color: AppColors.slate200.withValues(alpha: 0.5), width: 1),
             ),
 
             prefixIcon: (widget.phoneCode != null || widget.prefixIcon != null || widget.icon != null)

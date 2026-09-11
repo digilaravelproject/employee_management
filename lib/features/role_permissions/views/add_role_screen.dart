@@ -274,39 +274,39 @@ class _AddRoleScreenState extends State<AddRoleScreen> {
               ),
             );
           }),
-          const SizedBox(height: 16),
-
-          // Designation Dropdown
-          _buildFieldLabel('Designation', isRequired: true),
-          const SizedBox(height: 8),
-          Obx(() {
-            final selected = controller.selectedDesignationName.value;
-            return Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              decoration: BoxDecoration(
-                color: AppColors.slate50,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.slate200),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  isExpanded: true,
-                  hint: const AppText('Select Designation',
-                      fontSize: 13, color: AppColors.textColorHint),
-                  value: designationOptions.contains(selected) ? selected : null,
-                  icon: const Icon(Icons.keyboard_arrow_down_rounded,
-                      color: AppColors.textColorSecondary),
-                  items: designationOptions.map((desig) {
-                    return DropdownMenuItem<String>(
-                      value: desig,
-                      child: AppText(desig, fontSize: 13, fontWeight: FontWeight.w600),
-                    );
-                  }).toList(),
-                  onChanged: (val) => controller.selectedDesignationName.value = val,
-                ),
-              ),
-            );
-          }),
+          // const SizedBox(height: 16),
+          //
+          // // Designation Dropdown
+          // _buildFieldLabel('Designation', isRequired: true),
+          // const SizedBox(height: 8),
+          // Obx(() {
+          //   final selected = controller.selectedDesignationName.value;
+          //   return Container(
+          //     padding: const EdgeInsets.symmetric(horizontal: 14),
+          //     decoration: BoxDecoration(
+          //       color: AppColors.slate50,
+          //       borderRadius: BorderRadius.circular(12),
+          //       border: Border.all(color: AppColors.slate200),
+          //     ),
+          //     child: DropdownButtonHideUnderline(
+          //       child: DropdownButton<String>(
+          //         isExpanded: true,
+          //         hint: const AppText('Select Designation',
+          //             fontSize: 13, color: AppColors.textColorHint),
+          //         value: designationOptions.contains(selected) ? selected : null,
+          //         icon: const Icon(Icons.keyboard_arrow_down_rounded,
+          //             color: AppColors.textColorSecondary),
+          //         items: designationOptions.map((desig) {
+          //           return DropdownMenuItem<String>(
+          //             value: desig,
+          //             child: AppText(desig, fontSize: 13, fontWeight: FontWeight.w600),
+          //           );
+          //         }).toList(),
+          //         onChanged: (val) => controller.selectedDesignationName.value = val,
+          //       ),
+          //     ),
+          //   );
+          // }),
           const SizedBox(height: 16),
 
           // Description

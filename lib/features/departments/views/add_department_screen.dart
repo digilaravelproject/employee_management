@@ -109,7 +109,7 @@ class AddDepartmentScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
 
-                  // ── Department Head Card ──
+                 /* // ── Department Head Card ──
                   _buildLabel('Department Head', true),
                   const SizedBox(height: 8),
                   Obx(() {
@@ -258,12 +258,12 @@ class AddDepartmentScreen extends StatelessWidget {
                       ),
                     );
                   }),
-                  const SizedBox(height: 30),
+                  const SizedBox(height: 30),*/
                 ],
               ),
             ),
           ),
-          
+
           // ── Bottom Action Button ──
           Container(
             color: Colors.white,

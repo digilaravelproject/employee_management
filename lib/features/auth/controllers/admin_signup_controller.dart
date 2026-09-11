@@ -14,6 +14,7 @@ import '../domain/usecases/admin_signup_usecase.dart';
 
 class AdminSignupController extends GetxController {
   final AdminSignupUseCase _adminSignupUseCase;
+  // ignore: unused_field
   final AdminLoginUseCase? _adminLoginUseCase;
   final AdminForgotPasswordUseCase? _adminForgotPasswordUseCase;
   final AdminResetPasswordUseCase? _adminResetPasswordUseCase;
@@ -289,6 +290,10 @@ class AdminSignupController extends GetxController {
   }
 
   Future<void> login() async {
+    // Direct navigate to dashboard (bypass validation & API call)
+    Get.offAllNamed(RouteHelper.getDashboardRoute());
+
+    /*
     // 1. Form validation
     if (!loginFormKey.currentState!.validate()) {
       return;
@@ -361,6 +366,7 @@ class AdminSignupController extends GetxController {
     } finally {
       isLoginLoading.value = false;
     }
+    */
   }
 
   // ── Forgot Password Methods & Validators ─────────────

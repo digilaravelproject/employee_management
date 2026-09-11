@@ -8,6 +8,8 @@ import '../controllers/designation_controller.dart';
 import '../models/designation_model.dart';
 import '../../management/controllers/employee_controller.dart';
 import '../../management/models/employee_model.dart';
+import 'add_designation_screen.dart';
+import '../../../../core/utils/custom_snackbar.dart';
 
 class DesignationListScreen extends StatelessWidget {
   const DesignationListScreen({super.key});
@@ -159,14 +161,80 @@ class DesignationListScreen extends StatelessWidget {
                                         ),
                                       ],
                                     ),
+                                    if (designation.skills.isNotEmpty) ...[
+                                      const SizedBox(height: 8),
+                                      Wrap(
+                                        spacing: 6,
+                                        runSpacing: 4,
+                                        children: [
+                                          ...designation.skills.take(3).map((s) => Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                                decoration: BoxDecoration(
+                                                  color: AppColors.slate100,
+                                                  borderRadius: BorderRadius.circular(6),
+                                                ),
+                                                child: AppText(
+                                                  s,
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: AppColors.textColorSecondary,
+                                                ),
+                                              )),
+                                          if (designation.skills.length > 3)
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                                              decoration: BoxDecoration(
+                                                color: AppColors.slate100,
+                                                borderRadius: BorderRadius.circular(6),
+                                              ),
+                                              child: AppText(
+                                                '+${designation.skills.length - 3}',
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w600,
+                                                color: AppColors.textColorSecondary,
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ],
                                   ],
                                 ),
                               ),
-                              const SizedBox(width: 8),
-                              const Icon(
-                                Icons.chevron_right_rounded,
-                                color: AppColors.textColorHint,
-                                size: 20,
+                              const SizedBox(width: 4),
+                              PopupMenuButton<String>(
+                                padding: EdgeInsets.zero,
+                                icon: const Icon(Icons.more_vert_rounded, color: AppColors.textColorHint, size: 20),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                elevation: 4,
+                                onSelected: (value) {
+                                  if (value == 'edit') {
+                                    Get.to(() => AddDesignationScreen(designation: designation));
+                                  } else if (value == 'delete') {
+                                    _showDeleteConfirmation(context, controller, designation, assignedCount);
+                                  }
+                                },
+                                itemBuilder: (context) => [
+                                  const PopupMenuItem(
+                                    value: 'edit',
+                                    child: Row(
+                                      children: [
+                                        Icon(Iconsax.edit_2, size: 16, color: AppColors.primaryColor),
+                                        SizedBox(width: 10),
+                                        AppText('Edit', fontSize: 13, fontWeight: FontWeight.w600),
+                                      ],
+                                    ),
+                                  ),
+                                  const PopupMenuItem(
+                                    value: 'delete',
+                                    child: Row(
+                                      children: [
+                                        Icon(Iconsax.trash, size: 16, color: AppColors.errorColor),
+                                        SizedBox(width: 10),
+                                        AppText('Delete', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.errorColor),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
@@ -250,14 +318,74 @@ class DesignationListScreen extends StatelessWidget {
                     ],
                   ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.close, color: AppColors.textColorSecondary),
-                  onPressed: () => Get.back(),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Iconsax.edit_2, color: AppColors.primaryColor, size: 20),
+                      tooltip: 'Edit Designation',
+                      onPressed: () {
+                        Get.back();
+                        Get.to(() => AddDesignationScreen(designation: designation));
+                      },
+                    ),
+                    IconButton(
+                      icon: const Icon(Iconsax.trash, color: AppColors.errorColor, size: 20),
+                      tooltip: 'Delete Designation',
+                      onPressed: () {
+                        Get.back();
+                        final assigned = employeeController.employees
+                            .where((e) => e.designation.toLowerCase() == designation.name.toLowerCase())
+                            .length;
+                        final controller = Get.find<DesignationController>();
+                        _showDeleteConfirmation(context, controller, designation, assigned);
+                      },
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, color: AppColors.textColorSecondary),
+                      onPressed: () => Get.back(),
+                    ),
+                  ],
                 ),
               ],
             ),
             const SizedBox(height: 20),
             const Divider(height: 1, color: Color(0xFFF1F5F9)),
+            if (designation.skills.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              const AppText(
+                'Skills',
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textColorPrimary,
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: designation.skills.map((skill) {
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryColor.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: AppColors.primaryColor.withValues(alpha: 0.2),
+                        width: 1,
+                      ),
+                    ),
+                    child: AppText(
+                      skill,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primaryColor,
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 16),
+              const Divider(height: 1, color: Color(0xFFF1F5F9)),
+            ],
             const SizedBox(height: 20),
 
             // Assigned list title & button
@@ -571,6 +699,88 @@ class DesignationListScreen extends StatelessWidget {
         ),
       ),
       isScrollControlled: true,
+    );
+  }
+
+  void _showDeleteConfirmation(
+    BuildContext context,
+    DesignationController controller,
+    DesignationModel designation,
+    int assignedCount,
+  ) {
+    Get.dialog(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.errorColor.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Iconsax.trash, color: AppColors.errorColor, size: 20),
+            ),
+            const SizedBox(width: 10),
+            const AppText('Delete Designation', fontSize: 16, fontWeight: FontWeight.bold),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            AppText(
+              'Are you sure you want to delete "${designation.name}"?',
+              fontSize: 14,
+              color: AppColors.textColorPrimary,
+            ),
+            if (assignedCount > 0) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF3C7),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFFDE68A)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.warning_amber_rounded, color: Color(0xFFD97706), size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: AppText(
+                        '$assignedCount employee(s) currently assigned will have their designation unassigned.',
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF92400E),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const AppText('Cancel', color: AppColors.textColorSecondary, fontWeight: FontWeight.w600),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Get.back();
+              controller.deleteDesignation(designation.id);
+              CustomSnackbar.showSuccess('Designation deleted successfully');
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.errorColor,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              elevation: 0,
+            ),
+            child: const AppText('Delete', color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
     );
   }
 }
