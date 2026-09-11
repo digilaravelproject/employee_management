@@ -6,13 +6,21 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_text.dart';
 import '../controllers/attendance_history_controller.dart';
-import '../models/attendance_history_model.dart';
 import 'attendance_day_details_screen.dart';
 
 class AttendanceHistoryScreen extends StatelessWidget {
   final bool showBackButton;
+  final String? employeeName;
+  final String? employeeId;
+  final String? employeeDesignation;
 
-  const AttendanceHistoryScreen({super.key, this.showBackButton = true});
+  const AttendanceHistoryScreen({
+    super.key,
+    this.showBackButton = true,
+    this.employeeName,
+    this.employeeId,
+    this.employeeDesignation,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -30,11 +38,23 @@ class AttendanceHistoryScreen extends StatelessWidget {
                 onPressed: () => Get.back(),
               )
             : null,
-        title: const AppText(
-          'Attendance History',
-          fontSize: 18,
-          fontWeight: FontWeight.w700,
-          color: AppColors.textColorPrimary,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AppText(
+              employeeName != null ? "$employeeName's Attendance" : 'Attendance History',
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textColorPrimary,
+            ),
+            if (employeeId != null)
+              AppText(
+                '$employeeId${employeeDesignation != null ? ' • $employeeDesignation' : ''}',
+                fontSize: 11,
+                color: AppColors.textColorSecondary,
+              ),
+          ],
         ),
         centerTitle: false,
         actions: [
@@ -68,6 +88,43 @@ class AttendanceHistoryScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (employeeName != null) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF0FDF4),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFBBF7D0)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Iconsax.user_tick, color: Color(0xFF16A34A), size: 20),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            AppText(
+                              employeeName!,
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF15803D),
+                            ),
+                            AppText(
+                              'Individual attendance breakdown & monthly summary for administrator view',
+                              fontSize: 11,
+                              color: const Color(0xFF166534),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+
               // Stats overview Grid
               const _StatsOverviewGrid(),
               const SizedBox(height: 16),
@@ -489,8 +546,6 @@ class _CalendarSectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.find<AttendanceHistoryController>();
-
     return Container(
       decoration: BoxDecoration(
         color: AppColors.white,
@@ -1028,7 +1083,6 @@ class _RecentRecordsList extends StatelessWidget {
         itemBuilder: (context, index) {
           final record = records[index];
           final dateDayStr = DateFormat('dd').format(record.date);
-          final dateMonthStr = DateFormat('MMM').format(record.date);
           final dateWeekStr = DateFormat('EEE').format(record.date);
 
           Color statusColor;

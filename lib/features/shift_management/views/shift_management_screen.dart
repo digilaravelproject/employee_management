@@ -3,149 +3,539 @@ import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_text.dart';
+import '../controllers/shift_controller.dart';
+import '../models/shift_model.dart';
 import 'assign_shift_screen.dart';
 import 'create_shift_screen.dart';
-import 'shift_rotation_screen.dart';
+import 'shift_details_screen.dart';
+import 'shift_history_screen.dart';
+// import 'shift_rotation_screen.dart';
 
 class ShiftManagementScreen extends StatelessWidget {
   const ShiftManagementScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final ShiftController controller = Get.isRegistered<ShiftController>()
+        ? Get.find<ShiftController>()
+        : Get.put(ShiftController());
+
     return Scaffold(
       backgroundColor: AppColors.scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AppColors.scaffoldBackgroundColor,
+        backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textColorPrimary),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textColorPrimary, size: 20),
           onPressed: () => Get.back(),
         ),
         title: const AppText('Shift Management', fontSize: 18, fontWeight: FontWeight.bold),
         centerTitle: false,
-        // actions: [
-        //   IconButton(
-        //     icon: const Icon(Iconsax.notification, color: AppColors.textColorPrimary),
-        //     onPressed: () {},
-        //   ),
-        // ],
+        actions: [
+          IconButton(
+            tooltip: 'Shift History',
+            icon: const Icon(Iconsax.clock, color: AppColors.textColorPrimary, size: 20),
+            onPressed: () => Get.to(() => const ShiftHistoryScreen()),
+          ),
+          IconButton(
+            tooltip: 'Create Shift',
+            icon: const Icon(Iconsax.add_circle, color: AppColors.primaryColor, size: 22),
+            onPressed: () => Get.to(() => const CreateShiftScreen()),
+          ),
+          const SizedBox(width: 4),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => Get.to(() => const CreateShiftScreen()),
+        backgroundColor: AppColors.primaryColor,
+        icon: const Icon(Icons.add, color: Colors.white),
+        label: const AppText('Add Shift', fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Quick Actions
+            // Quick Actions (Matching previous requirements)
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildQuickAction(context, Iconsax.clipboard_text, 'Create Shift', Colors.purple, () => Get.to(() => const CreateShiftScreen())),
-                _buildQuickAction(context, Iconsax.profile_2user, 'Assign Shift', Colors.green, () => Get.to(() => const AssignShiftScreen())),
-                _buildQuickAction(context, Iconsax.repeate_music, 'Rotation', Colors.orange, () => Get.to(() => const ShiftRotationScreen())),
-                _buildQuickAction(context, Iconsax.calendar_2, 'Roster', Colors.blue, () {}),
+                _buildQuickAction(
+                  context,
+                  Iconsax.clipboard_text,
+                  'Create Shift',
+                  Colors.purple,
+                  () => Get.to(() => const CreateShiftScreen()),
+                ),
+                _buildQuickAction(
+                  context,
+                  Iconsax.profile_2user,
+                  'Assign Shift',
+                  Colors.green,
+                  () => Get.to(() => const AssignShiftScreen()),
+                ),
+                _buildQuickAction(
+                  context,
+                  Iconsax.clock,
+                  'Shift History',
+                  Colors.blue,
+                  () => Get.to(() => const ShiftHistoryScreen()),
+                ),
+                // _buildQuickAction(context, Iconsax.repeate_music, 'Rotation', Colors.orange, () => Get.to(() => const ShiftRotationScreen())),
+                // _buildQuickAction(context, Iconsax.calendar_2, 'Roster', Colors.blue, () {}),
               ],
             ),
-            
+
             const SizedBox(height: 24),
-            
-            // Today's Overview
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+
+            // Top Stat Summary Cards (Matching Panel 1: List View)
+            Obx(() => Row(
               children: [
-                const AppText('Today\'s Overview', fontSize: 14, fontWeight: FontWeight.bold),
-                AppText('View all', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primaryColor),
+                Expanded(
+                  child: _buildSummaryStatCard(
+                    icon: Iconsax.calendar_tick,
+                    color: Colors.blue,
+                    count: '${controller.totalShifts}',
+                    label: 'Total Shifts',
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _buildSummaryStatCard(
+                    icon: Iconsax.profile_2user,
+                    color: Colors.purple,
+                    count: '${controller.totalEmployees}',
+                    label: 'Employees',
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _buildSummaryStatCard(
+                    icon: Iconsax.tick_circle,
+                    color: Colors.green,
+                    count: '${controller.activeShifts}',
+                    label: 'Active',
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _buildSummaryStatCard(
+                    icon: Iconsax.close_circle,
+                    color: Colors.redAccent,
+                    count: '${controller.inactiveShifts}',
+                    label: 'Inactive',
+                  ),
+                ),
               ],
-            ),
-            const SizedBox(height: 12),
+            )),
+
+            const SizedBox(height: 24),
+
+            // Search & Filter Section (Matching Panel 1)
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.borderColor),
+                border: Border.all(color: AppColors.slate200),
               ),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Expanded(child: _buildOverviewStat('Total Shifts', '8', Colors.blue)),
-                      _buildDivider(),
-                      Expanded(child: _buildOverviewStat('Employees', '56', Colors.black)),
-                      _buildDivider(),
-                      Expanded(child: _buildOverviewStat('Present', '48', Colors.green)),
-                      _buildDivider(),
-                      Expanded(child: _buildOverviewStat('On Leave', '5', Colors.red)),
-                    ],
+                  // Search Bar
+                  TextFormField(
+                    onChanged: (val) => controller.searchQuery.value = val,
+                    style: const TextStyle(fontSize: 13, color: AppColors.textColorPrimary),
+                    decoration: InputDecoration(
+                      hintText: 'Search shifts by name or code...',
+                      hintStyle: const TextStyle(color: AppColors.textColorHint, fontSize: 13),
+                      prefixIcon: const Icon(Iconsax.search_normal, color: AppColors.textColorSecondary, size: 18),
+                      filled: true,
+                      fillColor: AppColors.slate50,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
                   ),
+
                   const SizedBox(height: 12),
-                  const AppText('Updated: 20 May 2025, 10:30 AM', fontSize: 10, color: AppColors.textColorSecondary),
+
+                  // Filter Dropdowns Row
+                  Obx(() => Row(
+                    children: [
+                      // Type Filter
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.slate50,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: AppColors.slate200),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              value: controller.selectedType.value,
+                              isExpanded: true,
+                              icon: const Icon(Icons.keyboard_arrow_down, size: 18),
+                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textColorPrimary),
+                              onChanged: (val) {
+                                if (val != null) controller.selectedType.value = val;
+                              },
+                              items: controller.typeFilterOptions.map((opt) {
+                                return DropdownMenuItem(value: opt, child: Text(opt));
+                              }).toList(),
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(width: 10),
+
+                      // Status Filter
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.slate50,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: AppColors.slate200),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              value: controller.selectedStatus.value,
+                              isExpanded: true,
+                              icon: const Icon(Icons.keyboard_arrow_down, size: 18),
+                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textColorPrimary),
+                              onChanged: (val) {
+                                if (val != null) controller.selectedStatus.value = val;
+                              },
+                              items: controller.statusFilterOptions.map((opt) {
+                                return DropdownMenuItem(value: opt, child: Text(opt));
+                              }).toList(),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  )),
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 24),
-            
-            // Today's Shifts
-            Row(
+
+            // Shifts List Header
+            Obx(() => Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const AppText('Today\'s Shifts', fontSize: 14, fontWeight: FontWeight.bold),
-                AppText('View roster', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primaryColor),
+                Row(
+                  children: [
+                    const AppText('All Shifts', fontSize: 16, fontWeight: FontWeight.bold),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryLight,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: AppText(
+                        '${controller.filteredShifts.length}',
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primaryColor,
+                      ),
+                    ),
+                  ],
+                ),
+                TextButton.icon(
+                  onPressed: () => Get.to(() => const CreateShiftScreen()),
+                  icon: const Icon(Icons.add_circle_outline, size: 16, color: AppColors.primaryColor),
+                  label: const AppText('Add Shift', fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primaryColor),
+                ),
               ],
+            )),
+
+            const SizedBox(height: 12),
+
+            // Dynamic Shift Cards List
+            Obx(() {
+              final list = controller.filteredShifts;
+
+              if (list.isEmpty) {
+                return Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 40),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.slate200),
+                  ),
+                  child: Column(
+                    children: const [
+                      Icon(Iconsax.calendar_search, size: 40, color: AppColors.textColorHint),
+                      SizedBox(height: 12),
+                      AppText('No shifts found matching criteria', fontSize: 13, color: AppColors.textColorHint),
+                    ],
+                  ),
+                );
+              }
+
+              return Column(
+                children: list.map((shift) => _buildShiftItemCard(context, shift, controller)).toList(),
+              );
+            }),
+
+            const SizedBox(height: 60),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ----------------------------------------------------
+  // Summary Stat Card (Matching Panel 1)
+  // ----------------------------------------------------
+  Widget _buildSummaryStatCard({
+    required IconData icon,
+    required Color color,
+    required String count,
+    required String label,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.slate200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
             ),
-            const SizedBox(height: 12),
-            _buildShiftCard('Morning Shift', '09:00 AM - 06:00 PM', '22', Icons.wb_sunny_outlined, Colors.orange),
-            const SizedBox(height: 12),
-            _buildShiftCard('Evening Shift', '02:00 PM - 11:00 PM', '18', Icons.wb_twilight, Colors.purple),
-            const SizedBox(height: 12),
-            _buildShiftCard('Night Shift', '11:00 PM - 08:00 AM', '16', Icons.nights_stay_outlined, Colors.blue),
-            
-            const SizedBox(height: 24),
-            
-            // Upcoming Rotations
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const AppText('Upcoming Rotations', fontSize: 14, fontWeight: FontWeight.bold),
-                AppText('View all', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primaryColor),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.borderColor),
-              ),
-              child: Column(
+            child: Icon(icon, color: color, size: 18),
+          ),
+          const SizedBox(height: 8),
+          AppText(count, fontSize: 17, fontWeight: FontWeight.bold, color: AppColors.textColorPrimary),
+          const SizedBox(height: 2),
+          AppText(label, fontSize: 10, color: AppColors.textColorSecondary, maxLines: 1),
+        ],
+      ),
+    );
+  }
+
+  // ----------------------------------------------------
+  // Shift Item Card (Clickable to Panel 9: Shift Details)
+  // ----------------------------------------------------
+  Widget _buildShiftItemCard(BuildContext context, ShiftModel shift, ShiftController controller) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.slate200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: InkWell(
+        onTap: () => Get.to(() => ShiftDetailsScreen(shift: shift)),
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const AppText('Rotation - May 2025 - Week 3', fontSize: 14, fontWeight: FontWeight.bold),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.green.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(4),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: shift.iconColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(shift.icon, color: shift.iconColor, size: 22),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Flexible(
+                              child: AppText(
+                                shift.name,
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                              decoration: BoxDecoration(
+                                color: AppColors.slate100,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: AppText(shift.code, fontSize: 9, color: AppColors.textColorSecondary),
+                            ),
+                          ],
                         ),
-                        child: const AppText('Active', fontSize: 10, fontWeight: FontWeight.bold, color: Colors.green),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            const Icon(Iconsax.clock, size: 14, color: AppColors.textColorHint),
+                            const SizedBox(width: 4),
+                            AppText(
+                              '${shift.startTime} - ${shift.endTime}',
+                              fontSize: 12,
+                              color: AppColors.textColorSecondary,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Status Badge & Menu
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: shift.isActive
+                              ? AppColors.successColor.withValues(alpha: 0.1)
+                              : AppColors.slate200,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: AppText(
+                          shift.isActive ? 'Active' : 'Inactive',
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: shift.isActive ? AppColors.successColor : AppColors.textColorSecondary,
+                        ),
+                      ),
+                      PopupMenuButton<String>(
+                        icon: const Icon(Icons.more_vert, size: 18, color: AppColors.textColorSecondary),
+                        padding: EdgeInsets.zero,
+                        onSelected: (val) {
+                          if (val == 'view') {
+                            Get.to(() => ShiftDetailsScreen(shift: shift));
+                          } else if (val == 'assign') {
+                            Get.to(() => const AssignShiftScreen());
+                          } else if (val == 'toggle') {
+                            controller.toggleShiftStatus(shift);
+                          } else if (val == 'duplicate') {
+                            controller.duplicateShift(shift);
+                          }
+                        },
+                        itemBuilder: (context) => [
+                          const PopupMenuItem(
+                            value: 'view',
+                            child: Row(
+                              children: [
+                                Icon(Iconsax.eye, size: 16),
+                                SizedBox(width: 8),
+                                AppText('View Details', fontSize: 12),
+                              ],
+                            ),
+                          ),
+                          const PopupMenuItem(
+                            value: 'assign',
+                            child: Row(
+                              children: [
+                                Icon(Iconsax.profile_2user, size: 16),
+                                SizedBox(width: 8),
+                                AppText('Assign Employees', fontSize: 12),
+                              ],
+                            ),
+                          ),
+                          const PopupMenuItem(
+                            value: 'duplicate',
+                            child: Row(
+                              children: [
+                                Icon(Iconsax.copy, size: 16),
+                                SizedBox(width: 8),
+                                AppText('Duplicate', fontSize: 12),
+                              ],
+                            ),
+                          ),
+                          PopupMenuItem(
+                            value: 'toggle',
+                            child: Row(
+                              children: [
+                                Icon(
+                                  shift.isActive ? Iconsax.slash : Iconsax.tick_circle,
+                                  size: 16,
+                                  color: shift.isActive ? Colors.red : Colors.green,
+                                ),
+                                const SizedBox(width: 8),
+                                AppText(shift.isActive ? 'Deactivate' : 'Activate', fontSize: 12),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                  const SizedBox(height: 4),
-                  const AppText('19 May 2025 - 25 May 2025', fontSize: 12, color: AppColors.textColorSecondary),
-                  const SizedBox(height: 4),
-                  const AppText('3 Shifts • 56 Employees', fontSize: 12, color: AppColors.textColorSecondary),
                 ],
               ),
-            ),
-            
-            const SizedBox(height: 40),
-          ],
+
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 10),
+                child: Divider(height: 1, color: AppColors.slate100),
+              ),
+
+              // Bottom Details Row: Employees & Type
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Iconsax.profile_2user, size: 14, color: AppColors.primaryColor),
+                      const SizedBox(width: 6),
+                      AppText(
+                        '${shift.employeesCount} Employees',
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textColorPrimary,
+                      ),
+                    ],
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppColors.slate100,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: AppText(
+                      shift.type,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.textColorSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -166,65 +556,6 @@ class ShiftManagementScreen extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           AppText(label, fontSize: 11, fontWeight: FontWeight.w600),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildOverviewStat(String label, String value, Color valueColor) {
-    return Column(
-      children: [
-        AppText(label, fontSize: 10, color: AppColors.textColorSecondary, textAlign: TextAlign.center),
-        const SizedBox(height: 8),
-        AppText(value, fontSize: 20, fontWeight: FontWeight.bold, color: valueColor),
-      ],
-    );
-  }
-
-  Widget _buildDivider() {
-    return Container(
-      height: 40,
-      width: 1,
-      color: AppColors.slate200,
-    );
-  }
-
-  Widget _buildShiftCard(String title, String time, String employees, IconData icon, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderColor),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: color, size: 24),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                AppText(title, fontSize: 14, fontWeight: FontWeight.bold),
-                const SizedBox(height: 4),
-                AppText(time, fontSize: 12, color: AppColors.textColorSecondary),
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              AppText(employees, fontSize: 16, fontWeight: FontWeight.bold, color: Colors.green),
-              const AppText('Employees', fontSize: 10, color: AppColors.textColorSecondary),
-            ],
-          ),
         ],
       ),
     );

@@ -6,6 +6,10 @@ import '../../../../core/widgets/app_text.dart';
 import '../controllers/employee_controller.dart';
 import '../models/employee_model.dart';
 import 'add_employee_screen.dart';
+import '../../../performance/controllers/performance_controller.dart';
+import '../../../performance/models/performance_model.dart';
+import '../../../performance/views/team_member_performance_screen.dart';
+import '../../../attendance/views/attendance_history_screen.dart';
 
 class EmployeeDetailScreen extends StatelessWidget {
   final EmployeeModel employee;
@@ -331,12 +335,45 @@ class EmployeeDetailScreen extends StatelessWidget {
             sliver: SliverList(
               delegate: SliverChildListDelegate([
                 // Employee Stats Row
-                Row(
-                  children: [
-                    Expanded(child: _buildStatCard('Performance', '94%', Iconsax.chart_21, Colors.purple)),
-                    const SizedBox(width: 15),
-                    Expanded(child: _buildStatCard('Attendance', '98%', Iconsax.user_tick, Colors.teal)),
-                  ],
+                Builder(
+                  builder: (context) {
+                    final perfController = Get.isRegistered<PerformanceController>()
+                        ? Get.find<PerformanceController>()
+                        : Get.put(PerformanceController());
+
+                    final matched = perfController.employees.firstWhereOrNull(
+                      (e) => e.name.toLowerCase() == employee.name.toLowerCase() || e.id == employee.id,
+                    );
+                    final perfScore = matched?.performanceScore ?? 94;
+
+                    return Row(
+                      children: [
+                        Expanded(
+                          child: _buildStatCard(
+                            'Performance',
+                            '$perfScore%',
+                            Iconsax.chart_21,
+                            Colors.purple,
+                            onTap: () => _openEmployeePerformance(context, employee, matched),
+                            showArrow: true,
+                            subLabel: 'View',
+                          ),
+                        ),
+                        const SizedBox(width: 15),
+                        Expanded(
+                          child: _buildStatCard(
+                            'Attendance',
+                            '98%',
+                            Iconsax.user_tick,
+                            Colors.teal,
+                            onTap: () => _openEmployeeAttendance(context, employee),
+                            showArrow: true,
+                            subLabel: 'View',
+                          ),
+                        ),
+                      ],
+                    );
+                  },
                 ),
                 const SizedBox(height: 25),
 
@@ -345,33 +382,83 @@ class EmployeeDetailScreen extends StatelessWidget {
                 const SizedBox(height: 12),
                 _buildModernInfoCard([
                   _InfoTile(icon: Iconsax.personalcard, label: 'Employee ID', value: employee.employeeId),
+                  _InfoTile(icon: Iconsax.status_up, label: 'Work Mode & Type', value: '${employee.workMode} • ${employee.employeeType}'),
+                  _InfoTile(icon: Iconsax.user_cirlce_add, label: 'Reporting Manager', value: employee.reportingManager.isNotEmpty ? employee.reportingManager : 'N/A'),
+                  _InfoTile(icon: Iconsax.timer_1, label: 'Lifecycle Status', value: '${employee.employmentStatus} (Probation: ${employee.probationPeriod})'),
+                  _InfoTile(icon: Iconsax.clock, label: 'Notice Period', value: employee.noticePeriod),
                   _InfoTile(icon: Iconsax.calendar_tick, label: 'Date of Joining', value: employee.joiningDate),
-                  _InfoTile(icon: Iconsax.wallet_money, label: 'Monthly Salary', value: '₹${employee.salary.toStringAsFixed(0)}'),
                 ]),
                 const SizedBox(height: 25),
 
-                // Personal Details
-                _buildSectionTitle('Personal & Contact'),
+                // Compensation & Target
+                _buildSectionTitle('Compensation & Goals'),
+                const SizedBox(height: 12),
+                _buildModernInfoCard([
+                  _InfoTile(icon: Iconsax.wallet_money, label: 'Salary (${employee.salaryType})', value: '₹${employee.salary.toStringAsFixed(0)}'),
+                  if (employee.hasSalesTarget) ...[
+                    _InfoTile(
+                      icon: Iconsax.chart_21,
+                      label: 'Sales Target (${employee.targetPeriod})',
+                      value: employee.targetType == 'Revenue' ? '₹${employee.targetAmount}' : '${employee.targetAmount} ${employee.targetType}',
+                    ),
+                    _InfoTile(icon: Iconsax.percentage_circle, label: 'Incentive Commission', value: '${employee.incentivePercent}% on achievement'),
+                  ],
+                ]),
+                const SizedBox(height: 25),
+
+                // Personal & Address Details
+                _buildSectionTitle('Personal & Address'),
                 const SizedBox(height: 12),
                 _buildModernInfoCard([
                   _InfoTile(icon: Iconsax.sms, label: 'Work Email', value: employee.email),
-                  _InfoTile(icon: Iconsax.call_calling, label: 'Emergency Contact', value: employee.emergencyContact),
-                  _InfoTile(icon: Iconsax.location, label: 'Office Address', value: employee.address),
+                  _InfoTile(icon: Iconsax.call, label: 'Mobile Number', value: employee.mobile),
+                  if (employee.alternateMobile.isNotEmpty)
+                    _InfoTile(icon: Iconsax.call_calling, label: 'Alternate Mobile', value: employee.alternateMobile),
+                  if (employee.emergencyContact.isNotEmpty)
+                    _InfoTile(icon: Iconsax.security_user, label: 'Emergency Contact', value: employee.emergencyContact),
+                  _InfoTile(
+                    icon: Iconsax.location,
+                    label: 'Complete Address',
+                    value: [
+                      employee.address,
+                      if (employee.city.isNotEmpty) employee.city,
+                      if (employee.state.isNotEmpty) employee.state,
+                      if (employee.pincode.isNotEmpty) 'PIN: ${employee.pincode}',
+                      if (employee.country.isNotEmpty) employee.country,
+                    ].where((s) => s.isNotEmpty).join(', '),
+                  ),
                 ]),
                 const SizedBox(height: 25),
 
+                // Bank Details
+                if (employee.accountNumber.isNotEmpty || employee.bankName.isNotEmpty) ...[
+                  _buildSectionTitle('Bank Account (Payroll)'),
+                  const SizedBox(height: 12),
+                  _buildModernInfoCard([
+                    _InfoTile(icon: Iconsax.user, label: 'Account Holder', value: employee.accountHolderName.isNotEmpty ? employee.accountHolderName : employee.name),
+                    _InfoTile(icon: Iconsax.bank, label: 'Bank Name', value: employee.bankName),
+                    _InfoTile(icon: Iconsax.card_pos, label: 'Account Number', value: employee.accountNumber),
+                    _InfoTile(icon: Iconsax.code, label: 'IFSC Code', value: employee.ifscCode),
+                    if (employee.branchName.isNotEmpty)
+                      _InfoTile(icon: Iconsax.buildings, label: 'Branch', value: employee.branchName),
+                  ]),
+                  const SizedBox(height: 25),
+                ],
+
                 // Skills
-                _buildSectionTitle('Expertise'),
+                _buildSectionTitle('Expertise & Skills'),
                 const SizedBox(height: 12),
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24)),
-                  child: Wrap(
-                    spacing: 10,
-                    runSpacing: 10,
-                    children: employee.skills.map((skill) => _buildSkillChip(skill)).toList(),
-                  ),
+                  child: employee.skills.isEmpty
+                      ? const AppText('No skills listed', fontSize: 12, color: AppColors.textColorHint)
+                      : Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          children: employee.skills.map((skill) => _buildSkillChip(skill)).toList(),
+                        ),
                 ),
                 const SizedBox(height: 100),
               ]),
@@ -406,24 +493,103 @@ class EmployeeDetailScreen extends StatelessWidget {
 
   Widget _buildDivider() => Container(width: 1, height: 30, color: const Color(0xFFF1F5F9));
 
-  Widget _buildStatCard(String label, String value, IconData icon, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(24)),
-      child: Row(
-        children: [
-          Icon(icon, color: color, size: 20),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildStatCard(
+    String label,
+    String value,
+    IconData icon,
+    Color color, {
+    VoidCallback? onTap,
+    bool showArrow = false,
+    String? subLabel,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(24),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(24),
+            border: onTap != null
+                ? Border.all(color: color.withValues(alpha: 0.3), width: 1.5)
+                : null,
+          ),
+          child: Row(
             children: [
-              AppText(label, fontSize: 10, color: color, fontWeight: FontWeight.w700),
-              AppText(value, fontSize: 18, fontWeight: FontWeight.w900, color: color),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: color, size: 20),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        AppText(label, fontSize: 10, color: color, fontWeight: FontWeight.w700),
+                        if (subLabel != null) ...[
+                          const SizedBox(width: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: color.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: AppText(subLabel, fontSize: 8, color: color, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    AppText(value, fontSize: 18, fontWeight: FontWeight.w900, color: color),
+                  ],
+                ),
+              ),
+              if (showArrow)
+                Icon(Icons.arrow_forward_ios_rounded, size: 12, color: color.withValues(alpha: 0.8)),
             ],
           ),
-        ],
+        ),
       ),
     );
+  }
+
+  void _openEmployeePerformance(
+    BuildContext context,
+    EmployeeModel emp,
+    EmployeePerformance? matchedPerf,
+  ) {
+    final targetEmp = matchedPerf ??
+        EmployeePerformance(
+          id: emp.id,
+          name: emp.name,
+          designation: emp.designation.isNotEmpty ? emp.designation : 'Executive',
+          department: emp.department.isNotEmpty ? emp.department : 'Engineering',
+          performanceScore: 94,
+          ratingLabel: 'Excellent',
+          imageUrl: emp.profilePic != null && emp.profilePic!.isNotEmpty
+              ? emp.profilePic!
+              : 'https://i.pravatar.cc/150?u=${emp.name.replaceAll(' ', '')}',
+          rank: 1,
+        );
+
+    Get.to(() => TeamMemberPerformanceScreen(emp: targetEmp));
+  }
+
+  void _openEmployeeAttendance(BuildContext context, EmployeeModel emp) {
+    Get.to(() => AttendanceHistoryScreen(
+      showBackButton: true,
+      employeeName: emp.name,
+      employeeId: emp.employeeId,
+      employeeDesignation: emp.designation,
+    ));
   }
 
   Widget _buildSkillChip(String skill) {

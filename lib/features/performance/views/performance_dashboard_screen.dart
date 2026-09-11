@@ -16,7 +16,7 @@ class PerformanceDashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.put(PerformanceController());
+    Get.put(PerformanceController());
 
     return Scaffold(
       backgroundColor: AppColors.scaffoldBackgroundColor,

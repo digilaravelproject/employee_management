@@ -6,7 +6,6 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_text.dart';
 import '../controllers/attendance_history_controller.dart';
-import '../models/attendance_history_model.dart';
 
 class AttendanceDayDetailsScreen extends StatelessWidget {
   const AttendanceDayDetailsScreen({super.key});
