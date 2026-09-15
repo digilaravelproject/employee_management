@@ -22,12 +22,12 @@ class LeaveApprovalScreen extends StatelessWidget {
         ),
         title: const AppText('Leave Approval', fontSize: 18, fontWeight: FontWeight.bold),
         centerTitle: false,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.more_vert, color: AppColors.textColorPrimary),
-            onPressed: () {},
-          ),
-        ],
+        // actions: [
+        //   IconButton(
+        //     icon: const Icon(Icons.more_vert, color: AppColors.textColorPrimary),
+        //     onPressed: () {},
+        //   ),
+        // ],
       ),
       body: Column(
         children: [

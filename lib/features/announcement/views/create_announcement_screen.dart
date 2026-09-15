@@ -6,6 +6,7 @@ import 'package:iconsax/iconsax.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_text.dart';
+import '../widgets/audience_picker_bottom_sheet.dart';
 
 class CreateAnnouncementScreen extends StatefulWidget {
   const CreateAnnouncementScreen({super.key});
@@ -18,6 +19,10 @@ class _CreateAnnouncementScreenState extends State<CreateAnnouncementScreen> {
   String _selectedType = 'General';
   String _selectedAudience = 'All Employees';
   String _selectedPriority = 'Normal';
+
+  final List<String> _selectedDepartments = [];
+  final List<String> _selectedDesignations = [];
+  final List<String> _selectedEmployees = [];
 
   bool _notifyInApp = true;
   bool _notifyEmail = true;
@@ -174,24 +179,95 @@ class _CreateAnnouncementScreenState extends State<CreateAnnouncementScreen> {
                     ],
                   ),
                   
-                  const SizedBox(height: 16),
+                  // Dynamic Audience Field
+                  if (_selectedAudience == 'Specific Department') ...[
+                    const SizedBox(height: 16),
+                    _buildRequiredLabel('Target Department(s)'),
+                    const SizedBox(height: 8),
+                    GestureDetector(
+                      onTap: () => _openDepartmentPicker(context),
+                      child: _buildAudienceDropdownField(
+                        title: _selectedDepartments.isEmpty
+                            ? 'Select Department(s)...'
+                            : _selectedDepartments.join(', '),
+                        icon: Iconsax.buildings,
+                        hasSelection: _selectedDepartments.isNotEmpty,
+                        badgeCount: _selectedDepartments.length,
+                      ),
+                    ),
+                    if (_selectedDepartments.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      _buildSelectedChips(
+                        items: _selectedDepartments,
+                        onRemove: (item) {
+                          setState(() {
+                            _selectedDepartments.remove(item);
+                          });
+                        },
+                      ),
+                    ],
+                  ] else if (_selectedAudience == 'Specific Designation') ...[
+                    const SizedBox(height: 16),
+                    _buildRequiredLabel('Target Designation(s)'),
+                    const SizedBox(height: 8),
+                    GestureDetector(
+                      onTap: () => _openDesignationPicker(context),
+                      child: _buildAudienceDropdownField(
+                        title: _selectedDesignations.isEmpty
+                            ? 'Select Designation(s)...'
+                            : _selectedDesignations.join(', '),
+                        icon: Iconsax.briefcase,
+                        hasSelection: _selectedDesignations.isNotEmpty,
+                        badgeCount: _selectedDesignations.length,
+                      ),
+                    ),
+                    if (_selectedDesignations.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      _buildSelectedChips(
+                        items: _selectedDesignations,
+                        onRemove: (item) {
+                          setState(() {
+                            _selectedDesignations.remove(item);
+                          });
+                        },
+                      ),
+                    ],
+                  ] else if (_selectedAudience == 'Custom Employees') ...[
+                    const SizedBox(height: 16),
+                    _buildRequiredLabel('Target Employee(s)'),
+                    const SizedBox(height: 8),
+                    GestureDetector(
+                      onTap: () => _openEmployeePicker(context),
+                      child: _buildAudienceDropdownField(
+                        title: _selectedEmployees.isEmpty
+                            ? 'Select Employee(s)...'
+                            : '${_selectedEmployees.length} employee(s) selected',
+                        icon: Iconsax.profile_2user,
+                        hasSelection: _selectedEmployees.isNotEmpty,
+                        badgeCount: _selectedEmployees.length,
+                      ),
+                    ),
+                    if (_selectedEmployees.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      _buildSelectedChips(
+                        items: _getEmployeeDisplayNames(_selectedEmployees),
+                        onRemove: (name) {
+                          final allEmps = AudienceDataHelper.getEmployeeItems();
+                          final matched = allEmps.firstWhereOrNull((e) => e.title == name);
+                          setState(() {
+                            if (matched != null) {
+                              _selectedEmployees.remove(matched.id);
+                            } else {
+                              _selectedEmployees.remove(name);
+                            }
+                          });
+                        },
+                      ),
+                    ],
+                  ],
                   
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryLight,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Iconsax.people, color: AppColors.primaryColor, size: 20),
-                        const SizedBox(width: 12),
-                        const Expanded(
-                          child: AppText('This announcement will be visible to all employees.', fontSize: 12, color: AppColors.primaryColor),
-                        ),
-                      ],
-                    ),
-                  ),
+                  const SizedBox(height: 16),
+                  _buildAudienceInfoBanner(),
                   
                   const SizedBox(height: 24),
                   
@@ -314,18 +390,18 @@ class _CreateAnnouncementScreenState extends State<CreateAnnouncementScreen> {
               top: false,
               child: Row(
                 children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Get.back(),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        side: const BorderSide(color: AppColors.primaryColor),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      child: const AppText('Save as Draft', fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primaryColor),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
+                  // Expanded(
+                  //   child: OutlinedButton(
+                  //     onPressed: () => Get.back(),
+                  //     style: OutlinedButton.styleFrom(
+                  //       padding: const EdgeInsets.symmetric(vertical: 16),
+                  //       side: const BorderSide(color: AppColors.primaryColor),
+                  //       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  //     ),
+                  //     child: const AppText('Save as Draft', fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primaryColor),
+                  //   ),
+                  // ),
+                  // const SizedBox(width: 16),
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () {
@@ -462,7 +538,16 @@ class _CreateAnnouncementScreenState extends State<CreateAnnouncementScreen> {
   Widget _buildRadioOption(String label) {
     final isSelected = _selectedAudience == label;
     return GestureDetector(
-      onTap: () => setState(() => _selectedAudience = label),
+      onTap: () {
+        setState(() => _selectedAudience = label);
+        if (label == 'Specific Department' && _selectedDepartments.isEmpty) {
+          _openDepartmentPicker(context);
+        } else if (label == 'Specific Designation' && _selectedDesignations.isEmpty) {
+          _openDesignationPicker(context);
+        } else if (label == 'Custom Employees' && _selectedEmployees.isEmpty) {
+          _openEmployeePicker(context);
+        }
+      },
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -479,6 +564,228 @@ class _CreateAnnouncementScreenState extends State<CreateAnnouncementScreen> {
           ),
           const SizedBox(width: 8),
           AppText(label, fontSize: 12, fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _openDepartmentPicker(BuildContext context) async {
+    final result = await AudiencePickerBottomSheet.show(
+      context: context,
+      title: 'Select Department',
+      searchHint: 'Search departments...',
+      items: AudienceDataHelper.getDepartmentItems(),
+      initialSelected: _selectedDepartments,
+    );
+    if (result != null) {
+      setState(() {
+        _selectedDepartments.clear();
+        _selectedDepartments.addAll(result);
+      });
+    }
+  }
+
+  Future<void> _openDesignationPicker(BuildContext context) async {
+    final result = await AudiencePickerBottomSheet.show(
+      context: context,
+      title: 'Select Designation',
+      searchHint: 'Search designations...',
+      items: AudienceDataHelper.getDesignationItems(),
+      initialSelected: _selectedDesignations,
+    );
+    if (result != null) {
+      setState(() {
+        _selectedDesignations.clear();
+        _selectedDesignations.addAll(result);
+      });
+    }
+  }
+
+  Future<void> _openEmployeePicker(BuildContext context) async {
+    final result = await AudiencePickerBottomSheet.show(
+      context: context,
+      title: 'Select Custom Employees',
+      searchHint: 'Search employee name, role or dept...',
+      items: AudienceDataHelper.getEmployeeItems(),
+      initialSelected: _selectedEmployees,
+    );
+    if (result != null) {
+      setState(() {
+        _selectedEmployees.clear();
+        _selectedEmployees.addAll(result);
+      });
+    }
+  }
+
+  Widget _buildAudienceDropdownField({
+    required String title,
+    required IconData icon,
+    required bool hasSelection,
+    int badgeCount = 0,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: hasSelection ? Colors.white : AppColors.slate50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: hasSelection ? AppColors.primaryColor : AppColors.slate200,
+          width: hasSelection ? 1.2 : 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: hasSelection ? AppColors.primaryColor : AppColors.textColorSecondary, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: AppText(
+              title,
+              fontSize: 13,
+              fontWeight: hasSelection ? FontWeight.w600 : FontWeight.w400,
+              color: hasSelection ? AppColors.textColorPrimary : AppColors.textColorHint,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          if (badgeCount > 0) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: AppColors.primaryLight,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: AppText(
+                '$badgeCount',
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: AppColors.primaryColor,
+              ),
+            ),
+            const SizedBox(width: 6),
+          ],
+          const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textColorSecondary, size: 20),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSelectedChips({
+    required List<String> items,
+    required Function(String) onRemove,
+  }) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: items.map((item) {
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: AppColors.primaryLight.withValues(alpha: 0.6),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppColors.primaryColor.withValues(alpha: 0.2)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 180),
+                child: AppText(
+                  item,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.primaryColor,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 6),
+              GestureDetector(
+                onTap: () => onRemove(item),
+                child: Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryColor.withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.close_rounded, size: 12, color: AppColors.primaryColor),
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  List<String> _getEmployeeDisplayNames(List<String> ids) {
+    final allEmps = AudienceDataHelper.getEmployeeItems();
+    return ids.map((id) {
+      final match = allEmps.firstWhereOrNull((e) => e.id == id);
+      return match?.title ?? id;
+    }).toList();
+  }
+
+  Widget _buildAudienceInfoBanner() {
+    String infoText = '';
+    IconData infoIcon = Iconsax.people;
+    Color infoColor = AppColors.primaryColor;
+    Color infoBg = AppColors.primaryLight;
+
+    if (_selectedAudience == 'All Employees') {
+      infoText = 'This announcement will be visible to all company employees.';
+      infoIcon = Iconsax.people;
+    } else if (_selectedAudience == 'Specific Department') {
+      if (_selectedDepartments.isEmpty) {
+        infoText = 'Please tap above to choose target department(s).';
+        infoIcon = Iconsax.info_circle;
+        infoColor = const Color(0xFFD97706);
+        infoBg = const Color(0xFFFEF3C7);
+      } else {
+        infoText = 'Visible only to employees in: ${_selectedDepartments.join(", ")}.';
+        infoIcon = Iconsax.buildings;
+      }
+    } else if (_selectedAudience == 'Specific Designation') {
+      if (_selectedDesignations.isEmpty) {
+        infoText = 'Please tap above to choose target designation(s).';
+        infoIcon = Iconsax.info_circle;
+        infoColor = const Color(0xFFD97706);
+        infoBg = const Color(0xFFFEF3C7);
+      } else {
+        infoText = 'Visible only to employees with role: ${_selectedDesignations.join(", ")}.';
+        infoIcon = Iconsax.briefcase;
+      }
+    } else if (_selectedAudience == 'Custom Employees') {
+      if (_selectedEmployees.isEmpty) {
+        infoText = 'Please tap above to select target employee(s).';
+        infoIcon = Iconsax.info_circle;
+        infoColor = const Color(0xFFD97706);
+        infoBg = const Color(0xFFFEF3C7);
+      } else {
+        final names = _getEmployeeDisplayNames(_selectedEmployees);
+        infoText = 'Visible to ${_selectedEmployees.length} employee(s): ${names.take(3).join(", ")}${names.length > 3 ? " +${names.length - 3} more" : ""}.';
+        infoIcon = Iconsax.user_tick;
+      }
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: infoBg,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: infoColor.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        children: [
+          Icon(infoIcon, color: infoColor, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: AppText(
+              infoText,
+              fontSize: 12,
+              color: infoColor,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
         ],
       ),
     );
@@ -511,13 +818,6 @@ class _CreateAnnouncementScreenState extends State<CreateAnnouncementScreen> {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildToolbarIcon(IconData icon) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: Icon(icon, color: AppColors.textColorPrimary, size: 18),
     );
   }
 
