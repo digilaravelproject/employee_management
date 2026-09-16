@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_text.dart';
+import '../../../core/controllers/app_controller.dart';
 import '../../role_permissions/models/role_permission_models.dart';
 import '../controllers/projects_controller.dart';
 import '../models/project_model.dart';
@@ -54,6 +55,9 @@ class ProjectDetailsScreen extends StatelessWidget {
           Obx(() {
             final project = controller.selectedProject.value;
             if (project == null) return const SizedBox();
+            final appController = Get.isRegistered<AppController>() ? Get.find<AppController>() : null;
+            final isEmployee = appController?.userRole.value.toLowerCase() == 'employee';
+            if (isEmployee) return const SizedBox();
             return PopupMenuButton<String>(
               icon: const Icon(Icons.more_vert_rounded, color: AppColors.textColorHint),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -339,9 +343,10 @@ class _OverviewTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = Get.find<ProjectsController>();
-    final done = project.tasks.where((t) => t.status == 'Done').length;
+    final done = project.tasks.where((t) => t.status == 'Done' || t.status == 'Completed').length;
     final inProgress = project.tasks.where((t) => t.status == 'In Progress').length;
-    final pending = project.tasks.where((t) => t.status == 'To Do' || t.status == 'Review').length;
+    final testing = project.tasks.where((t) => t.status == 'Testing' || t.status == 'Review').length;
+    final pending = project.tasks.where((t) => t.status == 'To Do').length;
     final total = project.tasks.length;
 
     return SingleChildScrollView(
@@ -501,10 +506,12 @@ class _OverviewTab extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildBulletMetric('Completed', done, AppColors.successColor, total),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 8),
                       _buildBulletMetric('In Progress', inProgress, AppColors.primaryColor, total),
-                      const SizedBox(height: 10),
-                      _buildBulletMetric('Pending', pending, AppColors.warningColor, total),
+                      const SizedBox(height: 8),
+                      _buildBulletMetric('Testing', testing, const Color(0xFF6366F1), total),
+                      const SizedBox(height: 8),
+                      _buildBulletMetric('To Do', pending, AppColors.warningColor, total),
                     ],
                   ),
                 ),
@@ -787,10 +794,27 @@ class _TasksTab extends StatelessWidget {
     }
   }
 
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'done':
+      case 'completed':
+        return AppColors.successColor;
+      case 'in progress':
+      case 'inprogress':
+        return AppColors.primaryColor;
+      case 'testing':
+      case 'review':
+        return const Color(0xFF6366F1);
+      case 'to do':
+      default:
+        return AppColors.slate500;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final controller = Get.find<ProjectsController>();
-    final taskTabs = ['All', 'To Do', 'In Progress', 'Done'];
+    final taskTabs = ['All', 'To Do', 'In Progress', 'Testing', 'Done'];
     final selectedSubTab = 'All'.obs;
 
     return Column(
@@ -849,6 +873,8 @@ class _TasksTab extends StatelessWidget {
             final filter = selectedSubTab.value;
             final tList = project.tasks.where((t) {
               if (filter == 'All') return true;
+              if (filter == 'Done') return t.status == 'Done' || t.status == 'Completed';
+              if (filter == 'Testing') return t.status == 'Testing' || t.status == 'Review';
               return t.status == filter;
             }).toList();
 
@@ -862,8 +888,9 @@ class _TasksTab extends StatelessWidget {
               separatorBuilder: (context, idx) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
                 final task = tList[index];
-                final isDone = task.status == 'Done';
+                final isDone = task.status == 'Done' || task.status == 'Completed';
                 final categoryColor = _getCategoryColor(task.category);
+                final statusColor = _getStatusColor(task.status);
 
                 return Container(
                   padding: const EdgeInsets.all(16),
@@ -942,6 +969,20 @@ class _TasksTab extends StatelessWidget {
                                     color: categoryColor,
                                   ),
                                 ),
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: statusColor.withValues(alpha: 0.08),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: AppText(
+                                    task.status, 
+                                    fontSize: 9, 
+                                    fontWeight: FontWeight.bold, 
+                                    color: statusColor,
+                                  ),
+                                ),
                                 const SizedBox(width: 12),
                                 const Icon(Iconsax.calendar, size: 12, color: AppColors.textColorHint),
                                 const SizedBox(width: 4),
@@ -970,28 +1011,35 @@ class _TasksTab extends StatelessWidget {
           }),
         ),
 
-        // "+ Add Task" capsule action button
-        Container(
-          color: Colors.white,
-          padding: const EdgeInsets.all(16),
-          child: SafeArea(
-            top: false,
-            child: SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: ElevatedButton.icon(
-                onPressed: () => _showAddTaskSheet(context, controller, project),
-                icon: const Icon(Iconsax.add, size: 16, color: Colors.white),
-                label: const AppText('Add Task', fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryColor, // Premium Blue
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  elevation: 0,
+        // "+ Add Task" capsule action button (Admin / Manager only)
+        Obx(() {
+          final appController = Get.isRegistered<AppController>() ? Get.find<AppController>() : null;
+          final isEmployee = appController?.userRole.value.toLowerCase() == 'employee';
+          if (isEmployee) return const SizedBox.shrink();
+
+          return Container(
+            color: Colors.white,
+            padding: const EdgeInsets.all(16),
+            child: SafeArea(
+              top: false,
+              child: SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton.icon(
+                  onPressed: () => _showAddTaskSheet(context, controller, project),
+                  icon: const Icon(Iconsax.add, size: 16, color: Colors.white),
+                  label: const AppText('Add Task', fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white, height: 1.1),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryColor,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    elevation: 0,
+                  ),
                 ),
               ),
             ),
-          ),
-        ),
+          );
+        }),
       ],
     );
   }

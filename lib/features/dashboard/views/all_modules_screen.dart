@@ -22,6 +22,9 @@ import '../../reports/views/reports_dashboard_screen.dart';
 import '../../security/views/security_dashboard_screen.dart';
 import '../../chat/views/chat_list_screen.dart';
 import '../../documents/views/documents_dashboard_screen.dart';
+import '../../employee/designation/views/designation_list_screen.dart';
+import '../../shift_management/views/shift_management_screen.dart';
+import '../../employee/management/views/employee_list_screen.dart';
 
 
 class AllModulesScreen extends StatelessWidget {
@@ -490,14 +493,29 @@ class _ModulesGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final List<_ModuleItem> modules = [
       const _ModuleItem(
-        label: 'Role',
-        icon: Iconsax.element_4,
+        label: 'Department',
+        icon: Iconsax.buildings,
         color: Color(0xFF6366F1), // Indigo
       ),
       const _ModuleItem(
-        label: 'Department',
-        icon: Iconsax.element_4,
-        color: Color(0xFF6366F1), // Indigo
+        label: 'Role',
+        icon: Iconsax.shield_security,
+        color: Color(0xFF8B5CF6), // Purple
+      ),
+      const _ModuleItem(
+        label: 'Designation',
+        icon: Iconsax.user_tag,
+        color: Color(0xFF3B82F6), // Blue
+      ),
+      const _ModuleItem(
+        label: 'Shift',
+        icon: Iconsax.clock,
+        color: Color(0xFF10B981), // Emerald
+      ),
+      const _ModuleItem(
+        label: 'Employee',
+        icon: Iconsax.profile_2user,
+        color: Color(0xFFF59E0B), // Amber
       ),
       const _ModuleItem(
         label: 'Projects',
@@ -672,10 +690,16 @@ class _ModuleCard extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: () {
-            if (item.label == 'Roles & Permissions' || item.label == 'Role') {
-              Get.to(() => const RoleListScreen());
-            } else if (item.label == 'Department') {
+            if (item.label == 'Department') {
               Get.to(() => const DepartmentListScreen());
+            } else if (item.label == 'Roles & Permissions' || item.label == 'Role') {
+              Get.to(() => const RoleListScreen());
+            } else if (item.label == 'Designation') {
+              Get.to(() => const DesignationListScreen());
+            } else if (item.label == 'Shift' || item.label == 'Shifts & Roster') {
+              Get.to(() => const ShiftManagementScreen());
+            } else if (item.label == 'Employee') {
+              Get.to(() => const EmployeeListScreen());
             } else if (item.label == 'Projects') {
               Get.to(() => const ProjectListScreen());
             } else if (item.label == 'Tasks') {

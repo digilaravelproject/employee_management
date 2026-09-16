@@ -38,6 +38,8 @@ class CustomPrimaryButton extends StatelessWidget {
           ),
           disabledBackgroundColor: Colors.grey.shade400,
           disabledForegroundColor: AppColors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+          alignment: Alignment.center,
         ),
         child: isLoading
             ? const SizedBox(
@@ -54,6 +56,7 @@ class CustomPrimaryButton extends StatelessWidget {
                   fontSize: fontSize,
                   fontWeight: FontWeight.bold,
                   letterSpacing: 0.5,
+                  height: 1.15,
                 ),
               ),
       ),

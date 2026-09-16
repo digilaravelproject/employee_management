@@ -40,12 +40,6 @@ class SalaryEmployeeListScreen extends StatelessWidget {
           color: AppColors.textColorPrimary,
         ),
         centerTitle: false,
-        actions: [
-          IconButton(
-            icon: const Icon(Iconsax.setting_4, color: AppColors.textColorSecondary),
-            onPressed: () {},
-          ),
-        ],
       ),
       body: Column(
         children: [
@@ -118,16 +112,6 @@ class SalaryEmployeeListScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 10),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AppColors.slate50,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.slate100),
-                  ),
-                  child: const Icon(Iconsax.filter_search, color: AppColors.textColorSecondary, size: 18),
                 ),
               ],
             ),

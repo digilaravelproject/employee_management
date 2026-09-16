@@ -42,14 +42,6 @@ class LeadsListScreen extends StatelessWidget {
         ),
         centerTitle: false,
         actions: [
-          IconButton(
-            icon: const Icon(Iconsax.filter, color: AppColors.textColorSecondary),
-            onPressed: () {
-              // Reset filters
-              controller.selectedFilter.value = 'All';
-              controller.searchQuery.value = '';
-            },
-          ),
           Padding(
             padding: const EdgeInsets.only(right: 16.0, left: 8.0, top: 8.0, bottom: 8.0),
             child: GestureDetector(

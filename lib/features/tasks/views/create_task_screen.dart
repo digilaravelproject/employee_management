@@ -8,7 +8,14 @@ import '../controllers/tasks_controller.dart';
 import 'assign_task_screen.dart';
 
 class CreateTaskScreen extends StatelessWidget {
-  const CreateTaskScreen({super.key});
+  final bool isEditMode;
+  final String? taskId;
+
+  const CreateTaskScreen({
+    super.key,
+    this.isEditMode = false,
+    this.taskId,
+  });
 
   Color _getPriorityColor(String prio) {
     switch (prio.toLowerCase()) {
@@ -34,7 +41,7 @@ class CreateTaskScreen extends StatelessWidget {
     final projController = Get.find<ProjectsController>();
 
     final priorityOptions = ['Low', 'Medium', 'High'];
-    final statusOptions = ['Pending', 'In Progress', 'Review', 'Completed'];
+    final statusOptions = ['To Do', 'In Progress', 'Testing', 'Completed'];
 
     return Scaffold(
       backgroundColor: AppColors.scaffoldBackgroundColor,
@@ -54,17 +61,17 @@ class CreateTaskScreen extends StatelessWidget {
             ),
           ),
         ),
-        title: const Column(
+        title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             AppText(
-              'Create Task',
+              isEditMode ? 'Edit Task' : 'Create Task',
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: AppColors.textColorPrimary,
             ),
             AppText(
-              'Add a new task',
+              isEditMode ? 'Update task parameters' : 'Add a new task',
               fontSize: 11,
               fontWeight: FontWeight.w500,
               color: AppColors.textColorHint,
@@ -73,9 +80,15 @@ class CreateTaskScreen extends StatelessWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => controller.saveTask(),
-            child: const AppText(
-              'Save',
+            onPressed: () {
+              if (isEditMode && taskId != null) {
+                controller.updateExistingTask(taskId!);
+              } else {
+                controller.saveTask();
+              }
+            },
+            child: AppText(
+              isEditMode ? 'Update' : 'Save',
               fontSize: 13,
               fontWeight: FontWeight.bold,
               color: AppColors.primaryColor,
@@ -428,7 +441,10 @@ class CreateTaskScreen extends StatelessWidget {
                     ),
                     child: DropdownButtonHideUnderline(
                       child: Obx(() {
-                        final currentStatus = controller.selectedStatus.value;
+                        final rawStatus = controller.selectedStatus.value;
+                        final currentStatus = statusOptions.contains(rawStatus)
+                            ? rawStatus
+                            : (rawStatus == 'Pending' ? 'To Do' : (rawStatus == 'Review' ? 'Testing' : 'To Do'));
 
                         return DropdownButton<String>(
                           value: currentStatus,
@@ -548,13 +564,24 @@ class CreateTaskScreen extends StatelessWidget {
             width: double.infinity,
             height: 48,
             child: ElevatedButton(
-              onPressed: () => controller.saveTask(),
+              onPressed: () {
+                if (isEditMode && taskId != null) {
+                  controller.updateExistingTask(taskId!);
+                } else {
+                  controller.saveTask();
+                }
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primaryColor,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 elevation: 0,
               ),
-              child: const AppText('Create Task', fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
+              child: AppText(
+                isEditMode ? 'Update Task' : 'Create Task',
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
             ),
           ),
         ),

@@ -109,16 +109,6 @@ class ComplianceTrackingScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(width: 10),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                  ),
-                  child: const Icon(Iconsax.filter, color: Color(0xFF64748B), size: 18),
-                ),
               ],
             ),
           ),

@@ -66,10 +66,53 @@ ThemeData darkTheme = ThemeData(
       backgroundColor: AppColors.darkPrimaryColor,
       foregroundColor: AppColors.white,
       elevation: 0,
+      minimumSize: const Size(64, 44),
+      alignment: Alignment.center,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
       ),
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+      textStyle: const TextStyle(
+        fontSize: 15,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 0.3,
+        height: 1.1,
+      ),
+    ),
+  ),
+  outlinedButtonTheme: OutlinedButtonThemeData(
+    style: OutlinedButton.styleFrom(
+      foregroundColor: AppColors.darkPrimaryColor,
+      elevation: 0,
+      minimumSize: const Size(64, 44),
+      alignment: Alignment.center,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      side: const BorderSide(color: AppColors.darkPrimaryColor, width: 1.2),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+      textStyle: const TextStyle(
+        fontSize: 15,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 0.3,
+        height: 1.1,
+      ),
+    ),
+  ),
+  textButtonTheme: TextButtonThemeData(
+    style: TextButton.styleFrom(
+      foregroundColor: AppColors.darkPrimaryColor,
+      minimumSize: const Size(48, 36),
+      alignment: Alignment.center,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+      textStyle: const TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+        height: 1.1,
+      ),
     ),
   ),
 );

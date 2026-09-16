@@ -107,20 +107,6 @@ class RoleListScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AppColors.slate50,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppColors.slate100),
-                  ),
-                  child: const Icon(
-                    Iconsax.setting_4,
-                    color: AppColors.textColorSecondary,
-                    size: 18,
-                  ),
-                ),
               ],
             ),
           ),

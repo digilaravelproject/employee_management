@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../role_permissions/models/role_permission_models.dart';
 import '../models/project_model.dart';
+import '../../tasks/controllers/tasks_controller.dart';
 
 class ProjectsController extends GetxController {
   // Reactive projects list
@@ -414,13 +415,32 @@ class ProjectsController extends GetxController {
       return task;
     }).toList();
 
-    final updated = current.copyWith(tasks: updatedTasks);
+    // Auto-update project overall status based on tasks progress
+    String projectOverallStatus = current.status;
+    final totalTasks = updatedTasks.length;
+    final doneTasks = updatedTasks.where((t) => t.status == 'Done' || t.status == 'Completed').length;
+    final inProgressTasks = updatedTasks.where((t) => t.status == 'In Progress' || t.status == 'Testing').length;
+
+    if (totalTasks > 0 && doneTasks == totalTasks) {
+      projectOverallStatus = 'Completed';
+    } else if (inProgressTasks > 0 || doneTasks > 0) {
+      if (projectOverallStatus == 'Not Started') {
+        projectOverallStatus = 'In Progress';
+      }
+    }
+
+    final updated = current.copyWith(tasks: updatedTasks, status: projectOverallStatus);
 
     final idx = projects.indexWhere((p) => p.id == current.id);
     if (idx != -1) {
       projects[idx] = updated;
     }
     selectedProject.value = updated;
+
+    // Sync back to TasksController if registered
+    if (Get.isRegistered<TasksController>()) {
+      Get.find<TasksController>().syncStatusFromProject(taskId, newStatus);
+    }
   }
 
   // Remove member from project details/edit screen

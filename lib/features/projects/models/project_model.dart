@@ -96,7 +96,7 @@ class Project {
   // Dynamic progress calculation based on tasks
   double get progressPercentage {
     if (tasks.isEmpty) return 0.0;
-    final doneCount = tasks.where((task) => task.status == 'Done').length;
+    final doneCount = tasks.where((task) => task.status == 'Done' || task.status == 'Completed').length;
     return (doneCount / tasks.length);
   }
 

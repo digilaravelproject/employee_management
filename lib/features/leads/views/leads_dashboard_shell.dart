@@ -47,31 +47,31 @@ class LeadsDashboardShell extends StatelessWidget {
         centerTitle: false,
         actions: [
           // Symmetrical Toggle ListView/KanbanView Button (only on Leads tab)
-          Obx(() {
-            if (controller.currentTabIdx.value != 0) return const SizedBox();
-            final isKanban = controller.isKanbanView.value;
-            return IconButton(
-              icon: Icon(
-                isKanban ? Iconsax.menu : Iconsax.kanban,
-                color: AppColors.primaryColor,
-                size: 22,
-              ),
-              tooltip: isKanban ? 'Switch to List View' : 'Switch to Kanban View',
-              onPressed: () {
-                controller.isKanbanView.value = !isKanban;
-              },
-            );
-          }),
-          Obx(() {
-            if (controller.currentTabIdx.value != 0) return const SizedBox();
-            return IconButton(
-              icon: const Icon(Iconsax.refresh, color: AppColors.textColorSecondary),
-              onPressed: () {
-                controller.selectedFilter.value = 'All';
-                controller.searchQuery.value = '';
-              },
-            );
-          }),
+          // Obx(() {
+          //   if (controller.currentTabIdx.value != 0) return const SizedBox();
+          //   final isKanban = controller.isKanbanView.value;
+          //   return IconButton(
+          //     icon: Icon(
+          //       isKanban ? Iconsax.menu : Iconsax.kanban,
+          //       color: AppColors.primaryColor,
+          //       size: 22,
+          //     ),
+          //     tooltip: isKanban ? 'Switch to List View' : 'Switch to Kanban View',
+          //     onPressed: () {
+          //       controller.isKanbanView.value = !isKanban;
+          //     },
+          //   );
+          // }),
+          // Obx(() {
+          //   if (controller.currentTabIdx.value != 0) return const SizedBox();
+          //   return IconButton(
+          //     icon: const Icon(Iconsax.refresh, color: AppColors.textColorSecondary),
+          //     onPressed: () {
+          //       controller.selectedFilter.value = 'All';
+          //       controller.searchQuery.value = '';
+          //     },
+          //   );
+          // }),
           // Add lead button in the AppBar for luxury layout consistency
           Obx(() {
             final tabIdx = controller.currentTabIdx.value;

@@ -88,9 +88,7 @@ class _AttendanceHeader extends StatelessWidget {
               ],
             ),
           ),
-          _HeaderIcon(icon: Iconsax.calendar_1),
-          const SizedBox(width: 12),
-          _HeaderIcon(icon: Iconsax.filter_search),
+          const _HeaderIcon(icon: Iconsax.calendar_1),
         ],
       ),
     );

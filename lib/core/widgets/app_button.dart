@@ -59,7 +59,8 @@ class AppButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(borderRadius),
             side: borderSide ?? BorderSide.none,
           ),
-          padding: padding ?? EdgeInsets.symmetric(horizontal: icon != null ? 12 : 16),
+          padding: padding ?? EdgeInsets.symmetric(horizontal: icon != null ? 12 : 16, vertical: 0),
+          alignment: Alignment.center,
         ),
         child: isLoading
             ? const SizedBox(
@@ -78,16 +79,19 @@ class AppButton extends StatelessWidget {
                     icon!,
                     const SizedBox(width: 8),
                   ],
-                  Text(
-                    text,
-                    style: TextStyle(
-                      fontSize: fontSize ?? 16,
-                      fontWeight: fontWeight ?? FontWeight.w600,
-                      fontFamily: GoogleFonts.outfit().fontFamily,
-                      color: effectiveTextColor,
+                  Flexible(
+                    child: Text(
+                      text,
+                      style: TextStyle(
+                        fontSize: fontSize ?? 16,
+                        fontWeight: fontWeight ?? FontWeight.w600,
+                        fontFamily: GoogleFonts.outfit().fontFamily,
+                        color: effectiveTextColor,
+                        height: 1.15,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
                     ),
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 1,
                   ),
                 ],
               ),

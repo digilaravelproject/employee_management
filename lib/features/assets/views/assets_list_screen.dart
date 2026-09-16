@@ -116,17 +116,6 @@ class AssetsListScreen extends StatelessWidget {
                             ),
                           ),
                         ),
-                        const SizedBox(width: 10),
-                        Container(
-                          height: 48,
-                          width: 48,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: AppColors.slate200),
-                          ),
-                          child: const Icon(Iconsax.filter, color: AppColors.primaryColor, size: 20),
-                        ),
                       ],
                     ),
                   ),

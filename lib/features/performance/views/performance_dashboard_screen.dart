@@ -722,21 +722,6 @@ class _TeamOverviewTab extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
-              Container(
-                height: 44,
-                width: 44,
-                decoration: BoxDecoration(
-                  color: AppColors.slate100,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: IconButton(
-                  icon: const Icon(Iconsax.filter, color: AppColors.textColorSecondary, size: 18),
-                  onPressed: () {
-                    // Filter action logic
-                  },
-                ),
-              ),
             ],
           ),
         ),

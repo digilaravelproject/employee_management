@@ -33,12 +33,6 @@ class PayslipHistoryScreen extends StatelessWidget {
         ),
         title: const AppText('Payslip History', fontSize: 18, fontWeight: FontWeight.bold),
         centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Iconsax.setting_4, color: AppColors.textColorPrimary), // filter icon
-            onPressed: () {},
-          ),
-        ],
       ),
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),

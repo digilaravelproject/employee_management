@@ -4,12 +4,10 @@ import 'package:iconsax/iconsax.dart';
 import 'package:get/get.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_text.dart';
-import '../../../routes/route_helper.dart';
 import '../../leave_management/views/my_leaves_screen.dart';
 import '../../leave_management/views/apply_leave_screen.dart';
 import '../../leave_management/views/manager_leave_dashboard.dart';
 import '../../shift_management/views/shift_management_screen.dart';
-import '../../announcement/views/create_announcement_screen.dart';
 import '../../payslip/views/payslip_history_screen.dart';
 import '../../attendance/views/attendance_history_screen.dart';
 import '../../notification/views/notification_screen.dart';
@@ -17,6 +15,10 @@ import '../../notification/controllers/notification_controller.dart';
 import '../../../core/controllers/app_controller.dart';
 import '../controllers/dashboard_controller.dart';
 import 'upcoming_birthdays_screen.dart';
+import '../../departments/views/department_list_screen.dart';
+import '../../role_permissions/views/role_list_screen.dart';
+import '../../employee/designation/views/designation_list_screen.dart';
+import '../../employee/management/views/employee_list_screen.dart';
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
@@ -472,22 +474,34 @@ class _QuickActionsGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final actions = [
       {
+        'icon': Iconsax.buildings,
+        'label': 'Department',
+        'color': const Color(0xFF6366F1), // Indigo
+        'onTap': () => Get.to(() => const DepartmentListScreen()),
+      },
+      {
+        'icon': Iconsax.shield_security,
+        'label': 'Role',
+        'color': const Color(0xFF8B5CF6), // Purple
+        'onTap': () => Get.to(() => const RoleListScreen()),
+      },
+      {
         'icon': Iconsax.user_tag,
-        'label': 'Add Designation',
-        'color': const Color(0xFF3B82F6),
-        'onTap': () => Get.toNamed(RouteHelper.getDesignationListRoute()),
+        'label': 'Designation',
+        'color': const Color(0xFF3B82F6), // Blue
+        'onTap': () => Get.to(() => const DesignationListScreen()),
       },
       {
-        'icon': Iconsax.user,
-        'label': 'Add Employee',
-        'color': const Color(0xFF3B82F6),
-        'onTap': () => Get.toNamed(RouteHelper.getEmployeeListRoute()),
-      },
-      {
-        'icon': Iconsax.calendar_2,
-        'label': 'Shift Schedule',
-        'color': Colors.green,
+        'icon': Iconsax.clock,
+        'label': 'Shift',
+        'color': const Color(0xFF10B981), // Emerald
         'onTap': () => Get.to(() => const ShiftManagementScreen()),
+      },
+      {
+        'icon': Iconsax.profile_2user,
+        'label': 'Employee',
+        'color': const Color(0xFFF59E0B), // Amber
+        'onTap': () => Get.to(() => const EmployeeListScreen()),
       },
       {
         'icon': Iconsax.airplane, 
@@ -495,13 +509,6 @@ class _QuickActionsGrid extends StatelessWidget {
         'color': Colors.purple,
         'onTap': () => Get.to(() => const ManagerLeaveDashboard()),
       },
-      {
-        'icon': Iconsax.volume_high,
-        'label': 'Announcement',
-        'color': Colors.orange,
-        'onTap': () => Get.to(() => const CreateAnnouncementScreen()),
-      },
-      {'icon': Iconsax.people, 'label': 'Team Overview', 'color': Colors.teal},
     ];
 
     return Wrap(

@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_text.dart';
+import '../../../core/controllers/app_controller.dart';
 import '../controllers/projects_controller.dart';
 import '../models/project_model.dart';
 import 'create_project_screen.dart';
@@ -52,30 +53,36 @@ class ProjectListScreen extends StatelessWidget {
           ],
         ),
         actions: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            child: ElevatedButton.icon(
-              onPressed: () {
-                controller.clearForm();
-                Get.to(() => const CreateProjectScreen(isEditMode: false));
-              },
-              icon: const Icon(Iconsax.add, size: 14, color: Colors.white),
-              label: const AppText(
-                'New Project',
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryColor, // Standardized Blue
-                elevation: 0,
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+          Obx(() {
+            final appController = Get.isRegistered<AppController>() ? Get.find<AppController>() : null;
+            final isEmployee = appController?.userRole.value.toLowerCase() == 'employee';
+            if (isEmployee) return const SizedBox.shrink();
+
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  controller.clearForm();
+                  Get.to(() => const CreateProjectScreen(isEditMode: false));
+                },
+                icon: const Icon(Iconsax.add, size: 14, color: Colors.white),
+                label: const AppText(
+                  'New Project',
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryColor,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
-            ),
-          ),
+            );
+          }),
         ],
       ),
       body: Column(
@@ -105,20 +112,6 @@ class ProjectListScreen extends StatelessWidget {
                         borderSide: BorderSide.none,
                       ),
                     ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AppColors.slate50,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppColors.slate100),
-                  ),
-                  child: const Icon(
-                    Iconsax.setting_4,
-                    color: AppColors.textColorSecondary,
-                    size: 18,
                   ),
                 ),
               ],

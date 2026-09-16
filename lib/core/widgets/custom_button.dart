@@ -153,12 +153,14 @@ class CustomButton extends StatelessWidget {
         Flexible(
           child: Text(
             text,
-            style: textStyle ??
+            style: (textStyle ??
                 TextStyle(
                   color: _getTextColor(),
                   fontSize: Dimensions.font16,
                   fontWeight: FontWeight.w600,
-                ),
+                )).copyWith(height: 1.15),
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
           ),
         ),
         if (suffixIcon != null) ...[
@@ -181,7 +183,8 @@ class CustomButton extends StatelessWidget {
   /// button style
   ButtonStyle _getButtonStyle(BorderRadius radius) {
     final base = ElevatedButton.styleFrom(
-      padding: padding ?? EdgeInsets.symmetric(vertical: Dimensions.height15),
+      padding: padding ?? EdgeInsets.symmetric(horizontal: 16, vertical: height != null ? 0 : Dimensions.height15),
+      alignment: Alignment.center,
       shape: RoundedRectangleBorder(borderRadius: radius),
     );
 

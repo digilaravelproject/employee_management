@@ -47,10 +47,6 @@ class EmployeeSharedScreen extends StatelessWidget {
             icon: const Icon(Iconsax.search_normal, color: AppColors.textColorPrimary, size: 20),
             onPressed: () {},
           ),
-          IconButton(
-            icon: const Icon(Iconsax.filter, color: AppColors.textColorPrimary, size: 20),
-            onPressed: () {},
-          ),
         ],
       ),
       body: SafeArea(

@@ -47,7 +47,7 @@ class TaskComment {
 
 class TaskStatusUpdate {
   final String id;
-  final String status; // Pending, In Progress, Review, Completed
+  final String status; // To Do, In Progress, Testing, Completed
   final String title;
   final String description;
   final DateTime timestamp;
@@ -63,7 +63,43 @@ class TaskStatusUpdate {
   });
 }
 
+class TaskTimeLog {
+  final String id;
+  final AppUser user;
+  final DateTime startTime;
+  final DateTime? endTime;
+  final int durationSeconds;
+  final String note;
+
+  const TaskTimeLog({
+    required this.id,
+    required this.user,
+    required this.startTime,
+    this.endTime,
+    required this.durationSeconds,
+    this.note = '',
+  });
+
+  String get formattedDuration {
+    final hours = durationSeconds ~/ 3600;
+    final minutes = (durationSeconds % 3600) ~/ 60;
+    final seconds = durationSeconds % 60;
+    if (hours > 0) {
+      return '${hours}h ${minutes}m';
+    } else if (minutes > 0) {
+      return '${minutes}m ${seconds}s';
+    } else {
+      return '${seconds}s';
+    }
+  }
+}
+
 class TaskModel {
+  static const String statusToDo = 'To Do';
+  static const String statusInProgress = 'In Progress';
+  static const String statusTesting = 'Testing';
+  static const String statusCompleted = 'Completed';
+
   final String id;
   final String title;
   final String description;
@@ -71,11 +107,17 @@ class TaskModel {
   final Project? project;
   final String priority; // Low, Medium, High
   final DateTime deadline;
-  final String status; // Pending, In Progress, Review, Completed
+  final String status; // To Do, In Progress, Testing, Completed
   final List<SubTask> subTasks;
   final List<TaskComment> comments;
   final List<TaskStatusUpdate> statusUpdates;
   final List<String> attachments; // Mock file names
+
+  // Time Tracking Attributes
+  final int totalTrackedSeconds;
+  final bool isTimerRunning;
+  final DateTime? timerStartedAt;
+  final List<TaskTimeLog> timeLogs;
 
   const TaskModel({
     required this.id,
@@ -85,12 +127,68 @@ class TaskModel {
     this.project,
     required this.priority,
     required this.deadline,
-    this.status = 'Pending',
+    this.status = statusToDo,
     required this.subTasks,
     required this.comments,
     required this.statusUpdates,
     required this.attachments,
+    this.totalTrackedSeconds = 0,
+    this.isTimerRunning = false,
+    this.timerStartedAt,
+    this.timeLogs = const [],
   });
+
+  String get normalizedStatus {
+    switch (status.toLowerCase()) {
+      case 'pending':
+      case 'to do':
+      case 'todo':
+        return statusToDo;
+      case 'in progress':
+      case 'inprogress':
+        return statusInProgress;
+      case 'review':
+      case 'testing':
+        return statusTesting;
+      case 'completed':
+      case 'done':
+        return statusCompleted;
+      default:
+        return status;
+    }
+  }
+
+  int get activeTotalSeconds {
+    if (isTimerRunning && timerStartedAt != null) {
+      final elapsed = DateTime.now().difference(timerStartedAt!).inSeconds;
+      return totalTrackedSeconds + (elapsed > 0 ? elapsed : 0);
+    }
+    return totalTrackedSeconds;
+  }
+
+  String get formattedActiveTime {
+    final secs = activeTotalSeconds;
+    final hours = secs ~/ 3600;
+    final minutes = (secs % 3600) ~/ 60;
+    final seconds = secs % 60;
+    final hStr = hours.toString().padLeft(2, '0');
+    final mStr = minutes.toString().padLeft(2, '0');
+    final sStr = seconds.toString().padLeft(2, '0');
+    return '$hStr:$mStr:$sStr';
+  }
+
+  String get formattedHumanTime {
+    final secs = activeTotalSeconds;
+    final hours = secs ~/ 3600;
+    final minutes = (secs % 3600) ~/ 60;
+    if (hours > 0) {
+      return '${hours}h ${minutes}m';
+    } else if (minutes > 0) {
+      return '${minutes}m';
+    } else {
+      return secs > 0 ? '${secs}s' : '0m';
+    }
+  }
 
   TaskModel copyWith({
     String? id,
@@ -105,6 +203,10 @@ class TaskModel {
     List<TaskComment>? comments,
     List<TaskStatusUpdate>? statusUpdates,
     List<String>? attachments,
+    int? totalTrackedSeconds,
+    bool? isTimerRunning,
+    DateTime? timerStartedAt,
+    List<TaskTimeLog>? timeLogs,
   }) {
     return TaskModel(
       id: id ?? this.id,
@@ -119,6 +221,10 @@ class TaskModel {
       comments: comments ?? this.comments,
       statusUpdates: statusUpdates ?? this.statusUpdates,
       attachments: attachments ?? this.attachments,
+      totalTrackedSeconds: totalTrackedSeconds ?? this.totalTrackedSeconds,
+      isTimerRunning: isTimerRunning ?? this.isTimerRunning,
+      timerStartedAt: timerStartedAt ?? this.timerStartedAt,
+      timeLogs: timeLogs ?? this.timeLogs,
     );
   }
 }

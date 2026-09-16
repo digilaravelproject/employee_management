@@ -44,27 +44,6 @@ class HolidayCalendarScreen extends StatelessWidget {
           fontWeight: FontWeight.bold,
           color: AppColors.textColorPrimary,
         ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: IconButton(
-              icon: const Icon(
-                Iconsax.filter,
-                color: AppColors.textColorSecondary,
-              ),
-              onPressed: () {
-                // Toggles filtering drawer or bottom sheet if needed
-                Get.snackbar(
-                  'Filters',
-                  'Use the location and year dropdowns below to filter holidays.',
-                  snackPosition: SnackPosition.BOTTOM,
-                  backgroundColor: AppColors.primaryColor,
-                  colorText: Colors.white,
-                );
-              },
-            ),
-          ),
-        ],
       ),
       body: SafeArea(
         child: Column(

@@ -41,12 +41,6 @@ class ActivityLogsScreen extends StatelessWidget {
           fontWeight: FontWeight.w800,
           color: Color(0xFF1E293B),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Iconsax.filter, color: Color(0xFF1E293B)),
-            onPressed: () {},
-          ),
-        ],
         centerTitle: false,
       ),
       body: SafeArea(
