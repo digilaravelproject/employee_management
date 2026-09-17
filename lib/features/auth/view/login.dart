@@ -43,7 +43,7 @@ class LoginScreen extends StatelessWidget {
                   const SizedBox(height: 24),
 
                   // ── Sign up link ──
-                  Row(
+                 /* Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       AppText(
@@ -63,7 +63,7 @@ class LoginScreen extends StatelessWidget {
                         ),
                       ),
                     ],
-                  ),
+                  ),*/
                   const SizedBox(height: 32),
                 ],
               ),
@@ -198,7 +198,7 @@ class _HeaderSection extends StatelessWidget {
 
         // App name
         const AppText(
-          'Admin Portal',
+          'Office Portal',
           style: AppTextStyle.heading,
           fontSize: 26,
           fontWeight: FontWeight.w800,
@@ -210,7 +210,7 @@ class _HeaderSection extends StatelessWidget {
 
         // Subtitle
         const AppText(
-          'Sign in to manage your company dashboard',
+          'Sign in to access and manage your workspace',
           style: AppTextStyle.body,
           fontSize: 14,
           color: Colors.white70,
@@ -256,7 +256,7 @@ class _LoginCard extends StatelessWidget {
             children: [
               // Title inside card
               AppText(
-                'Admin Login',
+                'Login',
                 style: AppTextStyle.subheading,
                 fontSize: 20,
                 fontWeight: FontWeight.w800,

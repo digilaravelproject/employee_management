@@ -8,6 +8,7 @@ import 'tabs/leads_list_tab.dart';
 import 'tabs/follow_ups_tab.dart';
 import 'tabs/customers_tab.dart';
 import 'add_edit_lead_screen.dart';
+import 'bde_leads_target_screen.dart';
 
 class LeadsDashboardShell extends StatelessWidget {
   const LeadsDashboardShell({super.key});
@@ -36,7 +37,7 @@ class LeadsDashboardShell extends StatelessWidget {
           ),
         ),
         title: Obx(() {
-          final titles = ['Leads Dashboard', 'Follow-ups', 'Customers Ledger', 'CRM Analytics'];
+          final titles = ['Leads Dashboard', 'Follow-ups', 'Customers Ledger', 'BDE Targets & Sales'];
           return AppText(
             titles[controller.currentTabIdx.value],
             fontSize: 18,
@@ -114,7 +115,7 @@ class LeadsDashboardShell extends StatelessWidget {
                     _buildSegmentItem(controller, 'Leads', 0),
                     _buildSegmentItem(controller, 'Follow-ups', 1),
                     _buildSegmentItem(controller, 'Customers', 2),
-                    _buildSegmentItem(controller, 'More', 3),
+                    _buildSegmentItem(controller, 'Targets', 3),
                   ],
                 );
               }),
@@ -132,7 +133,7 @@ class LeadsDashboardShell extends StatelessWidget {
                 case 2:
                   return const CustomersTab();
                 default:
-                  return const _CRMMorePlaceholder();
+                  return const _BdeTargetsTabGateway();
               }
             }),
           ),
@@ -177,33 +178,184 @@ class LeadsDashboardShell extends StatelessWidget {
   }
 }
 
-class _CRMMorePlaceholder extends StatelessWidget {
-  const _CRMMorePlaceholder();
+class _BdeTargetsTabGateway extends StatelessWidget {
+  const _BdeTargetsTabGateway();
 
   @override
   Widget build(BuildContext context) {
-    return Center(
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: AppColors.primaryColor.withValues(alpha: 0.08),
-              shape: BoxShape.circle,
+              gradient: const LinearGradient(
+                colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF0F172A).withValues(alpha: 0.2),
+                  blurRadius: 16,
+                  offset: const Offset(0, 8),
+                ),
+              ],
             ),
-            child: const Icon(Iconsax.setting_4, size: 48, color: AppColors.primaryColor),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const Icon(Iconsax.chart_21, color: Color(0xFF38BDF8), size: 28),
+                    ),
+                    const SizedBox(width: 14),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          AppText(
+                            'BDE Sales Targets & Deals',
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                          SizedBox(height: 2),
+                          AppText(
+                            'Monthly targets, closed leads & rankings',
+                            fontSize: 12,
+                            color: Color(0xFF94A3B8),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                const AppText(
+                  'Manage individual sales targets for Business Development Executives, track closed deal values against targets with month filters, and monitor the executive leaderboard.',
+                  fontSize: 13,
+                  color: Color(0xFFCBD5E1),
+                  height: 1.5,
+                ),
+                const SizedBox(height: 22),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF38BDF8),
+                      foregroundColor: const Color(0xFF0F172A),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      elevation: 0,
+                    ),
+                    icon: const Icon(Iconsax.arrow_right_3, size: 18, color: Color(0xFF0F172A)),
+                    label: const AppText(
+                      'Open Targets & Leaderboard',
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0F172A),
+                    ),
+                    onPressed: () {
+                      Get.to(() => const BdeLeadsTargetScreen());
+                    },
+                  ),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 16),
-          const AppText('CRM Settings & Analytics', fontSize: 16, fontWeight: FontWeight.bold),
-          const SizedBox(height: 6),
-          const AppText(
-            'Analytics reports & triggers are coming soon.',
-            fontSize: 12,
-            color: AppColors.textColorSecondary,
+          const SizedBox(height: 20),
+
+          // Features Breakdown Card
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const AppText(
+                  'Module Highlights',
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textColorPrimary,
+                ),
+                const SizedBox(height: 14),
+                _buildHighlightRow(
+                  icon: Iconsax.status_up,
+                  title: 'Monthly Target Progress',
+                  desc: 'Track target vs achieved revenue with auto-updating progress bar',
+                  color: Colors.blue,
+                ),
+                const SizedBox(height: 12),
+                _buildHighlightRow(
+                  icon: Iconsax.verify,
+                  title: 'Closed Deals Breakdown',
+                  desc: 'Inspect each converted lead, closed amount, date, and notes',
+                  color: Colors.green,
+                ),
+                const SizedBox(height: 12),
+                _buildHighlightRow(
+                  icon: Iconsax.ranking,
+                  title: 'Executive Leaderboard & Target Setting',
+                  desc: 'Assign and edit targets for each BDE and track rankings',
+                  color: Colors.purple,
+                ),
+                const SizedBox(height: 12),
+                _buildHighlightRow(
+                  icon: Iconsax.calendar,
+                  title: 'Month-by-Month Filter',
+                  desc: 'Seamlessly switch between September, August, July to review historical targets',
+                  color: Colors.orange,
+                ),
+              ],
+            ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildHighlightRow({
+    required IconData icon,
+    required String title,
+    required String desc,
+    required Color color,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: color, size: 18),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AppText(title, fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textColorPrimary),
+              const SizedBox(height: 2),
+              AppText(desc, fontSize: 11, color: AppColors.textColorSecondary),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

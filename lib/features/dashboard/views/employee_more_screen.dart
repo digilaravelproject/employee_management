@@ -15,6 +15,7 @@ import '../../compliance/views/compliance_dashboard_screen.dart';
 import '../../assets/views/employee_my_assets_screen.dart';
 import '../../followup/views/followup_dashboard_screen.dart';
 import '../../performance/views/performance_dashboard_screen.dart';
+import '../../leads/views/bde_leads_target_screen.dart';
 
 class EmployeeMoreScreen extends StatelessWidget {
   const EmployeeMoreScreen({super.key});
@@ -83,6 +84,15 @@ class EmployeeMoreScreen extends StatelessWidget {
               iconColor: Colors.deepOrange,
               onTap: () {
                 Get.to(() => const FollowupDashboardScreen(isEmployeeOnly: true));
+              },
+            ),
+            _MoreMenuItem(
+              icon: Iconsax.briefcase,
+              title: 'My Leads & Targets',
+              subtitle: 'Track monthly sales target, closed deals & leads',
+              iconColor: Colors.blueAccent,
+              onTap: () {
+                Get.to(() => const BdeLeadsTargetScreen());
               },
             ),
 
