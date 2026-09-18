@@ -2,8 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../core/constants/permission_keys.dart';
 import '../models/role_permission_models.dart';
+import '../repositories/role_permissions_repository.dart';
+import '../../../core/services/network/api_client.dart';
+import '../../../core/utils/logger.dart';
+import '../../../core/utils/custom_snackbar.dart';
 
 class RolePermissionsController extends GetxController {
+  late final RolePermissionsRepository _repository;
+
+  RolePermissionsController() {
+    _repository = RolePermissionsRepository(apiClient: Get.find<ApiClient>());
+  }
+
   // Reactive list of roles
   final RxList<Role> roles = <Role>[].obs;
 
@@ -26,10 +36,149 @@ class RolePermissionsController extends GetxController {
   final RxList<ModulePermissionGroup> tempPermissionGroups =
       <ModulePermissionGroup>[].obs;
 
+  final isLoadingPermissions = false.obs;
+
+  final isLoadingRoles = false.obs;
+
   @override
   void onInit() {
     super.onInit();
-    _initializeDummyRoles();
+    fetchRolesFromApi();
+    fetchPermissionsFromApi();
+    
+    debounce(searchQuery, (String query) {
+      if (query.trim().isEmpty) {
+        fetchRolesFromApi(showLoader: false);
+      } else {
+        searchRolesFromApi(query);
+      }
+    }, time: const Duration(milliseconds: 500));
+  }
+
+  Future<void> searchRolesFromApi(String query) async {
+    try {
+      final response = await _repository.searchRoles(query);
+      if (response.isSuccess && response.json != null && response.json!['status'] == true) {
+        final data = response.json!['data'] as List;
+        final fetchedRoles = data.map((json) => Role.fromJson(json)).toList();
+        roles.assignAll(fetchedRoles);
+      } else {
+        CustomSnackbar.showError(response.message ?? 'Failed to search roles');
+      }
+    } catch (e) {
+      Logger.e('RolePermissionsController => Failed to search roles: $e');
+      CustomSnackbar.showError('An error occurred while searching roles.');
+    }
+  }
+
+  Future<void> fetchRolesFromApi({bool showLoader = true}) async {
+    try {
+      if (showLoader) isLoadingRoles.value = true;
+      final response = await _repository.getRoles();
+      if (response.isSuccess && response.json != null && response.json!['status'] == true) {
+        final data = response.json!['data'] as List;
+        final fetchedRoles = data.map((json) => Role.fromJson(json)).toList();
+        roles.assignAll(fetchedRoles);
+      } else {
+        CustomSnackbar.showError(response.message ?? 'Failed to fetch roles');
+      }
+    } catch (e) {
+      Logger.e('RolePermissionsController => Failed to fetch roles: $e');
+      CustomSnackbar.showError('An error occurred while fetching roles.');
+    } finally {
+      if (showLoader) isLoadingRoles.value = false;
+    }
+  }
+
+  final isLoadingRoleDetails = false.obs;
+
+  Future<void> fetchRoleDetails(String id) async {
+    try {
+      isLoadingRoleDetails.value = true;
+      final response = await _repository.getRoleDetails(id);
+      
+      if (response.isSuccess && response.json != null && response.json!['status'] == true) {
+        final data = response.json!['data'];
+        
+        // Extract granted permission IDs
+        final List<int> grantedIds = [];
+        if (data['permission_ids'] != null) {
+          grantedIds.addAll(List<int>.from(data['permission_ids']));
+        }
+        
+        // Deep copy tempPermissionGroups to create this role's specific groups
+        final List<ModulePermissionGroup> roleGroups = tempPermissionGroups.map((group) {
+          final updatedPermissions = group.permissions.map((p) {
+            final isGranted = p.id != null && grantedIds.contains(p.id);
+            return p.copyWith(isGranted: isGranted);
+          }).toList();
+          
+          return group.copyWith(permissions: updatedPermissions);
+        }).toList();
+
+        // Update the basic details but inject the detailed groups
+        final detailedRole = Role.fromJson(data).copyWith(
+          permissionGroups: roleGroups,
+        );
+        
+        selectedRole.value = detailedRole;
+        
+        // Optionally update it in the local list so the list view also knows
+        final index = roles.indexWhere((r) => r.id == id);
+        if (index != -1) {
+          roles[index] = detailedRole;
+        }
+      } else {
+        CustomSnackbar.showError(response.message ?? 'Failed to fetch role details');
+      }
+    } catch (e) {
+      Logger.e('RolePermissionsController => Failed to fetch role details: $e');
+      CustomSnackbar.showError('An error occurred while fetching role details.');
+    } finally {
+      isLoadingRoleDetails.value = false;
+    }
+  }
+
+  Future<void> fetchPermissionsFromApi() async {
+    try {
+      isLoadingPermissions.value = true;
+      final response = await _repository.getPermissions();
+      if (response.isSuccess && response.json != null && response.json!['status'] == true) {
+        final modulesList = response.json!['modules'] as List;
+        final List<ModulePermissionGroup> groups = [];
+        
+        for (var moduleMap in modulesList) {
+          final permissionsList = moduleMap['permissions'] as List;
+          final List<GranularPermissionItem> permissions = permissionsList.map((p) {
+            return GranularPermissionItem(
+              key: p['slug'] ?? p['id'].toString(),
+              id: p['id'] != null ? int.tryParse(p['id'].toString()) : null,
+              label: p['name'] ?? '',
+              description: p['description'],
+              isGranted: p['is_assigned'] ?? false,
+            );
+          }).toList();
+
+          groups.add(ModulePermissionGroup(
+            moduleId: moduleMap['module_slug'] ?? '',
+            moduleName: moduleMap['module'] ?? '',
+            iconKey: 'element', // Default icon, adjust if mapping exists
+            permissions: permissions,
+          ));
+        }
+
+        if (groups.isNotEmpty) {
+          tempPermissionGroups.assignAll(groups);
+        }
+      } else {
+        CustomSnackbar.showError(response.message ?? 'Failed to fetch permissions');
+      }
+    } catch (e) {
+      Logger.e('Error parsing permissions: $e');
+      CustomSnackbar.showError('An error occurred while fetching permissions.');
+    } finally {
+      isLoadingPermissions.value = false;
+    }
   }
 
   /// Generate the full, comprehensive catalog of all 13 modules and their granular action permissions.
@@ -449,8 +598,10 @@ class RolePermissionsController extends GetxController {
     tempPermissionGroups.assignAll(updated);
   }
 
-  // Save new role
-  void saveRole() {
+  final isSavingRole = false.obs;
+
+  // Save new role via API
+  Future<void> saveRole() async {
     if (nameController.text.trim().isEmpty) {
       Get.snackbar(
         'Required Field',
@@ -462,32 +613,59 @@ class RolePermissionsController extends GetxController {
       return;
     }
 
-    final newRole = Role(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      name: nameController.text.trim(),
-      description: descriptionController.text.trim().isEmpty
-          ? 'No description provided'
-          : descriptionController.text.trim(),
-      departmentName: selectedDepartmentName.value ?? 'General',
-      designationName: selectedDesignationName.value ?? 'Staff',
-      isActive: isActive.value,
-      permissionGroups: List<ModulePermissionGroup>.from(tempPermissionGroups),
-    );
+    try {
+      isSavingRole.value = true;
 
-    roles.add(newRole);
-    clearForm();
-    Get.back();
-    Get.snackbar(
-      'Role Created',
-      'New role "${newRole.name}" created with ${newRole.totalPermissionsCount} permissions granted.',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.green,
-      colorText: Colors.white,
-    );
+      // Extract permission IDs that are granted
+      final List<int> permissionIds = [];
+      for (final group in tempPermissionGroups) {
+        for (final p in group.permissions) {
+          if (p.isGranted && p.id != null) {
+            permissionIds.add(p.id!);
+          }
+        }
+      }
+
+      final requestData = {
+        "name": nameController.text.trim(),
+        "department": selectedDepartmentName.value ?? "General",
+        "description": descriptionController.text.trim().isEmpty
+            ? 'No description provided'
+            : descriptionController.text.trim(),
+        "status": isActive.value,
+        "permission_ids": permissionIds
+      };
+
+      final response = await _repository.createRole(requestData);
+
+      if (response.isSuccess && response.json != null && response.json!['status'] == true) {
+        final data = response.json!['data'];
+        
+        // Add locally
+        final newRole = Role.fromJson(data);
+        
+        // Ensure local groups match the UI for immediate display if parsing didn't match perfectly
+        final finalRole = newRole.copyWith(
+          permissionGroups: List<ModulePermissionGroup>.from(tempPermissionGroups),
+        );
+        
+        roles.add(finalRole);
+        clearForm();
+        Get.back();
+        CustomSnackbar.showSuccess(response.json!['message'] ?? 'Role created successfully.');
+      } else {
+        CustomSnackbar.showError(response.message ?? 'Failed to create role');
+      }
+    } catch (e) {
+      Logger.e('RolePermissionsController => Failed to save role: $e');
+      CustomSnackbar.showError('An error occurred while creating the role');
+    } finally {
+      isSavingRole.value = false;
+    }
   }
 
   // Update existing role
-  void updateRole(String id) {
+  Future<void> updateRole(String id) async {
     if (nameController.text.trim().isEmpty) {
       Get.snackbar(
         'Required Field',
@@ -499,47 +677,95 @@ class RolePermissionsController extends GetxController {
       return;
     }
 
-    final index = roles.indexWhere((r) => r.id == id);
-    if (index != -1) {
-      final updatedRole = roles[index].copyWith(
-        name: nameController.text.trim(),
-        description: descriptionController.text.trim(),
-        departmentName: selectedDepartmentName.value,
-        designationName: selectedDesignationName.value,
-        isActive: isActive.value,
-        permissionGroups: List<ModulePermissionGroup>.from(tempPermissionGroups),
-      );
+    try {
+      isSavingRole.value = true;
 
-      roles[index] = updatedRole;
-      if (selectedRole.value?.id == id) {
-        selectedRole.value = updatedRole;
+      // Extract permission IDs that are granted
+      final List<int> permissionIds = [];
+      for (final group in tempPermissionGroups) {
+        for (final p in group.permissions) {
+          if (p.isGranted && p.id != null) {
+            permissionIds.add(p.id!);
+          }
+        }
       }
-      roles.refresh();
 
-      Get.back();
-      Get.snackbar(
-        'Role Updated',
-        'Role "${updatedRole.name}" updated successfully',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
-      );
+      final requestData = {
+        "name": nameController.text.trim(),
+        "department": selectedDepartmentName.value ?? "General",
+        "description": descriptionController.text.trim().isEmpty
+            ? 'No description provided'
+            : descriptionController.text.trim(),
+        "status": isActive.value,
+        "permission_ids": permissionIds
+      };
+
+      final response = await _repository.updateRole(id, requestData);
+
+      if (response.isSuccess && response.json != null && response.json!['status'] == true) {
+        final data = response.json!['data'];
+        
+        // Update locally
+        final newRole = Role.fromJson(data);
+        
+        final finalRole = newRole.copyWith(
+          permissionGroups: List<ModulePermissionGroup>.from(tempPermissionGroups),
+        );
+        
+        final index = roles.indexWhere((r) => r.id == id);
+        if (index != -1) {
+          roles[index] = finalRole;
+        }
+
+        if (selectedRole.value?.id == id) {
+          selectedRole.value = finalRole;
+        }
+        roles.refresh();
+        
+        Get.back();
+        CustomSnackbar.showSuccess(response.json!['message'] ?? 'Role updated successfully.');
+      } else {
+        CustomSnackbar.showError(response.message ?? 'Failed to update role');
+      }
+    } catch (e) {
+      Logger.e('RolePermissionsController => Failed to update role: $e');
+      CustomSnackbar.showError('An error occurred while updating the role');
+    } finally {
+      isSavingRole.value = false;
     }
   }
 
   // Delete role
-  void deleteRole(String id) {
-    roles.removeWhere((r) => r.id == id);
-    if (selectedRole.value?.id == id) {
-      selectedRole.value = null;
+  Future<void> deleteRole(String id) async {
+    try {
+      Get.back(); // close the dialog immediately
+
+      // Optimistically remove from UI
+      final roleIndex = roles.indexWhere((r) => r.id == id);
+      Role? removedRole;
+      if (roleIndex != -1) {
+        removedRole = roles.removeAt(roleIndex);
+      }
+      
+      if (selectedRole.value?.id == id) {
+        selectedRole.value = null;
+        Get.back(); // close details screen if it's open
+      }
+
+      final response = await _repository.deleteRole(id);
+
+      if (response.isSuccess && response.json != null && response.json!['status'] == true) {
+        CustomSnackbar.showSuccess(response.json!['message'] ?? 'Role deleted successfully.');
+      } else {
+        // Rollback on failure
+        if (removedRole != null) {
+          roles.insert(roleIndex, removedRole);
+        }
+        CustomSnackbar.showError(response.message ?? 'Failed to delete role');
+      }
+    } catch (e) {
+      Logger.e('RolePermissionsController => Failed to delete role: $e');
+      CustomSnackbar.showError('An error occurred while deleting the role');
     }
-    Get.back(); // close dialog or details
-    Get.snackbar(
-      'Role Deleted',
-      'The role has been permanently removed',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.redAccent,
-      colorText: Colors.white,
-    );
   }
 }

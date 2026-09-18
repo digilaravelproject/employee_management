@@ -22,15 +22,16 @@ class AppUser {
       );
 }
 
-/// A single granular permission item (screen, card, or specific action).
 class GranularPermissionItem {
-  final String key;
+  final String key; // Now used for slug or generic string ID
+  final int? id;    // Database ID required for API submission
   final String label;
   final String? description;
   bool isGranted;
 
   GranularPermissionItem({
     required this.key,
+    this.id,
     required this.label,
     this.description,
     this.isGranted = false,
@@ -38,12 +39,14 @@ class GranularPermissionItem {
 
   GranularPermissionItem copyWith({
     String? key,
+    int? id,
     String? label,
     String? description,
     bool? isGranted,
   }) {
     return GranularPermissionItem(
       key: key ?? this.key,
+      id: id ?? this.id,
       label: label ?? this.label,
       description: description ?? this.description,
       isGranted: isGranted ?? this.isGranted,
@@ -52,6 +55,7 @@ class GranularPermissionItem {
 
   Map<String, dynamic> toJson() => {
         'key': key,
+        'id': id,
         'label': label,
         'description': description,
         'isGranted': isGranted,
@@ -60,6 +64,7 @@ class GranularPermissionItem {
   factory GranularPermissionItem.fromJson(Map<String, dynamic> json) =>
       GranularPermissionItem(
         key: json['key'] ?? '',
+        id: json['id'],
         label: json['label'] ?? '',
         description: json['description'],
         isGranted: json['isGranted'] ?? false,
@@ -155,6 +160,8 @@ class Role {
   final String? designationName;
   final bool isActive;
   final List<ModulePermissionGroup> permissionGroups;
+  final int? grantedPermissionsApi;
+  final int? totalPermissionsApi;
 
   const Role({
     required this.id,
@@ -166,6 +173,8 @@ class Role {
     this.designationName,
     this.isActive = true,
     required this.permissionGroups,
+    this.grantedPermissionsApi,
+    this.totalPermissionsApi,
   });
 
   Role copyWith({
@@ -178,6 +187,8 @@ class Role {
     String? designationName,
     bool? isActive,
     List<ModulePermissionGroup>? permissionGroups,
+    int? grantedPermissionsApi,
+    int? totalPermissionsApi,
   }) {
     return Role(
       id: id ?? this.id,
@@ -190,15 +201,19 @@ class Role {
       isActive: isActive ?? this.isActive,
       permissionGroups: permissionGroups ??
           this.permissionGroups.map((g) => g.copyWith()).toList(),
+      grantedPermissionsApi: grantedPermissionsApi ?? this.grantedPermissionsApi,
+      totalPermissionsApi: totalPermissionsApi ?? this.totalPermissionsApi,
     );
   }
 
   int get totalPermissionsCount {
+    if (grantedPermissionsApi != null) return grantedPermissionsApi!;
     return permissionGroups.fold(
         0, (sum, group) => sum + group.grantedCount);
   }
 
   int get maxPermissionsCount {
+    if (totalPermissionsApi != null) return totalPermissionsApi!;
     return permissionGroups.fold(
         0, (sum, group) => sum + group.totalCount);
   }
@@ -228,17 +243,19 @@ class Role {
       };
 
   factory Role.fromJson(Map<String, dynamic> json) => Role(
-        id: json['id'] ?? '',
-        name: json['name'] ?? '',
-        description: json['description'] ?? '',
+        id: json['id']?.toString() ?? '',
+        name: json['name']?.toString() ?? '',
+        description: json['description']?.toString() ?? '',
         departmentId: json['departmentId'],
         departmentName: json['departmentName'],
         designationId: json['designationId'],
         designationName: json['designationName'],
-        isActive: json['isActive'] ?? true,
+        isActive: json['status'] ?? json['isActive'] ?? true, // also handle "status" mapping from API
         permissionGroups: (json['permissionGroups'] as List<dynamic>?)
                 ?.map((g) => ModulePermissionGroup.fromJson(g))
                 .toList() ??
             [],
+        grantedPermissionsApi: json['granted_permissions'] != null ? int.tryParse(json['granted_permissions'].toString()) : null,
+        totalPermissionsApi: json['total_permissions'] != null ? int.tryParse(json['total_permissions'].toString()) : null,
       );
 }

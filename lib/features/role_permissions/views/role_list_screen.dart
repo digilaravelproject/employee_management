@@ -115,6 +115,10 @@ class RoleListScreen extends StatelessWidget {
           // ── Roles List ──
           Expanded(
             child: Obx(() {
+              if (controller.isLoadingRoles.value) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
               final rolesList = controller.filteredRoles;
               if (rolesList.isEmpty) {
                 return Center(
@@ -199,6 +203,7 @@ class _RoleCard extends StatelessWidget {
         child: InkWell(
           onTap: () {
             controller.selectedRole.value = role;
+            controller.fetchRoleDetails(role.id);
             Get.to(() => const RoleDetailsScreen());
           },
           borderRadius: BorderRadius.circular(20),

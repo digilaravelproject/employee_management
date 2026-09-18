@@ -25,6 +25,7 @@ import '../../documents/views/documents_dashboard_screen.dart';
 import '../../employee/designation/views/designation_list_screen.dart';
 import '../../shift_management/views/shift_management_screen.dart';
 import '../../employee/management/views/employee_list_screen.dart';
+import '../../../../routes/route_helper.dart';
 
 
 class AllModulesScreen extends StatelessWidget {
@@ -691,11 +692,11 @@ class _ModuleCard extends StatelessWidget {
         child: InkWell(
           onTap: () {
             if (item.label == 'Department') {
-              Get.to(() => const DepartmentListScreen());
+              Get.toNamed('/department-list');
             } else if (item.label == 'Roles & Permissions' || item.label == 'Role') {
               Get.to(() => const RoleListScreen());
             } else if (item.label == 'Designation') {
-              Get.to(() => const DesignationListScreen());
+              Get.toNamed(RouteHelper.getDesignationListRoute());
             } else if (item.label == 'Shift' || item.label == 'Shifts & Roster') {
               Get.to(() => const ShiftManagementScreen());
             } else if (item.label == 'Employee') {

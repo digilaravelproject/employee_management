@@ -24,8 +24,12 @@ import '../features/intro/views/intro_screen.dart';
 import '../features/dashboard/views/dashboard_screen.dart';
 import '../features/employee/designation/views/designation_list_screen.dart';
 import '../features/employee/designation/views/add_designation_screen.dart';
+import '../features/employee/designation/bindings/designation_binding.dart';
 import '../features/employee/management/views/employee_list_screen.dart';
 import '../features/employee/management/views/add_employee_screen.dart';
+import '../features/departments/views/department_list_screen.dart';
+import '../features/departments/views/add_department_screen.dart';
+import '../features/departments/bindings/department_binding.dart';
 import '../core/services/network/api_client.dart';
 import 'app_routes.dart';
 
@@ -43,7 +47,8 @@ class RouteHelper {
   static String getDesignationListRoute() => AppRoutes.designationList;
   static String getAddDesignationRoute() => AppRoutes.addDesignation;
   static String getEmployeeListRoute() => AppRoutes.employeeList;
-  static String getAddEmployeeRoute() => AppRoutes.addEmployee;
+  static String getDepartmentListRoute() => AppRoutes.departmentList;
+  static String getAddDepartmentRoute() => AppRoutes.addDepartment;
   static String getLeadListRoute() => AppRoutes.leadList;
   static String getLeadSummaryRoute() => AppRoutes.leadSummary;
 
@@ -175,12 +180,14 @@ class RouteHelper {
     GetPage(
       name: AppRoutes.designationList,
       page: () => const DesignationListScreen(),
+      binding: DesignationBinding(),
       transition: Transition.rightToLeft,
     ),
 
     GetPage(
       name: AppRoutes.addDesignation,
       page: () => const AddDesignationScreen(),
+      binding: DesignationBinding(),
       transition: Transition.rightToLeft,
     ),
 
@@ -195,6 +202,19 @@ class RouteHelper {
       page: () => const AddEmployeeScreen(),
       transition: Transition.rightToLeft,
     ),
-  ];
 
+    GetPage(
+      name: AppRoutes.departmentList,
+      page: () => const DepartmentListScreen(),
+      binding: DepartmentBinding(),
+      transition: Transition.rightToLeft,
+    ),
+
+    GetPage(
+      name: AppRoutes.addDepartment,
+      page: () => const AddDepartmentScreen(),
+      binding: DepartmentBinding(),
+      transition: Transition.rightToLeft,
+    ),
+  ];
 }

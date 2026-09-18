@@ -290,48 +290,56 @@ class _AddDesignationScreenState extends State<AddDesignationScreen> {
             const SizedBox(height: 36),
 
             // ── Save / Update Button ──
-            AppButton(
+            Obx(() => AppButton(
               text: isEditing ? 'Update Designation' : 'Save Designation',
-              onPressed: () {
+              isLoading: designationController.isSaving.value,
+              onPressed: () async {
                 final designationName = nameController.text.trim();
                 if (designationName.isEmpty) {
                   CustomSnackbar.showError('Please enter designation name');
                   return;
                 }
 
+                bool success = false;
                 if (isEditing) {
-                  designationController.updateDesignation(
+                  success = await designationController.updateDesignation(
                     _designation!.id,
                     designationName,
                     selectedHierarchy,
                     skills: skills.toList(),
                   );
-                  CustomSnackbar.showSuccess('Designation updated successfully');
+                  if (success) {
+                    CustomSnackbar.showSuccess('Designation updated successfully');
+                  }
                 } else {
                   // Save designation in controller
-                  designationController.addDesignation(
+                  success = await designationController.addDesignation(
                     designationName,
                     selectedHierarchy,
                     skills: skills.toList(),
                   );
-                  CustomSnackbar.showSuccess('Designation added successfully');
-                }
-
-                // Update selected employees with the designation if any selected
-                for (final empId in selectedEmployeeIds) {
-                  final empIndex = employeeController.employees.indexWhere((e) => e.id == empId);
-                  if (empIndex != -1) {
-                    final currentEmp = employeeController.employees[empIndex];
-                    final updatedEmp = currentEmp.copyWith(
-                      designation: designationName,
-                    );
-                    employeeController.updateEmployee(updatedEmp);
+                  if (success) {
+                    CustomSnackbar.showSuccess('Designation added successfully');
                   }
                 }
 
-                Get.back();
+                if (success) {
+                  // Update selected employees with the designation if any selected
+                  for (final empId in selectedEmployeeIds) {
+                    final empIndex = employeeController.employees.indexWhere((e) => e.id == empId);
+                    if (empIndex != -1) {
+                      final currentEmp = employeeController.employees[empIndex];
+                      final updatedEmp = currentEmp.copyWith(
+                        designation: designationName,
+                      );
+                      employeeController.updateEmployee(updatedEmp);
+                    }
+                  }
+
+                  Get.back();
+                }
               },
-            ),
+            )),
           ],
         ),
       ),

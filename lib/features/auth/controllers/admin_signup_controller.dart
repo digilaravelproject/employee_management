@@ -227,17 +227,8 @@ class AdminSignupController extends GetxController {
         }
 
         // Save user info
-        if (response.data != null) {
-          final userData = response.data!;
-          final user = UserModel(
-            id: userData.id ?? 0,
-            name: userData.name ?? userData.ownerName ?? '',
-            email: userData.email ?? request.email,
-            phone: userData.mobileNumber ?? request.mobileNumber,
-            role: userData.role ?? 'admin',
-            companyName: userData.companyName ?? request.companyName,
-            ownerName: userData.ownerName ?? request.ownerName,
-          );
+        if (response.rawData != null) {
+          final user = UserModel.fromJson(response.rawData!);
           await SharedPrefs.setString(AppConstants.userData, jsonEncode(user.toJson()));
           await SharedPrefs.setBool(AppConstants.isLoggedIn, true);
         }
@@ -290,10 +281,6 @@ class AdminSignupController extends GetxController {
   }
 
   Future<void> login() async {
-    // Direct navigate to dashboard (bypass validation & API call)
-    Get.offAllNamed(RouteHelper.getDashboardRoute());
-
-    /*
     // 1. Form validation
     if (!loginFormKey.currentState!.validate()) {
       return;
@@ -333,17 +320,8 @@ class AdminSignupController extends GetxController {
         }
 
         // Save user info
-        if (response.data != null) {
-          final userData = response.data!;
-          final user = UserModel(
-            id: userData.id ?? 0,
-            name: userData.name ?? userData.ownerName ?? '',
-            email: userData.email ?? request.email,
-            phone: userData.mobileNumber ?? userData.phone,
-            role: userData.role ?? 'admin',
-            companyName: userData.companyName,
-            ownerName: userData.ownerName,
-          );
+        if (response.rawData != null) {
+          final user = UserModel.fromJson(response.rawData!);
           await SharedPrefs.setString(
               AppConstants.userData, jsonEncode(user.toJson()));
           await SharedPrefs.setBool(AppConstants.isLoggedIn, true);
@@ -366,7 +344,6 @@ class AdminSignupController extends GetxController {
     } finally {
       isLoginLoading.value = false;
     }
-    */
   }
 
   // ── Forgot Password Methods & Validators ─────────────

@@ -32,11 +32,9 @@ class ApiClient {
 
     _dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) async {
-        String token = await TokenManager.getToken() ?? "";
-        // Use hardcoded token if no token is saved
-        if (token.isEmpty) {
-          token = AppConstants.apiToken;
-        }
+        // Use the token from secure storage
+        String token = await TokenManager.getToken();
+        
         options.headers["Authorization"] = "Bearer $token";
         options.headers["Accept"] = "application/json";
 

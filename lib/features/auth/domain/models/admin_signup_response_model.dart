@@ -2,6 +2,7 @@ class AdminSignupResponseModel {
   final bool status;
   final String message;
   final AdminUserData? data;
+  final Map<String, dynamic>? rawData;
   final String? accessToken;
   final String? tokenType;
   final Map<String, List<String>>? errors;
@@ -15,6 +16,7 @@ class AdminSignupResponseModel {
     required this.status,
     required this.message,
     this.data,
+    this.rawData,
     this.accessToken,
     this.tokenType,
     this.errors,
@@ -58,6 +60,7 @@ class AdminSignupResponseModel {
       message: json['message']?.toString() ??
           (isStatusSuccess ? 'Account created successfully.' : 'Validation error'),
       data: userData,
+      rawData: json['data'] is Map<String, dynamic> ? json['data'] : null,
       accessToken: json['access_token']?.toString(),
       tokenType: json['token_type']?.toString(),
       errors: parsedErrors,

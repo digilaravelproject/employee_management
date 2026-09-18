@@ -39,21 +39,91 @@ class RoleDetailsScreen extends StatelessWidget {
                 if (value == 'edit') {
                   Get.to(() => EditRoleScreen(role: role));
                 } else if (value == 'delete') {
-                  Get.defaultDialog(
-                    title: 'Delete Role',
-                    titleStyle:
-                        const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                    middleText:
-                        'Are you sure you want to delete the "${role.name}" role? This action cannot be undone.',
-                    middleTextStyle: const TextStyle(
-                        fontSize: 13, color: AppColors.textColorSecondary),
-                    textCancel: 'Cancel',
-                    textConfirm: 'Delete',
-                    confirmTextColor: Colors.white,
-                    buttonColor: AppColors.errorColor,
-                    onConfirm: () {
-                      controller.deleteRole(role.id);
-                    },
+                  Get.dialog(
+                    Dialog(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      backgroundColor: Colors.white,
+                      elevation: 0,
+                      child: Padding(
+                        padding: const EdgeInsets.all(24.0),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: AppColors.errorColor.withValues(alpha: 0.1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Iconsax.trash,
+                                color: AppColors.errorColor,
+                                size: 32,
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                            const AppText(
+                              'Delete Role?',
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textColorPrimary,
+                            ),
+                            const SizedBox(height: 12),
+                            AppText(
+                              'Are you sure you want to delete the "${role.name}" role? This action cannot be undone and will remove all associated permissions.',
+                              fontSize: 13,
+                              color: AppColors.textColorSecondary,
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 24),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton(
+                                    onPressed: () => Get.back(),
+                                    style: OutlinedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(vertical: 12),
+                                      side: const BorderSide(color: AppColors.slate200),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                    child: const AppText(
+                                      'Cancel',
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.textColorPrimary,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: ElevatedButton(
+                                    onPressed: () => controller.deleteRole(role.id),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppColors.errorColor,
+                                      elevation: 0,
+                                      padding: const EdgeInsets.symmetric(vertical: 12),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                    child: const AppText(
+                                      'Delete',
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   );
                 }
               },
@@ -85,6 +155,10 @@ class RoleDetailsScreen extends StatelessWidget {
         ],
       ),
       body: Obx(() {
+        if (controller.isLoadingRoleDetails.value) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
         final role = controller.selectedRole.value;
         if (role == null) {
           return const Center(child: AppText('Role details not available'));

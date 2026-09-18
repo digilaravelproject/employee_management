@@ -1,11 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../../core/constants/app_constants.dart';
+import '../../../core/services/storage/shared_prefs.dart';
 import '../../../routes/route_helper.dart';
 
 class IntroController extends GetxController {
   final PageController pageController = PageController();
   final RxInt currentPage = 0.obs;
+
+  @override
+  void onInit() {
+    super.onInit();
+    _checkLoginStatus();
+  }
+
+  void _checkLoginStatus() {
+    final isLoggedIn = SharedPrefs.getBool(AppConstants.isLoggedIn) ?? false;
+    if (isLoggedIn) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Get.offAllNamed(RouteHelper.getDashboardRoute());
+      });
+    }
+  }
 
   final List<Map<String, String>> introData = [
     {

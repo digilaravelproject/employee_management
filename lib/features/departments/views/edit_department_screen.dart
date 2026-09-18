@@ -11,13 +11,6 @@ class EditDepartmentScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = Get.find<DepartmentsController>();
-    final dept = controller.selectedDepartment.value;
-
-    if (dept == null) {
-      return const Scaffold(
-        body: Center(child: AppText('No department selected')),
-      );
-    }
 
     return Scaffold(
       backgroundColor: AppColors.scaffoldBackgroundColor,
@@ -32,7 +25,7 @@ class EditDepartmentScreen extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
             ),
             child: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textColorPrimary, size: 20),
+              icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textColorPrimary, size: 18),
               onPressed: () => Get.back(),
             ),
           ),
@@ -56,7 +49,13 @@ class EditDepartmentScreen extends StatelessWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => _showDeleteConfirmation(context, controller, dept.id),
+            onPressed: () {
+              final deptId = controller.selectedApiDepartment.value?.id.toString() ??
+                  controller.selectedDepartment.value?.id;
+              if (deptId != null) {
+                _showDeleteConfirmation(context, controller, deptId);
+              }
+            },
             child: const Padding(
               padding: EdgeInsets.symmetric(horizontal: 8.0),
               child: AppText(
@@ -78,7 +77,7 @@ class EditDepartmentScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ── Form Card ──
+                  // ── Basic Info Card ──
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -125,13 +124,51 @@ class EditDepartmentScreen extends StatelessWidget {
                             ),
                           ),
                         ),
+                        const SizedBox(height: 18),
+                        _buildLabel('Status', false),
+                        const SizedBox(height: 8),
+                        Obx(() {
+                          final isActive = controller.formStatus.value.toLowerCase() == 'active';
+                          return Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: AppColors.slate50,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  isActive ? Iconsax.tick_circle : Iconsax.close_circle,
+                                  size: 18,
+                                  color: isActive ? const Color(0xFF10B981) : AppColors.textColorHint,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: AppText(
+                                    isActive ? 'Active' : 'Inactive',
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: isActive ? const Color(0xFF10B981) : AppColors.textColorHint,
+                                  ),
+                                ),
+                                Switch(
+                                  value: isActive,
+                                  activeThumbColor: const Color(0xFF10B981),
+                                  onChanged: (val) {
+                                    controller.formStatus.value = val ? 'Active' : 'Inactive';
+                                  },
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
                       ],
                     ),
                   ),
                   const SizedBox(height: 16),
 
                   // ── Department Head Card ──
-                  _buildLabel('Department Head', true),
+                  _buildLabel('Department Head', false),
                   const SizedBox(height: 8),
                   Obx(() {
                     final head = controller.selectedHead.value;
@@ -146,10 +183,21 @@ class EditDepartmentScreen extends StatelessWidget {
                         child: Row(
                           children: [
                             if (head != null) ...[
-                              CircleAvatar(
-                                radius: 20,
-                                backgroundImage: NetworkImage(head.avatarUrl),
-                              ),
+                              head.avatar != null && head.avatar!.isNotEmpty
+                                  ? CircleAvatar(
+                                      radius: 20,
+                                      backgroundImage: NetworkImage(head.avatar!),
+                                    )
+                                  : CircleAvatar(
+                                      radius: 20,
+                                      backgroundColor: AppColors.primaryColor.withValues(alpha: 0.1),
+                                      child: AppText(
+                                        head.name.isNotEmpty ? head.name[0].toUpperCase() : 'H',
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.primaryColor,
+                                      ),
+                                    ),
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Column(
@@ -158,6 +206,10 @@ class EditDepartmentScreen extends StatelessWidget {
                                     AppText(head.name, fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textColorPrimary),
                                     const SizedBox(height: 2),
                                     AppText(head.email, fontSize: 10, color: AppColors.textColorHint),
+                                    if (head.designation != null && head.designation!.isNotEmpty) ...[
+                                      const SizedBox(height: 2),
+                                      AppText(head.designation!, fontSize: 10, color: AppColors.primaryColor, fontWeight: FontWeight.w600),
+                                    ],
                                   ],
                                 ),
                               ),
@@ -183,7 +235,7 @@ class EditDepartmentScreen extends StatelessWidget {
                                     children: [
                                       AppText('Select Department Head', fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textColorPrimary),
                                       SizedBox(height: 2),
-                                      AppText('Choose the head for this department', fontSize: 10, color: AppColors.textColorHint),
+                                      AppText('Choose the employee to lead this department', fontSize: 10, color: AppColors.textColorHint),
                                     ],
                                   ),
                                 ),
@@ -244,10 +296,6 @@ class EditDepartmentScreen extends StatelessWidget {
                       );
                     }
 
-                    // Display only first 3 items as per mockup or more
-                    final displayCount = employeesList.length > 3 ? 3 : employeesList.length;
-                    final remainingCount = employeesList.length - displayCount;
-
                     return Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -255,57 +303,52 @@ class EditDepartmentScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(color: const Color(0xFFF1F5F9)),
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          ListView.separated(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: displayCount,
-                            separatorBuilder: (context, index) => const Divider(height: 20, color: Color(0xFFF1F5F9)),
-                            itemBuilder: (context, index) {
-                              final emp = employeesList[index];
-                              return Row(
-                                children: [
-                                  CircleAvatar(
-                                    radius: 18,
-                                    backgroundImage: NetworkImage(emp.avatarUrl),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        AppText(emp.name, fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textColorPrimary),
-                                        const SizedBox(height: 2),
-                                        AppText(emp.email, fontSize: 10, color: AppColors.textColorHint),
-                                      ],
+                      child: ListView.separated(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: employeesList.length,
+                        separatorBuilder: (context, index) => const Divider(height: 20, color: Color(0xFFF1F5F9)),
+                        itemBuilder: (context, index) {
+                          final emp = employeesList[index];
+                          return Row(
+                            children: [
+                              emp.avatar != null && emp.avatar!.isNotEmpty
+                                  ? CircleAvatar(
+                                      radius: 18,
+                                      backgroundImage: NetworkImage(emp.avatar!),
+                                    )
+                                  : CircleAvatar(
+                                      radius: 18,
+                                      backgroundColor: AppColors.primaryColor.withValues(alpha: 0.1),
+                                      child: AppText(
+                                        emp.name.isNotEmpty ? emp.name[0].toUpperCase() : '?',
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.primaryColor,
+                                      ),
                                     ),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Iconsax.minus_cirlce, color: Colors.redAccent, size: 20),
-                                    onPressed: () => controller.removeEmployee(emp),
-                                  ),
-                                ],
-                              );
-                            },
-                          ),
-                          if (remainingCount > 0) ...[
-                            const Divider(height: 20, color: Color(0xFFF1F5F9)),
-                            GestureDetector(
-                              onTap: () => _showEmployeesSelectionSheet(context, controller),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 4),
-                                child: AppText(
-                                  '+ $remainingCount more employees',
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.primaryColor,
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    AppText(emp.name, fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textColorPrimary),
+                                    const SizedBox(height: 2),
+                                    AppText(emp.email, fontSize: 10, color: AppColors.textColorHint),
+                                    if (emp.designation != null && emp.designation!.isNotEmpty) ...[
+                                      const SizedBox(height: 2),
+                                      AppText(emp.designation!, fontSize: 9, color: AppColors.primaryColor),
+                                    ],
+                                  ],
                                 ),
                               ),
-                            ),
-                          ],
-                        ],
+                              IconButton(
+                                icon: const Icon(Iconsax.minus_cirlce, color: Colors.redAccent, size: 20),
+                                onPressed: () => controller.removeEmployee(emp),
+                              ),
+                            ],
+                          );
+                        },
                       ),
                     );
                   }),
@@ -314,7 +357,7 @@ class EditDepartmentScreen extends StatelessWidget {
               ),
             ),
           ),
-          
+
           // ── Bottom Update Button ──
           Container(
             color: Colors.white,
@@ -324,20 +367,30 @@ class EditDepartmentScreen extends StatelessWidget {
               child: SizedBox(
                 width: double.infinity,
                 height: 50,
-                child: ElevatedButton(
-                  onPressed: () => controller.updateDepartment(),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryColor,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    elevation: 0,
-                  ),
-                  child: const AppText(
-                    'Update Department',
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
+                child: Obx(() {
+                  final isSaving = controller.isSaving.value;
+                  return ElevatedButton(
+                    onPressed: isSaving ? null : () => controller.updateDepartment(),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryColor,
+                      disabledBackgroundColor: AppColors.primaryColor.withValues(alpha: 0.6),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      elevation: 0,
+                    ),
+                    child: isSaving
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                          )
+                        : const AppText(
+                            'Update Department',
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                  );
+                }),
               ),
             ),
           ),
@@ -369,7 +422,7 @@ class EditDepartmentScreen extends StatelessWidget {
           ),
           ElevatedButton(
             onPressed: () {
-              Get.back(); // Dismiss dialog
+              Get.back();
               controller.deleteDepartment(id);
             },
             style: ElevatedButton.styleFrom(
@@ -385,15 +438,17 @@ class EditDepartmentScreen extends StatelessWidget {
 
   // Show bottom sheet to choose Department Head
   void _showHeadSelectionSheet(BuildContext context, DepartmentsController controller) {
+    final available = controller.availableEmployees;
+
     Get.bottomSheet(
       Container(
+        height: MediaQuery.of(context).size.height * 0.65,
         decoration: const BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
         padding: const EdgeInsets.all(20),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Center(
@@ -410,13 +465,13 @@ class EditDepartmentScreen extends StatelessWidget {
             const SizedBox(height: 14),
             Expanded(
               child: ListView.separated(
-                itemCount: controller.allEmployees.length,
+                itemCount: available.length,
                 physics: const BouncingScrollPhysics(),
                 separatorBuilder: (context, index) => const Divider(height: 20, color: Color(0xFFF1F5F9)),
                 itemBuilder: (context, index) {
-                  final user = controller.allEmployees[index];
+                  final user = available[index];
                   return Obx(() {
-                    final isSelected = controller.selectedHead.value == user;
+                    final isSelected = controller.selectedHead.value?.id == user.id;
                     return InkWell(
                       onTap: () {
                         controller.assignHead(user);
@@ -424,10 +479,21 @@ class EditDepartmentScreen extends StatelessWidget {
                       },
                       child: Row(
                         children: [
-                          CircleAvatar(
-                            radius: 20,
-                            backgroundImage: NetworkImage(user.avatarUrl),
-                          ),
+                          user.avatar != null && user.avatar!.isNotEmpty
+                              ? CircleAvatar(
+                                  radius: 20,
+                                  backgroundImage: NetworkImage(user.avatar!),
+                                )
+                              : CircleAvatar(
+                                  radius: 20,
+                                  backgroundColor: AppColors.primaryColor.withValues(alpha: 0.1),
+                                  child: AppText(
+                                    user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.primaryColor,
+                                  ),
+                                ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Column(
@@ -436,6 +502,10 @@ class EditDepartmentScreen extends StatelessWidget {
                                 AppText(user.name, fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textColorPrimary),
                                 const SizedBox(height: 2),
                                 AppText(user.email, fontSize: 10, color: AppColors.textColorHint),
+                                if (user.designation != null && user.designation!.isNotEmpty) ...[
+                                  const SizedBox(height: 2),
+                                  AppText(user.designation!, fontSize: 9, color: AppColors.primaryColor),
+                                ],
                               ],
                             ),
                           ),
@@ -453,20 +523,23 @@ class EditDepartmentScreen extends StatelessWidget {
           ],
         ),
       ),
+      isScrollControlled: true,
     );
   }
 
   // Show bottom sheet to multi-select employees
   void _showEmployeesSelectionSheet(BuildContext context, DepartmentsController controller) {
+    final available = controller.availableEmployees;
+
     Get.bottomSheet(
       Container(
+        height: MediaQuery.of(context).size.height * 0.65,
         decoration: const BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
         padding: const EdgeInsets.all(20),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Center(
@@ -485,7 +558,7 @@ class EditDepartmentScreen extends StatelessWidget {
                   children: [
                     AppText('Select Employees', fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textColorPrimary),
                     SizedBox(height: 2),
-                    AppText('Assign multiple employees to this department', fontSize: 11, color: AppColors.textColorHint),
+                    AppText('Assign employees to this department', fontSize: 11, color: AppColors.textColorHint),
                   ],
                 ),
                 TextButton(
@@ -497,21 +570,32 @@ class EditDepartmentScreen extends StatelessWidget {
             const SizedBox(height: 14),
             Expanded(
               child: ListView.separated(
-                itemCount: controller.allEmployees.length,
+                itemCount: available.length,
                 physics: const BouncingScrollPhysics(),
                 separatorBuilder: (context, index) => const Divider(height: 20, color: Color(0xFFF1F5F9)),
                 itemBuilder: (context, index) {
-                  final user = controller.allEmployees[index];
+                  final user = available[index];
                   return Obx(() {
-                    final isSelected = controller.selectedEmployees.contains(user);
+                    final isSelected = controller.selectedEmployees.any((e) => e.id == user.id);
                     return InkWell(
                       onTap: () => controller.toggleEmployeeSelection(user),
                       child: Row(
                         children: [
-                          CircleAvatar(
-                            radius: 20,
-                            backgroundImage: NetworkImage(user.avatarUrl),
-                          ),
+                          user.avatar != null && user.avatar!.isNotEmpty
+                              ? CircleAvatar(
+                                  radius: 20,
+                                  backgroundImage: NetworkImage(user.avatar!),
+                                )
+                              : CircleAvatar(
+                                  radius: 20,
+                                  backgroundColor: AppColors.primaryColor.withValues(alpha: 0.1),
+                                  child: AppText(
+                                    user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.primaryColor,
+                                  ),
+                                ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Column(
@@ -520,6 +604,10 @@ class EditDepartmentScreen extends StatelessWidget {
                                 AppText(user.name, fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textColorPrimary),
                                 const SizedBox(height: 2),
                                 AppText(user.email, fontSize: 10, color: AppColors.textColorHint),
+                                if (user.designation != null && user.designation!.isNotEmpty) ...[
+                                  const SizedBox(height: 2),
+                                  AppText(user.designation!, fontSize: 9, color: AppColors.primaryColor),
+                                ],
                               ],
                             ),
                           ),
@@ -537,6 +625,7 @@ class EditDepartmentScreen extends StatelessWidget {
           ],
         ),
       ),
+      isScrollControlled: true,
     );
   }
 }

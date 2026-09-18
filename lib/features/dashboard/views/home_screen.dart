@@ -4,6 +4,7 @@ import 'package:iconsax/iconsax.dart';
 import 'package:get/get.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_text.dart';
+import '../../../routes/route_helper.dart';
 import '../../leave_management/views/my_leaves_screen.dart';
 import '../../leave_management/views/apply_leave_screen.dart';
 import '../../leave_management/views/manager_leave_dashboard.dart';
@@ -477,7 +478,7 @@ class _QuickActionsGrid extends StatelessWidget {
         'icon': Iconsax.buildings,
         'label': 'Department',
         'color': const Color(0xFF6366F1), // Indigo
-        'onTap': () => Get.to(() => const DepartmentListScreen()),
+        'onTap': () => Get.toNamed('/department-list'),
       },
       {
         'icon': Iconsax.shield_security,
@@ -489,7 +490,7 @@ class _QuickActionsGrid extends StatelessWidget {
         'icon': Iconsax.user_tag,
         'label': 'Designation',
         'color': const Color(0xFF3B82F6), // Blue
-        'onTap': () => Get.to(() => const DesignationListScreen()),
+        'onTap': () => Get.toNamed(RouteHelper.getDesignationListRoute()),
       },
       {
         'icon': Iconsax.clock,

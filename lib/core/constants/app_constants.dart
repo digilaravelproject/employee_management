@@ -4,9 +4,9 @@ import 'app_text_constants.dart';
 
 class AppConstants {
   static String appName = "Office Management";
-  static String baseUrl = "https://beige-stingray-620454.hostingersite.com";
+  static String baseUrl = "https://yellowgreen-stork-427223.hostingersite.com/public";
   static String imageBaseUrl = "https://beige-stingray-620454.hostingersite.com/storage";
-  static String apiToken = EnvConfig.apiToken;
+  static String apiToken = "13|DjgMQyQlZyUELVdhjCWuNvZxZHJhD8twF0ovZxDJ877bcfb4"; // Temporarily set for debugging
   static const String googleMapsKey = 'AIzaSyAH2m4kQwGljzCxdDdy7JrnKTDKCgFZU_A';
   static const String fontFamily = 'Poppins';
   static const String defaultTag = 'PCB_APP'; // default tag for log checking

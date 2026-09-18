@@ -4,6 +4,7 @@ import 'package:iconsax/iconsax.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_text.dart';
 import '../../departments/controllers/departments_controller.dart';
+import '../../departments/widgets/department_picker_bottom_sheet.dart';
 import '../../employee/designation/controllers/designation_controller.dart';
 import '../controllers/role_permissions_controller.dart';
 import '../models/role_permission_models.dart';
@@ -109,24 +110,34 @@ class _EditRoleScreenState extends State<EditRoleScreen> {
         actions: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: ElevatedButton.icon(
-              onPressed: () => controller.updateRole(widget.role.id),
-              icon: const Icon(Icons.check_rounded, size: 16, color: Colors.white),
-              label: const AppText(
-                'Save Changes',
+            child: Obx(() => ElevatedButton.icon(
+              onPressed: controller.isSavingRole.value
+                  ? null
+                  : () => controller.updateRole(widget.role.id),
+              icon: controller.isSavingRole.value
+                  ? const SizedBox(
+                      height: 16,
+                      width: 16,
+                      child: CircularProgressIndicator(
+                          color: Colors.white, strokeWidth: 2),
+                    )
+                  : const Icon(Icons.check_rounded, size: 16, color: Colors.white),
+              label: AppText(
+                controller.isSavingRole.value ? 'Saving...' : 'Save Changes',
                 fontSize: 13,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primaryColor,
+                disabledBackgroundColor: AppColors.primaryColor.withValues(alpha: 0.7),
                 elevation: 0,
                 padding: const EdgeInsets.symmetric(horizontal: 14),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-            ),
+            )),
           ),
         ],
       ),
@@ -164,6 +175,58 @@ class _EditRoleScreenState extends State<EditRoleScreen> {
 
             const SizedBox(height: 40),
           ],
+        ),
+      ),
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, -4),
+            ),
+          ],
+        ),
+        child: SafeArea(
+          child: Obx(() => ElevatedButton(
+            onPressed: controller.isSavingRole.value
+                ? null
+                : () => controller.updateRole(widget.role.id),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryColor,
+              disabledBackgroundColor: AppColors.primaryColor.withValues(alpha: 0.7),
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              elevation: 0,
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (controller.isSavingRole.value)
+                  const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                else
+                  const Icon(Icons.check_rounded, size: 20, color: Colors.white),
+                const SizedBox(width: 8),
+                AppText(
+                  controller.isSavingRole.value ? 'Saving Changes...' : 'Save Changes',
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ],
+            ),
+          )),
         ),
       ),
     );
@@ -260,28 +323,52 @@ class _EditRoleScreenState extends State<EditRoleScreen> {
           const SizedBox(height: 8),
           Obx(() {
             final selected = controller.selectedDepartmentName.value;
-            return Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              decoration: BoxDecoration(
-                color: AppColors.slate50,
+            final isChosen = selected != null && selected.isNotEmpty;
+            return Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () {
+                  DepartmentPickerBottomSheet.show(
+                    context,
+                    selectedDepartmentName: selected,
+                    onSelect: (dept) {
+                      controller.selectedDepartmentName.value = dept.name;
+                    },
+                  );
+                },
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.slate200),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  isExpanded: true,
-                  hint: const AppText('Select Department',
-                      fontSize: 13, color: AppColors.textColorHint),
-                  value: departmentOptions.contains(selected) ? selected : null,
-                  icon: const Icon(Icons.keyboard_arrow_down_rounded,
-                      color: AppColors.textColorSecondary),
-                  items: departmentOptions.map((dept) {
-                    return DropdownMenuItem<String>(
-                      value: dept,
-                      child: AppText(dept, fontSize: 13, fontWeight: FontWeight.w600),
-                    );
-                  }).toList(),
-                  onChanged: (val) => controller.selectedDepartmentName.value = val,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: AppColors.slate50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isChosen ? AppColors.primaryColor.withValues(alpha: 0.4) : AppColors.slate200,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Iconsax.hierarchy,
+                        size: 18,
+                        color: isChosen ? AppColors.primaryColor : AppColors.textColorHint,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: AppText(
+                          isChosen ? selected : 'Select Department',
+                          fontSize: 13,
+                          fontWeight: isChosen ? FontWeight.w600 : FontWeight.w400,
+                          color: isChosen ? AppColors.textColorPrimary : AppColors.textColorHint,
+                        ),
+                      ),
+                      const Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        color: AppColors.textColorSecondary,
+                        size: 20,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             );
@@ -458,6 +545,12 @@ class _EditRoleScreenState extends State<EditRoleScreen> {
 
   Widget _buildPermissionsAccordionList(RolePermissionsController controller) {
     return Obx(() {
+      if (controller.isLoadingPermissions.value) {
+        return const Center(child: Padding(
+          padding: EdgeInsets.all(32.0),
+          child: CircularProgressIndicator(),
+        ));
+      }
       return ListView.builder(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
@@ -519,11 +612,11 @@ class _EditRoleScreenState extends State<EditRoleScreen> {
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Switch.adaptive(
+                    Checkbox(
                       value: group.isAllGranted,
-                      activeTrackColor: AppColors.primaryColor,
+                      activeColor: AppColors.primaryColor,
                       onChanged: (val) {
-                        controller.toggleModuleAll(group.moduleId, val);
+                        controller.toggleModuleAll(group.moduleId, val ?? false);
                       },
                     ),
                     const SizedBox(width: 4),
@@ -595,14 +688,14 @@ class _EditRoleScreenState extends State<EditRoleScreen> {
                               ],
                             ),
                           ),
-                          Switch.adaptive(
+                          Checkbox(
                             value: perm.isGranted,
-                            activeTrackColor: AppColors.primaryColor,
+                            activeColor: AppColors.primaryColor,
                             onChanged: (val) {
                               controller.togglePermission(
                                 group.moduleId,
                                 perm.key,
-                                val,
+                                val ?? false,
                               );
                             },
                           ),
