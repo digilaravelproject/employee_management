@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:iconsax/iconsax.dart';
+import 'shift_response_model.dart';
 
 class ShiftModel {
   final String id;
@@ -64,6 +66,65 @@ class ShiftModel {
     this.icon = Icons.wb_sunny_outlined,
     this.assignedEmployeeNames = const [],
   });
+
+  factory ShiftModel.fromDataModel(ShiftDataModel data) {
+    final type = data.shiftType.isNotEmpty ? data.shiftType : 'Fixed Shift';
+    final isNight = type.toLowerCase().contains('night');
+    final isFlexi = type.toLowerCase().contains('flex');
+    final isRotate = type.toLowerCase().contains('rotat');
+
+    IconData icon = Icons.wb_sunny_outlined;
+    Color iconColor = Colors.orange;
+
+    if (isNight) {
+      icon = Icons.nightlight_outlined;
+      iconColor = Colors.blue;
+    } else if (isFlexi) {
+      icon = Iconsax.slider_horizontal;
+      iconColor = Colors.redAccent;
+    } else if (isRotate) {
+      icon = Iconsax.repeat;
+      iconColor = Colors.green;
+    } else if (type.toLowerCase().contains('evening')) {
+      icon = Icons.wb_twilight;
+      iconColor = Colors.purple;
+    }
+
+    final assignedNames = data.assignedEmployees.map((e) => e.name).toList();
+
+    return ShiftModel(
+      id: data.id.toString(),
+      name: data.name,
+      code: data.code,
+      type: type,
+      isActive: data.status?.toLowerCase() == 'active',
+      description: data.description ?? '',
+      startTime: data.startTime,
+      endTime: data.endTime,
+      crossMidnight: data.crossMidnight,
+      workingHours: data.totalDuration ?? data.netWorkingDuration ?? data.grossDuration ?? '8h 00m',
+      enableBreak: data.breaksEnabled,
+      breakType: data.breaks.isNotEmpty ? data.breaks.first.type : 'Paid',
+      breakDuration: data.breakDuration ?? '01:00',
+      gracePeriod: '${data.gracePeriodMinutes ?? 15} Minutes',
+      lateAfter: '${data.lateAfterMinutes ?? 15} Minutes',
+      minWorkingHours: '${(data.minimumWorkingMinutes ?? 480) ~/ 60}:00 Hours',
+      earlyLeavingAllowed: data.earlyLeavingAllowed ?? false,
+      autoMarkLate: data.autoMarkLate ?? true,
+      autoMarkHalfDay: data.autoMarkHalfDay ?? true,
+      lateThreshold: '${data.lateThresholdMinutes ?? 30} Minutes',
+      halfDayAfter: '${(data.halfDayAfterMinutes ?? 240) ~/ 60}:00 Hours',
+      enableOvertime: data.overtimeEnabled ?? true,
+      otStartsAfter: '${(data.overtimeStartsAfterMinutes ?? 480) ~/ 60}:00 Hours',
+      minimumOT: '${data.minimumOvertimeMinutes ?? 30} Minutes',
+      otCalculation: data.overtimeCalculation ?? 'Hourly',
+      approvalRequired: data.overtimeApprovalRequired ?? true,
+      employeesCount: data.assignedEmployeesCount > 0 ? data.assignedEmployeesCount : data.assignedEmployees.length,
+      iconColor: iconColor,
+      icon: icon,
+      assignedEmployeeNames: assignedNames,
+    );
+  }
 }
 
 class ShiftHistoryModel {

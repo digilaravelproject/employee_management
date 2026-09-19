@@ -3,60 +3,169 @@ import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_text.dart';
+import '../../employee/management/controllers/employee_controller.dart';
+import '../controllers/shift_controller.dart';
+import '../models/shift_model.dart';
+import '../models/shift_response_model.dart';
 
 class AssignShiftScreen extends StatefulWidget {
-  const AssignShiftScreen({super.key});
+  final ShiftModel? preSelectedShift;
+  final ShiftDataModel? preSelectedShiftData;
+
+  const AssignShiftScreen({
+    super.key,
+    this.preSelectedShift,
+    this.preSelectedShiftData,
+  });
 
   @override
   State<AssignShiftScreen> createState() => _AssignShiftScreenState();
 }
 
+class _AssignShiftScreenItem {
+  final int id;
+  final String name;
+  final String designation;
+  final String department;
+  bool isSelected;
+
+  _AssignShiftScreenItem({
+    required this.id,
+    required this.name,
+    required this.designation,
+    required this.department,
+    this.isSelected = false,
+  });
+}
+
 class _AssignShiftScreenState extends State<AssignShiftScreen> {
   final TextEditingController _searchController = TextEditingController();
+  late final ShiftController _shiftController;
 
-  final List<Map<String, dynamic>> _shifts = [
-    {
-      'name': 'Morning Shift',
-      'time': '09:00 AM - 06:00 PM',
-      'icon': Icons.wb_sunny_outlined,
-      'color': Colors.orange,
-    },
-    {
-      'name': 'Evening Shift',
-      'time': '02:00 PM - 11:00 PM',
-      'icon': Icons.wb_twilight,
-      'color': Colors.purple,
-    },
-    {
-      'name': 'Night Shift',
-      'time': '10:00 PM - 07:00 AM',
-      'icon': Icons.nightlight_outlined,
-      'color': Colors.blue,
-    },
-    {
-      'name': 'General Shift',
-      'time': '10:00 AM - 07:00 PM',
-      'icon': Icons.access_time_rounded,
-      'color': Colors.teal,
-    },
-  ];
-
-  late Map<String, dynamic> _selectedShift;
-
-  final List<Map<String, dynamic>> _employees = [
-    {'name': 'Rahul Sharma', 'designation': 'UI/UX Designer', 'department': 'Design', 'selected': true},
-    {'name': 'Neha Singh', 'designation': 'HR Executive', 'department': 'Human Resources', 'selected': true},
-    {'name': 'Amit Kumar', 'designation': 'Marketing Executive', 'department': 'Marketing', 'selected': false},
-    {'name': 'Vikram Joshi', 'designation': 'Backend Developer', 'department': 'Engineering', 'selected': false},
-    {'name': 'Sneha Patel', 'designation': 'Frontend Developer', 'department': 'Engineering', 'selected': false},
-    {'name': 'Sameer Khan', 'designation': 'QA Engineer', 'department': 'Quality Assurance', 'selected': false},
-    {'name': 'Pooja Verma', 'designation': 'Operations Lead', 'department': 'Operations', 'selected': false},
-  ];
+  ShiftModel? _selectedShift;
+  List<_AssignShiftScreenItem> _employees = [];
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _selectedShift = _shifts.first;
+    _shiftController = Get.isRegistered<ShiftController>()
+        ? Get.find<ShiftController>()
+        : Get.put(ShiftController());
+
+    _initShift();
+    _initEmployees();
+  }
+
+  void _initShift() {
+    if (widget.preSelectedShift != null) {
+      _selectedShift = widget.preSelectedShift;
+    } else if (widget.preSelectedShiftData != null) {
+      _selectedShift = ShiftModel.fromDataModel(widget.preSelectedShiftData!);
+    } else if (_shiftController.shifts.isNotEmpty) {
+      _selectedShift = _shiftController.shifts.first;
+    } else {
+      _selectedShift = ShiftModel(
+        id: '2',
+        name: 'Morning Shift',
+        code: 'MORNING',
+        type: 'Fixed Shift',
+        isActive: true,
+        description: 'Morning working shift for sales and operations team.',
+        startTime: '10:00 AM',
+        endTime: '07:00 PM',
+        crossMidnight: false,
+        workingHours: '8h 00m',
+        enableBreak: true,
+        breakType: 'Paid',
+        breakDuration: '01:00',
+        gracePeriod: '15 min',
+        lateAfter: '15 min',
+        minWorkingHours: '8h 00m',
+        earlyLeavingAllowed: false,
+        autoMarkLate: true,
+        autoMarkHalfDay: true,
+        lateThreshold: '45 min',
+        halfDayAfter: '4h 00m',
+        enableOvertime: true,
+        otStartsAfter: '8h 00m',
+        minimumOT: '30 min',
+        otCalculation: 'Hourly',
+        approvalRequired: true,
+        employeesCount: 0,
+        icon: Icons.wb_sunny_outlined,
+        iconColor: Colors.orange,
+        assignedEmployeeNames: [],
+      );
+    }
+  }
+
+  void _initEmployees() {
+    final List<_AssignShiftScreenItem> list = [];
+
+    // Check if EmployeeController is registered with real/mock employees
+    if (Get.isRegistered<EmployeeController>()) {
+      final empCtrl = Get.find<EmployeeController>();
+      if (empCtrl.employees.isNotEmpty) {
+        for (var i = 0; i < empCtrl.employees.length; i++) {
+          final emp = empCtrl.employees[i];
+          final parsedId = int.tryParse(emp.id) ?? (i + 1);
+          list.add(
+            _AssignShiftScreenItem(
+              id: parsedId,
+              name: emp.name,
+              designation: emp.designation,
+              department: emp.department,
+              isSelected: _isEmployeePreAssigned(parsedId, emp.name),
+            ),
+          );
+        }
+      }
+    }
+
+    // Default fallback employee list if empty
+    if (list.isEmpty) {
+      final defaults = [
+        {'id': 1, 'name': 'Rahul Sharma', 'designation': 'UI/UX Designer', 'department': 'Design', 'selected': true},
+        {'id': 2, 'name': 'Neha Singh', 'designation': 'HR Executive', 'department': 'Human Resources', 'selected': true},
+        {'id': 3, 'name': 'Amit Kumar', 'designation': 'Marketing Executive', 'department': 'Marketing', 'selected': false},
+        {'id': 4, 'name': 'Vikram Joshi', 'designation': 'Backend Developer', 'department': 'Engineering', 'selected': false},
+        {'id': 5, 'name': 'Sneha Patel', 'designation': 'Frontend Developer', 'department': 'Engineering', 'selected': false},
+        {'id': 6, 'name': 'Sameer Khan', 'designation': 'QA Engineer', 'department': 'Quality Assurance', 'selected': false},
+        {'id': 7, 'name': 'Pooja Verma', 'designation': 'Operations Lead', 'department': 'Operations', 'selected': false},
+      ];
+
+      for (final d in defaults) {
+        final id = d['id'] as int;
+        final name = d['name'] as String;
+        list.add(
+          _AssignShiftScreenItem(
+            id: id,
+            name: name,
+            designation: d['designation'] as String,
+            department: d['department'] as String,
+            isSelected: _isEmployeePreAssigned(id, name) || (d['selected'] as bool),
+          ),
+        );
+      }
+    }
+
+    setState(() {
+      _employees = list;
+    });
+  }
+
+  bool _isEmployeePreAssigned(int id, String name) {
+    if (widget.preSelectedShiftData != null && widget.preSelectedShiftData!.assignedEmployees.isNotEmpty) {
+      final exists = widget.preSelectedShiftData!.assignedEmployees.any(
+        (emp) => emp.id == id || emp.name.toLowerCase() == name.toLowerCase(),
+      );
+      if (exists) return true;
+    }
+    if (widget.preSelectedShift != null && widget.preSelectedShift!.assignedEmployeeNames.isNotEmpty) {
+      return widget.preSelectedShift!.assignedEmployeeNames.contains(name);
+    }
+    return false;
   }
 
   @override
@@ -65,19 +174,24 @@ class _AssignShiftScreenState extends State<AssignShiftScreen> {
     super.dispose();
   }
 
-  List<Map<String, dynamic>> get _filteredEmployees {
+  List<_AssignShiftScreenItem> get _filteredEmployees {
     final query = _searchController.text.trim().toLowerCase();
     if (query.isEmpty) return _employees;
     return _employees.where((emp) {
-      final name = (emp['name'] as String).toLowerCase();
-      final desig = (emp['designation'] as String).toLowerCase();
-      return name.contains(query) || desig.contains(query);
+      final name = emp.name.toLowerCase();
+      final desig = emp.designation.toLowerCase();
+      final dept = emp.department.toLowerCase();
+      return name.contains(query) || desig.contains(query) || dept.contains(query);
     }).toList();
   }
 
-  int get _selectedCount => _employees.where((e) => e['selected'] as bool).length;
+  int get _selectedCount => _employees.where((e) => e.isSelected).length;
 
   void _showShiftSelectionModal() {
+    final availableShifts = _shiftController.shifts.isNotEmpty
+        ? _shiftController.shifts.toList()
+        : (_selectedShift != null ? [_selectedShift!] : <ShiftModel>[]);
+
     Get.bottomSheet(
       Container(
         padding: const EdgeInsets.all(20),
@@ -100,41 +214,49 @@ class _AssignShiftScreenState extends State<AssignShiftScreen> {
               ],
             ),
             const SizedBox(height: 12),
-            ..._shifts.map((shift) {
-              final isChosen = _selectedShift['name'] == shift['name'];
-              final Color shiftColor = shift['color'] as Color;
+            if (availableShifts.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 20),
+                child: Center(
+                  child: AppText('No shifts available', fontSize: 13, color: AppColors.textColorHint),
+                ),
+              )
+            else
+              ...availableShifts.map((shift) {
+                final isChosen = _selectedShift?.id == shift.id;
+                final Color shiftColor = shift.iconColor;
 
-              return Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                decoration: BoxDecoration(
-                  color: isChosen ? shiftColor.withValues(alpha: 0.08) : Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: isChosen ? shiftColor : AppColors.slate200,
-                    width: isChosen ? 1.5 : 1,
-                  ),
-                ),
-                child: ListTile(
-                  onTap: () {
-                    setState(() => _selectedShift = shift);
-                    Get.back();
-                  },
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: shiftColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  decoration: BoxDecoration(
+                    color: isChosen ? shiftColor.withValues(alpha: 0.08) : Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isChosen ? shiftColor : AppColors.slate200,
+                      width: isChosen ? 1.5 : 1,
                     ),
-                    child: Icon(shift['icon'] as IconData, color: shiftColor, size: 20),
                   ),
-                  title: AppText(shift['name'] as String, fontSize: 14, fontWeight: FontWeight.bold),
-                  subtitle: AppText(shift['time'] as String, fontSize: 12, color: AppColors.textColorSecondary),
-                  trailing: isChosen
-                      ? Icon(Icons.check_circle, color: shiftColor, size: 20)
-                      : null,
-                ),
-              );
-            }),
+                  child: ListTile(
+                    onTap: () {
+                      setState(() => _selectedShift = shift);
+                      Get.back();
+                    },
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: shiftColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(shift.icon, color: shiftColor, size: 20),
+                    ),
+                    title: AppText(shift.name, fontSize: 14, fontWeight: FontWeight.bold),
+                    subtitle: AppText('${shift.startTime} - ${shift.endTime}', fontSize: 12, color: AppColors.textColorSecondary),
+                    trailing: isChosen
+                        ? Icon(Icons.check_circle, color: shiftColor, size: 20)
+                        : null,
+                  ),
+                );
+              }),
             const SizedBox(height: 10),
           ],
         ),
@@ -142,11 +264,73 @@ class _AssignShiftScreenState extends State<AssignShiftScreen> {
     );
   }
 
+  Future<void> _handleAssignShift() async {
+    if (_selectedShift == null) {
+      Get.snackbar(
+        'No Shift Selected',
+        'Please select a shift first.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.orange,
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    final selectedEmployeeIds = _employees
+        .where((e) => e.isSelected)
+        .map((e) => e.id)
+        .toList();
+
+    setState(() => _isLoading = true);
+
+    try {
+      final response = await _shiftController.assignShiftApi(
+        _selectedShift!.id,
+        selectedEmployeeIds,
+      );
+
+      if (response.status) {
+        Get.back(result: true);
+        Get.snackbar(
+          'Shift Assigned',
+          response.message.isNotEmpty
+              ? response.message
+              : 'Shift "${_selectedShift!.name}" assigned to ${selectedEmployeeIds.length} employee(s).',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: AppColors.successColor,
+          colorText: Colors.white,
+          duration: const Duration(seconds: 3),
+        );
+      } else {
+        Get.snackbar(
+          'Assignment Failed',
+          response.message.isNotEmpty ? response.message : 'Could not assign shift. Please try again.',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: AppColors.errorColor,
+          colorText: Colors.white,
+          duration: const Duration(seconds: 3),
+        );
+      }
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'An error occurred: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: AppColors.errorColor,
+        colorText: Colors.white,
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final filtered = _filteredEmployees;
-    final allFilteredSelected = filtered.isNotEmpty && filtered.every((e) => e['selected'] as bool);
-    final Color currentShiftColor = _selectedShift['color'] as Color;
+    final allFilteredSelected = filtered.isNotEmpty && filtered.every((e) => e.isSelected);
+    final Color currentShiftColor = _selectedShift?.iconColor ?? AppColors.primaryColor;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -192,15 +376,29 @@ class _AssignShiftScreenState extends State<AssignShiftScreen> {
                                   color: currentShiftColor.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
-                                child: Icon(_selectedShift['icon'] as IconData, color: currentShiftColor, size: 20),
+                                child: Icon(
+                                  _selectedShift?.icon ?? Icons.access_time_rounded,
+                                  color: currentShiftColor,
+                                  size: 20,
+                                ),
                               ),
                               const SizedBox(width: 12),
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  AppText(_selectedShift['name'] as String, fontSize: 13, fontWeight: FontWeight.bold),
+                                  AppText(
+                                    _selectedShift?.name ?? 'Select a shift',
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                   const SizedBox(height: 2),
-                                  AppText(_selectedShift['time'] as String, fontSize: 11, color: AppColors.textColorSecondary),
+                                  AppText(
+                                    _selectedShift != null
+                                        ? '${_selectedShift!.startTime} - ${_selectedShift!.endTime}'
+                                        : 'Tap to choose',
+                                    fontSize: 11,
+                                    color: AppColors.textColorSecondary,
+                                  ),
                                 ],
                               ),
                             ],
@@ -270,7 +468,7 @@ class _AssignShiftScreenState extends State<AssignShiftScreen> {
                       setState(() {
                         final nextState = !allFilteredSelected;
                         for (var e in filtered) {
-                          e['selected'] = nextState;
+                          e.isSelected = nextState;
                         }
                       });
                     },
@@ -291,7 +489,7 @@ class _AssignShiftScreenState extends State<AssignShiftScreen> {
                             onChanged: (val) {
                               setState(() {
                                 for (var e in filtered) {
-                                  e['selected'] = val ?? false;
+                                  e.isSelected = val ?? false;
                                 }
                               });
                             },
@@ -324,15 +522,15 @@ class _AssignShiftScreenState extends State<AssignShiftScreen> {
                     )
                   else
                     ...filtered.map((emp) {
-                      final isSelected = emp['selected'] as bool;
-                      final name = emp['name'] as String;
-                      final designation = emp['designation'] as String;
-                      final department = emp['department'] as String? ?? 'General';
+                      final isSelected = emp.isSelected;
+                      final name = emp.name;
+                      final designation = emp.designation;
+                      final department = emp.department;
 
                       return InkWell(
                         onTap: () {
                           setState(() {
-                            emp['selected'] = !isSelected;
+                            emp.isSelected = !isSelected;
                           });
                         },
                         borderRadius: BorderRadius.circular(12),
@@ -391,7 +589,7 @@ class _AssignShiftScreenState extends State<AssignShiftScreen> {
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
                                 onChanged: (val) {
                                   setState(() {
-                                    emp['selected'] = val ?? false;
+                                    emp.isSelected = val ?? false;
                                   });
                                 },
                               ),
@@ -434,34 +632,24 @@ class _AssignShiftScreenState extends State<AssignShiftScreen> {
                     ),
                   ),
                   ElevatedButton(
-                    onPressed: () {
-                      if (_selectedCount == 0) {
-                        Get.snackbar(
-                          'No Employees Selected',
-                          'Please select at least one employee to assign the shift.',
-                          snackPosition: SnackPosition.BOTTOM,
-                          backgroundColor: Colors.orange,
-                          colorText: Colors.white,
-                        );
-                        return;
-                      }
-
-                      Get.back();
-                      Get.snackbar(
-                        'Success',
-                        'Shift "${_selectedShift['name']}" assigned to $_selectedCount employees.',
-                        snackPosition: SnackPosition.BOTTOM,
-                        backgroundColor: AppColors.successColor,
-                        colorText: Colors.white,
-                      );
-                    },
+                    onPressed: _isLoading ? null : _handleAssignShift,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primaryColor,
+                      disabledBackgroundColor: AppColors.primaryColor.withValues(alpha: 0.6),
                       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
                       elevation: 0,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
-                    child: const AppText('Assign Shift', fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+                    child: _isLoading
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                        : const AppText('Assign Shift', fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
                   ),
                 ],
               ),

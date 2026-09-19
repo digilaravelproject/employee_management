@@ -6,7 +6,9 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_text.dart';
 import '../controllers/shift_controller.dart';
+import '../models/create_shift_request_model.dart';
 import '../models/shift_model.dart';
+import '../models/shift_response_model.dart';
 
 class BreakItem {
   String name;
@@ -59,7 +61,14 @@ class EmployeeItem {
 }
 
 class CreateShiftScreen extends StatefulWidget {
-  const CreateShiftScreen({super.key});
+  final ShiftModel? shiftToEdit;
+  final ShiftDataModel? shiftDataToEdit;
+
+  const CreateShiftScreen({
+    super.key,
+    this.shiftToEdit,
+    this.shiftDataToEdit,
+  });
 
   @override
   State<CreateShiftScreen> createState() => _CreateShiftScreenState();
@@ -70,57 +79,50 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
   int _currentStep = 0;
   final int _totalSteps = 7;
 
+  bool get _isEditing => widget.shiftToEdit != null || widget.shiftDataToEdit != null;
+  String get _shiftId => widget.shiftToEdit?.id ?? widget.shiftDataToEdit?.id.toString() ?? '';
+
   // ----------------------------------------------------
   // Step 1: Basic Information (Panel 2)
   // ----------------------------------------------------
-  final TextEditingController _shiftNameController = TextEditingController(text: 'Morning Shift');
-  final TextEditingController _shiftCodeController = TextEditingController(text: 'MORNING');
-  final TextEditingController _descriptionController = TextEditingController(
-    text: 'Morning working shift for sales and operations team...',
-  );
-  String _shiftType = 'Fixed Shift';
+  late final TextEditingController _shiftNameController;
+  late final TextEditingController _shiftCodeController;
+  late final TextEditingController _descriptionController;
+  late String _shiftType;
   final List<String> _shiftTypes = ['Fixed Shift', 'Flexible Shift', 'Rotational Shift', 'Night Shift', 'Split Shift'];
-  bool _isActive = true;
+  late bool _isActive;
 
   // ----------------------------------------------------
   // Step 2: Shift Timing (Panel 3)
   // ----------------------------------------------------
-  TimeOfDay _startTime = const TimeOfDay(hour: 10, minute: 0);
-  TimeOfDay _endTime = const TimeOfDay(hour: 19, minute: 0);
-  bool _crossMidnight = false;
+  late TimeOfDay _startTime;
+  late TimeOfDay _endTime;
+  late bool _crossMidnight;
 
   // ----------------------------------------------------
   // Step 3: Break Settings (Panel 4)
   // ----------------------------------------------------
-  bool _enableBreak = true;
+  late bool _enableBreak;
   final String _newBreakName = 'Lunch Break';
-  String _breakType = 'Paid';
-  String _breakDuration = '60 Minutes';
-  TimeOfDay _breakStartTime = const TimeOfDay(hour: 13, minute: 0);
-  TimeOfDay _breakEndTime = const TimeOfDay(hour: 14, minute: 0);
+  late String _breakType;
+  late String _breakDuration;
+  late TimeOfDay _breakStartTime;
+  late TimeOfDay _breakEndTime;
   final List<String> _breakDurations = ['15 Minutes', '30 Minutes', '45 Minutes', '60 Minutes', '90 Minutes'];
 
-  final List<BreakItem> _breaks = [
-    BreakItem(
-      name: 'Lunch Break',
-      type: 'Paid',
-      duration: '60 min',
-      startTime: const TimeOfDay(hour: 13, minute: 0),
-      endTime: const TimeOfDay(hour: 14, minute: 0),
-    ),
-  ];
+  late List<BreakItem> _breaks;
 
   // ----------------------------------------------------
   // Step 4: Attendance Rules (Panel 5)
   // ----------------------------------------------------
-  String _gracePeriod = '15 Minutes';
-  String _lateAfter = '15 Minutes';
-  String _minWorkingHours = '08:00 Hours';
-  bool _earlyLeavingAllowed = false;
-  bool _autoMarkLate = true;
-  bool _autoMarkHalfDay = true;
-  String _lateThreshold = '30 Minutes';
-  String _halfDayAfter = '04:00 Hours';
+  late String _gracePeriod;
+  late String _lateAfter;
+  late String _minWorkingHours;
+  late bool _earlyLeavingAllowed;
+  late bool _autoMarkLate;
+  late bool _autoMarkHalfDay;
+  late String _lateThreshold;
+  late String _halfDayAfter;
 
   final List<String> _gracePeriodOptions = ['5 Minutes', '10 Minutes', '15 Minutes', '20 Minutes', '30 Minutes'];
   final List<String> _lateAfterOptions = ['5 Minutes', '10 Minutes', '15 Minutes', '20 Minutes', '30 Minutes'];
@@ -131,11 +133,11 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
   // ----------------------------------------------------
   // Step 5: Overtime Settings (Panel 6)
   // ----------------------------------------------------
-  bool _enableOvertime = true;
-  String _otStartsAfter = '08:00 Hours';
-  String _minimumOT = '30 Minutes';
-  String _otCalculation = 'Hourly';
-  bool _approvalRequired = true;
+  late bool _enableOvertime;
+  late String _otStartsAfter;
+  late String _minimumOT;
+  late String _otCalculation;
+  late bool _approvalRequired;
 
   final List<String> _otStartsOptions = ['08:00 Hours', '08:30 Hours', '09:00 Hours', '10:00 Hours'];
   final List<String> _minOtOptions = ['15 Minutes', '30 Minutes', '45 Minutes', '60 Minutes'];
@@ -224,15 +226,137 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
   @override
   void initState() {
     super.initState();
-    _weeklySchedule = [
-      DaySchedule(dayName: 'Monday', isWorking: true, startTime: _startTime, endTime: _endTime),
-      DaySchedule(dayName: 'Tuesday', isWorking: true, startTime: _startTime, endTime: _endTime),
-      DaySchedule(dayName: 'Wednesday', isWorking: true, startTime: _startTime, endTime: _endTime),
-      DaySchedule(dayName: 'Thursday', isWorking: true, startTime: _startTime, endTime: _endTime),
-      DaySchedule(dayName: 'Friday', isWorking: true, startTime: _startTime, endTime: _endTime),
-      DaySchedule(dayName: 'Saturday', isWorking: true, startTime: _startTime, endTime: _endTime),
-      DaySchedule(dayName: 'Sunday', isWorking: false, startTime: _startTime, endTime: _endTime),
-    ];
+
+    final data = widget.shiftDataToEdit;
+    final shift = widget.shiftToEdit;
+
+    // Step 1: Basic Info
+    _shiftNameController = TextEditingController(
+      text: data?.name ?? shift?.name ?? 'Morning Shift',
+    );
+    _shiftCodeController = TextEditingController(
+      text: data?.code ?? shift?.code ?? 'MORNING',
+    );
+    _descriptionController = TextEditingController(
+      text: data?.description ?? shift?.description ?? 'Morning working shift for sales and operations team...',
+    );
+
+    final resolvedType = data?.shiftType ?? shift?.type ?? 'Fixed Shift';
+    _shiftType = _shiftTypes.contains(resolvedType) ? resolvedType : _shiftTypes.first;
+
+    if (data != null) {
+      _isActive = data.status?.toLowerCase() == 'active';
+    } else if (shift != null) {
+      _isActive = shift.isActive;
+    } else {
+      _isActive = true;
+    }
+
+    // Step 2: Timings
+    final startTimeStr = data?.startTime ?? shift?.startTime;
+    final endTimeStr = data?.endTime ?? shift?.endTime;
+    _startTime = _parseTimeToTimeOfDay(startTimeStr, defaultTime: const TimeOfDay(hour: 10, minute: 0));
+    _endTime = _parseTimeToTimeOfDay(endTimeStr, defaultTime: const TimeOfDay(hour: 19, minute: 0));
+    _crossMidnight = data?.crossMidnight ?? shift?.crossMidnight ?? false;
+
+    // Step 3: Breaks
+    _enableBreak = data?.breaksEnabled ?? shift?.enableBreak ?? true;
+    _breakType = 'Paid';
+    _breakDuration = '60 Minutes';
+    _breakStartTime = const TimeOfDay(hour: 13, minute: 0);
+    _breakEndTime = const TimeOfDay(hour: 14, minute: 0);
+
+    if (data != null && data.breaks.isNotEmpty) {
+      _breaks = data.breaks.map((b) {
+        return BreakItem(
+          name: b.name.isNotEmpty ? b.name : 'Lunch Break',
+          type: b.type.isNotEmpty ? b.type : 'Paid',
+          duration: '${b.durationMinutes ?? 60} min',
+          startTime: _parseTimeToTimeOfDay(b.startTime, defaultTime: const TimeOfDay(hour: 13, minute: 0)),
+          endTime: _parseTimeToTimeOfDay(b.endTime, defaultTime: const TimeOfDay(hour: 14, minute: 0)),
+        );
+      }).toList();
+    } else {
+      _breaks = [
+        BreakItem(
+          name: 'Lunch Break',
+          type: 'Paid',
+          duration: '60 min',
+          startTime: const TimeOfDay(hour: 13, minute: 0),
+          endTime: const TimeOfDay(hour: 14, minute: 0),
+        ),
+      ];
+    }
+
+    // Step 4: Attendance Rules
+    final graceMins = data?.gracePeriodMinutes ?? (shift != null ? _parseDurationToMinutes(shift.gracePeriod, defaultValue: 15) : 15);
+    _gracePeriod = _gracePeriodOptions.contains('$graceMins Minutes') ? '$graceMins Minutes' : '15 Minutes';
+
+    final lateMins = data?.lateAfterMinutes ?? (shift != null ? _parseDurationToMinutes(shift.lateAfter, defaultValue: 15) : 15);
+    _lateAfter = _lateAfterOptions.contains('$lateMins Minutes') ? '$lateMins Minutes' : '15 Minutes';
+
+    final minWorkMins = data?.minimumWorkingMinutes ?? (shift != null ? _parseDurationToMinutes(shift.minWorkingHours, defaultValue: 480) : 480);
+    final minWorkStr = '${(minWorkMins ~/ 60).toString().padLeft(2, '0')}:00 Hours';
+    _minWorkingHours = _minHoursOptions.contains(minWorkStr) ? minWorkStr : '08:00 Hours';
+
+    _earlyLeavingAllowed = data?.earlyLeavingAllowed ?? shift?.earlyLeavingAllowed ?? false;
+    _autoMarkLate = data?.autoMarkLate ?? shift?.autoMarkLate ?? true;
+    _autoMarkHalfDay = data?.autoMarkHalfDay ?? shift?.autoMarkHalfDay ?? true;
+
+    final lateThreshMins = data?.lateThresholdMinutes ?? (shift != null ? _parseDurationToMinutes(shift.lateThreshold, defaultValue: 30) : 30);
+    _lateThreshold = _lateThresholdOptions.contains('$lateThreshMins Minutes') ? '$lateThreshMins Minutes' : '30 Minutes';
+
+    final halfDayMins = data?.halfDayAfterMinutes ?? (shift != null ? _parseDurationToMinutes(shift.halfDayAfter, defaultValue: 240) : 240);
+    final halfDayStr = '${(halfDayMins ~/ 60).toString().padLeft(2, '0')}:00 Hours';
+    _halfDayAfter = _halfDayOptions.contains(halfDayStr) ? halfDayStr : '04:00 Hours';
+
+    // Step 5: Overtime
+    _enableOvertime = data?.overtimeEnabled ?? shift?.enableOvertime ?? true;
+
+    final otStartsMins = data?.overtimeStartsAfterMinutes ?? (shift != null ? _parseDurationToMinutes(shift.otStartsAfter, defaultValue: 480) : 480);
+    final otStartsStr = '${(otStartsMins ~/ 60).toString().padLeft(2, '0')}:00 Hours';
+    _otStartsAfter = _otStartsOptions.contains(otStartsStr) ? otStartsStr : '08:00 Hours';
+
+    final minOtMins = data?.minimumOvertimeMinutes ?? (shift != null ? _parseDurationToMinutes(shift.minimumOT, defaultValue: 30) : 30);
+    _minimumOT = _minOtOptions.contains('$minOtMins Minutes') ? '$minOtMins Minutes' : '30 Minutes';
+
+    final otCalc = data?.overtimeCalculation ?? shift?.otCalculation ?? 'Hourly';
+    _otCalculation = _otCalculationOptions.contains(otCalc) ? otCalc : 'Hourly';
+
+    _approvalRequired = data?.overtimeApprovalRequired ?? shift?.approvalRequired ?? true;
+
+    // Step 6: Weekly Schedule
+    if (data != null && data.workingDays.isNotEmpty) {
+      _weeklySchedule = data.workingDays.map((d) {
+        return DaySchedule(
+          dayName: d.day,
+          isWorking: d.enabled,
+          startTime: _parseTimeToTimeOfDay(d.startTime, defaultTime: _startTime),
+          endTime: _parseTimeToTimeOfDay(d.endTime, defaultTime: _endTime),
+        );
+      }).toList();
+    } else {
+      _weeklySchedule = [
+        DaySchedule(dayName: 'Monday', isWorking: true, startTime: _startTime, endTime: _endTime),
+        DaySchedule(dayName: 'Tuesday', isWorking: true, startTime: _startTime, endTime: _endTime),
+        DaySchedule(dayName: 'Wednesday', isWorking: true, startTime: _startTime, endTime: _endTime),
+        DaySchedule(dayName: 'Thursday', isWorking: true, startTime: _startTime, endTime: _endTime),
+        DaySchedule(dayName: 'Friday', isWorking: true, startTime: _startTime, endTime: _endTime),
+        DaySchedule(dayName: 'Saturday', isWorking: false, startTime: _startTime, endTime: _endTime),
+        DaySchedule(dayName: 'Sunday', isWorking: false, startTime: _startTime, endTime: _endTime),
+      ];
+    }
+
+    // Step 7: Pre-select employees if applicable
+    if (data != null && data.assignedEmployees.isNotEmpty) {
+      final assignedIds = data.assignedEmployees.map((e) => e.id.toString()).toSet();
+      final assignedNames = data.assignedEmployees.map((e) => e.name.toLowerCase()).toSet();
+      for (final emp in _allEmployees) {
+        if (assignedIds.contains(emp.id) || assignedNames.contains(emp.name.toLowerCase())) {
+          emp.isSelected = true;
+        }
+      }
+    }
   }
 
   @override
@@ -248,6 +372,45 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
   // ----------------------------------------------------
   // Helpers
   // ----------------------------------------------------
+  TimeOfDay _parseTimeToTimeOfDay(String? timeStr, {TimeOfDay defaultTime = const TimeOfDay(hour: 10, minute: 0)}) {
+    if (timeStr == null || timeStr.trim().isEmpty) return defaultTime;
+    try {
+      final trimmed = timeStr.trim();
+      if (trimmed.toLowerCase().contains('am') || trimmed.toLowerCase().contains('pm')) {
+        final parsed = DateFormat('hh:mm a').parse(trimmed);
+        return TimeOfDay(hour: parsed.hour, minute: parsed.minute);
+      }
+      final parts = trimmed.split(':');
+      if (parts.length >= 2) {
+        final hour = int.tryParse(parts[0]) ?? defaultTime.hour;
+        final minute = int.tryParse(parts[1].split(' ')[0]) ?? defaultTime.minute;
+        return TimeOfDay(hour: hour, minute: minute);
+      }
+    } catch (_) {}
+    return defaultTime;
+  }
+  int _parseDurationToMinutes(String text, {int defaultValue = 0}) {
+    try {
+      final trimmed = text.trim();
+      if (trimmed.toLowerCase().contains('hour')) {
+        final timeParts = trimmed.split(' ')[0].split(':');
+        if (timeParts.length == 2) {
+          final hours = int.tryParse(timeParts[0]) ?? 0;
+          final minutes = int.tryParse(timeParts[1]) ?? 0;
+          return (hours * 60) + minutes;
+        } else if (timeParts.length == 1) {
+          final hours = int.tryParse(timeParts[0]) ?? 0;
+          return hours * 60;
+        }
+      }
+      final match = RegExp(r'\d+').firstMatch(trimmed);
+      if (match != null) {
+        return int.tryParse(match.group(0)!) ?? defaultValue;
+      }
+    } catch (_) {}
+    return defaultValue;
+  }
+
   String _formatTimeOfDay(TimeOfDay time) {
     final now = DateTime.now();
     final dt = DateTime(now.year, now.month, now.day, time.hour, time.minute);
@@ -321,7 +484,7 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
             }
           },
         ),
-        title: const AppText('Create New Shift', fontSize: 18, fontWeight: FontWeight.bold),
+        title: AppText(_isEditing ? 'Edit Shift' : 'Create New Shift', fontSize: 18, fontWeight: FontWeight.bold),
         centerTitle: false,
         actions: [
           TextButton.icon(
@@ -1832,91 +1995,164 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
             ],
             Expanded(
               flex: 2,
-              child: ElevatedButton(
-                onPressed: () {
-                  if (isLastStep) {
-                    if (Get.isRegistered<ShiftController>()) {
-                      final ctrl = Get.find<ShiftController>();
-                      final assignedNames = _allEmployees.where((e) => e.isSelected).map((e) => e.name).toList();
-                      final newShift = ShiftModel(
-                        id: DateTime.now().millisecondsSinceEpoch.toString(),
-                        name: _shiftNameController.text.trim().isEmpty ? 'New Shift' : _shiftNameController.text.trim(),
-                        code: _shiftCodeController.text.trim().isEmpty ? 'SHIFT' : _shiftCodeController.text.trim(),
-                        type: _shiftType,
-                        isActive: _isActive,
-                        description: _descriptionController.text.trim(),
-                        startTime: _formatTimeOfDay(_startTime),
-                        endTime: _formatTimeOfDay(_endTime),
-                        crossMidnight: _crossMidnight,
-                        workingHours: _calculateWorkingHours(_startTime, _endTime, _crossMidnight),
-                        enableBreak: _enableBreak,
-                        breakType: _breakType,
-                        breakDuration: _breakDuration,
-                        gracePeriod: _gracePeriod,
-                        lateAfter: _lateAfter,
-                        minWorkingHours: _minWorkingHours,
-                        earlyLeavingAllowed: _earlyLeavingAllowed,
-                        autoMarkLate: _autoMarkLate,
-                        autoMarkHalfDay: _autoMarkHalfDay,
-                        lateThreshold: _lateThreshold,
-                        halfDayAfter: _halfDayAfter,
-                        enableOvertime: _enableOvertime,
-                        otStartsAfter: _otStartsAfter,
-                        minimumOT: _minimumOT,
-                        otCalculation: _otCalculation,
-                        approvalRequired: _approvalRequired,
-                        employeesCount: _selectedEmployeesCount,
-                        assignedEmployeeNames: assignedNames,
-                        icon: _shiftType.contains('Night')
-                            ? Icons.nightlight_outlined
-                            : _shiftType.contains('Flexible')
-                                ? Iconsax.slider_horizontal
-                                : Icons.wb_sunny_outlined,
-                        iconColor: _shiftType.contains('Night')
-                            ? Colors.blue
-                            : _shiftType.contains('Flexible')
-                                ? Colors.redAccent
-                                : Colors.orange,
-                      );
-                      ctrl.addShift(newShift);
-                    }
-                    Get.back();
-                    Get.snackbar(
-                      'Shift Created Successfully!',
-                      'Shift "${_shiftNameController.text}" with $_selectedEmployeesCount assigned employees has been saved.',
-                      snackPosition: SnackPosition.BOTTOM,
-                      backgroundColor: AppColors.successColor,
-                      colorText: Colors.white,
-                      duration: const Duration(seconds: 3),
-                    );
-                  } else {
-                    _goToStep(_currentStep + 1);
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryColor,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    AppText(
-                      isLastStep ? 'Save & Create Shift' : 'Save & Continue',
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                    const SizedBox(width: 8),
-                    Icon(
-                      isLastStep ? Icons.check_circle_outline : Icons.arrow_forward_rounded,
-                      size: 18,
-                      color: Colors.white,
-                    ),
-                  ],
-                ),
-              ),
+              child: Obx(() {
+                final ctrl = Get.isRegistered<ShiftController>()
+                    ? Get.find<ShiftController>()
+                    : Get.put(ShiftController());
+                final isSubmitting = ctrl.isSubmitting.value;
+
+                return ElevatedButton(
+                  onPressed: isSubmitting
+                      ? null
+                      : () async {
+                          if (isLastStep) {
+                            if (_shiftNameController.text.trim().isEmpty) {
+                              Get.snackbar(
+                                'Validation',
+                                'Please enter shift name',
+                                snackPosition: SnackPosition.BOTTOM,
+                                backgroundColor: Colors.orange,
+                                colorText: Colors.white,
+                              );
+                              _goToStep(0);
+                              return;
+                            }
+
+                            final request = CreateShiftRequestModel(
+                              name: _shiftNameController.text.trim(),
+                              code: _shiftCodeController.text.trim().isNotEmpty
+                                  ? _shiftCodeController.text.trim()
+                                  : 'SHIFT',
+                              shiftType: _shiftType,
+                              status: _isActive,
+                              description: _descriptionController.text.trim(),
+                              startTime: _formatTimeOfDay(_startTime),
+                              endTime: _formatTimeOfDay(_endTime),
+                              crossMidnight: _crossMidnight,
+                              breaksEnabled: _enableBreak,
+                              breaks: _breaks
+                                  .map((b) => ShiftBreakRequestModel(
+                                        name: b.name,
+                                        type: b.type,
+                                        startTime: _formatTimeOfDay(b.startTime),
+                                        endTime: _formatTimeOfDay(b.endTime),
+                                      ))
+                                  .toList(),
+                              gracePeriodMinutes: _parseDurationToMinutes(_gracePeriod, defaultValue: 15),
+                              lateAfterMinutes: _parseDurationToMinutes(_lateAfter, defaultValue: 15),
+                              minimumWorkingMinutes: _parseDurationToMinutes(_minWorkingHours, defaultValue: 480),
+                              earlyLeavingAllowed: _earlyLeavingAllowed,
+                              autoMarkLate: _autoMarkLate,
+                              autoMarkHalfDay: _autoMarkHalfDay,
+                              lateThresholdMinutes: _parseDurationToMinutes(_lateThreshold, defaultValue: 30),
+                              halfDayAfterMinutes: _parseDurationToMinutes(_halfDayAfter, defaultValue: 240),
+                              overtimeEnabled: _enableOvertime,
+                              overtimeStartsAfterMinutes: _parseDurationToMinutes(_otStartsAfter, defaultValue: 480),
+                              minimumOvertimeMinutes: _parseDurationToMinutes(_minimumOT, defaultValue: 30),
+                              overtimeCalculation: _otCalculation,
+                              overtimeApprovalRequired: _approvalRequired,
+                              workingDays: _weeklySchedule
+                                  .map((d) => ShiftWorkingDayRequestModel(
+                                        day: d.dayName,
+                                        enabled: d.isWorking,
+                                        startTime:
+                                            '${d.startTime.hour.toString().padLeft(2, '0')}:${d.startTime.minute.toString().padLeft(2, '0')}',
+                                        endTime:
+                                            '${d.endTime.hour.toString().padLeft(2, '0')}:${d.endTime.minute.toString().padLeft(2, '0')}',
+                                      ))
+                                  .toList(),
+                              employeeIds: _allEmployees
+                                  .where((e) => e.isSelected)
+                                  .map((e) => int.tryParse(e.id) ?? 0)
+                                  .where((id) => id > 0)
+                                  .toList(),
+                            );
+
+                            if (_isEditing && _shiftId.isNotEmpty) {
+                              final res = await ctrl.updateShiftApi(_shiftId, request);
+                              if (res.status) {
+                                Get.back(result: true);
+                                Get.snackbar(
+                                  'Success',
+                                  res.message.isNotEmpty ? res.message : 'Shift updated successfully.',
+                                  snackPosition: SnackPosition.BOTTOM,
+                                  backgroundColor: AppColors.successColor,
+                                  colorText: Colors.white,
+                                  duration: const Duration(seconds: 3),
+                                );
+                              } else {
+                                Get.snackbar(
+                                  'Failed to Update Shift',
+                                  res.message.isNotEmpty ? res.message : 'Failed to update shift.',
+                                  snackPosition: SnackPosition.BOTTOM,
+                                  backgroundColor: AppColors.errorColor,
+                                  colorText: Colors.white,
+                                  duration: const Duration(seconds: 4),
+                                );
+                              }
+                            } else {
+                              final res = await ctrl.createShiftApi(request);
+                              if (res.status) {
+                                Get.back(result: true);
+                                Get.snackbar(
+                                  'Success',
+                                  res.message.isNotEmpty ? res.message : 'Shift created successfully.',
+                                  snackPosition: SnackPosition.BOTTOM,
+                                  backgroundColor: AppColors.successColor,
+                                  colorText: Colors.white,
+                                  duration: const Duration(seconds: 3),
+                                );
+                              } else {
+                                Get.snackbar(
+                                  'Failed to Create Shift',
+                                  res.message.isNotEmpty ? res.message : 'Failed to create shift.',
+                                  snackPosition: SnackPosition.BOTTOM,
+                                  backgroundColor: AppColors.errorColor,
+                                  colorText: Colors.white,
+                                  duration: const Duration(seconds: 4),
+                                );
+                              }
+                            }
+                          } else {
+                            _goToStep(_currentStep + 1);
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryColor,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: isSubmitting
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            AppText(
+                              isLastStep
+                                  ? (_isEditing ? 'Save & Update Shift' : 'Save & Create Shift')
+                                  : 'Save & Continue',
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                            const SizedBox(width: 8),
+                            Icon(
+                              isLastStep ? Icons.check_circle_outline : Icons.arrow_forward_rounded,
+                              size: 18,
+                              color: Colors.white,
+                            ),
+                          ],
+                        ),
+                );
+              }),
             ),
           ],
         ),

@@ -1,12 +1,43 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:iconsax/iconsax.dart';
+import '../../../core/services/network/api_client.dart';
+import '../../../core/utils/logger.dart';
+import '../domain/usecases/assign_shift_usecase.dart';
+import '../domain/usecases/create_shift_usecase.dart';
+import '../domain/usecases/delete_shift_usecase.dart';
+import '../domain/usecases/get_shift_details_usecase.dart';
+import '../domain/usecases/get_shifts_usecase.dart';
+import '../domain/usecases/update_shift_usecase.dart';
+import '../models/create_shift_request_model.dart';
 import '../models/shift_model.dart';
+import '../models/shift_response_model.dart';
+import '../repositories/shift_repository.dart';
 
 class ShiftController extends GetxController {
+  final CreateShiftUseCase? createShiftUseCase;
+  final UpdateShiftUseCase? updateShiftUseCase;
+  final DeleteShiftUseCase? deleteShiftUseCase;
+  final GetShiftsUseCase? getShiftsUseCase;
+  final GetShiftDetailsUseCase? getShiftDetailsUseCase;
+  final AssignShiftUseCase? assignShiftUseCase;
+
+  ShiftController({
+    this.createShiftUseCase,
+    this.updateShiftUseCase,
+    this.deleteShiftUseCase,
+    this.getShiftsUseCase,
+    this.getShiftDetailsUseCase,
+    this.assignShiftUseCase,
+  });
+
   final RxList<ShiftModel> shifts = <ShiftModel>[].obs;
   final RxList<ShiftHistoryModel> historyList = <ShiftHistoryModel>[].obs;
 
+  final Rxn<ShiftDataModel> selectedShiftDetails = Rxn<ShiftDataModel>();
+  final RxBool isLoadingDetails = false.obs;
+
+  final RxBool isLoading = false.obs;
+  final RxBool isSubmitting = false.obs;
   final RxString searchQuery = ''.obs;
   final RxString selectedType = 'All Types'.obs;
   final RxString selectedStatus = 'All Status'.obs;
@@ -25,137 +56,109 @@ class ShiftController extends GetxController {
     'Inactive',
   ];
 
+  CreateShiftUseCase get _effectiveCreateShiftUseCase {
+    if (createShiftUseCase != null) return createShiftUseCase!;
+    if (Get.isRegistered<CreateShiftUseCase>()) {
+      return Get.find<CreateShiftUseCase>();
+    }
+    final apiClient = Get.isRegistered<ApiClient>() ? Get.find<ApiClient>() : ApiClient();
+    final repo = ShiftRepository(apiClient: apiClient);
+    return CreateShiftUseCase(repo);
+  }
+
+  UpdateShiftUseCase get _effectiveUpdateShiftUseCase {
+    if (updateShiftUseCase != null) return updateShiftUseCase!;
+    if (Get.isRegistered<UpdateShiftUseCase>()) {
+      return Get.find<UpdateShiftUseCase>();
+    }
+    final apiClient = Get.isRegistered<ApiClient>() ? Get.find<ApiClient>() : ApiClient();
+    final repo = ShiftRepository(apiClient: apiClient);
+    return UpdateShiftUseCase(repo);
+  }
+
+  DeleteShiftUseCase get _effectiveDeleteShiftUseCase {
+    if (deleteShiftUseCase != null) return deleteShiftUseCase!;
+    if (Get.isRegistered<DeleteShiftUseCase>()) {
+      return Get.find<DeleteShiftUseCase>();
+    }
+    final apiClient = Get.isRegistered<ApiClient>() ? Get.find<ApiClient>() : ApiClient();
+    final repo = ShiftRepository(apiClient: apiClient);
+    return DeleteShiftUseCase(repo);
+  }
+
+  GetShiftsUseCase get _effectiveGetShiftsUseCase {
+    if (getShiftsUseCase != null) return getShiftsUseCase!;
+    if (Get.isRegistered<GetShiftsUseCase>()) {
+      return Get.find<GetShiftsUseCase>();
+    }
+    final apiClient = Get.isRegistered<ApiClient>() ? Get.find<ApiClient>() : ApiClient();
+    final repo = ShiftRepository(apiClient: apiClient);
+    return GetShiftsUseCase(repo);
+  }
+
+  GetShiftDetailsUseCase get _effectiveGetShiftDetailsUseCase {
+    if (getShiftDetailsUseCase != null) return getShiftDetailsUseCase!;
+    if (Get.isRegistered<GetShiftDetailsUseCase>()) {
+      return Get.find<GetShiftDetailsUseCase>();
+    }
+    final apiClient = Get.isRegistered<ApiClient>() ? Get.find<ApiClient>() : ApiClient();
+    final repo = ShiftRepository(apiClient: apiClient);
+    return GetShiftDetailsUseCase(repo);
+  }
+
+  AssignShiftUseCase get _effectiveAssignShiftUseCase {
+    if (assignShiftUseCase != null) return assignShiftUseCase!;
+    if (Get.isRegistered<AssignShiftUseCase>()) {
+      return Get.find<AssignShiftUseCase>();
+    }
+    final apiClient = Get.isRegistered<ApiClient>() ? Get.find<ApiClient>() : ApiClient();
+    final repo = ShiftRepository(apiClient: apiClient);
+    return AssignShiftUseCase(repo);
+  }
+
   @override
   void onInit() {
     super.onInit();
-    _loadInitialData();
+    _loadInitialHistory();
+    fetchShifts();
   }
 
-  void _loadInitialData() {
-    shifts.assignAll([
-      ShiftModel(
-        id: '1',
-        name: 'Morning Shift',
-        code: 'MORNING',
-        type: 'Fixed Shift',
-        isActive: true,
-        description: 'Morning working shift for sales and operations team.',
-        startTime: '10:00 AM',
-        endTime: '07:00 PM',
-        workingHours: '9 Hours',
-        breakType: 'Paid',
-        breakDuration: '60 Minutes',
-        gracePeriod: '15 Minutes',
-        lateAfter: '15 Minutes',
-        minWorkingHours: '08:00 Hours',
-        employeesCount: 18,
-        icon: Icons.wb_sunny_outlined,
-        iconColor: Colors.orange,
-        assignedEmployeeNames: ['Rahul Kumar', 'Amit Sharma', 'Pooja Verma', 'Vikram Joshi', 'Sameer Ali'],
-      ),
-      ShiftModel(
-        id: '2',
-        name: 'Evening Shift',
-        code: 'EVENING',
-        type: 'Fixed Shift',
-        isActive: true,
-        description: 'Mid-day and evening coverage for customer service operations.',
-        startTime: '02:00 PM',
-        endTime: '11:00 PM',
-        workingHours: '9 Hours',
-        breakType: 'Paid',
-        breakDuration: '45 Minutes',
-        gracePeriod: '15 Minutes',
-        lateAfter: '15 Minutes',
-        minWorkingHours: '08:00 Hours',
-        employeesCount: 12,
-        icon: Icons.wb_twilight,
-        iconColor: Colors.purple,
-        assignedEmployeeNames: ['Neha Singh', 'Arif Khan', 'Priya Sharma'],
-      ),
-      ShiftModel(
-        id: '3',
-        name: 'Night Shift',
-        code: 'NIGHT',
-        type: 'Night Shift',
-        isActive: true,
-        crossMidnight: true,
-        description: 'Overnight technical infrastructure and monitoring team.',
-        startTime: '10:00 PM',
-        endTime: '07:00 AM',
-        workingHours: '9 Hours',
-        breakType: 'Paid',
-        breakDuration: '60 Minutes',
-        gracePeriod: '20 Minutes',
-        lateAfter: '20 Minutes',
-        minWorkingHours: '08:00 Hours',
-        employeesCount: 8,
-        icon: Icons.nightlight_outlined,
-        iconColor: Colors.blue,
-        assignedEmployeeNames: ['Sameer Khan', 'Deepak Verma'],
-      ),
-      ShiftModel(
-        id: '4',
-        name: 'General Shift',
-        code: 'GENERAL',
-        type: 'Fixed Shift',
-        isActive: true,
-        description: 'Corporate and administrative standard business hours.',
-        startTime: '09:00 AM',
-        endTime: '06:00 PM',
-        workingHours: '9 Hours',
-        breakType: 'Paid',
-        breakDuration: '60 Minutes',
-        gracePeriod: '15 Minutes',
-        lateAfter: '15 Minutes',
-        minWorkingHours: '08:00 Hours',
-        employeesCount: 4,
-        icon: Iconsax.clock,
-        iconColor: Colors.teal,
-        assignedEmployeeNames: ['Sonia Kapoor', 'Anil Deshmukh'],
-      ),
-      ShiftModel(
-        id: '5',
-        name: 'Flexible Shift',
-        code: 'FLEXI',
-        type: 'Flexible Shift',
-        isActive: false,
-        description: 'Remote and hybrid work model with flexible start times.',
-        startTime: '09:00 AM',
-        endTime: '06:00 PM',
-        workingHours: '9 Hours',
-        breakType: 'Unpaid',
-        breakDuration: '60 Minutes',
-        gracePeriod: '30 Minutes',
-        lateAfter: '30 Minutes',
-        minWorkingHours: '07:00 Hours',
-        employeesCount: 3,
-        icon: Iconsax.slider_horizontal,
-        iconColor: Colors.redAccent,
-        assignedEmployeeNames: ['Rohan Gupta'],
-      ),
-      ShiftModel(
-        id: '6',
-        name: 'Rotational Shift',
-        code: 'ROTATE',
-        type: 'Rotational Shift',
-        isActive: true,
-        description: 'Bi-weekly rotating shift schedule for 24/7 client support.',
-        startTime: '10:00 AM',
-        endTime: '07:00 PM',
-        workingHours: '9 Hours',
-        breakType: 'Paid',
-        breakDuration: '60 Minutes',
-        gracePeriod: '15 Minutes',
-        lateAfter: '15 Minutes',
-        minWorkingHours: '08:00 Hours',
-        employeesCount: 5,
-        icon: Iconsax.repeat,
-        iconColor: Colors.green,
-        assignedEmployeeNames: ['Manish Rao', 'Sunil Tiwari'],
-      ),
-    ]);
+  Future<void> fetchShifts({String? status}) async {
+    isLoading.value = true;
+    try {
+      final statusParam = status ?? (selectedStatus.value == 'All Status' ? null : selectedStatus.value);
+      final response = await _effectiveGetShiftsUseCase.execute(status: statusParam);
+      if (response.status && response.data.isNotEmpty) {
+        final mappedShifts = response.data.map((d) => ShiftModel.fromDataModel(d)).toList();
+        shifts.assignAll(mappedShifts);
+      } else if (response.status && response.data.isEmpty) {
+        shifts.clear();
+      }
+    } catch (e) {
+      Logger.e('ShiftController => Error fetching shifts: $e');
+    } finally {
+      isLoading.value = false;
+    }
+  }
 
+  Future<ShiftDataModel?> fetchShiftDetails(String id) async {
+    isLoadingDetails.value = true;
+    try {
+      final response = await _effectiveGetShiftDetailsUseCase.execute(id);
+      if (response.status && response.data != null) {
+        selectedShiftDetails.value = response.data;
+        return response.data;
+      }
+      return null;
+    } catch (e) {
+      Logger.e('ShiftController => Error fetching shift details for id $id: $e');
+      return null;
+    } finally {
+      isLoadingDetails.value = false;
+    }
+  }
+
+  void _loadInitialHistory() {
     historyList.assignAll([
       ShiftHistoryModel(
         date: '10 Sep 2026',
@@ -223,6 +226,138 @@ class ShiftController extends GetxController {
 
       return matchesQuery && matchesType && matchesStatus;
     }).toList();
+  }
+
+  Future<ShiftResponseModel> createShiftApi(CreateShiftRequestModel request) async {
+    isSubmitting.value = true;
+    try {
+      final response = await _effectiveCreateShiftUseCase.execute(request);
+      if (response.status && response.data != null) {
+        final data = response.data!;
+        final newShift = ShiftModel.fromDataModel(data);
+        addShift(newShift);
+      }
+      return response;
+    } catch (e) {
+      return ShiftResponseModel(
+        status: false,
+        message: e.toString(),
+      );
+    } finally {
+      isSubmitting.value = false;
+    }
+  }
+
+  Future<ShiftResponseModel> updateShiftApi(String id, CreateShiftRequestModel request) async {
+    isSubmitting.value = true;
+    try {
+      final response = await _effectiveUpdateShiftUseCase.execute(id, request);
+      if (response.status && response.data != null) {
+        final data = response.data!;
+        final updatedShift = ShiftModel.fromDataModel(data);
+        final index = shifts.indexWhere((s) => s.id == id || s.id == data.id.toString());
+        if (index != -1) {
+          shifts[index] = updatedShift;
+        } else {
+          shifts.insert(0, updatedShift);
+        }
+        shifts.refresh();
+        selectedShiftDetails.value = data;
+
+        historyList.insert(
+          0,
+          ShiftHistoryModel(
+            date: 'Today',
+            userName: 'Current Admin',
+            action: 'Updated',
+            details: 'Updated ${updatedShift.name} (${updatedShift.startTime} - ${updatedShift.endTime})',
+            actionColor: Colors.blue,
+          ),
+        );
+      }
+      return response;
+    } catch (e) {
+      return ShiftResponseModel(
+        status: false,
+        message: e.toString(),
+      );
+    } finally {
+      isSubmitting.value = false;
+    }
+  }
+
+  Future<ShiftResponseModel> deleteShiftApi(String id) async {
+    isSubmitting.value = true;
+    try {
+      final response = await _effectiveDeleteShiftUseCase.execute(id);
+      if (response.status) {
+        final shiftIndex = shifts.indexWhere((s) => s.id == id);
+        final shiftName = shiftIndex != -1 ? shifts[shiftIndex].name : 'Shift #$id';
+        shifts.removeWhere((s) => s.id == id);
+        shifts.refresh();
+
+        if (selectedShiftDetails.value?.id.toString() == id) {
+          selectedShiftDetails.value = null;
+        }
+
+        historyList.insert(
+          0,
+          ShiftHistoryModel(
+            date: 'Today',
+            userName: 'Current Admin',
+            action: 'Deleted',
+            details: 'Deleted $shiftName',
+            actionColor: Colors.redAccent,
+          ),
+        );
+      }
+      return response;
+    } catch (e) {
+      return ShiftResponseModel(
+        status: false,
+        message: e.toString(),
+      );
+    } finally {
+      isSubmitting.value = false;
+    }
+  }
+
+  Future<ShiftResponseModel> assignShiftApi(String shiftId, List<int> employeeIds) async {
+    isSubmitting.value = true;
+    try {
+      final response = await _effectiveAssignShiftUseCase.execute(shiftId, employeeIds);
+      if (response.status && response.data != null) {
+        final data = response.data!;
+        final updatedShift = ShiftModel.fromDataModel(data);
+        final index = shifts.indexWhere((s) => s.id == shiftId || s.id == data.id.toString());
+        if (index != -1) {
+          shifts[index] = updatedShift;
+        } else {
+          shifts.insert(0, updatedShift);
+        }
+        shifts.refresh();
+        selectedShiftDetails.value = data;
+
+        historyList.insert(
+          0,
+          ShiftHistoryModel(
+            date: 'Today',
+            userName: 'Current Admin',
+            action: 'Assigned',
+            details: 'Assigned ${employeeIds.length} employees to ${updatedShift.name}',
+            actionColor: Colors.green,
+          ),
+        );
+      }
+      return response;
+    } catch (e) {
+      return ShiftResponseModel(
+        status: false,
+        message: e.toString(),
+      );
+    } finally {
+      isSubmitting.value = false;
+    }
   }
 
   void addShift(ShiftModel newShift) {

@@ -30,6 +30,9 @@ import '../features/employee/management/views/add_employee_screen.dart';
 import '../features/departments/views/department_list_screen.dart';
 import '../features/departments/views/add_department_screen.dart';
 import '../features/departments/bindings/department_binding.dart';
+import '../features/shift_management/bindings/shift_binding.dart';
+import '../features/shift_management/views/shift_management_screen.dart';
+import '../features/shift_management/views/create_shift_screen.dart';
 import '../core/services/network/api_client.dart';
 import 'app_routes.dart';
 
@@ -48,6 +51,8 @@ class RouteHelper {
   static String getAddDesignationRoute() => AppRoutes.addDesignation;
   static String getEmployeeListRoute() => AppRoutes.employeeList;
   static String getDepartmentListRoute() => AppRoutes.departmentList;
+  static String getShiftListRoute() => AppRoutes.shiftList;
+  static String getCreateShiftRoute() => AppRoutes.createShift;
   static String getAddDepartmentRoute() => AppRoutes.addDepartment;
   static String getLeadListRoute() => AppRoutes.leadList;
   static String getLeadSummaryRoute() => AppRoutes.leadSummary;
@@ -214,6 +219,20 @@ class RouteHelper {
       name: AppRoutes.addDepartment,
       page: () => const AddDepartmentScreen(),
       binding: DepartmentBinding(),
+      transition: Transition.rightToLeft,
+    ),
+
+    GetPage(
+      name: AppRoutes.shiftList,
+      page: () => const ShiftManagementScreen(),
+      binding: ShiftBinding(),
+      transition: Transition.rightToLeft,
+    ),
+
+    GetPage(
+      name: AppRoutes.createShift,
+      page: () => const CreateShiftScreen(),
+      binding: ShiftBinding(),
       transition: Transition.rightToLeft,
     ),
   ];
