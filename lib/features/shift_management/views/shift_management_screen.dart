@@ -8,18 +8,36 @@ import '../models/shift_model.dart';
 import 'assign_shift_screen.dart';
 import 'create_shift_screen.dart';
 import 'shift_details_screen.dart';
-// import 'shift_history_screen.dart';
-// import 'shift_rotation_screen.dart';
 
-class ShiftManagementScreen extends StatelessWidget {
+class ShiftManagementScreen extends StatefulWidget {
   const ShiftManagementScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final ShiftController controller = Get.isRegistered<ShiftController>()
+  State<ShiftManagementScreen> createState() => _ShiftManagementScreenState();
+}
+
+class _ShiftManagementScreenState extends State<ShiftManagementScreen> {
+  late final TextEditingController _searchController;
+  late final ShiftController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController = TextEditingController();
+    _controller = Get.isRegistered<ShiftController>()
         ? Get.find<ShiftController>()
         : Get.put(ShiftController());
+    _searchController.text = _controller.searchQuery.value;
+  }
 
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.scaffoldBackgroundColor,
       appBar: AppBar(
@@ -32,227 +50,191 @@ class ShiftManagementScreen extends StatelessWidget {
         title: const AppText('Shift Management', fontSize: 18, fontWeight: FontWeight.bold),
         centerTitle: false,
         actions: [
-          // IconButton(
-          //   tooltip: 'Shift History',
-          //   icon: const Icon(Iconsax.clock, color: AppColors.textColorPrimary, size: 20),
-          //   onPressed: () => Get.to(() => const ShiftHistoryScreen()),
-          // ),
           IconButton(
             tooltip: 'Create Shift',
             icon: const Icon(Iconsax.add_circle, color: AppColors.primaryColor, size: 22),
-            onPressed: () => Get.to(() => const CreateShiftScreen()),
+            onPressed: () async {
+              final res = await Get.to(() => const CreateShiftScreen());
+              if (res == true) {
+                _controller.fetchShifts();
+              }
+            },
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: 6),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Get.to(() => const CreateShiftScreen()),
+        onPressed: () async {
+          final res = await Get.to(() => const CreateShiftScreen());
+          if (res == true) {
+            _controller.fetchShifts();
+          }
+        },
         backgroundColor: AppColors.primaryColor,
-        icon: const Icon(Icons.add, color: Colors.white),
+        icon: const Icon(Icons.add_rounded, color: Colors.white, size: 20),
         label: const AppText('Add Shift', fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
       ),
       body: RefreshIndicator(
-        onRefresh: () => controller.fetchShifts(),
+        onRefresh: () => _controller.fetchShifts(),
         color: AppColors.primaryColor,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Quick Actions (Matching previous requirements)
+              // 1. Quick Action Action Buttons
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _buildQuickAction(
-                    context,
-                    Iconsax.clipboard_text,
-                    'Create Shift',
-                    Colors.purple,
-                    () => Get.to(() => const CreateShiftScreen()),
+                  Expanded(
+                    child: _buildActionCard(
+                      icon: Iconsax.add_circle5,
+                      title: 'Create Shift',
+                      subtitle: 'New schedule & rules',
+                      primaryColor: const Color(0xFF6366F1), // Indigo
+                      onTap: () async {
+                        final res = await Get.to(() => const CreateShiftScreen());
+                        if (res == true) {
+                          _controller.fetchShifts();
+                        }
+                      },
+                    ),
                   ),
-                  _buildQuickAction(
-                    context,
-                    Iconsax.profile_2user,
-                    'Assign Shift',
-                    Colors.green,
-                    () async {
-                      final res = await Get.to(() => const AssignShiftScreen());
-                      if (res == true) {
-                        controller.fetchShifts();
-                      }
-                    },
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildActionCard(
+                      icon: Iconsax.profile_2user5,
+                      title: 'Assign Shift',
+                      subtitle: 'Allocate to staff',
+                      primaryColor: const Color(0xFF10B981), // Emerald green
+                      onTap: () async {
+                        final res = await Get.to(() => const AssignShiftScreen());
+                        if (res == true) {
+                          _controller.fetchShifts();
+                        }
+                      },
+                    ),
                   ),
-                  // _buildQuickAction(
-                  //   context,
-                  //   Iconsax.clock,
-                  //   'Shift History',
-                  //   Colors.blue,
-                  //   () => Get.to(() => const ShiftHistoryScreen()),
-                  // ),
-                  // _buildQuickAction(context, Iconsax.repeate_music, 'Rotation', Colors.orange, () => Get.to(() => const ShiftRotationScreen())),
-                  // _buildQuickAction(context, Iconsax.calendar_2, 'Roster', Colors.blue, () {}),
                 ],
               ),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 18),
 
-              // Top Stat Summary Cards (Matching Panel 1: List View)
-              Obx(() => Row(
+              // 2. Stats Dashboard Cards (2x2 Grid)
+              Obx(() => Column(
                 children: [
-                  Expanded(
-                    child: _buildSummaryStatCard(
-                      icon: Iconsax.calendar_tick,
-                      color: Colors.blue,
-                      count: '${controller.totalShifts}',
-                      label: 'Total Shifts',
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildStatGridCard(
+                          icon: Iconsax.calendar_1,
+                          iconColor: const Color(0xFF3B82F6),
+                          count: '${_controller.totalShifts}',
+                          title: 'Total Shifts',
+                          subtitle: 'Configured schedules',
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildStatGridCard(
+                          icon: Iconsax.people,
+                          iconColor: const Color(0xFF8B5CF6),
+                          count: '${_controller.totalEmployees}',
+                          title: 'Total Staff',
+                          subtitle: 'Assigned members',
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _buildSummaryStatCard(
-                      icon: Iconsax.profile_2user,
-                      color: Colors.purple,
-                      count: '${controller.totalEmployees}',
-                      label: 'Employees',
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _buildSummaryStatCard(
-                      icon: Iconsax.tick_circle,
-                      color: Colors.green,
-                      count: '${controller.activeShifts}',
-                      label: 'Active',
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _buildSummaryStatCard(
-                      icon: Iconsax.close_circle,
-                      color: Colors.redAccent,
-                      count: '${controller.inactiveShifts}',
-                      label: 'Inactive',
-                    ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildStatGridCard(
+                          icon: Iconsax.tick_circle,
+                          iconColor: const Color(0xFF10B981),
+                          count: '${_controller.activeShifts}',
+                          title: 'Active Shifts',
+                          subtitle: 'Live in roster',
+                          isLive: true,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildStatGridCard(
+                          icon: Iconsax.close_circle,
+                          iconColor: const Color(0xFFEF4444),
+                          count: '${_controller.inactiveShifts}',
+                          title: 'Inactive Shifts',
+                          subtitle: 'Disabled/Archived',
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               )),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
 
-              // Search & Filter Section (Matching Panel 1)
+              // 3. Search Bar (Without dropdown filter)
               Container(
-                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(14),
                   border: Border.all(color: AppColors.slate200),
-                ),
-                child: Column(
-                  children: [
-                    // Search Bar
-                    TextFormField(
-                      onChanged: (val) => controller.searchQuery.value = val,
-                      style: const TextStyle(fontSize: 13, color: AppColors.textColorPrimary),
-                      decoration: InputDecoration(
-                        hintText: 'Search shifts by name or code...',
-                        hintStyle: const TextStyle(color: AppColors.textColorHint, fontSize: 13),
-                        prefixIcon: const Icon(Iconsax.search_normal, color: AppColors.textColorSecondary, size: 18),
-                        filled: true,
-                        fillColor: AppColors.slate50,
-                        contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.02),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
                     ),
-
-                    const SizedBox(height: 12),
-
-                    // Filter Dropdowns Row
-                    Obx(() => Row(
-                      children: [
-                        // Type Filter
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: AppColors.slate50,
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: AppColors.slate200),
-                            ),
-                            child: DropdownButtonHideUnderline(
-                              child: DropdownButton<String>(
-                                value: controller.selectedType.value,
-                                isExpanded: true,
-                                icon: const Icon(Icons.keyboard_arrow_down, size: 18),
-                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textColorPrimary),
-                                onChanged: (val) {
-                                  if (val != null) controller.selectedType.value = val;
-                                },
-                                items: controller.typeFilterOptions.map((opt) {
-                                  return DropdownMenuItem(value: opt, child: Text(opt));
-                                }).toList(),
-                              ),
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(width: 10),
-
-                        // Status Filter
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: AppColors.slate50,
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: AppColors.slate200),
-                            ),
-                            child: DropdownButtonHideUnderline(
-                              child: DropdownButton<String>(
-                                value: controller.selectedStatus.value,
-                                isExpanded: true,
-                                icon: const Icon(Icons.keyboard_arrow_down, size: 18),
-                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textColorPrimary),
-                                onChanged: (val) {
-                                  if (val != null) {
-                                    controller.selectedStatus.value = val;
-                                    controller.fetchShifts();
-                                  }
-                                },
-                                items: controller.statusFilterOptions.map((opt) {
-                                  return DropdownMenuItem(value: opt, child: Text(opt));
-                                }).toList(),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    )),
                   ],
+                ),
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: (val) {
+                    _controller.searchQuery.value = val;
+                    setState(() {});
+                  },
+                  style: const TextStyle(fontSize: 13, color: AppColors.textColorPrimary),
+                  decoration: InputDecoration(
+                    hintText: 'Search shifts by name, type, or code...',
+                    hintStyle: const TextStyle(color: AppColors.textColorHint, fontSize: 13),
+                    prefixIcon: const Icon(Iconsax.search_normal, color: AppColors.textColorSecondary, size: 18),
+                    suffixIcon: _searchController.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear_rounded, size: 18, color: AppColors.textColorHint),
+                            onPressed: () {
+                              _searchController.clear();
+                              _controller.searchQuery.value = '';
+                              setState(() {});
+                            },
+                          )
+                        : null,
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                  ),
                 ),
               ),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
 
-              // Shifts List Header
+              // 4. Shifts List Header
               Obx(() => Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Row(
                     children: [
-                      const AppText('All Shifts', fontSize: 16, fontWeight: FontWeight.bold),
+                      const AppText('All Shifts', fontSize: 15, fontWeight: FontWeight.bold),
                       const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
                           color: AppColors.primaryLight,
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                         child: AppText(
-                          '${controller.filteredShifts.length}',
+                          '${_controller.filteredShifts.length}',
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
                           color: AppColors.primaryColor,
@@ -260,19 +242,23 @@ class ShiftManagementScreen extends StatelessWidget {
                       ),
                     ],
                   ),
-                  TextButton.icon(
-                    onPressed: () => Get.to(() => const CreateShiftScreen()),
-                    icon: const Icon(Icons.add_circle_outline, size: 16, color: AppColors.primaryColor),
-                    label: const AppText('Add Shift', fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primaryColor),
-                  ),
+                  if (_controller.searchQuery.isNotEmpty)
+                    TextButton(
+                      onPressed: () {
+                        _searchController.clear();
+                        _controller.searchQuery.value = '';
+                        setState(() {});
+                      },
+                      child: const AppText('Clear Search', fontSize: 12, color: AppColors.primaryColor, fontWeight: FontWeight.w600),
+                    ),
                 ],
               )),
 
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
 
-              // Dynamic Shift Cards List
+              // 5. Dynamic Shift Cards List
               Obx(() {
-                if (controller.isLoading.value && controller.shifts.isEmpty) {
+                if (_controller.isLoading.value && _controller.shifts.isEmpty) {
                   return Container(
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(vertical: 48),
@@ -281,29 +267,60 @@ class ShiftManagementScreen extends StatelessWidget {
                   );
                 }
 
-                final list = controller.filteredShifts;
+                final list = _controller.filteredShifts;
 
                 if (list.isEmpty) {
                   return Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 40),
+                    padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: AppColors.slate200),
                     ),
                     child: Column(
-                      children: const [
-                        Icon(Iconsax.calendar_search, size: 40, color: AppColors.textColorHint),
-                        SizedBox(height: 12),
-                        AppText('No shifts found matching criteria', fontSize: 13, color: AppColors.textColorHint),
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: AppColors.slate50,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Iconsax.calendar_search, size: 36, color: AppColors.textColorHint),
+                        ),
+                        const SizedBox(height: 12),
+                        const AppText('No shifts found', fontSize: 14, fontWeight: FontWeight.bold),
+                        const SizedBox(height: 4),
+                        const AppText(
+                          'Try searching with a different keyword or create a new shift.',
+                          fontSize: 12,
+                          color: AppColors.textColorHint,
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton.icon(
+                          onPressed: () async {
+                            final res = await Get.to(() => const CreateShiftScreen());
+                            if (res == true) {
+                              _controller.fetchShifts();
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primaryColor,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          ),
+                          icon: const Icon(Icons.add, size: 16, color: Colors.white),
+                          label: const AppText('Create New Shift', fontSize: 12, color: Colors.white, fontWeight: FontWeight.bold),
+                        ),
                       ],
                     ),
                   );
                 }
 
                 return Column(
-                  children: list.map((shift) => _buildShiftItemCard(context, shift, controller)).toList(),
+                  children: list.map((shift) => _buildShiftItemCard(context, shift, _controller)).toList(),
                 );
               }),
 
@@ -316,19 +333,90 @@ class ShiftManagementScreen extends StatelessWidget {
   }
 
   // ----------------------------------------------------
-  // Summary Stat Card (Matching Panel 1)
+  // Action Button Card (Create / Assign Shift)
   // ----------------------------------------------------
-  Widget _buildSummaryStatCard({
+  Widget _buildActionCard({
     required IconData icon,
-    required Color color,
+    required String title,
+    required String subtitle,
+    required Color primaryColor,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.slate200),
+            boxShadow: [
+              BoxShadow(
+                color: primaryColor.withValues(alpha: 0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: primaryColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: primaryColor, size: 22),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AppText(
+                      title,
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textColorPrimary,
+                    ),
+                    const SizedBox(height: 2),
+                    AppText(
+                      subtitle,
+                      fontSize: 10,
+                      color: AppColors.textColorSecondary,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ----------------------------------------------------
+  // 2x2 Metric Stats Card
+  // ----------------------------------------------------
+  Widget _buildStatGridCard({
+    required IconData icon,
+    required Color iconColor,
     required String count,
-    required String label,
+    required String title,
+    required String subtitle,
+    bool isLive = false,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.slate200),
         boxShadow: [
           BoxShadow(
@@ -339,28 +427,78 @@ class ShiftManagementScreen extends StatelessWidget {
         ],
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: color, size: 18),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  color: iconColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: iconColor, size: 18),
+              ),
+              if (isLive)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF10B981),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const AppText('Live', fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF10B981)),
+                    ],
+                  ),
+                ),
+            ],
           ),
-          const SizedBox(height: 8),
-          AppText(count, fontSize: 17, fontWeight: FontWeight.bold, color: AppColors.textColorPrimary),
+          const SizedBox(height: 10),
+          AppText(
+            count,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: AppColors.textColorPrimary,
+          ),
           const SizedBox(height: 2),
-          AppText(label, fontSize: 10, color: AppColors.textColorSecondary, maxLines: 1),
+          AppText(
+            title,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textColorPrimary,
+          ),
+          const SizedBox(height: 1),
+          AppText(
+            subtitle,
+            fontSize: 10,
+            color: AppColors.textColorSecondary,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
         ],
       ),
     );
   }
 
   // ----------------------------------------------------
-  // Shift Item Card (Clickable to Panel 9: Shift Details)
+  // Shift Item Card
   // ----------------------------------------------------
   Widget _buildShiftItemCard(BuildContext context, ShiftModel shift, ShiftController controller) {
+    final bool isActive = shift.isActive;
+    final Color badgeColor = isActive ? const Color(0xFF10B981) : AppColors.textColorHint;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -376,7 +514,10 @@ class ShiftManagementScreen extends StatelessWidget {
         ],
       ),
       child: InkWell(
-        onTap: () => Get.to(() => ShiftDetailsScreen(shift: shift)),
+        onTap: () async {
+          await Get.to(() => ShiftDetailsScreen(shift: shift));
+          controller.fetchShifts();
+        },
         borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -411,19 +552,19 @@ class ShiftManagementScreen extends StatelessWidget {
                             ),
                             const SizedBox(width: 6),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
                                 color: AppColors.slate100,
                                 borderRadius: BorderRadius.circular(4),
                               ),
-                              child: AppText(shift.code, fontSize: 9, color: AppColors.textColorSecondary),
+                              child: AppText(shift.code, fontSize: 9, fontWeight: FontWeight.w600, color: AppColors.textColorSecondary),
                             ),
                           ],
                         ),
                         const SizedBox(height: 4),
                         Row(
                           children: [
-                            const Icon(Iconsax.clock, size: 14, color: AppColors.textColorHint),
+                            const Icon(Iconsax.clock, size: 13, color: AppColors.textColorHint),
                             const SizedBox(width: 4),
                             AppText(
                               '${shift.startTime} - ${shift.endTime}',
@@ -431,6 +572,23 @@ class ShiftManagementScreen extends StatelessWidget {
                               color: AppColors.textColorSecondary,
                               fontWeight: FontWeight.w500,
                             ),
+                            if (shift.workingHours.isNotEmpty) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                width: 3,
+                                height: 3,
+                                decoration: const BoxDecoration(
+                                  color: AppColors.textColorHint,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              AppText(
+                                shift.workingHours,
+                                fontSize: 11,
+                                color: AppColors.textColorHint,
+                              ),
+                            ],
                           ],
                         ),
                       ],
@@ -442,24 +600,38 @@ class ShiftManagementScreen extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          color: shift.isActive
-                              ? AppColors.successColor.withValues(alpha: 0.1)
-                              : AppColors.slate200,
-                          borderRadius: BorderRadius.circular(12),
+                          color: badgeColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(10),
                         ),
-                        child: AppText(
-                          shift.isActive ? 'Active' : 'Inactive',
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: shift.isActive ? AppColors.successColor : AppColors.textColorSecondary,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 5,
+                              height: 5,
+                              decoration: BoxDecoration(
+                                color: badgeColor,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            AppText(
+                              isActive ? 'Active' : 'Inactive',
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: badgeColor,
+                            ),
+                          ],
                         ),
                       ),
+                      const SizedBox(width: 2),
                       PopupMenuButton<String>(
                         icon: const Icon(Icons.more_vert, size: 18, color: AppColors.textColorSecondary),
                         padding: EdgeInsets.zero,
                         onSelected: (val) async {
                           if (val == 'view') {
-                            Get.to(() => ShiftDetailsScreen(shift: shift));
+                            await Get.to(() => ShiftDetailsScreen(shift: shift));
+                            controller.fetchShifts();
                           } else if (val == 'edit') {
                             final res = await Get.to(() => CreateShiftScreen(shiftToEdit: shift));
                             if (res == true) {
@@ -528,7 +700,7 @@ class ShiftManagementScreen extends StatelessWidget {
                                   size: 16,
                                   color: shift.isActive ? Colors.red : Colors.green,
                                 ),
-                                const SizedBox(width: 8),
+                                SizedBox(width: 8),
                                 AppText(shift.isActive ? 'Deactivate' : 'Activate', fontSize: 12),
                               ],
                             ),
@@ -564,7 +736,7 @@ class ShiftManagementScreen extends StatelessWidget {
                       const Icon(Iconsax.profile_2user, size: 14, color: AppColors.primaryColor),
                       const SizedBox(width: 6),
                       AppText(
-                        '${shift.employeesCount} Employees',
+                        '${shift.employeesCount} Staff Assigned',
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                         color: AppColors.textColorPrimary,
@@ -589,26 +761,6 @@ class ShiftManagementScreen extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildQuickAction(BuildContext context, IconData icon, String label, Color color, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Icon(icon, color: color, size: 28),
-          ),
-          const SizedBox(height: 8),
-          AppText(label, fontSize: 11, fontWeight: FontWeight.w600),
-        ],
       ),
     );
   }

@@ -16,28 +16,38 @@ import '../../notification/controllers/notification_controller.dart';
 import '../../../core/controllers/app_controller.dart';
 import '../controllers/dashboard_controller.dart';
 import 'upcoming_birthdays_screen.dart';
-import '../../departments/views/department_list_screen.dart';
+import 'package:intl/intl.dart';
 import '../../role_permissions/views/role_list_screen.dart';
-import '../../employee/designation/views/designation_list_screen.dart';
 import '../../employee/management/views/employee_list_screen.dart';
+
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     final appController = Get.find<AppController>();
+    final dashboardController = Get.isRegistered<DashboardController>()
+        ? Get.find<DashboardController>()
+        : Get.put(DashboardController());
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // ── Header ──
-              const _HomeHeader(),
-              const SizedBox(height: 24),
+        child: RefreshIndicator(
+          onRefresh: () async {
+            if (appController.userRole.value != 'admin') {
+              await dashboardController.fetchEmployeeDashboard();
+            }
+          },
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ── Header ──
+                const _HomeHeader(),
+                const SizedBox(height: 24),
 
               Obx(() {
                 final isAdmin = appController.userRole.value == 'admin';
@@ -117,19 +127,6 @@ class HomeScreen extends StatelessWidget {
                       const _TodayWorkSummary(),
                       const SizedBox(height: 24),
 
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const AppText("My Attendance (This Week)", fontSize: 15, fontWeight: FontWeight.w700),
-                          TextButton(
-                            onPressed: () => Get.to(() => const AttendanceHistoryScreen()),
-                            child: const AppText('View calendar >', fontSize: 12, color: AppColors.primaryColor),
-                          ),
-                        ],
-                      ),
-                      const _WeeklyAttendanceStrip(),
-                      const SizedBox(height: 24),
-
                       const AppText("Quick Actions", fontSize: 15, fontWeight: FontWeight.w700),
                       const SizedBox(height: 16),
                       const _EmployeeQuickActions(),
@@ -152,8 +149,9 @@ class HomeScreen extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }
 
 // ── HEADER ──────────────────────────────────────────────────────────────────
@@ -163,77 +161,111 @@ class _HomeHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final notifController = Get.put(NotificationController());
+    final appController = Get.find<AppController>();
+    final dashboardController = Get.isRegistered<DashboardController>()
+        ? Get.find<DashboardController>()
+        : Get.put(DashboardController());
 
-    return Row(
-      children: [
-        const Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              AppText(
-                'Good Morning, Manager 👋',
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-              ),
-              AppText(
-                'ABC Solutions Pvt. Ltd.',
-                fontSize: 13,
-                color: AppColors.textColorSecondary,
-              ),
-            ],
-          ),
-        ),
-        Obx(() {
-          final count = notifController.unreadCount;
-          return InkWell(
-            onTap: () => Get.to(() => const NotificationScreen()),
-            borderRadius: BorderRadius.circular(20),
-            child: Stack(
+    return Obx(() {
+      final isAdmin = appController.userRole.value == 'admin';
+      final empData = dashboardController.employeeDashboardData.value;
+
+      final greeting = isAdmin
+          ? 'Good Morning, Manager 👋'
+          : (empData?.greeting ?? 'Good Morning 👋');
+
+      final subtitle = isAdmin
+          ? 'ABC Solutions Pvt. Ltd.'
+          : ((empData?.employee?.designation != null && empData?.employee?.department != null)
+              ? '${empData!.employee!.designation} • ${empData.employee!.department}'
+              : (empData?.employee?.designation ?? empData?.employee?.department ?? 'ABC Solutions Pvt. Ltd.'));
+
+      final avatarUrl = isAdmin
+          ? 'https://i.pravatar.cc/150?u=manager'
+          : (empData?.employee?.avatar ?? '');
+
+      return Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white,
-                    border: Border.all(color: AppColors.slate200),
-                  ),
-                  child: const Icon(Iconsax.notification, size: 20),
+                AppText(
+                  greeting,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
                 ),
-                if (count > 0)
-                  Positioned(
-                    right: 2,
-                    top: 2,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(
-                        color: Colors.red,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Text(
-                        '$count',
-                        style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
+                const SizedBox(height: 4),
+                AppText(
+                  subtitle,
+                  fontSize: 13,
+                  color: AppColors.textColorSecondary,
+                ),
               ],
             ),
-          );
-        }),
-        const SizedBox(width: 12),
-        InkWell(
-          onTap: () {
-            if (Get.isRegistered<DashboardController>()) {
-              Get.find<DashboardController>().changeIndex(3);
-            }
-          },
-          borderRadius: BorderRadius.circular(22),
-          child: const CircleAvatar(
-            radius: 22,
-            backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=manager'),
           ),
-        ),
-      ],
-    );
+          Obx(() {
+            final count = notifController.unreadCount;
+            return InkWell(
+              onTap: () => Get.to(() => const NotificationScreen()),
+              borderRadius: BorderRadius.circular(20),
+              child: Stack(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white,
+                      border: Border.all(color: AppColors.slate200),
+                    ),
+                    child: const Icon(Iconsax.notification, size: 20),
+                  ),
+                  if (count > 0)
+                    Positioned(
+                      right: 2,
+                      top: 2,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(
+                          '$count',
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 8,
+                              fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            );
+          }),
+          const SizedBox(width: 12),
+          InkWell(
+            onTap: () {
+              if (Get.isRegistered<DashboardController>()) {
+                Get.find<DashboardController>().changeIndex(3);
+              }
+            },
+            borderRadius: BorderRadius.circular(22),
+            child: CircleAvatar(
+              radius: 22,
+              backgroundColor: AppColors.slate200,
+              backgroundImage: (avatarUrl.isNotEmpty && Uri.tryParse(avatarUrl)?.isAbsolute == true)
+                  ? NetworkImage(avatarUrl)
+                  : null,
+              onBackgroundImageError: (_, __) {},
+              child: (avatarUrl.isEmpty || Uri.tryParse(avatarUrl)?.isAbsolute != true)
+                  ? const Icon(Icons.person, color: AppColors.textColorSecondary, size: 22)
+                  : null,
+            ),
+          ),
+        ],
+      );
+    });
   }
 }
 
@@ -787,232 +819,241 @@ class EmployeeShiftAttendanceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primaryColor.withValues(alpha: 0.12),
-            blurRadius: 22,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(18, 18, 18, 70),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF2563EB), Color(0xFF3B82F6)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const AppText(
-                          'Current Shift',
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF10B981),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: const AppText(
-                            '• Ongoing',
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    const AppText(
-                      '09:00 AM - 06:00 PM',
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.w800,
-                    ),
-                    const SizedBox(height: 8),
-                    const AppText(
-                      'General Shift',
-                      color: Colors.white70,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ],
-                ),
+    final dashboardController = Get.isRegistered<DashboardController>()
+        ? Get.find<DashboardController>()
+        : Get.put(DashboardController());
 
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: const Column(
+    return Obx(() {
+      final empData = dashboardController.employeeDashboardData.value;
+      final currentShift = empData?.currentShift;
+      final attendance = empData?.attendance;
+
+      final shiftName = currentShift?.name ?? 'General Shift';
+      final shiftTiming = (currentShift?.startTime != null && currentShift?.endTime != null)
+          ? '${currentShift!.startTime} - ${currentShift.endTime}'
+          : '10:00 AM - 07:00 PM';
+      final isOngoing = currentShift?.isOngoing ?? false;
+
+      // Date parsing
+      DateTime now = DateTime.now();
+      if (empData?.date != null) {
+        final parsed = DateTime.tryParse(empData!.date!);
+        if (parsed != null) now = parsed;
+      }
+      final monthStr = DateFormat('MMM').format(now);
+      final dayNum = DateFormat('dd').format(now);
+      final weekdayStr = empData?.day != null && empData!.day!.isNotEmpty
+          ? (empData.day!.length > 3 ? empData.day!.substring(0, 3) : empData.day!)
+          : DateFormat('EEE').format(now);
+
+      final checkInTime = attendance?.checkIn ?? '--:-- --';
+      final isCheckedIn = attendance?.checkIn != null && attendance!.checkIn!.isNotEmpty;
+      final checkInStatus = isCheckedIn ? 'Completed' : (attendance?.status ?? 'Not Marked');
+      final checkInColor = isCheckedIn ? const Color(0xFF22C55E) : const Color(0xFFF97316);
+
+      final checkOutTime = attendance?.checkOut ?? '--:-- --';
+      final isCheckedOut = attendance?.checkOut != null && attendance!.checkOut!.isNotEmpty;
+      final checkOutStatus = isCheckedOut ? 'Completed' : 'Pending';
+      final checkOutColor = isCheckedOut ? const Color(0xFF22C55E) : const Color(0xFFF97316);
+
+      return Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primaryColor.withValues(alpha: 0.12),
+              blurRadius: 22,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(18, 18, 18, 70),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF2563EB), Color(0xFF3B82F6)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      AppText(
-                        'May',
-                        color: AppColors.primaryColor,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
+                      Row(
+                        children: [
+                          const AppText(
+                            'Current Shift',
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isOngoing
+                                  ? const Color(0xFF10B981)
+                                  : Colors.white.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: AppText(
+                              isOngoing ? '• Ongoing' : '• Scheduled',
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
                       ),
-                      SizedBox(height: 4),
+                      const SizedBox(height: 14),
                       AppText(
-                        '20',
-                        color: AppColors.textColorPrimary,
-                        fontSize: 26,
-                        fontWeight: FontWeight.w900,
+                        shiftTiming,
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
                       ),
+                      const SizedBox(height: 8),
                       AppText(
-                        'Tue',
-                        color: AppColors.textColorPrimary,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
+                        shiftName,
+                        color: Colors.white70,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
                       ),
                     ],
                   ),
-                ),
-              ],
-            ),
-          ),
 
-          Transform.translate(
-            offset: const Offset(0, -50),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 18),
-              child: Column(
-                children: [
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,
-                      vertical: 18,
+                      vertical: 12,
                     ),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(18),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.08),
-                          blurRadius: 18,
-                          offset: const Offset(0, 8),
-                        ),
-                      ],
                     ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: _CheckItem(
-                            title: 'Check-in',
-                            time: '08:55 AM',
-                            status: 'Completed',
-                            icon: Iconsax.tick_circle,
-                            color: Color(0xFF22C55E),
-                          ),
-                        ),
-
-                        Container(
-                          height: 62,
-                          width: 1,
-                          color: AppColors.slate200,
-                        ),
-
-                        Expanded(
-                          child: _CheckItem(
-                            title: 'Check-out',
-                            time: '--:-- --',
-                            status: 'Pending',
-                            icon: Iconsax.clock,
-                            color: Color(0xFFF97316),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 18),
-
-                  AppButton(
-                    text: 'Mark Attendance',
-                    height: 50,
-                    borderRadius: 16,
-                    color: AppColors.primaryColor,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    icon: const Icon(
-                      Iconsax.finger_scan,
-                      color: Colors.white,
-                      size: 22,
-                    ),
-                    onPressed: () {
-                      // mark attendance action
-                    },
-                  ),
-
-                 /* Container(
-                    height: 56,
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
-                      ),
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.primaryColor.withValues(alpha: 0.30),
-                          blurRadius: 18,
-                          offset: const Offset(0, 8),
-                        ),
-                      ],
-                    ),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    child: Column(
                       children: [
                         AppText(
-                          'Mark Attendance',
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
+                          monthStr,
+                          color: AppColors.primaryColor,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
                         ),
-                        SizedBox(width: 14),
-                        Icon(
-                          Iconsax.finger_scan,
-                          color: Colors.white,
-                          size: 23,
+                        const SizedBox(height: 4),
+                        AppText(
+                          dayNum,
+                          color: AppColors.textColorPrimary,
+                          fontSize: 26,
+                          fontWeight: FontWeight.w900,
+                        ),
+                        AppText(
+                          weekdayStr,
+                          color: AppColors.textColorPrimary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
                         ),
                       ],
                     ),
-                  ),*/
+                  ),
                 ],
               ),
             ),
-          ),
-        ],
-      ),
-    );
+
+            Transform.translate(
+              offset: const Offset(0, -50),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 18),
+                child: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 18,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(18),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.08),
+                            blurRadius: 18,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: _CheckItem(
+                              title: 'Check-in',
+                              time: checkInTime,
+                              status: checkInStatus,
+                              icon: isCheckedIn ? Iconsax.tick_circle : Iconsax.clock,
+                              color: checkInColor,
+                            ),
+                          ),
+
+                          Container(
+                            height: 62,
+                            width: 1,
+                            color: AppColors.slate200,
+                          ),
+
+                          Expanded(
+                            child: _CheckItem(
+                              title: 'Check-out',
+                              time: checkOutTime,
+                              status: checkOutStatus,
+                              icon: isCheckedOut ? Iconsax.tick_circle : Iconsax.clock,
+                              color: checkOutColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 18),
+
+                    AppButton(
+                      text: isCheckedOut
+                          ? 'Attendance Completed'
+                          : (isCheckedIn ? 'Check Out' : 'Mark Attendance'),
+                      height: 50,
+                      borderRadius: 16,
+                      color: AppColors.primaryColor,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      icon: const Icon(
+                        Iconsax.finger_scan,
+                        color: Colors.white,
+                        size: 22,
+                      ),
+                      onPressed: () {
+                        if (Get.isRegistered<DashboardController>()) {
+                          Get.find<DashboardController>().changeIndex(1);
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    });
   }
 }
 
@@ -1115,47 +1156,124 @@ class _TodayBirthdayCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.slate200),
-      ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    final dashboardController = Get.isRegistered<DashboardController>()
+        ? Get.find<DashboardController>()
+        : Get.put(DashboardController());
+
+    return Obx(() {
+      final birthdays = dashboardController.employeeDashboardData.value?.todaysBirthdays ?? [];
+
+      if (birthdays.isEmpty) {
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppColors.slate200),
+          ),
+          child: Column(
             children: [
-              const Row(
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  AppText("Today's Birthday", fontSize: 14, fontWeight: FontWeight.w700),
-                  SizedBox(width: 6),
-                  AppText('🎂', fontSize: 14),
+                  const Row(
+                    children: [
+                      AppText("Today's Birthday", fontSize: 14, fontWeight: FontWeight.w700),
+                      SizedBox(width: 6),
+                      AppText('🎂', fontSize: 14),
+                    ],
+                  ),
+                  TextButton(
+                    onPressed: () => Get.to(() => const UpcomingBirthdaysScreen()),
+                    child: const AppText('View all >', fontSize: 12, color: AppColors.primaryColor),
+                  ),
                 ],
               ),
-              TextButton(onPressed: () => Get.to(() => const UpcomingBirthdaysScreen()), child: const AppText('View all >', fontSize: 12, color: AppColors.primaryColor)),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryColor.withValues(alpha: 0.08),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Iconsax.cake, color: AppColors.primaryColor, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        AppText('No birthdays today', fontSize: 13, fontWeight: FontWeight.w600),
+                        AppText('Check upcoming birthdays for the team', fontSize: 11, color: AppColors.textColorSecondary),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
-          const Row(
-            children: [
-              CircleAvatar(radius: 20, backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=rohit')),
-              SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+        );
+      }
+
+      final firstBday = birthdays.first;
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.slate200),
+        ),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Row(
                   children: [
-                    AppText('Rohit Sharma', fontSize: 14, fontWeight: FontWeight.w700),
-                    AppText('UI/UX Designer', fontSize: 11, color: AppColors.textColorSecondary),
+                    AppText("Today's Birthday", fontSize: 14, fontWeight: FontWeight.w700),
+                    SizedBox(width: 6),
+                    AppText('🎂', fontSize: 14),
                   ],
                 ),
-              ),
-              Icon(Iconsax.gift, color: Colors.red, size: 24),
-            ],
-          ),
-        ],
-      ),
-    );
+                TextButton(
+                  onPressed: () => Get.to(() => const UpcomingBirthdaysScreen()),
+                  child: const AppText('View all >', fontSize: 12, color: AppColors.primaryColor),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 20,
+                  backgroundColor: AppColors.slate200,
+                  backgroundImage: firstBday.avatar != null && firstBday.avatar!.isNotEmpty
+                      ? NetworkImage(firstBday.avatar!)
+                      : null,
+                  onBackgroundImageError: (_, __) {},
+                  child: (firstBday.avatar == null || firstBday.avatar!.isEmpty)
+                      ? const Icon(Icons.person, color: AppColors.textColorSecondary, size: 20)
+                      : null,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      AppText(firstBday.name ?? 'Team Member', fontSize: 14, fontWeight: FontWeight.w700),
+                      AppText(firstBday.designation ?? 'Colleague', fontSize: 11, color: AppColors.textColorSecondary),
+                    ],
+                  ),
+                ),
+                const Icon(Iconsax.gift, color: Colors.red, size: 24),
+              ],
+            ),
+          ],
+        ),
+      );
+    });
   }
 }
 
@@ -1164,21 +1282,33 @@ class _TodayWorkSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      physics: const BouncingScrollPhysics(),
-      child: Row(
-        children: const [
-          _SummaryItem(icon: Iconsax.clock, label: 'Working Hours', value: '00h 00m', color: Color(0xFF3B82F6)),
-          SizedBox(width: 12),
-          _SummaryItem(icon: Iconsax.coffee, label: 'Break Hours', value: '00h 00m', color: Colors.orange),
-          SizedBox(width: 12),
-          _SummaryItem(icon: Iconsax.timer_1, label: 'Overtime', value: '00h 00m', color: Colors.purple),
-          SizedBox(width: 12),
-          _SummaryItem(icon: Iconsax.tick_circle, label: 'Status', value: 'Present', color: Colors.green),
-        ],
-      ),
-    );
+    final dashboardController = Get.isRegistered<DashboardController>()
+        ? Get.find<DashboardController>()
+        : Get.put(DashboardController());
+
+    return Obx(() {
+      final summary = dashboardController.employeeDashboardData.value?.todaysSummary;
+      final workingHours = summary?.workingHours ?? '00h 00m';
+      final breakHours = summary?.breakHours ?? '00h 00m';
+      final overtime = summary?.overtime ?? '00h 00m';
+      final status = summary?.status ?? 'Not Marked';
+
+      return SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        child: Row(
+          children: [
+            _SummaryItem(icon: Iconsax.clock, label: 'Working Hours', value: workingHours, color: const Color(0xFF3B82F6)),
+            const SizedBox(width: 12),
+            _SummaryItem(icon: Iconsax.coffee, label: 'Break Hours', value: breakHours, color: Colors.orange),
+            const SizedBox(width: 12),
+            _SummaryItem(icon: Iconsax.timer_1, label: 'Overtime', value: overtime, color: Colors.purple),
+            const SizedBox(width: 12),
+            _SummaryItem(icon: Iconsax.tick_circle, label: 'Status', value: status, color: Colors.green),
+          ],
+        ),
+      );
+    });
   }
 }
 
@@ -1214,165 +1344,7 @@ class _SummaryItem extends StatelessWidget {
   }
 }
 
-/*class _WeeklyAttendanceStrip extends StatelessWidget {
-  const _WeeklyAttendanceStrip();
 
-  @override
-  Widget build(BuildContext context) {
-    final days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    final dates = ['16', '17', '18', '19', '20', '21', '22'];
-    final status = ['P', 'P', 'A', 'P', 'P', '–', '–'];
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: List.generate(7, (index) {
-        final isToday = index == 4;
-        final isAbsent = status[index] == 'A';
-        final isPresent = status[index] == 'P';
-
-        return Container(
-          width: 45,
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color: isToday ? Colors.white : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: isToday ? AppColors.primaryColor : AppColors.slate200),
-          ),
-          child: Column(
-            children: [
-              AppText(days[index], fontSize: 9, color: AppColors.textColorSecondary),
-              const SizedBox(height: 4),
-              AppText(dates[index], fontSize: 13, fontWeight: FontWeight.w700),
-              const SizedBox(height: 8),
-              AppText(
-                status[index],
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-                color: isAbsent ? Colors.red : (isPresent ? Colors.green : AppColors.textColorHint),
-              ),
-            ],
-          ),
-        );
-      }),
-    );
-  }
-}*/
-
-class _WeeklyAttendanceStrip extends StatelessWidget {
-  const _WeeklyAttendanceStrip();
-
-  @override
-  Widget build(BuildContext context) {
-    final days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    final dates = ['16', '17', '18', '19', '20', '21', '22'];
-    final status = ['P', 'P', 'A', 'P', 'P', '–', '–'];
-
-    return SizedBox(
-      height: 125,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 4),
-        itemCount: days.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 12),
-        itemBuilder: (context, index) {
-          final isToday = index == 4;
-          final isAbsent = status[index] == 'A';
-          final isPresent = status[index] == 'P';
-
-          Color statusColor = AppColors.textColorHint;
-
-          if (isAbsent) {
-            statusColor = const Color(0xFFEF4444);
-          } else if (isPresent) {
-            statusColor = const Color(0xFF22C55E);
-          }
-
-          return AnimatedContainer(
-            duration: const Duration(milliseconds: 250),
-            width: 72,
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            decoration: BoxDecoration(
-              gradient: isToday
-                  ? const LinearGradient(
-                colors: [
-                  Color(0xFF2563EB),
-                  Color(0xFF3B82F6),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              )
-                  : null,
-              color: isToday ? null : Colors.white,
-              borderRadius: BorderRadius.circular(22),
-              border: Border.all(
-                color: isToday
-                    ? Colors.transparent
-                    : AppColors.slate200,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: isToday
-                      ? AppColors.primaryColor.withValues(alpha: 0.28)
-                      : Colors.black.withValues(alpha: 0.04),
-                  blurRadius: isToday ? 18 : 10,
-                  offset: const Offset(0, 6),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                AppText(
-                  days[index],
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: isToday
-                      ? Colors.white70
-                      : AppColors.textColorSecondary,
-                ),
-
-                const SizedBox(height: 8),
-
-                AppText(
-                  dates[index],
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  color: isToday
-                      ? Colors.white
-                      : AppColors.textColorPrimary,
-                ),
-
-                const SizedBox(height: 5),
-
-                Container(
-                  height: 25,
-                  width: 25,
-                  decoration: BoxDecoration(
-                    color: isToday
-                        ? Colors.white.withValues(alpha: 0.18)
-                        : statusColor.withValues(alpha: 0.12),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: AppText(
-                      status[index],
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                      color: isToday
-                          ? Colors.white
-                          : statusColor,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
 
 class _EmployeeQuickActions extends StatelessWidget {
   const _EmployeeQuickActions();

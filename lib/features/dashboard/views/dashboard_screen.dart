@@ -134,16 +134,28 @@ class DashboardScreen extends StatelessWidget {
       child: Obx(() {
         final isAdmin = appController.userRole.value == 'admin';
 
-        final List<Widget> screens = [
-          const HomeScreen(),
-          isAdmin ? const AttendanceScreen() : const AttendanceHistoryScreen(showBackButton: false),
-          isAdmin ? const AllModulesScreen() : const EmployeeMoreScreen(),
-          const ProfileScreen(),
-        ];
+        Widget buildCurrentScreen() {
+          switch (controller.currentIndex.value) {
+            case 0:
+              return const HomeScreen();
+            case 1:
+              return isAdmin
+                  ? const AttendanceScreen()
+                  : const AttendanceHistoryScreen(showBackButton: false);
+            case 2:
+              return isAdmin
+                  ? const AllModulesScreen()
+                  : const EmployeeMoreScreen();
+            case 3:
+              return const ProfileScreen();
+            default:
+              return const HomeScreen();
+          }
+        }
 
         return Scaffold(
           extendBody: false, // Content does not flow behind the floating bar
-          body: screens[controller.currentIndex.value],
+          body: buildCurrentScreen(),
           bottomNavigationBar: _CustomBottomNavBar(controller: controller, isAdmin: isAdmin),
         );
       }),

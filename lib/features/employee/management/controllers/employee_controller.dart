@@ -1,10 +1,36 @@
 import 'package:get/get.dart';
+import '../../../../core/services/network/api_client.dart';
+import '../../../../core/utils/logger.dart';
+import '../domain/usecases/create_employee_usecase.dart';
+import '../models/create_employee_request_model.dart';
+import '../models/create_employee_response_model.dart';
 import '../models/employee_model.dart';
+import '../repositories/employee_repository.dart';
 import '../../designation/controllers/designation_controller.dart';
 
+import '../../../departments/controllers/departments_controller.dart';
+import '../../../shift_management/controllers/shift_controller.dart';
+
 class EmployeeController extends GetxController {
+  final CreateEmployeeUseCase? createEmployeeUseCase;
+
+  EmployeeController({
+    this.createEmployeeUseCase,
+  });
+
+  final RxBool isSubmitting = false.obs;
   var employees = <EmployeeModel>[].obs;
   var filteredEmployees = <EmployeeModel>[].obs;
+
+  CreateEmployeeUseCase get _effectiveCreateEmployeeUseCase {
+    if (createEmployeeUseCase != null) return createEmployeeUseCase!;
+    if (Get.isRegistered<CreateEmployeeUseCase>()) {
+      return Get.find<CreateEmployeeUseCase>();
+    }
+    final apiClient = Get.isRegistered<ApiClient>() ? Get.find<ApiClient>() : ApiClient();
+    final repo = EmployeeRepository(apiClient: apiClient);
+    return CreateEmployeeUseCase(repo);
+  }
 
   // Search & Filter State
   var searchQuery = ''.obs;
@@ -15,16 +41,29 @@ class EmployeeController extends GetxController {
   var filterStatus = 'All'.obs; // 'All', 'Active', 'Inactive'
   var filterJoiningYear = 'All'.obs; // 'All', '2025', '2024', '2023'
 
-  // Master Filter Options
-  final List<String> departmentsList = [
-    'All',
-    'Engineering',
-    'Human Resources',
-    'Sales',
-    'Marketing',
-    'Support',
-    'Operations',
-  ];
+  // Master Filter & Form Options
+  List<String> get departmentsList {
+    List<String> dynamicList = [];
+    if (Get.isRegistered<DepartmentsController>()) {
+      final deptCtrl = Get.find<DepartmentsController>();
+      if (deptCtrl.departments.isNotEmpty) {
+        dynamicList = deptCtrl.departments.map((d) => d.name).where((n) => n.isNotEmpty).toList();
+      } else if (deptCtrl.apiDepartments.isNotEmpty) {
+        dynamicList = deptCtrl.apiDepartments.map((d) => d.name).where((n) => n.isNotEmpty).toList();
+      }
+    }
+    if (dynamicList.isEmpty) {
+      dynamicList = [
+        'Engineering',
+        'Human Resources',
+        'Sales',
+        'Marketing',
+        'Support',
+        'Operations',
+      ];
+    }
+    return ['All', ...dynamicList];
+  }
 
   final List<String> teamsList = [
     'All',
@@ -34,13 +73,24 @@ class EmployeeController extends GetxController {
     'Growth Team',
   ];
 
-  final List<String> shiftsList = [
-    'All',
-    'Morning Shift',
-    'Evening Shift',
-    'Night Shift',
-    'General Shift',
-  ];
+  List<String> get shiftsList {
+    List<String> dynamicList = [];
+    if (Get.isRegistered<ShiftController>()) {
+      final shiftCtrl = Get.find<ShiftController>();
+      if (shiftCtrl.shifts.isNotEmpty) {
+        dynamicList = shiftCtrl.shifts.map((s) => s.name).where((n) => n.isNotEmpty).toList();
+      }
+    }
+    if (dynamicList.isEmpty) {
+      dynamicList = [
+        'Morning Shift',
+        'Evening Shift',
+        'Night Shift',
+        'General Shift',
+      ];
+    }
+    return ['All', ...dynamicList];
+  }
 
   final List<String> statusList = [
     'All',
@@ -419,6 +469,71 @@ class EmployeeController extends GetxController {
   void addEmployee(EmployeeModel employee) {
     employees.insert(0, employee);
     applyFilters();
+  }
+
+  Future<CreateEmployeeResponseModel> createEmployeeApi(CreateEmployeeRequestModel request) async {
+    isSubmitting.value = true;
+    try {
+      final response = await _effectiveCreateEmployeeUseCase.execute(request);
+      if (response.status) {
+        String empId = request.employeeId;
+        String newId = DateTime.now().millisecondsSinceEpoch.toString();
+        if (response.data is Map<String, dynamic>) {
+          final data = response.data as Map<String, dynamic>;
+          if (data['id'] != null) newId = data['id'].toString();
+          if (data['employee_id'] != null) empId = data['employee_id'].toString();
+        }
+
+        final double sal = double.tryParse(request.monthlyBaseSalary) ?? 0.0;
+        final newEmp = EmployeeModel(
+          id: newId,
+          employeeId: empId,
+          name: request.name,
+          mobile: request.mobileNumber,
+          alternateMobile: request.alternateMobileNumber ?? '',
+          email: request.email,
+          gender: request.gender,
+          dob: request.dateOfBirth,
+          designation: request.designationId,
+          department: request.department,
+          team: request.team ?? 'Team Alpha',
+          shift: request.assignedShiftId ?? 'Morning Shift',
+          workMode: request.workMode,
+          employeeType: request.employeeType,
+          employmentStatus: request.employmentStatus,
+          probationPeriod: request.probationPeriod ?? '3 Months',
+          noticePeriod: request.noticePeriod ?? '30 Days',
+          joiningDate: request.dateOfJoining,
+          salaryType: request.salaryType,
+          salary: sal,
+          hasSalesTarget: request.salesTargetEnabled == '1',
+          address: request.streetAddress ?? '',
+          city: request.city ?? '',
+          state: request.state ?? '',
+          pincode: request.postalCode ?? '',
+          country: request.country ?? 'India',
+          emergencyContact: request.emergencyContact ?? '',
+          accountHolderName: request.accountHolderName ?? '',
+          bankName: request.bankName ?? '',
+          accountNumber: request.accountNumber ?? '',
+          ifscCode: request.ifscCode ?? '',
+          branchName: request.branchName ?? '',
+          skills: request.skills,
+          isActive: request.employmentStatus.toLowerCase() == 'active' || request.employmentStatus.toLowerCase() == 'probation',
+        );
+
+        addEmployee(newEmp);
+      }
+      return response;
+    } catch (e) {
+      Logger.e('EmployeeController => Error in createEmployeeApi: $e');
+      return CreateEmployeeResponseModel(
+        status: false,
+        message: e.toString(),
+      );
+    } finally {
+      isSubmitting.value = false;
+    }
   }
 
   void updateEmployee(EmployeeModel updatedEmployee) {

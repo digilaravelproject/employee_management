@@ -25,6 +25,7 @@ import '../features/dashboard/views/dashboard_screen.dart';
 import '../features/employee/designation/views/designation_list_screen.dart';
 import '../features/employee/designation/views/add_designation_screen.dart';
 import '../features/employee/designation/bindings/designation_binding.dart';
+import '../features/employee/management/bindings/employee_binding.dart';
 import '../features/employee/management/views/employee_list_screen.dart';
 import '../features/employee/management/views/add_employee_screen.dart';
 import '../features/departments/views/department_list_screen.dart';
@@ -33,6 +34,8 @@ import '../features/departments/bindings/department_binding.dart';
 import '../features/shift_management/bindings/shift_binding.dart';
 import '../features/shift_management/views/shift_management_screen.dart';
 import '../features/shift_management/views/create_shift_screen.dart';
+import '../features/leave_management/bindings/admin_leave_binding.dart';
+import '../features/leave_management/views/leave_requests_screen.dart';
 import '../core/services/network/api_client.dart';
 import 'app_routes.dart';
 
@@ -54,6 +57,7 @@ class RouteHelper {
   static String getShiftListRoute() => AppRoutes.shiftList;
   static String getCreateShiftRoute() => AppRoutes.createShift;
   static String getAddDepartmentRoute() => AppRoutes.addDepartment;
+  static String getLeaveRequestsRoute() => AppRoutes.leaveRequests;
   static String getLeadListRoute() => AppRoutes.leadList;
   static String getLeadSummaryRoute() => AppRoutes.leadSummary;
 
@@ -199,12 +203,14 @@ class RouteHelper {
     GetPage(
       name: AppRoutes.employeeList,
       page: () => const EmployeeListScreen(),
+      binding: EmployeeBinding(),
       transition: Transition.rightToLeft,
     ),
 
     GetPage(
       name: AppRoutes.addEmployee,
       page: () => const AddEmployeeScreen(),
+      binding: EmployeeBinding(),
       transition: Transition.rightToLeft,
     ),
 
@@ -233,6 +239,13 @@ class RouteHelper {
       name: AppRoutes.createShift,
       page: () => const CreateShiftScreen(),
       binding: ShiftBinding(),
+      transition: Transition.rightToLeft,
+    ),
+
+    GetPage(
+      name: AppRoutes.leaveRequests,
+      page: () => const LeaveRequestsScreen(),
+      binding: AdminLeaveBinding(),
       transition: Transition.rightToLeft,
     ),
   ];

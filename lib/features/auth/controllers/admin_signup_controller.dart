@@ -7,6 +7,7 @@ import '../../../../core/services/storage/token_manger.dart';
 import '../../../../core/utils/custom_snackbar.dart';
 import '../../../../core/utils/logger.dart';
 import '../../../../routes/route_helper.dart';
+import '../../../../core/controllers/app_controller.dart';
 import '../domain/models/admin_signup_request_model.dart';
 import '../domain/models/admin_signup_response_model.dart';
 import '../domain/models/user_model.dart';
@@ -231,6 +232,10 @@ class AdminSignupController extends GetxController {
           final user = UserModel.fromJson(response.rawData!);
           await SharedPrefs.setString(AppConstants.userData, jsonEncode(user.toJson()));
           await SharedPrefs.setBool(AppConstants.isLoggedIn, true);
+
+          if (Get.isRegistered<AppController>()) {
+            Get.find<AppController>().setRole(user.role);
+          }
         }
 
         CustomSnackbar.showSuccess(successMsg);
@@ -325,6 +330,10 @@ class AdminSignupController extends GetxController {
           await SharedPrefs.setString(
               AppConstants.userData, jsonEncode(user.toJson()));
           await SharedPrefs.setBool(AppConstants.isLoggedIn, true);
+
+          if (Get.isRegistered<AppController>()) {
+            Get.find<AppController>().setRole(user.role);
+          }
         }
 
         CustomSnackbar.showSuccess(successMsg);

@@ -2,7 +2,6 @@ import 'package:get/get.dart';
 import 'dart:convert';
 import '../services/storage/shared_prefs.dart';
 import '../constants/app_constants.dart';
-import '../../features/auth/domain/models/user_model.dart';
 
 class AppController extends GetxController {
   // Store the selected role. 'admin' or 'employee'
@@ -20,7 +19,12 @@ class AppController extends GetxController {
       try {
         final userData = jsonDecode(userDataString);
         if (userData['role'] != null) {
-          userRole.value = userData['role'];
+          final role = userData['role'].toString().toLowerCase().trim();
+          if (role == 'admin' || role == 'superadmin' || role == 'super_admin') {
+            userRole.value = 'admin';
+          } else {
+            userRole.value = 'employee';
+          }
         }
       } catch (e) {
         print('Error loading role from prefs: $e');
@@ -29,6 +33,11 @@ class AppController extends GetxController {
   }
 
   void setRole(String role) {
-    userRole.value = role;
+    final normalized = role.toLowerCase().trim();
+    if (normalized == 'admin' || normalized == 'superadmin' || normalized == 'super_admin') {
+      userRole.value = 'admin';
+    } else {
+      userRole.value = 'employee';
+    }
   }
 }

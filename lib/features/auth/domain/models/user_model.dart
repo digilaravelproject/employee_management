@@ -1,5 +1,4 @@
 import 'dart:convert';
-import '../../../../core/constants/app_constants.dart';
 
 class UserDocument {
   final int? id;
@@ -182,14 +181,16 @@ class UserModel {
       dateOfJoining: json['date_of_joining']?.toString(),
       monthlySalary: json['monthly_salary']?.toString(),
       salaryType: json['salary_type']?.toString(),
-      salesTargetEnabled: json['sales_target_enabled'] != null ? int.tryParse(json['sales_target_enabled'].toString()) : null,
+      salesTargetEnabled: json['sales_target_enabled'] is bool
+          ? (json['sales_target_enabled'] == true ? 1 : 0)
+          : (json['sales_target_enabled'] != null ? int.tryParse(json['sales_target_enabled'].toString()) : null),
       salesTarget: json['sales_target']?.toString(),
       accountHolderName: json['account_holder_name']?.toString(),
       bankName: json['bank_name']?.toString(),
       accountNumber: json['account_number']?.toString(),
       ifscCode: json['ifsc_code']?.toString(),
       branchName: json['branch_name']?.toString(),
-      skills: json['skills']?.toString(),
+      skills: json['skills'] is List ? (json['skills'] as List).join(', ') : json['skills']?.toString(),
       address: json['address']?.toString(),
       streetAddress: json['street_address']?.toString(),
       city: json['city']?.toString(),

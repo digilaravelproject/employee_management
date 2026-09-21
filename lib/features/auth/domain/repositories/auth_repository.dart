@@ -152,7 +152,7 @@ class AuthRepository implements AuthRepositoryInterface {
   Future<ResponseModel> logout() async {
     try {
       final response = await _apiClient.post(
-        AppConstants.logoutUrl,
+        AppConstants.adminLogoutUrl,
         handleError: false,
         showToaster: false,
       );

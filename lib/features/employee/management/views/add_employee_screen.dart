@@ -1,14 +1,23 @@
+import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/custom_snackbar.dart';
 import '../../../../core/widgets/app_text.dart';
 import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/app_input_field.dart';
+import '../../../../core/services/network/api_client.dart';
+import '../../../departments/controllers/departments_controller.dart';
+import '../../../departments/repositories/department_repository.dart';
+import '../../designation/controllers/designation_controller.dart';
+import '../../designation/repositories/designation_repository.dart';
+import '../../../shift_management/controllers/shift_controller.dart';
 import '../controllers/employee_controller.dart';
+import '../models/create_employee_request_model.dart';
 import '../models/employee_model.dart';
 
 class AddEmployeeScreen extends StatefulWidget {
@@ -23,6 +32,12 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
   final controller = Get.isRegistered<EmployeeController>()
       ? Get.find<EmployeeController>()
       : Get.put(EmployeeController());
+
+  late final DepartmentsController _departmentsController;
+  late final DesignationController _designationController;
+  late final ShiftController _shiftController;
+
+  File? _avatarFile;
 
   final PageController _pageController = PageController();
   int _currentStep = 0;
@@ -97,6 +112,30 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
   void initState() {
     super.initState();
     final e = widget.employee;
+
+    final apiClient = Get.isRegistered<ApiClient>() ? Get.find<ApiClient>() : ApiClient();
+
+    _departmentsController = Get.isRegistered<DepartmentsController>()
+        ? Get.find<DepartmentsController>()
+        : Get.put(DepartmentsController(repository: DepartmentRepository(apiClient: apiClient)));
+
+    _designationController = Get.isRegistered<DesignationController>()
+        ? Get.find<DesignationController>()
+        : Get.put(DesignationController(repository: DesignationRepository(apiClient: apiClient)));
+
+    _shiftController = Get.isRegistered<ShiftController>()
+        ? Get.find<ShiftController>()
+        : Get.put(ShiftController());
+
+    if (_departmentsController.departments.isEmpty && _departmentsController.apiDepartments.isEmpty) {
+      _departmentsController.fetchDepartments();
+    }
+    if (_designationController.designations.isEmpty) {
+      _designationController.fetchDesignations();
+    }
+    if (_shiftController.shifts.isEmpty) {
+      _shiftController.fetchShifts();
+    }
 
     // Step 1 Controllers
     nameController = TextEditingController(text: e?.name);
@@ -248,7 +287,87 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
     }
   }
 
-  void _saveEmployee() {
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(source: source, imageQuality: 80);
+      if (picked != null) {
+        setState(() {
+          _avatarFile = File(picked.path);
+        });
+      }
+    } catch (e) {
+      CustomSnackbar.showError('Could not select image: $e');
+    }
+  }
+
+  void _showPhotoPicker() {
+    Get.bottomSheet(
+      Container(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(24),
+            topRight: Radius.circular(24),
+          ),
+        ),
+        child: Wrap(
+          children: [
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              child: AppText('Select Profile Photo', fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            ListTile(
+              leading: const Icon(Iconsax.camera, color: AppColors.primaryColor),
+              title: const AppText('Take Photo from Camera', fontSize: 14),
+              onTap: () {
+                Get.back();
+                _pickImage(ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Iconsax.gallery, color: AppColors.primaryColor),
+              title: const AppText('Choose from Gallery', fontSize: 14),
+              onTap: () {
+                Get.back();
+                _pickImage(ImageSource.gallery);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _getSelectedDesignationId() {
+    if (Get.isRegistered<DesignationController>()) {
+      final desigCtrl = Get.find<DesignationController>();
+      final match = desigCtrl.designations.firstWhereOrNull(
+        (d) => d.name.toLowerCase().trim() == selectedDesignation.toLowerCase().trim(),
+      );
+      if (match != null && match.id.isNotEmpty) {
+        return match.id;
+      }
+    }
+    return '2';
+  }
+
+  String _getSelectedShiftId() {
+    if (Get.isRegistered<ShiftController>()) {
+      final shiftCtrl = Get.find<ShiftController>();
+      final match = shiftCtrl.shifts.firstWhereOrNull(
+        (s) => s.name.toLowerCase().contains(selectedShift.toLowerCase()) ||
+               selectedShift.toLowerCase().contains(s.name.toLowerCase()),
+      );
+      if (match != null && match.id.isNotEmpty) {
+        return match.id;
+      }
+    }
+    return '2';
+  }
+
+  Future<void> _saveEmployee() async {
     final name = nameController.text.trim();
     final empId = empIdController.text.trim();
     final mobile = mobileController.text.trim();
@@ -259,59 +378,113 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
     final pincode = pincodeController.text.trim();
     final country = countryController.text.trim();
 
-    final salaryVal = double.tryParse(salaryController.text.trim()) ?? 0.0;
-
-    final employeeToSave = EmployeeModel(
-      id: widget.employee?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
-      employeeId: empId,
-      name: name,
-      mobile: mobile,
-      alternateMobile: altMobileController.text.trim(),
-      email: email.isNotEmpty ? email : '${empId.toLowerCase()}@company.com',
-      gender: selectedGender,
-      dob: DateFormat('dd MMM yyyy').format(selectedDob),
-      designation: selectedDesignation,
-      department: selectedDepartment,
-      team: selectedTeam,
-      shift: selectedShift,
-      workMode: selectedWorkMode,
-      employeeType: selectedEmployeeType,
-      reportingManager: selectedReportingManager,
-      employmentStatus: selectedEmploymentStatus,
-      probationPeriod: selectedProbationPeriod,
-      noticePeriod: selectedNoticePeriod,
-      joiningDate: DateFormat('dd MMMM yyyy').format(selectedJoiningDate),
-      salaryType: selectedSalaryType,
-      salary: salaryVal,
-      hasSalesTarget: hasSalesTarget,
-      targetType: selectedTargetType,
-      targetAmount: targetAmountController.text.trim(),
-      targetPeriod: selectedTargetPeriod,
-      incentivePercent: incentivePercentController.text.trim(),
-      address: address,
-      city: city,
-      state: state,
-      pincode: pincode,
-      country: country.isNotEmpty ? country : 'India',
-      emergencyContact: emergencyContactController.text.trim(),
-      accountHolderName: accountHolderNameController.text.trim(),
-      bankName: bankNameController.text.trim(),
-      accountNumber: accountNumberController.text.trim(),
-      ifscCode: ifscCodeController.text.trim().toUpperCase(),
-      branchName: branchNameController.text.trim(),
-      skills: List.from(_skillsList),
-      isActive: selectedEmploymentStatus == 'Active' || selectedEmploymentStatus == 'Probation',
-    );
+    final salaryVal = salaryController.text.trim().isNotEmpty
+        ? salaryController.text.trim()
+        : '60000';
 
     if (widget.employee == null) {
-      controller.addEmployee(employeeToSave);
-      CustomSnackbar.showSuccess('Employee ${employeeToSave.name} registered successfully!');
+      final request = CreateEmployeeRequestModel(
+        name: name,
+        employeeId: empId,
+        gender: selectedGender,
+        dateOfBirth: DateFormat('yyyy-MM-dd').format(selectedDob),
+        maritalStatus: selectedMaritalStatus,
+        bloodGroup: selectedBloodGroup,
+        mobileNumber: mobile,
+        alternateMobileNumber: altMobileController.text.trim(),
+        email: email.isNotEmpty ? email : '${empId.toLowerCase()}@company.com',
+        emergencyContact: emergencyContactController.text.trim(),
+        streetAddress: address,
+        city: city,
+        postalCode: pincode,
+        state: state,
+        country: country.isNotEmpty ? country : 'India',
+        workMode: selectedWorkMode,
+        employeeType: selectedEmployeeType,
+        department: selectedDepartment,
+        designationId: _getSelectedDesignationId(),
+        team: selectedTeam,
+        assignedShiftId: _getSelectedShiftId(),
+        dateOfJoining: DateFormat('yyyy-MM-dd').format(selectedJoiningDate),
+        employmentStatus: selectedEmploymentStatus,
+        probationPeriod: selectedProbationPeriod,
+        noticePeriod: selectedNoticePeriod,
+        salaryType: selectedSalaryType,
+        monthlyBaseSalary: salaryVal,
+        salesTargetEnabled: hasSalesTarget ? '1' : '0',
+        accountHolderName: accountHolderNameController.text.trim(),
+        bankName: bankNameController.text.trim(),
+        accountNumber: accountNumberController.text.trim(),
+        ifscCode: ifscCodeController.text.trim().toUpperCase(),
+        branchName: branchNameController.text.trim(),
+        skills: List.from(_skillsList),
+        roleIds: const [9],
+        avatarPath: _avatarFile?.path,
+      );
+
+      final response = await controller.createEmployeeApi(request);
+      if (response.status) {
+        CustomSnackbar.showSuccess(
+          response.message.isNotEmpty
+              ? response.message
+              : 'Employee $name registered successfully!',
+        );
+        Get.back(result: true);
+      } else {
+        CustomSnackbar.showError(
+          response.message.isNotEmpty
+              ? response.message
+              : 'Failed to create employee. Please try again.',
+        );
+      }
     } else {
+      final double sal = double.tryParse(salaryVal) ?? 0.0;
+      final employeeToSave = EmployeeModel(
+        id: widget.employee!.id,
+        employeeId: empId,
+        name: name,
+        mobile: mobile,
+        alternateMobile: altMobileController.text.trim(),
+        email: email.isNotEmpty ? email : '${empId.toLowerCase()}@company.com',
+        gender: selectedGender,
+        dob: DateFormat('dd MMM yyyy').format(selectedDob),
+        designation: selectedDesignation,
+        department: selectedDepartment,
+        team: selectedTeam,
+        shift: selectedShift,
+        workMode: selectedWorkMode,
+        employeeType: selectedEmployeeType,
+        reportingManager: selectedReportingManager,
+        employmentStatus: selectedEmploymentStatus,
+        probationPeriod: selectedProbationPeriod,
+        noticePeriod: selectedNoticePeriod,
+        joiningDate: DateFormat('dd MMMM yyyy').format(selectedJoiningDate),
+        salaryType: selectedSalaryType,
+        salary: sal,
+        hasSalesTarget: hasSalesTarget,
+        targetType: selectedTargetType,
+        targetAmount: targetAmountController.text.trim(),
+        targetPeriod: selectedTargetPeriod,
+        incentivePercent: incentivePercentController.text.trim(),
+        address: address,
+        city: city,
+        state: state,
+        pincode: pincode,
+        country: country.isNotEmpty ? country : 'India',
+        emergencyContact: emergencyContactController.text.trim(),
+        accountHolderName: accountHolderNameController.text.trim(),
+        bankName: bankNameController.text.trim(),
+        accountNumber: accountNumberController.text.trim(),
+        ifscCode: ifscCodeController.text.trim().toUpperCase(),
+        branchName: branchNameController.text.trim(),
+        skills: List.from(_skillsList),
+        isActive: selectedEmploymentStatus == 'Active' || selectedEmploymentStatus == 'Probation',
+      );
+
       controller.updateEmployee(employeeToSave);
       CustomSnackbar.showSuccess('Employee ${employeeToSave.name} updated successfully!');
+      Get.back(result: true);
     }
-
-    Get.back();
   }
 
   void _addSkill() {
@@ -617,27 +790,21 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
                       CircleAvatar(
                         radius: 46,
                         backgroundColor: AppColors.primaryLight,
-                        child: AppText(
-                          nameController.text.trim().isNotEmpty ? nameController.text.trim()[0].toUpperCase() : 'EMP',
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primaryColor,
-                        ),
+                        backgroundImage: _avatarFile != null ? FileImage(_avatarFile!) : null,
+                        child: _avatarFile == null
+                            ? AppText(
+                                nameController.text.trim().isNotEmpty ? nameController.text.trim()[0].toUpperCase() : 'EMP',
+                                fontSize: 28,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primaryColor,
+                              )
+                            : null,
                       ),
                       Positioned(
                         bottom: 0,
                         right: 0,
                         child: GestureDetector(
-                          onTap: () {
-                            Get.snackbar(
-                              'Profile Photo',
-                              'Upload from Camera or Gallery',
-                              snackPosition: SnackPosition.BOTTOM,
-                              backgroundColor: const Color(0xFF1E293B),
-                              colorText: Colors.white,
-                              duration: const Duration(seconds: 2),
-                            );
-                          },
+                          onTap: _showPhotoPicker,
                           child: Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
@@ -1065,31 +1232,37 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
             children: [
               _buildFieldTitle('Department', isRequired: true),
               const SizedBox(height: 6),
-              _buildDropdown(
-                value: selectedDepartment,
-                items: controller.departmentsList.where((d) => d != 'All').toList(),
-                onChanged: (val) {
-                  if (val != null) {
-                    setState(() {
-                      selectedDepartment = val;
-                      if (selectedDepartment == 'Sales') {
-                        hasSalesTarget = true;
-                      }
-                    });
-                  }
-                },
-              ),
+              Obx(() {
+                final depts = controller.departmentsList.where((d) => d != 'All').toList();
+                return _buildDropdown(
+                  value: depts.contains(selectedDepartment) ? selectedDepartment : (depts.isNotEmpty ? depts.first : 'Engineering'),
+                  items: depts,
+                  onChanged: (val) {
+                    if (val != null) {
+                      setState(() {
+                        selectedDepartment = val;
+                        if (selectedDepartment.toLowerCase().contains('sales')) {
+                          hasSalesTarget = true;
+                        }
+                      });
+                    }
+                  },
+                );
+              }),
               const SizedBox(height: 16),
 
               _buildFieldTitle('Designation / Role', isRequired: true),
               const SizedBox(height: 6),
-              _buildDropdown(
-                value: selectedDesignation,
-                items: controller.designations,
-                onChanged: (val) {
-                  if (val != null) setState(() => selectedDesignation = val);
-                },
-              ),
+              Obx(() {
+                final desigs = controller.designations;
+                return _buildDropdown(
+                  value: desigs.contains(selectedDesignation) ? selectedDesignation : (desigs.isNotEmpty ? desigs.first : 'Senior Flutter Developer'),
+                  items: desigs,
+                  onChanged: (val) {
+                    if (val != null) setState(() => selectedDesignation = val);
+                  },
+                );
+              }),
               const SizedBox(height: 16),
 
               _buildFieldTitle('Team / Unit', isRequired: true),
@@ -1105,13 +1278,16 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
 
               _buildFieldTitle('Assigned Shift', isRequired: true),
               const SizedBox(height: 6),
-              _buildDropdown(
-                value: selectedShift,
-                items: controller.shiftsList.where((s) => s != 'All').toList(),
-                onChanged: (val) {
-                  if (val != null) setState(() => selectedShift = val);
-                },
-              ),
+              Obx(() {
+                final shifts = controller.shiftsList.where((s) => s != 'All').toList();
+                return _buildDropdown(
+                  value: shifts.contains(selectedShift) ? selectedShift : (shifts.isNotEmpty ? shifts.first : 'Morning Shift'),
+                  items: shifts,
+                  onChanged: (val) {
+                    if (val != null) setState(() => selectedShift = val);
+                  },
+                );
+              }),
               const SizedBox(height: 16),
 
               _buildFieldTitle('Reporting Manager', isRequired: true),
@@ -1796,13 +1972,14 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
             ],
             Expanded(
               flex: 6,
-              child: AppButton(
+              child: Obx(() => AppButton(
                 text: isLastStep
                     ? (widget.employee == null ? 'Register Employee' : 'Save Changes')
                     : 'Save & Continue',
                 color: AppColors.primaryColor,
+                isLoading: controller.isSubmitting.value,
                 onPressed: _handleNext,
-              ),
+              )),
             ),
           ],
         ),

@@ -24,8 +24,9 @@ class AttendanceHistoryScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Put or find the controller
-    final controller = Get.put(AttendanceHistoryController());
+    final controller = Get.isRegistered<AttendanceHistoryController>()
+        ? Get.find<AttendanceHistoryController>()
+        : Get.put(AttendanceHistoryController());
 
     return Scaffold(
       backgroundColor: AppColors.scaffoldBackgroundColor,
@@ -82,67 +83,83 @@ class AttendanceHistoryScreen extends StatelessWidget {
         ],
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (employeeName != null) ...[
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF0FDF4),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFBBF7D0)),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Iconsax.user_tick, color: Color(0xFF16A34A), size: 20),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            AppText(
-                              employeeName!,
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: const Color(0xFF15803D),
-                            ),
-                            AppText(
-                              'Individual attendance breakdown & monthly summary for administrator view',
-                              fontSize: 11,
-                              color: const Color(0xFF166534),
-                            ),
-                          ],
-                        ),
+        child: RefreshIndicator(
+          onRefresh: () => controller.fetchAttendanceHistory(controller.selectedMonth.value),
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Obx(() {
+                  if (controller.isLoading.value) {
+                    return const Padding(
+                      padding: EdgeInsets.only(bottom: 12.0),
+                      child: LinearProgressIndicator(
+                        minHeight: 3,
+                        backgroundColor: AppColors.slate100,
+                        color: AppColors.primaryColor,
                       ),
-                    ],
+                    );
+                  }
+                  return const SizedBox.shrink();
+                }),
+                if (employeeName != null) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF0FDF4),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFBBF7D0)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Iconsax.user_tick, color: Color(0xFF16A34A), size: 20),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              AppText(
+                                employeeName!,
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF15803D),
+                              ),
+                              AppText(
+                                'Individual attendance breakdown & monthly summary for administrator view',
+                                fontSize: 11,
+                                color: const Color(0xFF166534),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
+                ],
+
+                // Stats overview Grid
+                const _StatsOverviewGrid(),
+                const SizedBox(height: 16),
+
+                // Monthly Summary Card with linear progress
+                const _MonthlySummaryCard(),
+                const SizedBox(height: 20),
+
+                // Calendar Card
+                const _CalendarSectionCard(),
+                const SizedBox(height: 20),
+
+                // Recent records
+                const _RecentRecordsHeader(),
+                const SizedBox(height: 10),
+                const _RecentRecordsList(),
+                const SizedBox(height: 40),
               ],
-
-              // Stats overview Grid
-              const _StatsOverviewGrid(),
-              const SizedBox(height: 16),
-
-              // Monthly Summary Card with linear progress
-              const _MonthlySummaryCard(),
-              const SizedBox(height: 20),
-
-              // Calendar Card
-              const _CalendarSectionCard(),
-              const SizedBox(height: 20),
-
-              // Recent records
-              const _RecentRecordsHeader(),
-              const SizedBox(height: 10),
-              const _RecentRecordsList(),
-              const SizedBox(height: 40),
-            ],
+            ),
           ),
         ),
       ),
@@ -667,26 +684,37 @@ class _CalendarGrid extends StatelessWidget {
           Color statusTextColor = AppColors.textColorPrimary;
           
           if (record != null && isCurrentMonth) {
-            switch (record.status) {
-              case 'Present':
+            final normalizedStatus = record.status.trim().toLowerCase();
+            switch (normalizedStatus) {
+              case 'present':
                 statusBgColor = AppColors.successColor;
                 statusTextColor = AppColors.white;
                 break;
-              case 'Half Day':
+              case 'half day':
+              case 'half_day':
                 statusBgColor = AppColors.warningColor;
                 statusTextColor = AppColors.white;
                 break;
-              case 'Absent':
+              case 'absent':
                 statusBgColor = AppColors.errorColor;
                 statusTextColor = AppColors.white;
                 break;
-              case 'Leave':
+              case 'leave':
                 statusBgColor = AppColors.indigo500;
                 statusTextColor = AppColors.white;
                 break;
-              case 'Weekend':
+              case 'weekend':
                 statusBgColor = AppColors.slate100;
-                statusTextColor = AppColors.textColorSecondary.withOpacity(0.7);
+                statusTextColor = AppColors.textColorSecondary.withValues(alpha: 0.7);
+                break;
+              case 'not marked':
+              case 'not_marked':
+                statusBgColor = const Color(0xFFFEF3C7);
+                statusTextColor = const Color(0xFFD97706);
+                break;
+              case 'upcoming':
+                statusBgColor = Colors.transparent;
+                statusTextColor = AppColors.textColorHint;
                 break;
               default:
                 statusBgColor = Colors.transparent;
@@ -695,7 +723,7 @@ class _CalendarGrid extends StatelessWidget {
           } else {
             // Out of month or no record
             statusBgColor = Colors.transparent;
-            statusTextColor = AppColors.textColorHint.withOpacity(0.5);
+            statusTextColor = AppColors.textColorHint.withValues(alpha: 0.5);
           }
 
           return InkWell(
@@ -751,22 +779,33 @@ class _CalendarGrid extends StatelessWidget {
           
           Color badgeBg;
           Color badgeText;
-          switch (record.status) {
-            case 'Present':
+          final normStatus = record.status.trim().toLowerCase();
+          switch (normStatus) {
+            case 'present':
               badgeBg = const Color(0xFFEAFAF1);
               badgeText = AppColors.successColor;
               break;
-            case 'Half Day':
+            case 'half day':
+            case 'half_day':
               badgeBg = const Color(0xFFFEF9EC);
               badgeText = AppColors.warningColor;
               break;
-            case 'Absent':
+            case 'absent':
               badgeBg = const Color(0xFFFDF2F2);
               badgeText = AppColors.errorColor;
               break;
-            case 'Leave':
+            case 'leave':
               badgeBg = const Color(0xFFEEF2FF);
               badgeText = AppColors.indigo500;
+              break;
+            case 'weekend':
+              badgeBg = AppColors.slate100;
+              badgeText = AppColors.textColorSecondary;
+              break;
+            case 'not marked':
+            case 'not_marked':
+              badgeBg = const Color(0xFFFEF3C7);
+              badgeText = const Color(0xFFD97706);
               break;
             default:
               badgeBg = AppColors.slate100;
@@ -1056,11 +1095,12 @@ class _RecentRecordsList extends StatelessWidget {
     final controller = Get.find<AttendanceHistoryController>();
 
     return Obx(() {
-      // Show list of the records for selected month, sorted descending (newest first)
-      final records = controller.activeMonthRecords
-          .where((r) => r.status != 'Weekend')
-          .toList();
-      records.sort((a, b) => b.date.compareTo(a.date));
+      // Show list of recent records from API, or fallback to activeMonthRecords
+      final records = controller.recentRecords.isNotEmpty
+          ? controller.recentRecords
+          : controller.activeMonthRecords
+              .where((r) => r.status.toLowerCase() != 'weekend')
+              .toList();
 
       if (records.isEmpty) {
         return const Center(

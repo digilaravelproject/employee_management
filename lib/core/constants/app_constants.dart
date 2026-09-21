@@ -1,10 +1,9 @@
 import '../models/language_model.dart';
-import '../services/config/env_config.dart';
 import 'app_text_constants.dart';
 
 class AppConstants {
   static String appName = "Office Management";
-  static String baseUrl = "https://yellowgreen-stork-427223.hostingersite.com/public";
+  static String baseUrl = "https://yellowgreen-stork-427223.hostingersite.com";
   static String imageBaseUrl = "https://beige-stingray-620454.hostingersite.com/storage";
   static String apiToken = "13|DjgMQyQlZyUELVdhjCWuNvZxZHJhD8twF0ovZxDJ877bcfb4"; // Temporarily set for debugging
   static const String googleMapsKey = 'AIzaSyAH2m4kQwGljzCxdDdy7JrnKTDKCgFZU_A';
@@ -37,6 +36,7 @@ class AppConstants {
   static const String currentSubscriptionUrl = '/api/v1/subscriptions/current';
   static const String subscriptionsHistoryUrl = '/api/v1/subscriptions';
   static const String logoutUrl = '/api/v1/auth/logout';
+  static const String adminLogoutUrl = '/api/admin/logout';
   static const String profileUrl = '/api/v1/auth/me';
   static const String updateProfileUrl = '/api/v1/auth/profile/update';
   static const String userSignupUrl = '/api/user_signup';
@@ -45,6 +45,7 @@ class AppConstants {
   static const String adminForgotPasswordUrl = 'https://yellowgreen-stork-427223.hostingersite.com/public/api/admin/forgot-password';
   static const String adminResetPasswordUrl = 'https://yellowgreen-stork-427223.hostingersite.com/public/api/admin/reset-password';
   static const String adminUpdatePasswordUrl = 'https://yellowgreen-stork-427223.hostingersite.com/public/api/admin/update-password';
+  static const String adminLeaveRequestsUrl = '/api/admin/leave-requests';
   static const String userLoginUrl = '/api/user_login';
   static const String otpVerifyUrl = '/api/otp_verify';
   static const String documentTemplatesEndpoint = '/api/v1/document-templates/';

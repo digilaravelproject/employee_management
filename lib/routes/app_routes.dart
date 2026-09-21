@@ -144,4 +144,5 @@ class AppRoutes {
   static const String addEmployee = '/add-employee';
   static const String departmentList = '/department-list';
   static const String addDepartment = '/add-department';
+  static const String leaveRequests = '/leave-requests';
 }

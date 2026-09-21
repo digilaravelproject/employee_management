@@ -328,7 +328,7 @@ class _TeamLeaveCalendarScreenState extends State<TeamLeaveCalendarScreen> {
                   ),
                   const SizedBox(height: 2),
                   if (showDummyEvents)
-                    ..._leaveData[dayNumber]!.map((event) => _buildEventTag(event)).toList(),
+                    ..._leaveData[dayNumber]!.map((event) => _buildEventTag(event)),
                 ],
               ),
             );

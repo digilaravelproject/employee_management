@@ -1,9 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
+import '../../../core/constants/app_constants.dart';
+import '../../../core/services/network/api_client.dart';
+import '../../../core/services/storage/shared_prefs.dart';
+import '../../../core/services/storage/token_manger.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/custom_snackbar.dart';
+import '../../../core/utils/logger.dart';
 import '../../../core/widgets/app_text.dart';
 import '../../../core/controllers/app_controller.dart';
+import '../../../routes/route_helper.dart';
+import '../../auth/controllers/auth_controller.dart';
 import 'edit_profile_screen.dart';
 import 'change_password_screen.dart';
 import 'employee_documents_screen.dart';
@@ -293,11 +301,163 @@ class ProfileScreen extends StatelessWidget {
                   ),
                 ),
                 
-                const SizedBox(height: 24), // Small spacing at the bottom of list
+                const SizedBox(height: 20),
+
+                // Logout Option
+                _buildLogoutButton(context),
+
+                const SizedBox(height: 40),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildLogoutButton(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.red.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.redAccent.withValues(alpha: 0.2)),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _showLogoutDialog(context),
+          borderRadius: BorderRadius.circular(14),
+          child: const Padding(
+            padding: EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Iconsax.logout, color: Colors.redAccent, size: 20),
+                SizedBox(width: 10),
+                AppText(
+                  'Log Out',
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.redAccent,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showLogoutDialog(BuildContext context) {
+    final RxBool isLoggingOut = false.obs;
+
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        backgroundColor: Colors.white,
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: Colors.red.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Iconsax.logout, color: Colors.redAccent, size: 28),
+              ),
+              const SizedBox(height: 16),
+              const AppText(
+                'Log Out',
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textColorPrimary,
+              ),
+              const SizedBox(height: 8),
+              const AppText(
+                'Are you sure you want to log out of your account?',
+                fontSize: 13,
+                color: AppColors.textColorSecondary,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Get.back(),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        side: const BorderSide(color: AppColors.slate200),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: const AppText(
+                        'Cancel',
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textColorSecondary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Obx(() => ElevatedButton(
+                      onPressed: isLoggingOut.value
+                          ? null
+                          : () async {
+                              isLoggingOut.value = true;
+                              try {
+                                final apiClient = Get.isRegistered<ApiClient>() ? Get.find<ApiClient>() : ApiClient();
+                                await apiClient.post(
+                                  AppConstants.adminLogoutUrl,
+                                  handleError: false,
+                                  showToaster: false,
+                                );
+                              } catch (e) {
+                                Logger.e('Logout error: $e');
+                              } finally {
+                                await TokenManager.clearToken();
+                                await SharedPrefs.remove(AppConstants.userData);
+                                await SharedPrefs.setBool(AppConstants.isLoggedIn, false);
+                                if (Get.isRegistered<AuthController>()) {
+                                  final authCtrl = Get.find<AuthController>();
+                                  authCtrl.currentUser.value = null;
+                                  authCtrl.currentMobile.value = '';
+                                }
+                                Get.back();
+                                CustomSnackbar.showSuccess('Logged out successfully');
+                                Get.offAllNamed(RouteHelper.getLoginRoute());
+                              }
+                            },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.redAccent,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: isLoggingOut.value
+                          ? const SizedBox(
+                              height: 18,
+                              width: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            )
+                          : const AppText(
+                              'Log Out',
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                    )),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
