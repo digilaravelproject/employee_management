@@ -248,49 +248,118 @@ class EmployeeListScreen extends StatelessWidget {
           // Employees List View
           Expanded(
             child: Obx(() {
-              final list = controller.filteredEmployees;
-
-              if (list.isEmpty) {
-                return Center(
+              if (controller.isLoading.value && controller.employees.isEmpty) {
+                return const Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: AppColors.slate100,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Iconsax.user_remove, size: 48, color: AppColors.textColorHint),
-                      ),
-                      const SizedBox(height: 16),
-                      const AppText('No employees found', fontSize: 16, fontWeight: FontWeight.bold),
-                      const SizedBox(height: 4),
-                      const AppText('Try adjusting your search or active filters', fontSize: 12, color: AppColors.textColorSecondary),
-                      const SizedBox(height: 16),
-                      if (controller.activeFiltersCount > 0)
-                        ElevatedButton.icon(
-                          onPressed: () => controller.resetFilters(),
-                          icon: const Icon(Icons.refresh, size: 16),
-                          label: const AppText('Reset Filters', fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primaryColor,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                          ),
-                        ),
+                      CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.primaryColor),
+                      SizedBox(height: 12),
+                      AppText('Loading employees...', fontSize: 13, color: AppColors.textColorSecondary),
                     ],
                   ),
                 );
               }
 
-              return ListView.builder(
-                padding: const EdgeInsets.fromLTRB(20, 6, 20, 80),
-                physics: const BouncingScrollPhysics(),
-                itemCount: list.length,
-                itemBuilder: (context, index) {
-                  final emp = list[index];
-                  return _buildEmployeeCard(context, emp);
-                },
+              if (controller.errorMessage.value.isNotEmpty && controller.employees.isEmpty) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(32.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.error_outline, size: 48, color: Colors.redAccent),
+                        const SizedBox(height: 16),
+                        AppText(
+                          controller.errorMessage.value,
+                          fontSize: 14,
+                          color: AppColors.textColorSecondary,
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 20),
+                        ElevatedButton.icon(
+                          onPressed: () => controller.fetchEmployees(),
+                          icon: const Icon(Icons.refresh, size: 16, color: Colors.white),
+                          label: const AppText('Retry', fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primaryColor,
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
+              final list = controller.filteredEmployees;
+
+              if (list.isEmpty) {
+                return RefreshIndicator(
+                  onRefresh: () => controller.fetchEmployees(showLoader: false),
+                  color: AppColors.primaryColor,
+                  child: ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    children: [
+                      SizedBox(height: MediaQuery.of(context).size.height * 0.15),
+                      Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(20),
+                              decoration: const BoxDecoration(
+                                color: AppColors.slate100,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Iconsax.user_remove, size: 48, color: AppColors.textColorHint),
+                            ),
+                            const SizedBox(height: 16),
+                            const AppText('No employees found', fontSize: 16, fontWeight: FontWeight.bold),
+                            const SizedBox(height: 4),
+                            const AppText('Try adjusting your search or active filters', fontSize: 12, color: AppColors.textColorSecondary),
+                            const SizedBox(height: 16),
+                            if (controller.activeFiltersCount > 0)
+                              ElevatedButton.icon(
+                                onPressed: () => controller.resetFilters(),
+                                icon: const Icon(Icons.refresh, size: 16),
+                                label: const AppText('Reset Filters', fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primaryColor,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                              )
+                            else
+                              ElevatedButton.icon(
+                                onPressed: () => controller.fetchEmployees(),
+                                icon: const Icon(Icons.refresh, size: 16),
+                                label: const AppText('Refresh List', fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primaryColor,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              return RefreshIndicator(
+                onRefresh: () => controller.fetchEmployees(showLoader: false),
+                color: AppColors.primaryColor,
+                child: ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(20, 6, 20, 80),
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  itemCount: list.length,
+                  itemBuilder: (context, index) {
+                    final emp = list[index];
+                    return _buildEmployeeCard(context, emp);
+                  },
+                ),
               );
             }),
           ),
@@ -303,6 +372,25 @@ class EmployeeListScreen extends StatelessWidget {
   // Employee Item Card
   // ----------------------------------------------------
   Widget _buildEmployeeCard(BuildContext context, dynamic emp) {
+    String initial = '';
+    if (emp.name != null && emp.name.toString().isNotEmpty) {
+      final parts = emp.name.toString().trim().split(' ');
+      initial = parts.map((n) => n.isNotEmpty ? n[0] : '').take(2).join().toUpperCase();
+    }
+    if (initial.isEmpty) initial = 'EM';
+
+    final hasAvatar = emp.profilePic != null && emp.profilePic.toString().isNotEmpty;
+    final statusText = (emp.employmentStatus != null && emp.employmentStatus.toString().isNotEmpty)
+        ? emp.employmentStatus.toString()
+        : (emp.isActive == true ? 'Active' : 'Inactive');
+
+    Color statusColor = AppColors.successColor;
+    if (statusText.toLowerCase() == 'inactive' || statusText.toLowerCase() == 'terminated') {
+      statusColor = AppColors.errorColor;
+    } else if (statusText.toLowerCase() == 'probation' || statusText.toLowerCase() == 'notice period') {
+      statusColor = Colors.orange;
+    }
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -328,16 +416,19 @@ class EmployeeListScreen extends StatelessWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Avatar with Initials
+                  // Avatar with Initials / Network Image
                   CircleAvatar(
                     radius: 24,
                     backgroundColor: AppColors.primaryLight,
-                    child: AppText(
-                      emp.name.split(' ').map((n) => n.isNotEmpty ? n[0] : '').take(2).join(),
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.primaryColor,
-                    ),
+                    backgroundImage: hasAvatar ? NetworkImage(emp.profilePic.toString()) : null,
+                    child: !hasAvatar
+                        ? AppText(
+                            initial,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.primaryColor,
+                          )
+                        : null,
                   ),
                   const SizedBox(width: 14),
 
@@ -350,7 +441,7 @@ class EmployeeListScreen extends StatelessWidget {
                           children: [
                             Flexible(
                               child: AppText(
-                                emp.name,
+                                emp.name ?? '',
                                 fontSize: 15,
                                 fontWeight: FontWeight.bold,
                                 overflow: TextOverflow.ellipsis,
@@ -364,7 +455,7 @@ class EmployeeListScreen extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: AppText(
-                                emp.employeeId,
+                                emp.employeeId ?? '',
                                 fontSize: 9,
                                 fontWeight: FontWeight.w600,
                                 color: AppColors.textColorSecondary,
@@ -374,7 +465,7 @@ class EmployeeListScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 3),
                         AppText(
-                          emp.designation,
+                          emp.designation.isNotEmpty ? emp.designation : 'Employee',
                           fontSize: 12,
                           color: AppColors.textColorSecondary,
                           fontWeight: FontWeight.w500,
@@ -384,7 +475,11 @@ class EmployeeListScreen extends StatelessWidget {
                           children: [
                             const Icon(Iconsax.building_4, size: 12, color: AppColors.textColorHint),
                             const SizedBox(width: 4),
-                            AppText(emp.department, fontSize: 11, color: AppColors.textColorHint),
+                            AppText(
+                              emp.department.isNotEmpty ? emp.department : 'General',
+                              fontSize: 11,
+                              color: AppColors.textColorHint,
+                            ),
                           ],
                         ),
                       ],
@@ -395,9 +490,7 @@ class EmployeeListScreen extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: emp.isActive
-                          ? AppColors.successColor.withValues(alpha: 0.1)
-                          : AppColors.errorColor.withValues(alpha: 0.1),
+                      color: statusColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
@@ -405,14 +498,14 @@ class EmployeeListScreen extends StatelessWidget {
                       children: [
                         CircleAvatar(
                           radius: 3,
-                          backgroundColor: emp.isActive ? AppColors.successColor : AppColors.errorColor,
+                          backgroundColor: statusColor,
                         ),
                         const SizedBox(width: 4),
                         AppText(
-                          emp.isActive ? 'Active' : 'Inactive',
+                          statusText,
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
-                          color: emp.isActive ? AppColors.successColor : AppColors.errorColor,
+                          color: statusColor,
                         ),
                       ],
                     ),

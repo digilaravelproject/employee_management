@@ -138,36 +138,40 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
     }
 
     // Step 1 Controllers
-    nameController = TextEditingController(text: e?.name);
+    nameController = TextEditingController(text: e?.name ?? '');
     empIdController = TextEditingController(
       text: e?.employeeId ??
           'EMP-${DateFormat('yyyy').format(DateTime.now())}-${(controller.employees.length + 1).toString().padLeft(3, '0')}',
     );
-    selectedGender = e?.gender ?? 'Male';
+    selectedGender = e != null && e.gender.isNotEmpty ? e.gender : 'Male';
     if (e != null && e.dob.isNotEmpty) {
       try {
-        selectedDob = DateFormat('dd MMM yyyy').parse(e.dob);
-      } catch (_) {}
+        selectedDob = DateTime.tryParse(e.dob) ?? DateFormat('dd MMM yyyy').parse(e.dob);
+      } catch (_) {
+        try {
+          selectedDob = DateFormat('yyyy-MM-dd').parse(e.dob);
+        } catch (_) {}
+      }
     }
 
     // Step 2 Controllers
-    mobileController = TextEditingController(text: e?.mobile);
-    altMobileController = TextEditingController(text: e?.alternateMobile);
-    emailController = TextEditingController(text: e?.email);
-    emergencyContactController = TextEditingController(text: e?.emergencyContact);
-    addressController = TextEditingController(text: e?.address);
-    cityController = TextEditingController(text: e != null && e.city.isNotEmpty ? e.city : 'Bengaluru');
-    stateController = TextEditingController(text: e != null && e.state.isNotEmpty ? e.state : 'Karnataka');
-    pincodeController = TextEditingController(text: e != null && e.pincode.isNotEmpty ? e.pincode : '560038');
+    mobileController = TextEditingController(text: e?.mobile ?? '');
+    altMobileController = TextEditingController(text: e?.alternateMobile ?? '');
+    emailController = TextEditingController(text: e?.email ?? '');
+    emergencyContactController = TextEditingController(text: e?.emergencyContact ?? '');
+    addressController = TextEditingController(text: e?.address ?? '');
+    cityController = TextEditingController(text: e?.city ?? '');
+    stateController = TextEditingController(text: e?.state ?? '');
+    pincodeController = TextEditingController(text: e?.pincode ?? '');
     countryController = TextEditingController(text: e != null && e.country.isNotEmpty ? e.country : 'India');
 
     // Step 3 Employment
     selectedWorkMode = e != null && e.workMode.isNotEmpty ? e.workMode : 'Office';
     selectedEmployeeType = e != null && e.employeeType.isNotEmpty ? e.employeeType : 'Full-time';
-    selectedDepartment = e?.department ?? (controller.departmentsList.length > 1 ? controller.departmentsList[1] : 'Engineering');
-    selectedDesignation = e?.designation ?? (controller.designations.isNotEmpty ? controller.designations[0] : 'Senior Flutter Developer');
-    selectedTeam = e?.team ?? (controller.teamsList.length > 1 ? controller.teamsList[1] : 'Team Alpha');
-    selectedShift = e?.shift ?? (controller.shiftsList.length > 1 ? controller.shiftsList[1] : 'Morning Shift');
+    selectedDepartment = e != null && e.department.isNotEmpty ? e.department : (controller.departmentsList.length > 1 ? controller.departmentsList[1] : 'Engineering');
+    selectedDesignation = e != null && e.designation.isNotEmpty ? e.designation : (controller.designations.isNotEmpty ? controller.designations[0] : 'Senior Flutter Developer');
+    selectedTeam = e != null && e.team.isNotEmpty ? e.team : (controller.teamsList.length > 1 ? controller.teamsList[1] : 'Team Alpha');
+    selectedShift = e != null && e.shift.isNotEmpty ? e.shift : (controller.shiftsList.length > 1 ? controller.shiftsList[1] : 'Morning Shift');
     selectedReportingManager = e != null && e.reportingManager.isNotEmpty
         ? e.reportingManager
         : (controller.reportingManagersList.isNotEmpty ? controller.reportingManagersList.first : '');
@@ -177,25 +181,35 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
 
     if (e != null && e.joiningDate.isNotEmpty) {
       try {
-        selectedJoiningDate = DateFormat('dd MMMM yyyy').parse(e.joiningDate);
-      } catch (_) {}
+        selectedJoiningDate = DateTime.tryParse(e.joiningDate) ?? DateFormat('dd MMMM yyyy').parse(e.joiningDate);
+      } catch (_) {
+        try {
+          selectedJoiningDate = DateFormat('yyyy-MM-dd').parse(e.joiningDate);
+        } catch (_) {}
+      }
     }
 
     // Step 4 Compensation & Target
     selectedSalaryType = e != null && e.salaryType.isNotEmpty ? e.salaryType : 'Monthly';
-    salaryController = TextEditingController(text: e != null && e.salary > 0 ? e.salary.toStringAsFixed(0) : '60000');
+    salaryController = TextEditingController(
+      text: e != null && e.salary > 0
+          ? (e.salary % 1 == 0 ? e.salary.toInt().toString() : e.salary.toString())
+          : '60000',
+    );
     hasSalesTarget = e?.hasSalesTarget ?? (selectedDepartment == 'Sales');
     selectedTargetType = e != null && e.targetType.isNotEmpty ? e.targetType : 'Revenue';
-    targetAmountController = TextEditingController(text: e != null && e.targetAmount.isNotEmpty ? e.targetAmount : '500000');
+    targetAmountController = TextEditingController(text: e?.targetAmount ?? '0');
     selectedTargetPeriod = e != null && e.targetPeriod.isNotEmpty ? e.targetPeriod : 'Monthly';
-    incentivePercentController = TextEditingController(text: e != null && e.incentivePercent.isNotEmpty ? e.incentivePercent : '5');
+    incentivePercentController = TextEditingController(text: e?.incentivePercent ?? '0');
 
     // Step 5 Bank & Skills
-    accountHolderNameController = TextEditingController(text: e != null && e.accountHolderName.isNotEmpty ? e.accountHolderName : (e?.name ?? ''));
-    bankNameController = TextEditingController(text: e != null && e.bankName.isNotEmpty ? e.bankName : 'HDFC Bank');
+    accountHolderNameController = TextEditingController(
+      text: e != null && e.accountHolderName.isNotEmpty ? e.accountHolderName : (e?.name ?? ''),
+    );
+    bankNameController = TextEditingController(text: e?.bankName ?? '');
     accountNumberController = TextEditingController(text: e?.accountNumber ?? '');
-    ifscCodeController = TextEditingController(text: e != null && e.ifscCode.isNotEmpty ? e.ifscCode : 'HDFC0001234');
-    branchNameController = TextEditingController(text: e != null && e.branchName.isNotEmpty ? e.branchName : 'Main Branch');
+    ifscCodeController = TextEditingController(text: e?.ifscCode ?? '');
+    branchNameController = TextEditingController(text: e?.branchName ?? '');
 
     if (e != null && e.skills.isNotEmpty) {
       _skillsList.addAll(e.skills);
@@ -449,6 +463,61 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
       }
     } else {
       final double sal = double.tryParse(salaryVal) ?? 0.0;
+      final numericSalary = double.tryParse(salaryVal) ?? (int.tryParse(salaryVal) ?? salaryVal);
+      final numericSalesTarget = hasSalesTarget
+          ? (double.tryParse(targetAmountController.text.trim()) ??
+              int.tryParse(targetAmountController.text.trim()) ??
+              targetAmountController.text.trim())
+          : null;
+      final numericIncentive = hasSalesTarget
+          ? (double.tryParse(incentivePercentController.text.trim()) ??
+              incentivePercentController.text.trim())
+          : null;
+
+      final Map<String, dynamic> patchData = {
+        'name': name,
+        'employee_id': empId,
+        'gender': selectedGender,
+        'date_of_birth': DateFormat('yyyy-MM-dd').format(selectedDob),
+        'marital_status': selectedMaritalStatus,
+        'blood_group': selectedBloodGroup,
+        'mobile_number': mobile,
+        'alternate_mobile_number': altMobileController.text.trim(),
+        'email': email.isNotEmpty ? email : '${empId.toLowerCase()}@company.com',
+        'emergency_contact': emergencyContactController.text.trim(),
+        'address': address,
+        'street_address': address,
+        'city': city,
+        'postal_code': pincode,
+        'state': state,
+        'country': country.isNotEmpty ? country : 'India',
+        'work_mode': selectedWorkMode,
+        'employee_type': selectedEmployeeType,
+        'department': selectedDepartment,
+        'designation_id': _getSelectedDesignationId(),
+        'team': selectedTeam,
+        'assigned_shift_id': _getSelectedShiftId(),
+        'date_of_joining': DateFormat('yyyy-MM-dd').format(selectedJoiningDate),
+        'employment_status': selectedEmploymentStatus,
+        'probation_period': selectedProbationPeriod,
+        'notice_period': selectedNoticePeriod,
+        'salary_type': selectedSalaryType,
+        'monthly_base_salary': numericSalary,
+        'skills': List<String>.from(_skillsList),
+        'sales_target_enabled': hasSalesTarget ? 1 : 0,
+        if (hasSalesTarget) ...{
+          'sales_target_metric_type': selectedTargetType,
+          'sales_target': numericSalesTarget,
+          'sales_target_period': selectedTargetPeriod,
+          'incentive_commission_percent': numericIncentive,
+        },
+        'account_holder_name': accountHolderNameController.text.trim(),
+        'bank_name': bankNameController.text.trim(),
+        'account_number': accountNumberController.text.trim(),
+        'ifsc_code': ifscCodeController.text.trim().toUpperCase(),
+        'branch_name': branchNameController.text.trim(),
+      };
+
       final employeeToSave = EmployeeModel(
         id: widget.employee!.id,
         employeeId: empId,
@@ -457,7 +526,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
         alternateMobile: altMobileController.text.trim(),
         email: email.isNotEmpty ? email : '${empId.toLowerCase()}@company.com',
         gender: selectedGender,
-        dob: DateFormat('dd MMM yyyy').format(selectedDob),
+        dob: DateFormat('yyyy-MM-dd').format(selectedDob),
         designation: selectedDesignation,
         department: selectedDepartment,
         team: selectedTeam,
@@ -468,7 +537,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
         employmentStatus: selectedEmploymentStatus,
         probationPeriod: selectedProbationPeriod,
         noticePeriod: selectedNoticePeriod,
-        joiningDate: DateFormat('dd MMMM yyyy').format(selectedJoiningDate),
+        joiningDate: DateFormat('yyyy-MM-dd').format(selectedJoiningDate),
         salaryType: selectedSalaryType,
         salary: sal,
         hasSalesTarget: hasSalesTarget,
@@ -488,12 +557,29 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
         ifscCode: ifscCodeController.text.trim().toUpperCase(),
         branchName: branchNameController.text.trim(),
         skills: List.from(_skillsList),
-        isActive: selectedEmploymentStatus == 'Active' || selectedEmploymentStatus == 'Probation',
+        isActive: selectedEmploymentStatus.toLowerCase() == 'active' || selectedEmploymentStatus.toLowerCase() == 'probation',
       );
 
-      controller.updateEmployee(employeeToSave);
-      CustomSnackbar.showSuccess('Employee ${employeeToSave.name} updated successfully!');
-      Get.back(result: true);
+      final response = await controller.updateEmployeeApi(
+        widget.employee!.id,
+        patchData,
+        employeeToSave,
+      );
+
+      if (response.isSuccess) {
+        CustomSnackbar.showSuccess(
+          response.message.isNotEmpty
+              ? response.message
+              : 'Employee ${employeeToSave.name} updated successfully!',
+        );
+        Get.back(result: true);
+      } else {
+        CustomSnackbar.showError(
+          response.message.isNotEmpty
+              ? response.message
+              : 'Failed to update employee. Please try again.',
+        );
+      }
     }
   }
 

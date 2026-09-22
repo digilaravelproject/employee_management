@@ -1,10 +1,14 @@
+import 'dart:io';
 import 'package:get/get.dart';
 import '../../../../core/services/network/api_client.dart';
+import '../../../../core/services/network/response_model.dart';
+import '../../../../core/utils/custom_snackbar.dart';
 import '../../../../core/utils/logger.dart';
 import '../domain/usecases/create_employee_usecase.dart';
 import '../models/create_employee_request_model.dart';
 import '../models/create_employee_response_model.dart';
 import '../models/employee_model.dart';
+import '../repositories/employee_repository_interface.dart';
 import '../repositories/employee_repository.dart';
 import '../../designation/controllers/designation_controller.dart';
 
@@ -13,23 +17,41 @@ import '../../../shift_management/controllers/shift_controller.dart';
 
 class EmployeeController extends GetxController {
   final CreateEmployeeUseCase? createEmployeeUseCase;
+  final EmployeeRepositoryInterface? repository;
 
   EmployeeController({
     this.createEmployeeUseCase,
+    this.repository,
   });
 
+  final RxBool isLoading = false.obs;
+  final RxString errorMessage = ''.obs;
   final RxBool isSubmitting = false.obs;
+  final RxBool isDeleting = false.obs;
+  final RxBool isUploadingAvatar = false.obs;
   var employees = <EmployeeModel>[].obs;
   var filteredEmployees = <EmployeeModel>[].obs;
+
+  // Single Employee Detail State
+  final Rx<EmployeeModel?> employeeDetail = Rx<EmployeeModel?>(null);
+  final RxBool isLoadingDetail = false.obs;
+  final RxString detailErrorMessage = ''.obs;
+
+  EmployeeRepositoryInterface get _effectiveEmployeeRepository {
+    if (repository != null) return repository!;
+    if (Get.isRegistered<EmployeeRepositoryInterface>()) {
+      return Get.find<EmployeeRepositoryInterface>();
+    }
+    final apiClient = Get.isRegistered<ApiClient>() ? Get.find<ApiClient>() : ApiClient();
+    return EmployeeRepository(apiClient: apiClient);
+  }
 
   CreateEmployeeUseCase get _effectiveCreateEmployeeUseCase {
     if (createEmployeeUseCase != null) return createEmployeeUseCase!;
     if (Get.isRegistered<CreateEmployeeUseCase>()) {
       return Get.find<CreateEmployeeUseCase>();
     }
-    final apiClient = Get.isRegistered<ApiClient>() ? Get.find<ApiClient>() : ApiClient();
-    final repo = EmployeeRepository(apiClient: apiClient);
-    return CreateEmployeeUseCase(repo);
+    return CreateEmployeeUseCase(_effectiveEmployeeRepository);
   }
 
   // Search & Filter State
@@ -177,7 +199,79 @@ class EmployeeController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    _loadInitialMockData();
+    fetchEmployees();
+  }
+
+  Future<void> fetchEmployees({bool showLoader = true}) async {
+    try {
+      if (showLoader) {
+        isLoading.value = true;
+      }
+      errorMessage.value = '';
+
+      Logger.d('EmployeeController => Fetching employees from API');
+      final response = await _effectiveEmployeeRepository.getEmployees();
+
+      if (response.status) {
+        employees.assignAll(response.data);
+        applyFilters();
+        Logger.d('EmployeeController => Loaded ${employees.length} employees from API');
+      } else {
+        errorMessage.value = response.message.isNotEmpty
+            ? response.message
+            : 'Failed to retrieve employees';
+        Logger.w('EmployeeController => ${errorMessage.value}');
+        if (employees.isEmpty) {
+          _loadInitialMockData();
+        }
+      }
+    } catch (e) {
+      Logger.e('EmployeeController => Error in fetchEmployees: $e');
+      errorMessage.value = 'Failed to load employees. Please try again.';
+      if (employees.isEmpty) {
+        _loadInitialMockData();
+      }
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<EmployeeModel?> fetchEmployeeDetail(String id, {bool showLoader = true}) async {
+    try {
+      if (showLoader) {
+        isLoadingDetail.value = true;
+      }
+      detailErrorMessage.value = '';
+      Logger.d('EmployeeController => Fetching employee detail for ID: $id');
+      final response = await _effectiveEmployeeRepository.getEmployeeById(id);
+
+      if (response.status && response.data != null) {
+        employeeDetail.value = response.data;
+        // Update in employees list if exists
+        final index = employees.indexWhere((e) => e.id == id || e.employeeId == response.data!.employeeId);
+        if (index != -1) {
+          employees[index] = response.data!;
+          applyFilters();
+        }
+        Logger.d('EmployeeController => Successfully retrieved details for ${response.data!.name}');
+        return response.data;
+      } else {
+        detailErrorMessage.value = response.message.isNotEmpty
+            ? response.message
+            : 'Failed to retrieve employee details';
+        Logger.w('EmployeeController => ${detailErrorMessage.value}');
+      }
+    } catch (e) {
+      Logger.e('EmployeeController => Error in fetchEmployeeDetail: $e');
+      detailErrorMessage.value = 'Failed to load employee details. Please try again.';
+    } finally {
+      isLoadingDetail.value = false;
+    }
+    return null;
+  }
+
+  void setEmployeeDetail(EmployeeModel employee) {
+    employeeDetail.value = employee;
   }
 
   void _loadInitialMockData() {
@@ -523,6 +617,7 @@ class EmployeeController extends GetxController {
         );
 
         addEmployee(newEmp);
+        fetchEmployees(showLoader: false);
       }
       return response;
     } catch (e) {
@@ -530,6 +625,41 @@ class EmployeeController extends GetxController {
       return CreateEmployeeResponseModel(
         status: false,
         message: e.toString(),
+      );
+    } finally {
+      isSubmitting.value = false;
+    }
+  }
+
+  Future<ResponseModel> updateEmployeeApi(
+    String id,
+    Map<String, dynamic> data,
+    EmployeeModel updatedModel,
+  ) async {
+    isSubmitting.value = true;
+    try {
+      Logger.d('EmployeeController => Updating employee ID: $id');
+      final response = await _effectiveEmployeeRepository.updateEmployee(id, data);
+
+      if (response.isSuccess) {
+        int index = employees.indexWhere((e) => e.id == id);
+        if (index != -1) {
+          employees[index] = updatedModel;
+          applyFilters();
+        }
+        if (employeeDetail.value?.id == id) {
+          employeeDetail.value = updatedModel;
+        }
+        // Sync fresh data from API in background
+        fetchEmployeeDetail(id, showLoader: false);
+        fetchEmployees(showLoader: false);
+      }
+      return response;
+    } catch (e) {
+      Logger.e('EmployeeController => Error in updateEmployeeApi: $e');
+      return ResponseModel(
+        isSuccess: false,
+        message: 'Failed to update employee: ${e.toString()}',
       );
     } finally {
       isSubmitting.value = false;
@@ -544,9 +674,74 @@ class EmployeeController extends GetxController {
     }
   }
 
-  void deleteEmployee(String id) {
-    employees.removeWhere((e) => e.id == id);
-    applyFilters();
+  Future<bool> deleteEmployee(String id) async {
+    isDeleting.value = true;
+    try {
+      Logger.d('EmployeeController => Deleting employee ID: $id');
+      final response = await _effectiveEmployeeRepository.deleteEmployee(id);
+
+      if (response.isSuccess) {
+        employees.removeWhere((e) => e.id == id);
+        applyFilters();
+        if (employeeDetail.value?.id == id) {
+          employeeDetail.value = null;
+        }
+        CustomSnackbar.showSuccess(
+          response.message.isNotEmpty ? response.message : 'Employee removed successfully.',
+          title: 'Deleted',
+        );
+        return true;
+      } else {
+        CustomSnackbar.showError(
+          response.message.isNotEmpty ? response.message : 'Failed to delete employee.',
+          title: 'Error',
+        );
+        return false;
+      }
+    } catch (e) {
+      Logger.e('EmployeeController => Error in deleteEmployee: $e');
+      CustomSnackbar.showError(
+        'Failed to delete employee: ${e.toString()}',
+        title: 'Error',
+      );
+      return false;
+    } finally {
+      isDeleting.value = false;
+    }
+  }
+
+  Future<bool> updateEmployeeAvatar(String id, File imageFile) async {
+    isUploadingAvatar.value = true;
+    try {
+      Logger.d('EmployeeController => Updating avatar for employee ID: $id');
+      final response = await _effectiveEmployeeRepository.updateEmployeeAvatar(id, imageFile);
+
+      if (response.isSuccess) {
+        // Re-fetch detail in background to get new avatar URL
+        await fetchEmployeeDetail(id, showLoader: false);
+        fetchEmployees(showLoader: false);
+        CustomSnackbar.showSuccess(
+          response.message.isNotEmpty ? response.message : 'Profile image updated successfully!',
+          title: 'Success',
+        );
+        return true;
+      } else {
+        CustomSnackbar.showError(
+          response.message.isNotEmpty ? response.message : 'Failed to update profile image.',
+          title: 'Error',
+        );
+        return false;
+      }
+    } catch (e) {
+      Logger.e('EmployeeController => Error in updateEmployeeAvatar: $e');
+      CustomSnackbar.showError(
+        'Failed to update profile image: ${e.toString()}',
+        title: 'Error',
+      );
+      return false;
+    } finally {
+      isUploadingAvatar.value = false;
+    }
   }
 
   void toggleSkill(String skill) {

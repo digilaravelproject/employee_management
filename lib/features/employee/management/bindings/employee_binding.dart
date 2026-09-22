@@ -30,6 +30,7 @@ class EmployeeBinding extends Bindings {
       Get.lazyPut<EmployeeController>(
         () => EmployeeController(
           createEmployeeUseCase: Get.find<CreateEmployeeUseCase>(),
+          repository: Get.find<EmployeeRepositoryInterface>(),
         ),
         fenix: true,
       );
