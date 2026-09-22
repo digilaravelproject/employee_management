@@ -36,6 +36,7 @@ class DepartmentsController extends GetxController {
   // Loading states
   final RxBool isLoading = false.obs;
   final RxBool isSaving = false.obs;
+  final RxBool isAddingEmployees = false.obs;
   final RxBool isSearching = false.obs;
 
   // Search state
@@ -57,36 +58,37 @@ class DepartmentsController extends GetxController {
 
   // Available system employees for assignment
   List<DepartmentMemberModel> get availableEmployees {
-    if (Get.isRegistered<EmployeeController>()) {
-      final empCtrl = Get.find<EmployeeController>();
-      if (empCtrl.employees.isNotEmpty) {
-        return empCtrl.employees.map((e) {
-          return DepartmentMemberModel(
-            id: int.tryParse(e.id) ?? 1,
-            employeeId: e.employeeId,
-            name: e.name,
-            email: e.email,
-            avatar: e.profilePic,
-            designation: e.designation,
-            status: e.isActive ? 'active' : 'inactive',
-          );
-        }).toList();
-      }
-    }
-    return _defaultSystemEmployees;
-  }
+    final empCtrl = Get.isRegistered<EmployeeController>()
+        ? Get.find<EmployeeController>()
+        : Get.put(EmployeeController());
 
-  static final List<DepartmentMemberModel> _defaultSystemEmployees = [
-    DepartmentMemberModel(id: 3, employeeId: 'EMP1026', name: 'John Doe', email: 'john.doe@example.com', designation: 'Senior Flutter Developer', status: 'active'),
-    DepartmentMemberModel(id: 1, employeeId: 'EMP1001', name: 'Rahul Sharma', email: 'rahul.sharma@example.com', designation: 'Tech Lead', status: 'active'),
-    DepartmentMemberModel(id: 2, employeeId: 'EMP1002', name: 'Neha Patel', email: 'neha.patel@example.com', designation: 'HR Manager', status: 'active'),
-    DepartmentMemberModel(id: 4, employeeId: 'EMP1004', name: 'Amit Kumar', email: 'amit.kumar@example.com', designation: 'Sales Lead', status: 'active'),
-    DepartmentMemberModel(id: 5, employeeId: 'EMP1005', name: 'Priya Verma', email: 'priya.verma@example.com', designation: 'UI/UX Designer', status: 'active'),
-  ];
+    if (empCtrl.employees.isNotEmpty) {
+      return empCtrl.employees.map((e) {
+        return DepartmentMemberModel(
+          id: int.tryParse(e.id) ?? 0,
+          employeeId: e.employeeId,
+          name: e.name,
+          email: e.email,
+          avatar: e.profilePic,
+          designation: e.designation,
+          status: e.isActive ? 'active' : 'inactive',
+        );
+      }).toList();
+    }
+    return [];
+  }
 
   @override
   void onInit() {
     super.onInit();
+    // Ensure live employee data is fetched
+    final empCtrl = Get.isRegistered<EmployeeController>()
+        ? Get.find<EmployeeController>()
+        : Get.put(EmployeeController());
+    if (empCtrl.employees.isEmpty) {
+      empCtrl.fetchEmployees(showLoader: false);
+    }
+
     if (repository != null) {
       fetchDepartments();
     } else {
@@ -286,12 +288,79 @@ class DepartmentsController extends GetxController {
     }
   }
 
+  Future<bool> addEmployeesToDepartment(String departmentId, List<int> employeeIds) async {
+    if (repository == null) {
+      CustomSnackbar.showError('Repository not available');
+      return false;
+    }
+
+    if (employeeIds.isEmpty) {
+      CustomSnackbar.showError('Please select at least one employee');
+      return false;
+    }
+
+    try {
+      isAddingEmployees.value = true;
+      final response = await repository!.addEmployeesToDepartment(departmentId, employeeIds);
+
+      if (response.status && response.data != null) {
+        final updatedData = response.data!;
+        final uiModel = _apiModelToUiModel(updatedData);
+
+        final apiIdx = apiDepartments.indexWhere((d) => d.id.toString() == departmentId);
+        if (apiIdx != -1) {
+          apiDepartments[apiIdx] = updatedData;
+        } else {
+          apiDepartments.add(updatedData);
+        }
+
+        final idx = departments.indexWhere((d) => d.id == departmentId);
+        if (idx != -1) {
+          departments[idx] = uiModel;
+        }
+
+        selectedApiDepartment.value = updatedData;
+        selectedDepartment.value = uiModel;
+        selectedEmployees.assignAll(updatedData.employees);
+
+        CustomSnackbar.showSuccess(
+          response.message.isNotEmpty ? response.message : 'Employees added successfully.',
+        );
+        fetchDepartments();
+        return true;
+      } else {
+        CustomSnackbar.showError(
+          response.message.isNotEmpty ? response.message : 'Failed to add employees',
+        );
+        return false;
+      }
+    } catch (e) {
+      Logger.e('DepartmentsController => addEmployeesToDepartment: $e');
+      CustomSnackbar.showError('Something went wrong while adding employees');
+      return false;
+    } finally {
+      isAddingEmployees.value = false;
+    }
+  }
+
   Future<bool> removeEmployeeFromDepartmentApi(String departmentId, String employeeId) async {
     if (repository == null) return false;
 
     try {
       final response = await repository!.removeEmployeeFromDepartment(departmentId, employeeId);
       if (response.status) {
+        if (response.data != null) {
+          final updatedData = response.data!;
+          final uiModel = _apiModelToUiModel(updatedData);
+          final apiIdx = apiDepartments.indexWhere((d) => d.id.toString() == departmentId);
+          if (apiIdx != -1) apiDepartments[apiIdx] = updatedData;
+          final idx = departments.indexWhere((d) => d.id == departmentId);
+          if (idx != -1) departments[idx] = uiModel;
+          selectedApiDepartment.value = updatedData;
+          selectedEmployees.assignAll(updatedData.employees);
+        } else {
+          selectedEmployees.removeWhere((e) => e.id.toString() == employeeId);
+        }
         fetchDepartments();
         return true;
       } else {

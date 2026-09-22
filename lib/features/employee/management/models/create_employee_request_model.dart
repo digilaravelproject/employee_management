@@ -170,12 +170,13 @@ class CreateEmployeeRequestModel {
       map['branch_name'] = branchName!.trim();
     }
 
-    // Role IDs: e.g. "[9]"
-    if (roleIds.isNotEmpty) {
-      map['role_ids'] = '[${roleIds.join(',')}]';
-    }
-
     final formData = FormData.fromMap(map);
+
+    // Role IDs array: role_ids[]
+    final effectiveRoleIds = roleIds.isNotEmpty ? roleIds : [9];
+    for (final roleId in effectiveRoleIds) {
+      formData.fields.add(MapEntry('role_ids[]', roleId.toString()));
+    }
 
     // Skills array: skills[]
     for (final skill in skills) {

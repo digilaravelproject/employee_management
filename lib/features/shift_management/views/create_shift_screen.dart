@@ -5,6 +5,7 @@ import 'package:iconsax/iconsax.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_text.dart';
+import '../../employee/management/controllers/employee_controller.dart';
 import '../controllers/shift_controller.dart';
 import '../models/create_shift_request_model.dart';
 import '../models/shift_model.dart';
@@ -157,71 +158,55 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
   final List<String> _departments = ['All', 'Sales', 'Support', 'HR', 'Engineering', 'Marketing'];
   final List<String> _teams = ['All', 'Team Alpha', 'Team Beta', 'Core Operations'];
 
-  final List<EmployeeItem> _allEmployees = [
-    EmployeeItem(
-      id: '1',
-      name: 'Rahul Kumar',
-      department: 'Sales',
-      team: 'Team Alpha',
-      currentShift: 'Morning Shift',
-      status: 'Assigned',
-      isSelected: true,
-    ),
-    EmployeeItem(
-      id: '2',
-      name: 'Amit Sharma',
-      department: 'Sales',
-      team: 'Team Alpha',
-      currentShift: 'Morning Shift',
-      status: 'Assigned',
-      isSelected: true,
-    ),
-    EmployeeItem(
-      id: '3',
-      name: 'Arif Khan',
-      department: 'Support',
-      team: 'Team Beta',
-      currentShift: 'No Shift',
-      status: 'Available',
-      isSelected: false,
-    ),
-    EmployeeItem(
-      id: '4',
-      name: 'Sameer Ali',
-      department: 'Sales',
-      team: 'Team Alpha',
-      currentShift: 'Morning Shift',
-      status: 'Assigned',
-      isSelected: false,
-    ),
-    EmployeeItem(
-      id: '5',
-      name: 'Neha Singh',
-      department: 'HR',
-      team: 'Core Operations',
-      currentShift: 'No Shift',
-      status: 'Available',
-      isSelected: false,
-    ),
-    EmployeeItem(
-      id: '6',
-      name: 'Priya Sharma',
-      department: 'Engineering',
-      team: 'Core Operations',
-      currentShift: 'General Shift',
-      status: 'Assigned',
-      isSelected: false,
-    ),
-    EmployeeItem(
-      id: '7',
-      name: 'Vikram Mehta',
-      department: 'Support',
-      team: 'Team Beta',
-      currentShift: 'No Shift',
-      status: 'Available',
-      isSelected: false,
-    ),
-  ];
+  final List<EmployeeItem> _allEmployees = [];
+
+  void _initEmployeeList() {
+    final empCtrl = Get.isRegistered<EmployeeController>()
+        ? Get.find<EmployeeController>()
+        : Get.put(EmployeeController());
+
+    final data = widget.shiftDataToEdit;
+    final shift = widget.shiftToEdit;
+    final assignedIds = (data != null && data.assignedEmployees.isNotEmpty)
+        ? data.assignedEmployees.map((e) => e.id.toString()).toSet()
+        : <String>{};
+    final assignedNames = (data != null && data.assignedEmployees.isNotEmpty)
+        ? data.assignedEmployees.map((e) => e.name.toLowerCase()).toSet()
+        : (shift != null
+            ? shift.assignedEmployeeNames.map((n) => n.toLowerCase()).toSet()
+            : <String>{});
+
+    _allEmployees.clear();
+
+    if (empCtrl.employees.isNotEmpty) {
+      final deptSet = <String>{'All'};
+      for (final emp in empCtrl.employees) {
+        final dept = emp.department.isNotEmpty ? emp.department : 'General';
+        deptSet.add(dept);
+
+        final isPreSelected = assignedIds.contains(emp.id) ||
+            assignedNames.contains(emp.name.toLowerCase());
+
+        _allEmployees.add(
+          EmployeeItem(
+            id: emp.id,
+            name: emp.name,
+            department: dept,
+            team: emp.designation.isNotEmpty ? emp.designation : 'General',
+            currentShift: emp.shift.isNotEmpty ? emp.shift : 'No Shift',
+            status: emp.shift.isNotEmpty ? 'Assigned' : 'Available',
+            isSelected: isPreSelected,
+          ),
+        );
+      }
+      _departments.clear();
+      _departments.addAll(deptSet);
+    }
+
+    if (mounted) {
+      setState(() {});
+    }
+  }
 
   @override
   void initState() {
@@ -347,15 +332,17 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
       ];
     }
 
-    // Step 7: Pre-select employees if applicable
-    if (data != null && data.assignedEmployees.isNotEmpty) {
-      final assignedIds = data.assignedEmployees.map((e) => e.id.toString()).toSet();
-      final assignedNames = data.assignedEmployees.map((e) => e.name.toLowerCase()).toSet();
-      for (final emp in _allEmployees) {
-        if (assignedIds.contains(emp.id) || assignedNames.contains(emp.name.toLowerCase())) {
-          emp.isSelected = true;
-        }
-      }
+    // Step 7: Pre-select employees and load live employee directory
+    final empCtrl = Get.isRegistered<EmployeeController>()
+        ? Get.find<EmployeeController>()
+        : Get.put(EmployeeController());
+
+    _initEmployeeList();
+
+    if (empCtrl.employees.isEmpty) {
+      empCtrl.fetchEmployees(showLoader: false).then((_) {
+        _initEmployeeList();
+      });
     }
   }
 
@@ -1902,12 +1889,18 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
                               color: AppColors.primaryColor,
                             ),
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 10),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                AppText(emp.name, fontSize: 13, fontWeight: FontWeight.bold),
+                                AppText(
+                                  emp.name,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                                 const SizedBox(height: 2),
                                 Row(
                                   children: [
@@ -1917,19 +1910,30 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
                                         color: AppColors.slate100,
                                         borderRadius: BorderRadius.circular(4),
                                       ),
-                                      child: AppText(emp.department, fontSize: 10, color: AppColors.textColorSecondary),
+                                      child: AppText(
+                                        emp.department,
+                                        fontSize: 10,
+                                        color: AppColors.textColorSecondary,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
                                     ),
                                     const SizedBox(width: 6),
-                                    AppText(
-                                      'Current: ${emp.currentShift}',
-                                      fontSize: 11,
-                                      color: AppColors.textColorHint,
+                                    Expanded(
+                                      child: AppText(
+                                        'Current: ${emp.currentShift}',
+                                        fontSize: 11,
+                                        color: AppColors.textColorHint,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
                                     ),
                                   ],
                                 ),
                               ],
                             ),
                           ),
+                          const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(

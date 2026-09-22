@@ -259,39 +259,80 @@ class EditDepartmentScreen extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         _buildLabel('Assigned Employees (${emps.length})', false),
-                        GestureDetector(
+                        InkWell(
                           onTap: () => _showEmployeesSelectionSheet(context, controller),
-                          child: const Row(
-                            children: [
-                              Icon(Iconsax.add, size: 14, color: AppColors.primaryColor),
-                              SizedBox(width: 4),
-                              AppText('Add Employees', fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primaryColor),
-                            ],
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Row(
+                              children: [
+                                Icon(Iconsax.user_add, size: 14, color: AppColors.primaryColor),
+                                SizedBox(width: 6),
+                                AppText('Add Employees', fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primaryColor),
+                              ],
+                            ),
                           ),
                         ),
                       ],
                     );
                   }),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 10),
 
                   Obx(() {
                     final employeesList = controller.selectedEmployees;
+                    final deptId = controller.selectedApiDepartment.value?.id.toString() ??
+                        controller.selectedDepartment.value?.id;
+
                     if (employeesList.isEmpty) {
                       return Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+                        padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(color: const Color(0xFFF1F5F9)),
                         ),
-                        child: const Center(
-                          child: AppText(
-                            'No employees assigned to this department',
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: AppColors.textColorHint,
-                          ),
+                        child: Column(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: AppColors.slate50,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Iconsax.profile_2user, size: 28, color: AppColors.textColorHint),
+                            ),
+                            const SizedBox(height: 12),
+                            const AppText(
+                              'No employees assigned yet',
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textColorPrimary,
+                            ),
+                            const SizedBox(height: 4),
+                            const AppText(
+                              'Add employees to manage tasks and roles under this department.',
+                              fontSize: 11,
+                              textAlign: TextAlign.center,
+                              color: AppColors.textColorHint,
+                            ),
+                            const SizedBox(height: 14),
+                            ElevatedButton.icon(
+                              onPressed: () => _showEmployeesSelectionSheet(context, controller),
+                              icon: const Icon(Iconsax.add, size: 16, color: Colors.white),
+                              label: const AppText('Add Employees', fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primaryColor,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                              ),
+                            ),
+                          ],
                         ),
                       );
                     }
@@ -310,19 +351,21 @@ class EditDepartmentScreen extends StatelessWidget {
                         separatorBuilder: (context, index) => const Divider(height: 20, color: Color(0xFFF1F5F9)),
                         itemBuilder: (context, index) {
                           final emp = employeesList[index];
+                          final isHead = controller.selectedHead.value?.id == emp.id;
+
                           return Row(
                             children: [
                               emp.avatar != null && emp.avatar!.isNotEmpty
                                   ? CircleAvatar(
-                                      radius: 18,
+                                      radius: 20,
                                       backgroundImage: NetworkImage(emp.avatar!),
                                     )
                                   : CircleAvatar(
-                                      radius: 18,
+                                      radius: 20,
                                       backgroundColor: AppColors.primaryColor.withValues(alpha: 0.1),
                                       child: AppText(
                                         emp.name.isNotEmpty ? emp.name[0].toUpperCase() : '?',
-                                        fontSize: 12,
+                                        fontSize: 13,
                                         fontWeight: FontWeight.bold,
                                         color: AppColors.primaryColor,
                                       ),
@@ -332,19 +375,65 @@ class EditDepartmentScreen extends StatelessWidget {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    AppText(emp.name, fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textColorPrimary),
+                                    Row(
+                                      children: [
+                                        Flexible(
+                                          child: AppText(
+                                            emp.name,
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.bold,
+                                            color: AppColors.textColorPrimary,
+                                          ),
+                                        ),
+                                        if (isHead) ...[
+                                          const SizedBox(width: 6),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFF6366F1).withValues(alpha: 0.1),
+                                              borderRadius: BorderRadius.circular(6),
+                                            ),
+                                            child: const AppText(
+                                              'HEAD',
+                                              fontSize: 8,
+                                              fontWeight: FontWeight.w800,
+                                              color: Color(0xFF6366F1),
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
                                     const SizedBox(height: 2),
                                     AppText(emp.email, fontSize: 10, color: AppColors.textColorHint),
                                     if (emp.designation != null && emp.designation!.isNotEmpty) ...[
                                       const SizedBox(height: 2),
-                                      AppText(emp.designation!, fontSize: 9, color: AppColors.primaryColor),
+                                      AppText(
+                                        emp.designation!,
+                                        fontSize: 10,
+                                        color: AppColors.primaryColor,
+                                        fontWeight: FontWeight.w600,
+                                      ),
                                     ],
                                   ],
                                 ),
                               ),
                               IconButton(
-                                icon: const Icon(Iconsax.minus_cirlce, color: Colors.redAccent, size: 20),
-                                onPressed: () => controller.removeEmployee(emp),
+                                icon: const Icon(Iconsax.trash, color: Colors.redAccent, size: 18),
+                                constraints: const BoxConstraints(),
+                                padding: const EdgeInsets.all(6),
+                                onPressed: () {
+                                  if (deptId != null && controller.repository != null) {
+                                    _showRemoveEmployeeConfirmation(
+                                      context,
+                                      controller,
+                                      deptId,
+                                      emp.id.toString(),
+                                      emp.name,
+                                    );
+                                  } else {
+                                    controller.removeEmployee(emp);
+                                  }
+                                },
                               ),
                             ],
                           );
@@ -436,18 +525,70 @@ class EditDepartmentScreen extends StatelessWidget {
     );
   }
 
+  void _showRemoveEmployeeConfirmation(
+    BuildContext context,
+    DepartmentsController controller,
+    String departmentId,
+    String employeeId,
+    String employeeName,
+  ) {
+    Get.dialog(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.errorColor.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Iconsax.trash, color: AppColors.errorColor, size: 18),
+            ),
+            const SizedBox(width: 10),
+            const AppText('Remove Employee', fontSize: 15, fontWeight: FontWeight.bold),
+          ],
+        ),
+        content: AppText(
+          'Are you sure you want to remove "$employeeName" from this department?',
+          fontSize: 13,
+          color: AppColors.textColorPrimary,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const AppText('Cancel', color: AppColors.textColorSecondary, fontWeight: FontWeight.w600),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Get.back();
+              await controller.removeEmployeeFromDepartmentApi(departmentId, employeeId);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.errorColor,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              elevation: 0,
+            ),
+            child: const AppText('Remove', color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+    );
+  }
+
   // Show bottom sheet to choose Department Head
   void _showHeadSelectionSheet(BuildContext context, DepartmentsController controller) {
     final available = controller.availableEmployees;
+    final searchFilter = ''.obs;
 
     Get.bottomSheet(
       Container(
-        height: MediaQuery.of(context).size.height * 0.65,
+        height: MediaQuery.of(context).size.height * 0.75,
         decoration: const BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -458,67 +599,118 @@ class EditDepartmentScreen extends StatelessWidget {
                 decoration: const BoxDecoration(color: Color(0xFFCBD5E1), borderRadius: BorderRadius.all(Radius.circular(10))),
               ),
             ),
-            const SizedBox(height: 18),
-            const AppText('Select Department Head', fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textColorPrimary),
-            const SizedBox(height: 4),
-            const AppText('Choose the employee to lead this department', fontSize: 11, color: AppColors.textColorHint),
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AppText('Select Department Head', fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textColorPrimary),
+                    SizedBox(height: 2),
+                    AppText('Choose the leader for this department', fontSize: 11, color: AppColors.textColorHint),
+                  ],
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close_rounded, size: 20, color: AppColors.textColorHint),
+                  onPressed: () => Get.back(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              onChanged: (val) => searchFilter.value = val.trim().toLowerCase(),
+              style: const TextStyle(fontSize: 13),
+              decoration: InputDecoration(
+                hintText: 'Search employee by name, role...',
+                hintStyle: const TextStyle(fontSize: 12, color: AppColors.textColorHint),
+                prefixIcon: const Icon(Iconsax.search_normal, size: 16, color: AppColors.textColorHint),
+                filled: true,
+                fillColor: AppColors.slate50,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
             Expanded(
-              child: ListView.separated(
-                itemCount: available.length,
-                physics: const BouncingScrollPhysics(),
-                separatorBuilder: (context, index) => const Divider(height: 20, color: Color(0xFFF1F5F9)),
-                itemBuilder: (context, index) {
-                  final user = available[index];
-                  return Obx(() {
+              child: Obx(() {
+                final query = searchFilter.value;
+                final filtered = query.isEmpty
+                    ? available
+                    : available.where((e) {
+                        return e.name.toLowerCase().contains(query) ||
+                            e.email.toLowerCase().contains(query) ||
+                            (e.designation != null && e.designation!.toLowerCase().contains(query));
+                      }).toList();
+
+                if (filtered.isEmpty) {
+                  return const Center(
+                    child: AppText('No matching employees found', fontSize: 12, color: AppColors.textColorHint),
+                  );
+                }
+
+                return ListView.separated(
+                  itemCount: filtered.length,
+                  physics: const BouncingScrollPhysics(),
+                  separatorBuilder: (context, index) => const Divider(height: 16, color: Color(0xFFF1F5F9)),
+                  itemBuilder: (context, index) {
+                    final user = filtered[index];
                     final isSelected = controller.selectedHead.value?.id == user.id;
+
                     return InkWell(
                       onTap: () {
                         controller.assignHead(user);
                         Get.back();
                       },
-                      child: Row(
-                        children: [
-                          user.avatar != null && user.avatar!.isNotEmpty
-                              ? CircleAvatar(
-                                  radius: 20,
-                                  backgroundImage: NetworkImage(user.avatar!),
-                                )
-                              : CircleAvatar(
-                                  radius: 20,
-                                  backgroundColor: AppColors.primaryColor.withValues(alpha: 0.1),
-                                  child: AppText(
-                                    user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.primaryColor,
+                      borderRadius: BorderRadius.circular(12),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                        child: Row(
+                          children: [
+                            user.avatar != null && user.avatar!.isNotEmpty
+                                ? CircleAvatar(
+                                    radius: 20,
+                                    backgroundImage: NetworkImage(user.avatar!),
+                                  )
+                                : CircleAvatar(
+                                    radius: 20,
+                                    backgroundColor: AppColors.primaryColor.withValues(alpha: 0.1),
+                                    child: AppText(
+                                      user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.primaryColor,
+                                    ),
                                   ),
-                                ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                AppText(user.name, fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textColorPrimary),
-                                const SizedBox(height: 2),
-                                AppText(user.email, fontSize: 10, color: AppColors.textColorHint),
-                                if (user.designation != null && user.designation!.isNotEmpty) ...[
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  AppText(user.name, fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textColorPrimary),
                                   const SizedBox(height: 2),
-                                  AppText(user.designation!, fontSize: 9, color: AppColors.primaryColor),
+                                  AppText(user.email, fontSize: 10, color: AppColors.textColorHint),
+                                  if (user.designation != null && user.designation!.isNotEmpty) ...[
+                                    const SizedBox(height: 2),
+                                    AppText(user.designation!, fontSize: 9, color: AppColors.primaryColor, fontWeight: FontWeight.w600),
+                                  ],
                                 ],
-                              ],
+                              ),
                             ),
-                          ),
-                          if (isSelected)
-                            const Icon(Icons.check_circle_rounded, color: AppColors.primaryColor, size: 22)
-                          else
-                            const Icon(Icons.radio_button_off_rounded, color: AppColors.slate300, size: 22),
-                        ],
+                            if (isSelected)
+                              const Icon(Icons.check_circle_rounded, color: AppColors.primaryColor, size: 22)
+                            else
+                              const Icon(Icons.radio_button_off_rounded, color: AppColors.slate300, size: 22),
+                          ],
+                        ),
                       ),
                     );
-                  });
-                },
-              ),
+                  },
+                );
+              }),
             ),
           ],
         ),
@@ -527,99 +719,374 @@ class EditDepartmentScreen extends StatelessWidget {
     );
   }
 
-  // Show bottom sheet to multi-select employees
+  // Show bottom sheet to multi-select and add employees via API
   void _showEmployeesSelectionSheet(BuildContext context, DepartmentsController controller) {
     final available = controller.availableEmployees;
+    final deptId = controller.selectedApiDepartment.value?.id.toString() ??
+        controller.selectedDepartment.value?.id;
+
+    // Track IDs selected in this sheet modal
+    final RxList<int> selectedIds = <int>[].obs;
+    final RxString searchFilter = ''.obs;
+
+    // Pre-populate with currently assigned employees
+    for (final emp in controller.selectedEmployees) {
+      if (!selectedIds.contains(emp.id)) {
+        selectedIds.add(emp.id);
+      }
+    }
 
     Get.bottomSheet(
       Container(
-        height: MediaQuery.of(context).size.height * 0.65,
+        height: MediaQuery.of(context).size.height * 0.85,
         decoration: const BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
-        padding: const EdgeInsets.all(20),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: const BoxDecoration(color: Color(0xFFCBD5E1), borderRadius: BorderRadius.all(Radius.circular(10))),
-              ),
-            ),
-            const SizedBox(height: 18),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    AppText('Select Employees', fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textColorPrimary),
-                    SizedBox(height: 2),
-                    AppText('Assign employees to this department', fontSize: 11, color: AppColors.textColorHint),
-                  ],
-                ),
-                TextButton(
-                  onPressed: () => Get.back(),
-                  child: const AppText('Done', fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.primaryColor),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            Expanded(
-              child: ListView.separated(
-                itemCount: available.length,
-                physics: const BouncingScrollPhysics(),
-                separatorBuilder: (context, index) => const Divider(height: 20, color: Color(0xFFF1F5F9)),
-                itemBuilder: (context, index) {
-                  final user = available[index];
-                  return Obx(() {
-                    final isSelected = controller.selectedEmployees.any((e) => e.id == user.id);
-                    return InkWell(
-                      onTap: () => controller.toggleEmployeeSelection(user),
-                      child: Row(
+            // Top Header & Drag handle
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFCBD5E1),
+                        borderRadius: BorderRadius.all(Radius.circular(10)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          user.avatar != null && user.avatar!.isNotEmpty
-                              ? CircleAvatar(
-                                  radius: 20,
-                                  backgroundImage: NetworkImage(user.avatar!),
-                                )
-                              : CircleAvatar(
-                                  radius: 20,
-                                  backgroundColor: AppColors.primaryColor.withValues(alpha: 0.1),
-                                  child: AppText(
-                                    user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.primaryColor,
-                                  ),
-                                ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                AppText(user.name, fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textColorPrimary),
-                                const SizedBox(height: 2),
-                                AppText(user.email, fontSize: 10, color: AppColors.textColorHint),
-                                if (user.designation != null && user.designation!.isNotEmpty) ...[
-                                  const SizedBox(height: 2),
-                                  AppText(user.designation!, fontSize: 9, color: AppColors.primaryColor),
-                                ],
-                              ],
-                            ),
+                          const AppText(
+                            'Add Employees',
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textColorPrimary,
                           ),
-                          if (isSelected)
-                            const Icon(Icons.check_box_rounded, color: AppColors.primaryColor, size: 22)
-                          else
-                            const Icon(Icons.check_box_outline_blank_rounded, color: AppColors.slate300, size: 22),
+                          const SizedBox(height: 2),
+                          Obx(() => AppText(
+                                '${selectedIds.length} of ${available.length} employees selected',
+                                fontSize: 11,
+                                color: AppColors.textColorHint,
+                              )),
                         ],
                       ),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded, size: 20, color: AppColors.textColorHint),
+                        onPressed: () => Get.back(),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  // Search Bar
+                  TextField(
+                    onChanged: (val) => searchFilter.value = val.trim().toLowerCase(),
+                    style: const TextStyle(fontSize: 13),
+                    decoration: InputDecoration(
+                      hintText: 'Search by name, designation, email...',
+                      hintStyle: const TextStyle(fontSize: 12, color: AppColors.textColorHint),
+                      prefixIcon: const Icon(Iconsax.search_normal, size: 16, color: AppColors.textColorHint),
+                      filled: true,
+                      fillColor: AppColors.slate50,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  // Quick Actions Row
+                  Obx(() {
+                    final query = searchFilter.value;
+                    final filtered = query.isEmpty
+                        ? available
+                        : available.where((e) {
+                            return e.name.toLowerCase().contains(query) ||
+                                e.email.toLowerCase().contains(query) ||
+                                (e.designation != null && e.designation!.toLowerCase().contains(query)) ||
+                                (e.employeeId != null && e.employeeId!.toLowerCase().contains(query));
+                          }).toList();
+
+                    final allFilteredSelected = filtered.isNotEmpty &&
+                        filtered.every((e) => selectedIds.contains(e.id));
+
+                    return Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        AppText(
+                          '${filtered.length} Employees Available',
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textColorSecondary,
+                        ),
+                        InkWell(
+                          onTap: () {
+                            if (allFilteredSelected) {
+                              for (final e in filtered) {
+                                selectedIds.remove(e.id);
+                              }
+                            } else {
+                              for (final e in filtered) {
+                                if (!selectedIds.contains(e.id)) {
+                                  selectedIds.add(e.id);
+                                }
+                              }
+                            }
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                            child: AppText(
+                              allFilteredSelected ? 'Deselect All' : 'Select All',
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primaryColor,
+                            ),
+                          ),
+                        ),
+                      ],
                     );
-                  });
-                },
+                  }),
+                ],
+              ),
+            ),
+
+            const Divider(height: 1, color: Color(0xFFF1F5F9)),
+
+            // Employee List
+            Expanded(
+              child: Obx(() {
+                final query = searchFilter.value;
+                final filtered = query.isEmpty
+                    ? available
+                    : available.where((e) {
+                        return e.name.toLowerCase().contains(query) ||
+                            e.email.toLowerCase().contains(query) ||
+                            (e.designation != null && e.designation!.toLowerCase().contains(query)) ||
+                            (e.employeeId != null && e.employeeId!.toLowerCase().contains(query));
+                      }).toList();
+
+                if (filtered.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Iconsax.search_status, size: 40, color: AppColors.textColorHint.withValues(alpha: 0.4)),
+                        const SizedBox(height: 10),
+                        const AppText('No matching employees found', fontSize: 13, color: AppColors.textColorSecondary),
+                      ],
+                    ),
+                  );
+                }
+
+                return ListView.separated(
+                  itemCount: filtered.length,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  physics: const BouncingScrollPhysics(),
+                  separatorBuilder: (context, index) => const Divider(height: 12, color: Color(0xFFF8FAFC)),
+                  itemBuilder: (context, index) {
+                    final user = filtered[index];
+
+                    return Obx(() {
+                      final isSelected = selectedIds.contains(user.id);
+                      final isAlreadyAssigned = controller.selectedEmployees.any((e) => e.id == user.id);
+
+                      return InkWell(
+                        onTap: () {
+                          if (selectedIds.contains(user.id)) {
+                            selectedIds.remove(user.id);
+                          } else {
+                            selectedIds.add(user.id);
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(14),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? AppColors.primaryColor.withValues(alpha: 0.08)
+                                : Colors.white,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: isSelected
+                                  ? AppColors.primaryColor
+                                  : const Color(0xFFE2E8F0),
+                              width: isSelected ? 1.5 : 1.0,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              // Avatar
+                              user.avatar != null && user.avatar!.isNotEmpty
+                                  ? CircleAvatar(
+                                      radius: 20,
+                                      backgroundImage: NetworkImage(user.avatar!),
+                                    )
+                                  : CircleAvatar(
+                                      radius: 20,
+                                      backgroundColor: AppColors.primaryColor.withValues(alpha: 0.12),
+                                      child: AppText(
+                                        user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.primaryColor,
+                                      ),
+                                    ),
+                              const SizedBox(width: 12),
+                              // Details
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Flexible(
+                                          child: AppText(
+                                            user.name,
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.bold,
+                                            color: AppColors.textColorPrimary,
+                                          ),
+                                        ),
+                                        if (isAlreadyAssigned) ...[
+                                          const SizedBox(width: 6),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                                              borderRadius: BorderRadius.circular(6),
+                                            ),
+                                            child: const AppText(
+                                              'Assigned',
+                                              fontSize: 9,
+                                              fontWeight: FontWeight.bold,
+                                              color: Color(0xFF10B981),
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                    const SizedBox(height: 2),
+                                    AppText(user.email, fontSize: 10, color: AppColors.textColorHint),
+                                    Row(
+                                      children: [
+                                        if (user.designation != null && user.designation!.isNotEmpty) ...[
+                                          AppText(
+                                            user.designation!,
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.w600,
+                                            color: AppColors.primaryColor,
+                                          ),
+                                        ],
+                                        if (user.employeeId != null && user.employeeId!.isNotEmpty) ...[
+                                          if (user.designation != null && user.designation!.isNotEmpty)
+                                            const AppText(' • ', fontSize: 9, color: AppColors.textColorHint),
+                                          AppText(
+                                            user.employeeId!,
+                                            fontSize: 9,
+                                            color: AppColors.textColorHint,
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              // Checkbox
+                              Icon(
+                                isSelected ? Icons.check_box_rounded : Icons.check_box_outline_blank_rounded,
+                                color: isSelected ? AppColors.primaryColor : const Color(0xFF94A3B8),
+                                size: 26,
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    });
+                  },
+                );
+              }),
+            ),
+
+            // Bottom Action Bar
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, -4),
+                  ),
+                ],
+              ),
+              child: SafeArea(
+                top: false,
+                child: Obx(() {
+                  final isAdding = controller.isAddingEmployees.value;
+                  final count = selectedIds.length;
+
+                  return SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: (count == 0 || isAdding)
+                          ? null
+                          : () async {
+                              final selectedMembers = available
+                                  .where((e) => selectedIds.contains(e.id))
+                                  .toList();
+
+                              if (deptId != null && controller.repository != null) {
+                                // Hit API: POST /api/admin/departments/{id}/employees with {"employee_ids": [...]}
+                                final newIdsToAdd = selectedIds.toList();
+                                final success = await controller.addEmployeesToDepartment(deptId, newIdsToAdd);
+                                if (success) {
+                                  Get.back();
+                                }
+                              } else {
+                                // Local selection for create flow
+                                controller.selectedEmployees.assignAll(selectedMembers);
+                                Get.back();
+                              }
+                            },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primaryColor,
+                        disabledBackgroundColor: AppColors.primaryColor.withValues(alpha: 0.5),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 0,
+                      ),
+                      child: isAdding
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                            )
+                          : AppText(
+                              deptId != null
+                                  ? (count > 0 ? 'Add ($count) Employees to Department' : 'Select Employees to Add')
+                                  : (count > 0 ? 'Done ($count Selected)' : 'Select Employees'),
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                    ),
+                  );
+                }),
               ),
             ),
           ],
@@ -629,3 +1096,4 @@ class EditDepartmentScreen extends StatelessWidget {
     );
   }
 }
+

@@ -21,8 +21,8 @@ class AddDesignationScreen extends StatefulWidget {
 }
 
 class _AddDesignationScreenState extends State<AddDesignationScreen> {
-  final designationController = Get.find<DesignationController>();
-  final employeeController = Get.find<EmployeeController>();
+  late final DesignationController designationController;
+  late final EmployeeController employeeController;
 
   final nameController = TextEditingController();
   final skillController = TextEditingController();
@@ -36,6 +36,17 @@ class _AddDesignationScreenState extends State<AddDesignationScreen> {
   @override
   void initState() {
     super.initState();
+    designationController = Get.isRegistered<DesignationController>()
+        ? Get.find<DesignationController>()
+        : Get.put(DesignationController());
+    employeeController = Get.isRegistered<EmployeeController>()
+        ? Get.find<EmployeeController>()
+        : Get.put(EmployeeController());
+
+    if (employeeController.employees.isEmpty) {
+      employeeController.fetchEmployees(showLoader: false);
+    }
+
     _designation = widget.designation ?? (Get.arguments is DesignationModel ? Get.arguments as DesignationModel : null);
     if (_designation != null) {
       nameController.text = _designation!.name;

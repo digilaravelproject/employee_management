@@ -16,6 +16,7 @@ import '../../../departments/repositories/department_repository.dart';
 import '../../designation/controllers/designation_controller.dart';
 import '../../designation/repositories/designation_repository.dart';
 import '../../../shift_management/controllers/shift_controller.dart';
+import '../../../role_permissions/controllers/role_permissions_controller.dart';
 import '../controllers/employee_controller.dart';
 import '../models/create_employee_request_model.dart';
 import '../models/employee_model.dart';
@@ -36,6 +37,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
   late final DepartmentsController _departmentsController;
   late final DesignationController _designationController;
   late final ShiftController _shiftController;
+  late final RolePermissionsController _rolePermissionsController;
 
   File? _avatarFile;
 
@@ -73,6 +75,8 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
   String selectedEmployeeType = 'Full-time';
   String selectedDepartment = 'Engineering';
   String selectedDesignation = 'Senior Flutter Developer';
+  String selectedRole = 'Employee';
+  int selectedRoleId = 9;
   String selectedTeam = 'Team Alpha';
   String selectedShift = 'Morning Shift';
   String selectedReportingManager = '';
@@ -127,6 +131,10 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
         ? Get.find<ShiftController>()
         : Get.put(ShiftController());
 
+    _rolePermissionsController = Get.isRegistered<RolePermissionsController>()
+        ? Get.find<RolePermissionsController>()
+        : Get.put(RolePermissionsController());
+
     if (_departmentsController.departments.isEmpty && _departmentsController.apiDepartments.isEmpty) {
       _departmentsController.fetchDepartments();
     }
@@ -135,6 +143,9 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
     }
     if (_shiftController.shifts.isEmpty) {
       _shiftController.fetchShifts();
+    }
+    if (_rolePermissionsController.roles.isEmpty) {
+      _rolePermissionsController.fetchRolesFromApi(showLoader: false);
     }
 
     // Step 1 Controllers
@@ -387,6 +398,23 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
     return '2';
   }
 
+  int _getSelectedRoleId() {
+    if (_rolePermissionsController.roles.isNotEmpty) {
+      final match = _rolePermissionsController.roles.firstWhereOrNull(
+        (r) => r.name.toLowerCase().trim() == selectedRole.toLowerCase().trim(),
+      );
+      if (match != null) {
+        return int.tryParse(match.id) ?? selectedRoleId;
+      }
+      final role9 = _rolePermissionsController.roles.firstWhereOrNull((r) => r.id == '9');
+      if (role9 != null) {
+        return 9;
+      }
+      return int.tryParse(_rolePermissionsController.roles.first.id) ?? selectedRoleId;
+    }
+    return selectedRoleId;
+  }
+
   Future<void> _saveEmployee() async {
     final name = nameController.text.trim();
     final empId = empIdController.text.trim();
@@ -442,7 +470,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
         ifscCode: ifscCodeController.text.trim().toUpperCase(),
         branchName: branchNameController.text.trim(),
         skills: List.from(_skillsList),
-        roleIds: const [9],
+        roleIds: [_getSelectedRoleId()],
         avatarPath: _avatarFile?.path,
       );
 
@@ -504,6 +532,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
         'salary_type': selectedSalaryType,
         'monthly_base_salary': numericSalary,
         'skills': List<String>.from(_skillsList),
+        'role_ids': [_getSelectedRoleId()],
         'sales_target_enabled': hasSalesTarget ? 1 : 0,
         if (hasSalesTarget) ...{
           'sales_target_metric_type': selectedTargetType,
@@ -1347,7 +1376,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
               }),
               const SizedBox(height: 16),
 
-              _buildFieldTitle('Designation / Role', isRequired: true),
+              _buildFieldTitle('Designation', isRequired: true),
               const SizedBox(height: 6),
               Obx(() {
                 final desigs = controller.designations;
@@ -1356,6 +1385,35 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
                   items: desigs,
                   onChanged: (val) {
                     if (val != null) setState(() => selectedDesignation = val);
+                  },
+                );
+              }),
+              const SizedBox(height: 16),
+
+              _buildFieldTitle('Role', isRequired: true),
+              const SizedBox(height: 6),
+              Obx(() {
+                final rolesList = _rolePermissionsController.roles;
+                final roleNames = rolesList.map((r) => r.name).toList();
+                final fallbackRoles = ['Employee', 'Admin', 'HR', 'Manager'];
+                final displayItems = roleNames.isNotEmpty ? roleNames : fallbackRoles;
+                final currentValue = displayItems.contains(selectedRole)
+                    ? selectedRole
+                    : (displayItems.isNotEmpty ? displayItems.first : 'Employee');
+
+                return _buildDropdown(
+                  value: currentValue,
+                  items: displayItems,
+                  onChanged: (val) {
+                    if (val != null) {
+                      setState(() {
+                        selectedRole = val;
+                        final matched = rolesList.firstWhereOrNull((r) => r.name == val);
+                        if (matched != null) {
+                          selectedRoleId = int.tryParse(matched.id) ?? 9;
+                        }
+                      });
+                    }
                   },
                 );
               }),

@@ -135,6 +135,30 @@ class DepartmentRepository {
     }
   }
 
+  Future<DepartmentResponseModel> addEmployeesToDepartment(String departmentId, List<int> employeeIds) async {
+    try {
+      final response = await apiClient.post(
+        '/api/admin/departments/$departmentId/employees',
+        data: {'employee_ids': employeeIds},
+      );
+
+      if (response.isSuccess && response.json != null) {
+        return DepartmentResponseModel.fromJson(response.json!);
+      }
+
+      return DepartmentResponseModel(
+        status: false,
+        message: response.message.isNotEmpty ? response.message : 'Unknown error occurred',
+      );
+    } catch (e) {
+      Logger.e('DepartmentRepository => Failed to add employees to department: $e');
+      return DepartmentResponseModel(
+        status: false,
+        message: e.toString(),
+      );
+    }
+  }
+
   Future<DepartmentResponseModel> removeEmployeeFromDepartment(String departmentId, String employeeId) async {
     try {
       final response = await apiClient.delete('/api/admin/departments/$departmentId/employees/$employeeId');

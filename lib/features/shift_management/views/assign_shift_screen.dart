@@ -53,8 +53,18 @@ class _AssignShiftScreenState extends State<AssignShiftScreen> {
         ? Get.find<ShiftController>()
         : Get.put(ShiftController());
 
+    final empCtrl = Get.isRegistered<EmployeeController>()
+        ? Get.find<EmployeeController>()
+        : Get.put(EmployeeController());
+
     _initShift();
     _initEmployees();
+
+    if (empCtrl.employees.isEmpty) {
+      empCtrl.fetchEmployees(showLoader: false).then((_) {
+        if (mounted) _initEmployees();
+      });
+    }
   }
 
   void _initShift() {
@@ -122,34 +132,6 @@ class _AssignShiftScreenState extends State<AssignShiftScreen> {
         }
       }
     }
-
-    // Default fallback employee list if empty
-    if (list.isEmpty) {
-      final defaults = [
-        {'id': 1, 'name': 'Rahul Sharma', 'designation': 'UI/UX Designer', 'department': 'Design', 'selected': true},
-        {'id': 2, 'name': 'Neha Singh', 'designation': 'HR Executive', 'department': 'Human Resources', 'selected': true},
-        {'id': 3, 'name': 'Amit Kumar', 'designation': 'Marketing Executive', 'department': 'Marketing', 'selected': false},
-        {'id': 4, 'name': 'Vikram Joshi', 'designation': 'Backend Developer', 'department': 'Engineering', 'selected': false},
-        {'id': 5, 'name': 'Sneha Patel', 'designation': 'Frontend Developer', 'department': 'Engineering', 'selected': false},
-        {'id': 6, 'name': 'Sameer Khan', 'designation': 'QA Engineer', 'department': 'Quality Assurance', 'selected': false},
-        {'id': 7, 'name': 'Pooja Verma', 'designation': 'Operations Lead', 'department': 'Operations', 'selected': false},
-      ];
-
-      for (final d in defaults) {
-        final id = d['id'] as int;
-        final name = d['name'] as String;
-        list.add(
-          _AssignShiftScreenItem(
-            id: id,
-            name: name,
-            designation: d['designation'] as String,
-            department: d['department'] as String,
-            isSelected: _isEmployeePreAssigned(id, name) || (d['selected'] as bool),
-          ),
-        );
-      }
-    }
-
     setState(() {
       _employees = list;
     });

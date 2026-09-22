@@ -4,6 +4,8 @@ import 'package:iconsax/iconsax.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_text.dart';
 
+import '../../employee/management/controllers/employee_controller.dart';
+
 class RotationEmployee {
   final String id;
   final String name;
@@ -63,82 +65,65 @@ class ShiftRotationScreen extends StatefulWidget {
 
 class _ShiftRotationScreenState extends State<ShiftRotationScreen> {
   final List<RotationSchedule> _rotationsList = [];
-
-  // Complete corporate directory of employees to simulate assignment search
-  final List<RotationEmployee> _companyDirectory = [
-    RotationEmployee(id: 'emp1', name: 'Rahul Sharma', role: 'Software Engineer', email: 'rahul@example.com', avatarUrl: 'https://i.pravatar.cc/150?u=emp1', shiftName: 'Morning Shift'),
-    RotationEmployee(id: 'emp2', name: 'Neha Kapoor', role: 'HR Specialist', email: 'neha@example.com', avatarUrl: 'https://i.pravatar.cc/150?u=emp2', shiftName: 'General Shift'),
-    RotationEmployee(id: 'emp3', name: 'Amit Singh', role: 'Project Manager', email: 'amit@example.com', avatarUrl: 'https://i.pravatar.cc/150?u=emp3', shiftName: 'Morning Shift'),
-    RotationEmployee(id: 'emp4', name: 'Vikas Yadav', role: 'QA Lead', email: 'vikas@example.com', avatarUrl: 'https://i.pravatar.cc/150?u=emp4', shiftName: 'Evening Shift'),
-    RotationEmployee(id: 'emp5', name: 'Priya Patel', role: 'UX Designer', email: 'priya@example.com', avatarUrl: 'https://i.pravatar.cc/150?u=emp5', shiftName: 'General Shift'),
-    RotationEmployee(id: 'emp6', name: 'Rajesh Kumar', role: 'Support Engineer', email: 'rajesh@example.com', avatarUrl: 'https://i.pravatar.cc/150?u=emp6', shiftName: 'Night Shift'),
-    RotationEmployee(id: 'emp7', name: 'Sunil Verma', role: 'DevOps Engineer', email: 'sunil@example.com', avatarUrl: 'https://i.pravatar.cc/150?u=emp7', shiftName: 'Night Shift'),
-    RotationEmployee(id: 'emp8', name: 'Kiran Rao', role: 'Security Analyst', email: 'kiran@example.com', avatarUrl: 'https://i.pravatar.cc/150?u=emp8', shiftName: 'Evening Shift'),
-    RotationEmployee(id: 'emp9', name: 'Deepika Sen', role: 'Product Manager', email: 'deepika@example.com', avatarUrl: 'https://i.pravatar.cc/150?u=emp9', shiftName: 'General Shift'),
-    RotationEmployee(id: 'emp10', name: 'Rohan Deshmukh', role: 'Database Administrator', email: 'rohan@example.com', avatarUrl: 'https://i.pravatar.cc/150?u=emp10', shiftName: 'Night Shift'),
-  ];
+  final List<RotationEmployee> _companyDirectory = [];
 
   @override
   void initState() {
     super.initState();
-    _initializeMockData();
+    final empCtrl = Get.isRegistered<EmployeeController>()
+        ? Get.find<EmployeeController>()
+        : Get.put(EmployeeController());
+
+    if (empCtrl.employees.isEmpty) {
+      empCtrl.fetchEmployees(showLoader: false).then((_) {
+        if (mounted) {
+          _populateDirectoryAndMock();
+        }
+      });
+    } else {
+      _populateDirectoryAndMock();
+    }
+  }
+
+  void _populateDirectoryAndMock() {
+    final empCtrl = Get.find<EmployeeController>();
+    _companyDirectory.clear();
+
+    if (empCtrl.employees.isNotEmpty) {
+      for (final emp in empCtrl.employees) {
+        _companyDirectory.add(
+          RotationEmployee(
+            id: emp.id,
+            name: emp.name,
+            role: emp.designation.isNotEmpty ? emp.designation : emp.role,
+            email: emp.email,
+            avatarUrl: emp.profilePic ?? 'https://i.pravatar.cc/150?u=${emp.name.replaceAll(' ', '')}',
+            shiftName: emp.shift.isNotEmpty ? emp.shift : 'General Shift',
+          ),
+        );
+      }
+    }
+
+    setState(() {
+      _rotationsList.clear();
+      if (_companyDirectory.isNotEmpty) {
+        _initializeMockData();
+      }
+    });
   }
 
   void _initializeMockData() {
+    if (_companyDirectory.isEmpty) return;
+
+    final staffList = _companyDirectory;
     _rotationsList.addAll([
       RotationSchedule(
         id: 'r1',
-        title: 'Rotation - May 2025 - Week 1',
-        dates: '28 Apr - 04 May 2025',
-        shiftsCount: 3,
-        status: 'Completed',
-        assignedEmployees: [
-          _companyDirectory[0], // Rahul
-          _companyDirectory[1], // Neha
-          _companyDirectory[2], // Amit
-          _companyDirectory[3], // Vikas
-          _companyDirectory[4], // Priya
-        ],
-      ),
-      RotationSchedule(
-        id: 'r2',
-        title: 'Rotation - May 2025 - Week 2',
-        dates: '05 May - 11 May 2025',
-        shiftsCount: 3,
-        status: 'Completed',
-        assignedEmployees: [
-          _companyDirectory[0], // Rahul
-          _companyDirectory[1], // Neha
-          _companyDirectory[3], // Vikas
-          _companyDirectory[5], // Rajesh
-        ],
-      ),
-      RotationSchedule(
-        id: 'r3',
-        title: 'Rotation - May 2025 - Week 3',
-        dates: '12 May - 18 May 2025',
+        title: 'Rotation - Current Cycle',
+        dates: 'Active Cycle',
         shiftsCount: 3,
         status: 'Active',
-        assignedEmployees: [
-          _companyDirectory[2], // Amit
-          _companyDirectory[3], // Vikas
-          _companyDirectory[4], // Priya
-          _companyDirectory[5], // Rajesh
-          _companyDirectory[6], // Sunil
-        ],
-      ),
-      RotationSchedule(
-        id: 'r4',
-        title: 'Rotation - May 2025 - Week 4',
-        dates: '19 May - 25 May 2025',
-        shiftsCount: 3,
-        status: 'Upcoming',
-        assignedEmployees: [
-          _companyDirectory[0], // Rahul
-          _companyDirectory[4], // Priya
-          _companyDirectory[5], // Rajesh
-          _companyDirectory[6], // Sunil
-        ],
+        assignedEmployees: List.from(staffList),
       ),
     ]);
   }
@@ -801,11 +786,7 @@ class _ShiftRotationScreenState extends State<ShiftRotationScreen> {
     };
 
     // Preselected initial employees from directory to assign by default
-    final List<RotationEmployee> initialSelection = [
-      _companyDirectory[0], // Rahul
-      _companyDirectory[4], // Priya
-      _companyDirectory[5], // Rajesh
-    ];
+    final List<RotationEmployee> initialSelection = _companyDirectory.take(3).toList();
 
     String selectedStatus = 'Upcoming';
     String selectedCycle = 'Weekly';

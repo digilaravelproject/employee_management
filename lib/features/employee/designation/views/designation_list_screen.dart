@@ -17,7 +17,13 @@ class DesignationListScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = Get.find<DesignationController>();
-    final employeeController = Get.put(EmployeeController());
+    final employeeController = Get.isRegistered<EmployeeController>()
+        ? Get.find<EmployeeController>()
+        : Get.put(EmployeeController());
+
+    if (employeeController.employees.isEmpty) {
+      employeeController.fetchEmployees(showLoader: false);
+    }
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
