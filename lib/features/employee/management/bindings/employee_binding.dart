@@ -9,21 +9,30 @@ class EmployeeBinding extends Bindings {
   @override
   void dependencies() {
     if (!Get.isRegistered<ApiClient>()) {
-      Get.lazyPut<ApiClient>(() => ApiClient());
+      Get.lazyPut<ApiClient>(() => ApiClient(), fenix: true);
     }
 
-    Get.lazyPut<EmployeeRepositoryInterface>(
-      () => EmployeeRepository(apiClient: Get.find<ApiClient>()),
-    );
+    if (!Get.isRegistered<EmployeeRepositoryInterface>()) {
+      Get.lazyPut<EmployeeRepositoryInterface>(
+        () => EmployeeRepository(apiClient: Get.find<ApiClient>()),
+        fenix: true,
+      );
+    }
 
-    Get.lazyPut<CreateEmployeeUseCase>(
-      () => CreateEmployeeUseCase(Get.find<EmployeeRepositoryInterface>()),
-    );
+    if (!Get.isRegistered<CreateEmployeeUseCase>()) {
+      Get.lazyPut<CreateEmployeeUseCase>(
+        () => CreateEmployeeUseCase(Get.find<EmployeeRepositoryInterface>()),
+        fenix: true,
+      );
+    }
 
-    Get.lazyPut<EmployeeController>(
-      () => EmployeeController(
-        createEmployeeUseCase: Get.find<CreateEmployeeUseCase>(),
-      ),
-    );
+    if (!Get.isRegistered<EmployeeController>()) {
+      Get.lazyPut<EmployeeController>(
+        () => EmployeeController(
+          createEmployeeUseCase: Get.find<CreateEmployeeUseCase>(),
+        ),
+        fenix: true,
+      );
+    }
   }
 }

@@ -30,6 +30,10 @@ class CreateEmployeeRequestModel {
   final String salaryType;
   final String monthlyBaseSalary;
   final String salesTargetEnabled; // "0" or "1"
+  final String? salesTargetMetricType;
+  final String? salesTarget;
+  final String? salesTargetPeriod;
+  final String? incentiveCommissionPercent;
   final String? accountHolderName;
   final String? bankName;
   final String? accountNumber;
@@ -68,6 +72,10 @@ class CreateEmployeeRequestModel {
     required this.salaryType,
     required this.monthlyBaseSalary,
     this.salesTargetEnabled = '0',
+    this.salesTargetMetricType,
+    this.salesTarget,
+    this.salesTargetPeriod,
+    this.incentiveCommissionPercent,
     this.accountHolderName,
     this.bankName,
     this.accountNumber,
@@ -132,6 +140,20 @@ class CreateEmployeeRequestModel {
     if (noticePeriod != null && noticePeriod!.trim().isNotEmpty) {
       map['notice_period'] = noticePeriod!.trim();
     }
+    if (salesTargetEnabled == '1') {
+      if (salesTargetMetricType != null && salesTargetMetricType!.trim().isNotEmpty) {
+        map['sales_target_metric_type'] = salesTargetMetricType!.trim();
+      }
+      if (salesTarget != null && salesTarget!.trim().isNotEmpty) {
+        map['sales_target'] = salesTarget!.trim();
+      }
+      if (salesTargetPeriod != null && salesTargetPeriod!.trim().isNotEmpty) {
+        map['sales_target_period'] = salesTargetPeriod!.trim();
+      }
+      if (incentiveCommissionPercent != null && incentiveCommissionPercent!.trim().isNotEmpty) {
+        map['incentive_commission_percent'] = incentiveCommissionPercent!.trim();
+      }
+    }
     if (accountHolderName != null && accountHolderName!.trim().isNotEmpty) {
       map['account_holder_name'] = accountHolderName!.trim();
     }
@@ -148,9 +170,9 @@ class CreateEmployeeRequestModel {
       map['branch_name'] = branchName!.trim();
     }
 
-    // Role IDs: e.g. " [9]"
+    // Role IDs: e.g. "[9]"
     if (roleIds.isNotEmpty) {
-      map['role_ids'] = ' [${roleIds.join(', ')}]';
+      map['role_ids'] = '[${roleIds.join(',')}]';
     }
 
     final formData = FormData.fromMap(map);
@@ -169,7 +191,7 @@ class CreateEmployeeRequestModel {
         final filename = avatarPath!.split(Platform.pathSeparator).last;
         formData.files.add(
           MapEntry(
-            'avtar',
+            'avatar',
             await MultipartFile.fromFile(
               avatarPath!,
               filename: filename,

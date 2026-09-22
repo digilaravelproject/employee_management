@@ -476,49 +476,49 @@ class EmployeeController extends GetxController {
     try {
       final response = await _effectiveCreateEmployeeUseCase.execute(request);
       if (response.status) {
-        String empId = request.employeeId;
-        String newId = DateTime.now().millisecondsSinceEpoch.toString();
-        if (response.data is Map<String, dynamic>) {
-          final data = response.data as Map<String, dynamic>;
-          if (data['id'] != null) newId = data['id'].toString();
-          if (data['employee_id'] != null) empId = data['employee_id'].toString();
-        }
+        String empId = response.data?.employeeId ?? request.employeeId;
+        String newId = response.data?.id?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString();
 
         final double sal = double.tryParse(request.monthlyBaseSalary) ?? 0.0;
         final newEmp = EmployeeModel(
           id: newId,
           employeeId: empId,
-          name: request.name,
-          mobile: request.mobileNumber,
-          alternateMobile: request.alternateMobileNumber ?? '',
-          email: request.email,
-          gender: request.gender,
-          dob: request.dateOfBirth,
-          designation: request.designationId,
-          department: request.department,
-          team: request.team ?? 'Team Alpha',
+          name: response.data?.name ?? request.name,
+          mobile: response.data?.mobileNumber ?? request.mobileNumber,
+          alternateMobile: response.data?.alternateMobileNumber ?? request.alternateMobileNumber ?? '',
+          email: response.data?.email ?? request.email,
+          gender: response.data?.gender ?? request.gender,
+          dob: response.data?.dateOfBirth ?? request.dateOfBirth,
+          designation: response.data?.designation ?? request.designationId,
+          department: response.data?.department ?? request.department,
+          team: response.data?.team ?? request.team ?? 'Team Alpha',
           shift: request.assignedShiftId ?? 'Morning Shift',
-          workMode: request.workMode,
-          employeeType: request.employeeType,
-          employmentStatus: request.employmentStatus,
-          probationPeriod: request.probationPeriod ?? '3 Months',
-          noticePeriod: request.noticePeriod ?? '30 Days',
-          joiningDate: request.dateOfJoining,
-          salaryType: request.salaryType,
+          workMode: response.data?.workMode ?? request.workMode,
+          employeeType: response.data?.employeeType ?? request.employeeType,
+          employmentStatus: response.data?.employmentStatus ?? request.employmentStatus,
+          probationPeriod: response.data?.probationPeriod ?? request.probationPeriod ?? '3 Months',
+          noticePeriod: response.data?.noticePeriod ?? request.noticePeriod ?? '30 Days',
+          joiningDate: response.data?.dateOfJoining ?? request.dateOfJoining,
+          salaryType: response.data?.salaryType ?? request.salaryType,
           salary: sal,
           hasSalesTarget: request.salesTargetEnabled == '1',
-          address: request.streetAddress ?? '',
-          city: request.city ?? '',
-          state: request.state ?? '',
-          pincode: request.postalCode ?? '',
-          country: request.country ?? 'India',
-          emergencyContact: request.emergencyContact ?? '',
-          accountHolderName: request.accountHolderName ?? '',
-          bankName: request.bankName ?? '',
-          accountNumber: request.accountNumber ?? '',
-          ifscCode: request.ifscCode ?? '',
-          branchName: request.branchName ?? '',
-          skills: request.skills,
+          targetType: request.salesTargetMetricType ?? 'Revenue',
+          targetAmount: request.salesTarget ?? '0',
+          targetPeriod: request.salesTargetPeriod ?? 'Monthly',
+          incentivePercent: request.incentiveCommissionPercent ?? '0',
+          address: response.data?.streetAddress ?? request.streetAddress ?? '',
+          city: response.data?.city ?? request.city ?? '',
+          state: response.data?.state ?? request.state ?? '',
+          pincode: response.data?.postalCode ?? request.postalCode ?? '',
+          country: response.data?.country ?? request.country ?? 'India',
+          emergencyContact: response.data?.emergencyContact ?? request.emergencyContact ?? '',
+          accountHolderName: response.data?.accountHolderName ?? request.accountHolderName ?? '',
+          bankName: response.data?.bankName ?? request.bankName ?? '',
+          accountNumber: response.data?.accountNumber ?? request.accountNumber ?? '',
+          ifscCode: response.data?.ifscCode ?? request.ifscCode ?? '',
+          branchName: response.data?.branchName ?? request.branchName ?? '',
+          skills: response.data?.skills.isNotEmpty == true ? response.data!.skills : request.skills,
+          profilePic: response.data?.avatar,
           isActive: request.employmentStatus.toLowerCase() == 'active' || request.employmentStatus.toLowerCase() == 'probation',
         );
 

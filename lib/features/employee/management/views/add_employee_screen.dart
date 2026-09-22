@@ -349,6 +349,9 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
       if (match != null && match.id.isNotEmpty) {
         return match.id;
       }
+      if (desigCtrl.designations.isNotEmpty) {
+        return desigCtrl.designations.first.id;
+      }
     }
     return '2';
   }
@@ -362,6 +365,9 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
       );
       if (match != null && match.id.isNotEmpty) {
         return match.id;
+      }
+      if (shiftCtrl.shifts.isNotEmpty) {
+        return shiftCtrl.shifts.first.id;
       }
     }
     return '2';
@@ -412,6 +418,10 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
         salaryType: selectedSalaryType,
         monthlyBaseSalary: salaryVal,
         salesTargetEnabled: hasSalesTarget ? '1' : '0',
+        salesTargetMetricType: hasSalesTarget ? selectedTargetType : null,
+        salesTarget: hasSalesTarget ? targetAmountController.text.trim() : null,
+        salesTargetPeriod: hasSalesTarget ? selectedTargetPeriod : null,
+        incentiveCommissionPercent: hasSalesTarget ? incentivePercentController.text.trim() : null,
         accountHolderName: accountHolderNameController.text.trim(),
         bankName: bankNameController.text.trim(),
         accountNumber: accountNumberController.text.trim(),

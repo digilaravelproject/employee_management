@@ -251,17 +251,18 @@ class _HomeHeader extends StatelessWidget {
               }
             },
             borderRadius: BorderRadius.circular(22),
-            child: CircleAvatar(
-              radius: 22,
-              backgroundColor: AppColors.slate200,
-              backgroundImage: (avatarUrl.isNotEmpty && Uri.tryParse(avatarUrl)?.isAbsolute == true)
-                  ? NetworkImage(avatarUrl)
-                  : null,
-              onBackgroundImageError: (_, __) {},
-              child: (avatarUrl.isEmpty || Uri.tryParse(avatarUrl)?.isAbsolute != true)
-                  ? const Icon(Icons.person, color: AppColors.textColorSecondary, size: 22)
-                  : null,
-            ),
+            child: () {
+              final hasValidAvatar = avatarUrl.isNotEmpty && Uri.tryParse(avatarUrl)?.isAbsolute == true;
+              return CircleAvatar(
+                radius: 22,
+                backgroundColor: AppColors.slate200,
+                backgroundImage: hasValidAvatar ? NetworkImage(avatarUrl) : null,
+                onBackgroundImageError: hasValidAvatar ? (error, stackTrace) {} : null,
+                child: !hasValidAvatar
+                    ? const Icon(Icons.person, color: AppColors.textColorSecondary, size: 22)
+                    : null,
+              );
+            }(),
           ),
         ],
       );
@@ -1246,17 +1247,20 @@ class _TodayBirthdayCard extends StatelessWidget {
             const SizedBox(height: 8),
             Row(
               children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundColor: AppColors.slate200,
-                  backgroundImage: firstBday.avatar != null && firstBday.avatar!.isNotEmpty
-                      ? NetworkImage(firstBday.avatar!)
-                      : null,
-                  onBackgroundImageError: (_, __) {},
-                  child: (firstBday.avatar == null || firstBday.avatar!.isEmpty)
-                      ? const Icon(Icons.person, color: AppColors.textColorSecondary, size: 20)
-                      : null,
-                ),
+                () {
+                  final hasBdayAvatar = firstBday.avatar != null &&
+                      firstBday.avatar!.isNotEmpty &&
+                      Uri.tryParse(firstBday.avatar!)?.isAbsolute == true;
+                  return CircleAvatar(
+                    radius: 20,
+                    backgroundColor: AppColors.slate200,
+                    backgroundImage: hasBdayAvatar ? NetworkImage(firstBday.avatar!) : null,
+                    onBackgroundImageError: hasBdayAvatar ? (error, stackTrace) {} : null,
+                    child: !hasBdayAvatar
+                        ? const Icon(Icons.person, color: AppColors.textColorSecondary, size: 20)
+                        : null,
+                  );
+                }(),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
