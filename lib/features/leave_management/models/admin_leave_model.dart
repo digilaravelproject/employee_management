@@ -68,6 +68,50 @@ class AdminLeavePaginationModel {
   }
 }
 
+class LeaveBalanceOverviewModel {
+  final int leaveTypeId;
+  final String name;
+  final String code;
+  final int total;
+  final int taken;
+  final int pending;
+  final int remaining;
+
+  LeaveBalanceOverviewModel({
+    required this.leaveTypeId,
+    required this.name,
+    required this.code,
+    required this.total,
+    required this.taken,
+    required this.pending,
+    required this.remaining,
+  });
+
+  factory LeaveBalanceOverviewModel.fromJson(Map<String, dynamic> json) {
+    return LeaveBalanceOverviewModel(
+      leaveTypeId: int.tryParse(json['leave_type_id']?.toString() ?? '0') ?? 0,
+      name: json['name']?.toString() ?? '',
+      code: json['code']?.toString() ?? '',
+      total: int.tryParse(json['total']?.toString() ?? '0') ?? 0,
+      taken: int.tryParse(json['taken']?.toString() ?? '0') ?? 0,
+      pending: int.tryParse(json['pending']?.toString() ?? '0') ?? 0,
+      remaining: int.tryParse(json['remaining']?.toString() ?? '0') ?? 0,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'leave_type_id': leaveTypeId,
+      'name': name,
+      'code': code,
+      'total': total,
+      'taken': taken,
+      'pending': pending,
+      'remaining': remaining,
+    };
+  }
+}
+
 class AdminLeaveListResponseModel {
   final bool status;
   final String message;
@@ -75,6 +119,7 @@ class AdminLeaveListResponseModel {
   final AdminLeaveCountsModel? counts;
   final AdminLeavePaginationModel? pagination;
   final List<AdminLeaveItemModel> data;
+  final List<LeaveBalanceOverviewModel> leaveBalances;
 
   AdminLeaveListResponseModel({
     required this.status,
@@ -83,6 +128,7 @@ class AdminLeaveListResponseModel {
     this.counts,
     this.pagination,
     required this.data,
+    this.leaveBalances = const [],
   });
 
   factory AdminLeaveListResponseModel.fromJson(Map<String, dynamic> json) {
@@ -109,6 +155,14 @@ class AdminLeaveListResponseModel {
       pagination = AdminLeavePaginationModel.fromJson(json['pagination'] as Map<String, dynamic>);
     }
 
+    List<LeaveBalanceOverviewModel> balances = [];
+    if (json['leave_balances'] is List) {
+      balances = (json['leave_balances'] as List)
+          .whereType<Map<String, dynamic>>()
+          .map((b) => LeaveBalanceOverviewModel.fromJson(b))
+          .toList();
+    }
+
     return AdminLeaveListResponseModel(
       status: json['status'] == true ||
           json['status'] == 1 ||
@@ -119,6 +173,7 @@ class AdminLeaveListResponseModel {
       counts: counts,
       pagination: pagination,
       data: items,
+      leaveBalances: balances,
     );
   }
 
@@ -130,6 +185,7 @@ class AdminLeaveListResponseModel {
       if (counts != null) 'counts': counts!.toJson(),
       if (pagination != null) 'pagination': pagination!.toJson(),
       'data': data.map((d) => d.toJson()).toList(),
+      'leave_balances': leaveBalances.map((b) => b.toJson()).toList(),
     };
   }
 }
@@ -286,6 +342,10 @@ class AdminLeaveItemModel {
   final String? documentUrl;
   final String? createdAt;
   final String? updatedAt;
+  final String leaveTypeCode;
+  final String? assigneeName;
+  final String? contactDuringLeave;
+  final String? addressDuringLeave;
 
   AdminLeaveItemModel({
     required this.id,
@@ -305,6 +365,10 @@ class AdminLeaveItemModel {
     this.documentUrl,
     this.createdAt,
     this.updatedAt,
+    this.leaveTypeCode = '',
+    this.assigneeName,
+    this.contactDuringLeave,
+    this.addressDuringLeave,
   });
 
   factory AdminLeaveItemModel.fromJson(Map<String, dynamic> json) {
@@ -377,6 +441,15 @@ class AdminLeaveItemModel {
       normStatus = 'Cancelled';
     }
 
+    String lCode = '';
+    if (json['leave_type'] is Map) {
+      lCode = json['leave_type']['code']?.toString() ?? '';
+    }
+    String? aName;
+    if (json['assignee'] is Map) {
+      aName = json['assignee']['name']?.toString();
+    }
+
     return AdminLeaveItemModel(
       id: int.tryParse(json['id']?.toString() ?? '0') ?? 0,
       employee: emp,
@@ -386,7 +459,7 @@ class AdminLeaveItemModel {
       endDate: eDate,
       totalDays: days,
       duration: durString,
-      sessionType: json['session_type']?.toString() ?? 'Full Day',
+      sessionType: json['session']?.toString() ?? json['session_type']?.toString() ?? 'Full Day',
       reason: json['reason']?.toString() ?? '',
       status: normStatus,
       appliedAt: appAt,
@@ -395,6 +468,10 @@ class AdminLeaveItemModel {
       documentUrl: json['attachment_path']?.toString() ?? json['document']?.toString(),
       createdAt: json['created_at']?.toString(),
       updatedAt: json['updated_at']?.toString(),
+      leaveTypeCode: lCode,
+      assigneeName: aName,
+      contactDuringLeave: json['contact_during_leave']?.toString(),
+      addressDuringLeave: json['address_during_leave']?.toString(),
     );
   }
 
@@ -488,6 +565,10 @@ class AdminLeaveDetailDataModel {
   final AdminLeaveReviewerModel? reviewer;
   final List<AdminLeaveActionModel> actions;
   final AdminLeaveBalanceModel leaveBalance;
+  final String session;
+  final String? addressDuringLeave;
+  final String? assigneeName;
+  final String? assigneeDesignation;
 
   AdminLeaveDetailDataModel({
     required this.id,
@@ -511,6 +592,10 @@ class AdminLeaveDetailDataModel {
     this.reviewer,
     this.actions = const [],
     required this.leaveBalance,
+    this.session = 'Full Day',
+    this.addressDuringLeave,
+    this.assigneeName,
+    this.assigneeDesignation,
   });
 
   factory AdminLeaveDetailDataModel.fromJson(Map<String, dynamic> json) {
@@ -618,6 +703,10 @@ class AdminLeaveDetailDataModel {
       reviewer: rev,
       actions: actList,
       leaveBalance: bal,
+      session: json['session']?.toString() ?? json['session_type']?.toString() ?? 'Full Day',
+      addressDuringLeave: json['address_during_leave']?.toString(),
+      assigneeName: json['assignee'] is Map ? json['assignee']['name']?.toString() : null,
+      assigneeDesignation: json['assignee'] is Map ? json['assignee']['designation']?.toString() : null,
     );
   }
 

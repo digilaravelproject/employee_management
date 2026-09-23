@@ -11,6 +11,8 @@ abstract class AdminLeaveRepositoryInterface {
     dynamic leaveTypeId,
     String? search,
     int? page,
+    int? perPage,
+    int? year,
   });
   Future<AdminLeaveDetailResponseModel> getLeaveRequestDetails(int id);
   Future<ResponseModel> approveLeaveRequest(int id, {String? note});

@@ -20,12 +20,20 @@ class AdminLeaveRepository implements AdminLeaveRepositoryInterface {
     dynamic leaveTypeId,
     String? search,
     int? page,
+    int? perPage,
+    int? year,
   }) async {
     try {
       final Map<String, dynamic> queryParams = {};
 
-      if (status != null && status.isNotEmpty && status.toLowerCase() != 'all') {
-        queryParams['status'] = status;
+      if (status != null && status.isNotEmpty) {
+        queryParams['status'] = status.toLowerCase();
+      }
+      if (year != null) {
+        queryParams['year'] = year;
+      }
+      if (perPage != null && perPage > 0) {
+        queryParams['per_page'] = perPage;
       }
       if (dateRange != null && dateRange.isNotEmpty && dateRange.toLowerCase() != 'all' && dateRange != 'All Time') {
         queryParams['date_range'] = dateRange;

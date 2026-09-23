@@ -691,127 +691,7 @@ class _ActivityItem extends StatelessWidget {
 
 // ── EMPLOYEE VIEW WIDGETS ───────────────────────────────────────────────────
 
-class _EmployeeShiftCard extends StatelessWidget {
-  const _EmployeeShiftCard();
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF2563EB), Color(0xFF3B82F6)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const AppText('Current Shift', color: Colors.white, fontSize: 13),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.green.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
-                        ),
-                        child: const AppText('• Ongoing', color: Colors.green, fontSize: 10, fontWeight: FontWeight.w700),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  const AppText('09:00 AM – 06:00 PM', color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800),
-                  const SizedBox(height: 8),
-                  const AppText('General Shift', color: Colors.white70, fontSize: 12),
-                ],
-              ),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Column(
-                  children: [
-                    AppText('May', color: AppColors.textColorSecondary, fontSize: 10),
-                    AppText('20', color: AppColors.textColorPrimary, fontSize: 20, fontWeight: FontWeight.w800),
-                    AppText('Tue', color: AppColors.textColorSecondary, fontSize: 10),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AttendanceActionCard extends StatelessWidget {
-  const _AttendanceActionCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: AppColors.slate200),
-          ),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  const Expanded(child: _ActionStat(label: 'Check-in', time: '08:55 AM', status: 'Completed', statusColor: Colors.green)),
-                  Container(height: 40, width: 1, color: AppColors.slate200),
-                  const Expanded(child: _ActionStat(label: 'Check-out', time: '--:-- --', status: 'Pending', statusColor: Colors.orange)),
-                ],
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 20),
-        Container(
-          width: double.infinity,
-          height: 56,
-          decoration: BoxDecoration(
-            color: AppColors.primaryColor,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primaryColor.withValues(alpha: 0.3),
-                blurRadius: 15,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: const Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              AppText('Mark Attendance', color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700),
-              SizedBox(width: 12),
-              Icon(Iconsax.finger_scan, color: Colors.white, size: 22),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
 
 
 
@@ -1003,6 +883,14 @@ class EmployeeShiftAttendanceCard extends StatelessWidget {
                               status: checkInStatus,
                               icon: isCheckedIn ? Iconsax.tick_circle : Iconsax.clock,
                               color: checkInColor,
+                              onTap: isCheckedIn
+                                  ? null
+                                  : () => _showCheckInBottomSheet(
+                                        context,
+                                        dashboardController,
+                                        shiftName: shiftName,
+                                        shiftTiming: shiftTiming,
+                                      ),
                             ),
                           ),
 
@@ -1019,6 +907,14 @@ class EmployeeShiftAttendanceCard extends StatelessWidget {
                               status: checkOutStatus,
                               icon: isCheckedOut ? Iconsax.tick_circle : Iconsax.clock,
                               color: checkOutColor,
+                              onTap: (isCheckedIn && !isCheckedOut)
+                                  ? () => _showCheckOutBottomSheet(
+                                        context,
+                                        dashboardController,
+                                        shiftName: shiftName,
+                                        shiftTiming: shiftTiming,
+                                      )
+                                  : null,
                             ),
                           ),
                         ],
@@ -1027,26 +923,51 @@ class EmployeeShiftAttendanceCard extends StatelessWidget {
 
                     const SizedBox(height: 18),
 
-                    AppButton(
-                      text: isCheckedOut
-                          ? 'Attendance Completed'
-                          : (isCheckedIn ? 'Check Out' : 'Mark Attendance'),
-                      height: 50,
-                      borderRadius: 16,
-                      color: AppColors.primaryColor,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      icon: const Icon(
-                        Iconsax.finger_scan,
-                        color: Colors.white,
-                        size: 22,
-                      ),
-                      onPressed: () {
-                        if (Get.isRegistered<DashboardController>()) {
-                          Get.find<DashboardController>().changeIndex(1);
-                        }
-                      },
-                    ),
+                    Obx(() {
+                      final isCheckingIn = dashboardController.isCheckingIn.value;
+                      final isCheckingOut = dashboardController.isCheckingOut.value;
+                      final isLoading = isCheckingIn || isCheckingOut;
+
+                      return AppButton(
+                        text: isCheckedOut
+                            ? 'Attendance Completed'
+                            : (isCheckedIn ? 'Clock Out' : 'Check In'),
+                        isLoading: isLoading,
+                        height: 50,
+                        borderRadius: 16,
+                        color: isCheckedOut
+                            ? AppColors.slate400
+                            : (isCheckedIn ? const Color(0xFFEF4444) : AppColors.primaryColor),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        icon: isLoading
+                            ? null
+                            : Icon(
+                                isCheckedIn ? Iconsax.logout : Iconsax.finger_scan,
+                                color: Colors.white,
+                                size: 22,
+                              ),
+                        onPressed: isLoading || isCheckedOut
+                            ? null
+                            : () {
+                                if (!isCheckedIn) {
+                                  _showCheckInBottomSheet(
+                                    context,
+                                    dashboardController,
+                                    shiftName: shiftName,
+                                    shiftTiming: shiftTiming,
+                                  );
+                                } else {
+                                  _showCheckOutBottomSheet(
+                                    context,
+                                    dashboardController,
+                                    shiftName: shiftName,
+                                    shiftTiming: shiftTiming,
+                                  );
+                                }
+                              },
+                      );
+                    }),
                   ],
                 ),
               ),
@@ -1056,6 +977,432 @@ class EmployeeShiftAttendanceCard extends StatelessWidget {
       );
     });
   }
+
+  void _showCheckInBottomSheet(
+    BuildContext context,
+    DashboardController controller, {
+    required String shiftName,
+    required String shiftTiming,
+  }) {
+    final notesController = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (bottomSheetContext) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(bottomSheetContext).viewInsets.bottom,
+          ),
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(24, 20, 24, 28),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 44,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: AppColors.slate200,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryColor.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Iconsax.location,
+                          color: AppColors.primaryColor,
+                          size: 26,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            AppText(
+                              'Attendance Check-In',
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                            ),
+                            SizedBox(height: 3),
+                            AppText(
+                              'Real-time GPS coordinates will be captured',
+                              fontSize: 12,
+                              color: AppColors.textColorSecondary,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Shift & GPS Badge card
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.slate200),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Iconsax.clock, size: 16, color: AppColors.primaryColor),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: AppText(
+                                '$shiftName ($shiftTiming)',
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textColorPrimary,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            const Icon(Iconsax.gps, size: 16, color: Color(0xFF10B981)),
+                            const SizedBox(width: 8),
+                            const Expanded(
+                              child: AppText(
+                                'Current GPS latitude & longitude will be captured',
+                                fontSize: 12,
+                                color: Color(0xFF047857),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+                  const AppText(
+                    'Notes (Optional)',
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textColorPrimary,
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: notesController,
+                    maxLines: 2,
+                    decoration: InputDecoration(
+                      hintText: 'e.g. Checked in from the Pune office',
+                      hintStyle: const TextStyle(
+                        color: AppColors.textColorHint,
+                        fontSize: 13,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppColors.slate200),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppColors.slate200),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppColors.primaryColor),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.of(bottomSheetContext).pop(),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            side: const BorderSide(color: AppColors.slate300),
+                          ),
+                          child: const AppText(
+                            'Cancel',
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textColorSecondary,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Obx(() {
+                          final isCheckingIn = controller.isCheckingIn.value;
+                          return AppButton(
+                            text: 'Confirm Check-In',
+                            isLoading: isCheckingIn,
+                            height: 48,
+                            borderRadius: 14,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primaryColor,
+                            onPressed: isCheckingIn
+                                ? null
+                                : () async {
+                                    final success = await controller.checkIn(
+                                      notes: notesController.text,
+                                    );
+                                    if (success && Get.isBottomSheetOpen == true) {
+                                      Get.back();
+                                    }
+                                  },
+                          );
+                        }),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showCheckOutBottomSheet(
+    BuildContext context,
+    DashboardController controller, {
+    required String shiftName,
+    required String shiftTiming,
+  }) {
+    final notesController = TextEditingController(text: 'Work completed');
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (bottomSheetContext) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(bottomSheetContext).viewInsets.bottom,
+          ),
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(24, 20, 24, 28),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 44,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: AppColors.slate200,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEF4444).withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Iconsax.logout,
+                          color: Color(0xFFEF4444),
+                          size: 26,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            AppText(
+                              'Clock Out / Check-Out',
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                            ),
+                            SizedBox(height: 3),
+                            AppText(
+                              'Real-time GPS coordinates will be captured',
+                              fontSize: 12,
+                              color: AppColors.textColorSecondary,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Shift & GPS Badge card
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.slate200),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Iconsax.clock, size: 16, color: AppColors.primaryColor),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: AppText(
+                                '$shiftName ($shiftTiming)',
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textColorPrimary,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            const Icon(Iconsax.gps, size: 16, color: Color(0xFF10B981)),
+                            const SizedBox(width: 8),
+                            const Expanded(
+                              child: AppText(
+                                'Current GPS latitude & longitude will be captured',
+                                fontSize: 12,
+                                color: Color(0xFF047857),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+                  const AppText(
+                    'Notes',
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textColorPrimary,
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: notesController,
+                    maxLines: 2,
+                    decoration: InputDecoration(
+                      hintText: 'e.g. Work completed',
+                      hintStyle: const TextStyle(
+                        color: AppColors.textColorHint,
+                        fontSize: 13,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppColors.slate200),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppColors.slate200),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFFEF4444)),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.of(bottomSheetContext).pop(),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            side: const BorderSide(color: AppColors.slate300),
+                          ),
+                          child: const AppText(
+                            'Cancel',
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textColorSecondary,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Obx(() {
+                          final isCheckingOut = controller.isCheckingOut.value;
+                          return AppButton(
+                            text: 'Confirm Clock-Out',
+                            isLoading: isCheckingOut,
+                            height: 48,
+                            borderRadius: 14,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFFEF4444),
+                            onPressed: isCheckingOut
+                                ? null
+                                : () async {
+                                    final success = await controller.checkOut(
+                                      notes: notesController.text,
+                                    );
+                                    if (success && Get.isBottomSheetOpen == true) {
+                                      Get.back();
+                                    }
+                                  },
+                          );
+                        }),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
 }
 
 class _CheckItem extends StatelessWidget {
@@ -1064,6 +1411,7 @@ class _CheckItem extends StatelessWidget {
   final String status;
   final IconData icon;
   final Color color;
+  final VoidCallback? onTap;
 
   const _CheckItem({
     required this.title,
@@ -1071,86 +1419,57 @@ class _CheckItem extends StatelessWidget {
     required this.status,
     required this.icon,
     required this.color,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        AppText(
-          title,
-          color: AppColors.textColorSecondary,
-          fontSize: 13,
-          fontWeight: FontWeight.w600,
-        ),
-        const SizedBox(height: 10),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: color, size: 20),
-            const SizedBox(width: 7),
-            AppText(
-              time,
-              color: AppColors.textColorPrimary,
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Column(
+        children: [
+          AppText(
+            title,
+            color: AppColors.textColorSecondary,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: color, size: 20),
+              const SizedBox(width: 7),
+              AppText(
+                time,
+                color: AppColors.textColorPrimary,
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
             ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(10),
+            child: AppText(
+              status,
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
           ),
-          child: AppText(
-            status,
-            color: color,
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
 
-class _ActionStat extends StatelessWidget {
-  final String label;
-  final String time;
-  final String status;
-  final Color statusColor;
 
-  const _ActionStat({required this.label, required this.time, required this.status, required this.statusColor});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        AppText(label, fontSize: 11, color: AppColors.textColorSecondary),
-        const SizedBox(height: 8),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.check_circle_rounded, color: statusColor, size: 18),
-            const SizedBox(width: 8),
-            AppText(time, fontSize: 16, fontWeight: FontWeight.w800),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          decoration: BoxDecoration(
-            color: statusColor.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: AppText(status, color: statusColor, fontSize: 10, fontWeight: FontWeight.w700),
-        ),
-      ],
-    );
-  }
-}
 
 class _TodayBirthdayCard extends StatelessWidget {
   const _TodayBirthdayCard();

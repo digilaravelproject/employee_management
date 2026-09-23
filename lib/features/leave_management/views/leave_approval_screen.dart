@@ -59,7 +59,7 @@ class _LeaveApprovalScreenState extends State<LeaveApprovalScreen> {
           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textColorPrimary),
           onPressed: () => Get.back(),
         ),
-        title: const AppText('Leave Approval', fontSize: 18, fontWeight: FontWeight.bold),
+        title: const AppText('Leave Details', fontSize: 18, fontWeight: FontWeight.bold),
         centerTitle: false,
         actions: [
           IconButton(
@@ -303,6 +303,8 @@ class _LeaveApprovalScreenState extends State<LeaveApprovalScreen> {
           _buildDivider(),
           _buildDetailRow('Total Days', duration, isBoldValue: true),
           _buildDivider(),
+          _buildDetailRow('Session', detail?.session ?? fallback?['session'] ?? 'Full Day'),
+          _buildDivider(),
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: Row(
@@ -325,6 +327,17 @@ class _LeaveApprovalScreenState extends State<LeaveApprovalScreen> {
           if (contact.isNotEmpty) ...[
             _buildDivider(),
             _buildDetailRow('Contact During Leave', contact),
+          ],
+          if (detail?.addressDuringLeave != null && detail!.addressDuringLeave!.isNotEmpty) ...[
+            _buildDivider(),
+            _buildDetailRow('Address During Leave', detail.addressDuringLeave!),
+          ],
+          if (detail?.assigneeName != null && detail!.assigneeName!.isNotEmpty) ...[
+            _buildDivider(),
+            _buildDetailRow(
+              'Handover / Assigned To',
+              '${detail.assigneeName!}${detail.assigneeDesignation != null && detail.assigneeDesignation!.isNotEmpty ? ' (${detail.assigneeDesignation!})' : ''}',
+            ),
           ],
           _buildDivider(),
           _buildDetailRow('Applied On', appliedOn),
@@ -543,260 +556,8 @@ class _LeaveApprovalScreenState extends State<LeaveApprovalScreen> {
     );
   }
 
-  // ── Approve Confirmation Dialog ────────────────────────────────
-  void _showApproveConfirmationDialog(int leaveId) {
-    final noteController = TextEditingController(text: 'Approved by reporting manager.');
-
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-          actionsPadding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-          title: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.green.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.check_circle_outline, color: Colors.green, size: 24),
-              ),
-              const SizedBox(width: 12),
-              const AppText(
-                'Approve Leave',
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textColorPrimary,
-              ),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const AppText(
-                'Are you sure you want to approve this leave request?',
-                fontSize: 13,
-                color: AppColors.textColorSecondary,
-              ),
-              const SizedBox(height: 16),
-              const AppText(
-                'Approval Note',
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textColorPrimary,
-              ),
-              const SizedBox(height: 6),
-              TextField(
-                controller: noteController,
-                maxLines: 3,
-                style: const TextStyle(fontSize: 13, color: AppColors.textColorPrimary),
-                decoration: InputDecoration(
-                  hintText: 'Add an approval note...',
-                  hintStyle: const TextStyle(fontSize: 12, color: AppColors.textColorHint),
-                  filled: true,
-                  fillColor: AppColors.slate50,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppColors.borderColor),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppColors.borderColor),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Colors.green),
-                  ),
-                  contentPadding: const EdgeInsets.all(12),
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const AppText(
-                'Cancel',
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textColorSecondary,
-              ),
-            ),
-            Obx(() {
-              final isApproving = controller.isApproving.value;
-              return ElevatedButton(
-                onPressed: isApproving
-                    ? null
-                    : () async {
-                        Navigator.of(ctx).pop();
-                        await controller.approveLeave(
-                          leaveId,
-                          note: noteController.text.trim().isNotEmpty
-                              ? noteController.text.trim()
-                              : 'Approved by reporting manager.',
-                        );
-                      },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-                child: isApproving
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                      )
-                    : const AppText(
-                        'Confirm Approve',
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-              );
-            }),
-          ],
-        );
-      },
-    );
-  }
-
-  // ── Reject Confirmation Dialog ─────────────────────────────────
-  void _showRejectConfirmationDialog(int leaveId) {
-    final noteController = TextEditingController(text: 'Insufficient supporting information.');
-
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-          actionsPadding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-          title: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.redAccent.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.cancel_outlined, color: Colors.redAccent, size: 24),
-              ),
-              const SizedBox(width: 12),
-              const AppText(
-                'Reject Leave',
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textColorPrimary,
-              ),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const AppText(
-                'Please provide a note or reason for rejecting this leave request.',
-                fontSize: 13,
-                color: AppColors.textColorSecondary,
-              ),
-              const SizedBox(height: 16),
-              const AppText(
-                'Rejection Reason / Note',
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textColorPrimary,
-              ),
-              const SizedBox(height: 6),
-              TextField(
-                controller: noteController,
-                maxLines: 3,
-                style: const TextStyle(fontSize: 13, color: AppColors.textColorPrimary),
-                decoration: InputDecoration(
-                  hintText: 'Add a rejection reason...',
-                  hintStyle: const TextStyle(fontSize: 12, color: AppColors.textColorHint),
-                  filled: true,
-                  fillColor: AppColors.slate50,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppColors.borderColor),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppColors.borderColor),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Colors.redAccent),
-                  ),
-                  contentPadding: const EdgeInsets.all(12),
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const AppText(
-                'Cancel',
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textColorSecondary,
-              ),
-            ),
-            Obx(() {
-              final isRejecting = controller.isRejecting.value;
-              return ElevatedButton(
-                onPressed: isRejecting
-                    ? null
-                    : () async {
-                        Navigator.of(ctx).pop();
-                        await controller.rejectLeave(
-                          leaveId,
-                          note: noteController.text.trim().isNotEmpty
-                              ? noteController.text.trim()
-                              : 'Insufficient supporting information.',
-                        );
-                      },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.redAccent,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-                child: isRejecting
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                      )
-                    : const AppText(
-                        'Confirm Reject',
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-              );
-            }),
-          ],
-        );
-      },
-    );
-  }
-
   // ── Bottom Action Bar ──────────────────────────────────────────
   Widget _buildBottomActionBar(AdminLeaveDetailDataModel? detail, Map<String, dynamic>? fallback) {
-    final status = detail?.status ?? fallback?['status'] ?? 'Pending';
-    final isPending = status.toLowerCase() == 'pending';
-    final leaveId = detail?.id ?? resolvedLeaveId;
-
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -811,76 +572,19 @@ class _LeaveApprovalScreenState extends State<LeaveApprovalScreen> {
       ),
       child: SafeArea(
         top: false,
-        child: isPending && leaveId != null
-            ? Obx(() {
-                final isApproving = controller.isApproving.value;
-                final isRejecting = controller.isRejecting.value;
-                final isBusy = isApproving || isRejecting;
-
-                return Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: isBusy ? null : () => _showRejectConfirmationDialog(leaveId),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          side: const BorderSide(color: Colors.redAccent),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                        child: isRejecting
-                            ? const SizedBox(
-                                height: 18,
-                                width: 18,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.redAccent),
-                              )
-                            : const AppText('Reject', fontSize: 14, fontWeight: FontWeight.bold, color: Colors.redAccent),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: isBusy ? null : () => _showApproveConfirmationDialog(leaveId),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                        child: isApproving
-                            ? const SizedBox(
-                                height: 18,
-                                width: 18,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                              )
-                            : const AppText('Approve', fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
-                      ),
-                    ),
-                  ],
-                );
-              })
-            : SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () => Get.back(),
-                  icon: Icon(
-                    status.toLowerCase() == 'approved' ? Icons.check_circle : Icons.info,
-                    size: 18,
-                    color: Colors.white,
-                  ),
-                  label: AppText(
-                    'Status: $status',
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: status.toLowerCase() == 'approved' ? Colors.green : Colors.grey[700],
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                ),
-              ),
+        child: SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: () => Get.back(),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryColor,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const AppText('Back', fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+          ),
+        ),
       ),
     );
   }
