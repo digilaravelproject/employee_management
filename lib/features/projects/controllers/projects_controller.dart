@@ -48,35 +48,168 @@ class ProjectsController extends GetxController {
   }
 
   void _initializeDummyProjects() {
+    // Standard Project Modules for Website Redesign
+    final p1Modules = [
+      const ProjectModule(
+        id: 'mod_1',
+        name: 'UI/UX & Design System',
+        description: 'Wireframes, visual components, typography and design tokens.',
+        subModules: [
+          ProjectSubModule(id: 'sub_1_1', name: 'Wireframes & Architecture', description: 'Low-fidelity layout blueprints'),
+          ProjectSubModule(id: 'sub_1_2', name: 'Design Tokens & Theme', description: 'Color palette and typography specs'),
+          ProjectSubModule(id: 'sub_1_3', name: 'Interactive Prototypes', description: 'Figma click-through validation'),
+        ],
+      ),
+      const ProjectModule(
+        id: 'mod_2',
+        name: 'Frontend Development',
+        description: 'Responsive user interface, state management, and asset rendering.',
+        subModules: [
+          ProjectSubModule(id: 'sub_2_1', name: 'Core Layout & Navigation', description: 'Scaffold, sidebars and headers'),
+          ProjectSubModule(id: 'sub_2_2', name: 'Component Library', description: 'Reusable widgets and controls'),
+          ProjectSubModule(id: 'sub_2_3', name: 'Form Validation', description: 'Input masks and error states'),
+        ],
+      ),
+      const ProjectModule(
+        id: 'mod_3',
+        name: 'Backend & APIs',
+        description: 'Authentication, database models, payment endpoints and webhooks.',
+        subModules: [
+          ProjectSubModule(id: 'sub_3_1', name: 'OAuth & Session Management', description: 'JWT authentication endpoints'),
+          ProjectSubModule(id: 'sub_3_2', name: 'Database Schemas', description: 'PostgreSQL tables and migration scripts'),
+          ProjectSubModule(id: 'sub_3_3', name: 'Payment Integrations', description: 'Stripe and Razorpay gateways'),
+        ],
+      ),
+      const ProjectModule(
+        id: 'mod_4',
+        name: 'QA & Testing',
+        description: 'Automated test suites, user acceptance and performance optimization.',
+        subModules: [
+          ProjectSubModule(id: 'sub_4_1', name: 'Regression Testing', description: 'End to end flow verification'),
+          ProjectSubModule(id: 'sub_4_2', name: 'Load & Benchmark Testing', description: 'Stress tests under high traffic'),
+        ],
+      ),
+    ];
+
     // Project 1: Website Redesign
     final proj1Tasks = [
-      ProjectTask(id: 't1', title: 'Create wireframes and mockups', category: 'Design', status: 'Done', dueDate: DateTime(2024, 4, 12), assignee: allEmployees[0]),
-      ProjectTask(id: 't2', title: 'UI Design Implementation', category: 'Design', status: 'Done', dueDate: DateTime(2024, 4, 18), assignee: allEmployees[0]),
-      ProjectTask(id: 't3', title: 'Frontend Development', category: 'Development', status: 'In Progress', dueDate: DateTime(2024, 4, 22), assignee: allEmployees[1]),
-      ProjectTask(id: 't4', title: 'Backend Integration', category: 'Development', status: 'In Progress', dueDate: DateTime(2024, 4, 28), assignee: allEmployees[2]),
-      ProjectTask(id: 't5', title: 'Testing and Bug Fixing', category: 'Testing', status: 'To Do', dueDate: DateTime(2024, 5, 5), assignee: allEmployees[4]),
-      ProjectTask(id: 't6', title: 'User Acceptance Testing', category: 'Testing', status: 'To Do', dueDate: DateTime(2024, 5, 8), assignee: allEmployees[3]),
-      ProjectTask(id: 't7', title: 'Deployment and Launch', category: 'Development', status: 'To Do', dueDate: DateTime(2024, 5, 12), assignee: allEmployees[4]),
+      ProjectTask(
+        id: 't1',
+        title: 'Create wireframes and mockups',
+        category: 'Design',
+        status: 'Done',
+        dueDate: DateTime(2024, 4, 12),
+        assignee: allEmployees[0],
+        moduleName: 'UI/UX & Design System',
+        subModuleName: 'Wireframes & Architecture',
+      ),
+      ProjectTask(
+        id: 't2',
+        title: 'UI Design Implementation',
+        category: 'Design',
+        status: 'Done',
+        dueDate: DateTime(2024, 4, 18),
+        assignee: allEmployees[0],
+        moduleName: 'UI/UX & Design System',
+        subModuleName: 'Design Tokens & Theme',
+      ),
+      ProjectTask(
+        id: 't3',
+        title: 'Frontend Development',
+        category: 'Development',
+        status: 'In Progress',
+        dueDate: DateTime(2024, 4, 22),
+        assignee: allEmployees[1],
+        moduleName: 'Frontend Development',
+        subModuleName: 'Core Layout & Navigation',
+      ),
+      ProjectTask(
+        id: 't4',
+        title: 'Backend Integration',
+        category: 'Development',
+        status: 'In Progress',
+        dueDate: DateTime(2024, 4, 28),
+        assignee: allEmployees[2],
+        moduleName: 'Backend & APIs',
+        subModuleName: 'OAuth & Session Management',
+      ),
+      ProjectTask(
+        id: 't5',
+        title: 'Testing and Bug Fixing',
+        category: 'Testing',
+        status: 'To Do',
+        dueDate: DateTime(2024, 5, 5),
+        assignee: allEmployees[4],
+        moduleName: 'QA & Testing',
+        subModuleName: 'Regression Testing',
+      ),
+      ProjectTask(
+        id: 't6',
+        title: 'User Acceptance Testing',
+        category: 'Testing',
+        status: 'To Do',
+        dueDate: DateTime(2024, 5, 8),
+        assignee: allEmployees[3],
+        moduleName: 'QA & Testing',
+        subModuleName: 'Regression Testing',
+      ),
+      ProjectTask(
+        id: 't7',
+        title: 'Deployment and Launch',
+        category: 'Development',
+        status: 'To Do',
+        dueDate: DateTime(2024, 5, 12),
+        assignee: allEmployees[4],
+        moduleName: 'Frontend Development',
+        subModuleName: 'Core Layout & Navigation',
+      ),
     ];
-    // Pad to match "24 tasks" metric in the mockup: 10 Done, 8 In Progress, 6 Pending (To Do)
+    // Additional tasks
     for (int i = 8; i <= 15; i++) {
-      proj1Tasks.add(ProjectTask(id: 't$i', title: 'Asset Redesign Milestone #$i', category: 'Design', status: 'Done', dueDate: DateTime(2024, 4, 15), assignee: allEmployees[0]));
+      proj1Tasks.add(ProjectTask(
+        id: 't$i',
+        title: 'Asset Redesign Milestone #$i',
+        category: 'Design',
+        status: 'Done',
+        dueDate: DateTime(2024, 4, 15),
+        assignee: allEmployees[0],
+        moduleName: 'UI/UX & Design System',
+        subModuleName: 'Design Tokens & Theme',
+      ));
     }
     for (int i = 16; i <= 21; i++) {
-      proj1Tasks.add(ProjectTask(id: 't$i', title: 'Responsive UI Coding #$i', category: 'Development', status: 'In Progress', dueDate: DateTime(2024, 4, 25), assignee: allEmployees[1]));
+      proj1Tasks.add(ProjectTask(
+        id: 't$i',
+        title: 'Responsive UI Coding #$i',
+        category: 'Development',
+        status: 'In Progress',
+        dueDate: DateTime(2024, 4, 25),
+        assignee: allEmployees[1],
+        moduleName: 'Frontend Development',
+        subModuleName: 'Component Library',
+      ));
     }
     for (int i = 22; i <= 24; i++) {
-      proj1Tasks.add(ProjectTask(id: 't$i', title: 'Quality Assurance check #$i', category: 'Testing', status: 'To Do', dueDate: DateTime(2024, 5, 1), assignee: allEmployees[4]));
+      proj1Tasks.add(ProjectTask(
+        id: 't$i',
+        title: 'Quality Assurance check #$i',
+        category: 'Testing',
+        status: 'To Do',
+        dueDate: DateTime(2024, 5, 1),
+        assignee: allEmployees[4],
+        moduleName: 'QA & Testing',
+        subModuleName: 'Regression Testing',
+      ));
     }
 
     final proj1Timeline = [
       ProjectTimelineEvent(id: 'm1', title: 'Project Created', subtitle: '10 Apr 2024 • 10:30 AM', date: DateTime(2024, 4, 10), isCompleted: true),
       ProjectTimelineEvent(id: 'm2', title: 'Requirement Gathering', subtitle: '12 Apr 2024 • 02:00 PM', date: DateTime(2024, 4, 12), isCompleted: true),
-      ProjectTimelineEvent(id: 'm3', title: 'Design Phase', subtitle: '18 Apr 2024 • 11:15 AM', date: DateTime(2024, 4, 18), isCompleted: true),
-      ProjectTimelineEvent(id: 'm4', title: 'Development Phase', subtitle: '22 Apr 2024 • 09:00 AM', date: DateTime(2024, 4, 22), isCompleted: true),
-      ProjectTimelineEvent(id: 'm5', title: 'Testing Phase', subtitle: 'In Progress • Expected by 05 May 2024', date: DateTime(2024, 5, 5), isCompleted: false),
-      ProjectTimelineEvent(id: 'm6', title: 'Review & Feedback', subtitle: 'Scheduled', date: DateTime(2024, 5, 10), isCompleted: false),
-      ProjectTimelineEvent(id: 'm7', title: 'Project Completed', subtitle: 'Scheduled', date: DateTime(2024, 5, 15), isCompleted: false),
+      ProjectTimelineEvent(id: 'm3', title: 'Design Phase Completed', subtitle: '18 Apr 2024 • 11:15 AM', date: DateTime(2024, 4, 18), isCompleted: true),
+      ProjectTimelineEvent(id: 'm4', title: 'Development Sprint #1 Started', subtitle: '22 Apr 2024 • 09:00 AM', date: DateTime(2024, 4, 22), isCompleted: true),
+      ProjectTimelineEvent(id: 'm5', title: 'New Team Members Onboarded', subtitle: 'Full past project history access enabled', date: DateTime(2024, 4, 25), isCompleted: true),
+      ProjectTimelineEvent(id: 'm6', title: 'Testing & QA Review', subtitle: 'In Progress • Expected by 05 May 2024', date: DateTime(2024, 5, 5), isCompleted: false),
+      ProjectTimelineEvent(id: 'm7', title: 'Final Deployment', subtitle: 'Scheduled for 15 May 2024', date: DateTime(2024, 5, 15), isCompleted: false),
     ];
 
     final proj1Files = const [
@@ -85,36 +218,57 @@ class ProjectsController extends GetxController {
     ];
 
     // Project 2: Mobile App Development
+    final p2Modules = [
+      const ProjectModule(
+        id: 'p2_mod1',
+        name: 'Flutter Architecture',
+        description: 'Folder structure, routing, and GetX state bindings.',
+        subModules: [
+          ProjectSubModule(id: 'p2_s1', name: 'Dependency Injection', description: 'Core GetX bindings'),
+          ProjectSubModule(id: 'p2_s2', name: 'Theme & Design System', description: 'Material3 and typography'),
+        ],
+      ),
+      const ProjectModule(
+        id: 'p2_mod2',
+        name: 'API & Gateway',
+        description: 'REST API client, caching, and offline support.',
+        subModules: [
+          ProjectSubModule(id: 'p2_s3', name: 'Dio Network Layer', description: 'Interceptors and token refresh'),
+          ProjectSubModule(id: 'p2_s4', name: 'Payment SDKs', description: 'App Store and In-App purchases'),
+        ],
+      ),
+    ];
+
     final proj2Tasks = [
-      ProjectTask(id: 'pt1', title: 'Flutter App Setup', category: 'Development', status: 'Done', dueDate: DateTime(2024, 6, 1), assignee: allEmployees[1]),
-      ProjectTask(id: 'pt2', title: 'State Management Integration', category: 'Development', status: 'Done', dueDate: DateTime(2024, 6, 4), assignee: allEmployees[2]),
-      ProjectTask(id: 'pt3', title: 'API Integration', category: 'Development', status: 'In Progress', dueDate: DateTime(2024, 6, 8), assignee: allEmployees[3]),
-      ProjectTask(id: 'pt4', title: 'UX Optimization', category: 'Design', status: 'To Do', dueDate: DateTime(2024, 6, 10), assignee: allEmployees[0]),
-      ProjectTask(id: 'pt5', title: 'App Store Guidelines Review', category: 'Testing', status: 'To Do', dueDate: DateTime(2024, 6, 12), assignee: allEmployees[4]),
+      ProjectTask(id: 'pt1', title: 'Flutter App Setup', category: 'Development', status: 'Done', dueDate: DateTime(2024, 6, 1), assignee: allEmployees[1], moduleName: 'Flutter Architecture', subModuleName: 'Dependency Injection'),
+      ProjectTask(id: 'pt2', title: 'State Management Integration', category: 'Development', status: 'Done', dueDate: DateTime(2024, 6, 4), assignee: allEmployees[2], moduleName: 'Flutter Architecture', subModuleName: 'Theme & Design System'),
+      ProjectTask(id: 'pt3', title: 'API Integration', category: 'Development', status: 'In Progress', dueDate: DateTime(2024, 6, 8), assignee: allEmployees[3], moduleName: 'API & Gateway', subModuleName: 'Dio Network Layer'),
+      ProjectTask(id: 'pt4', title: 'UX Optimization', category: 'Design', status: 'To Do', dueDate: DateTime(2024, 6, 10), assignee: allEmployees[0], moduleName: 'Flutter Architecture', subModuleName: 'Theme & Design System'),
+      ProjectTask(id: 'pt5', title: 'App Store Guidelines Review', category: 'Testing', status: 'To Do', dueDate: DateTime(2024, 6, 12), assignee: allEmployees[4], moduleName: 'API & Gateway', subModuleName: 'Payment SDKs'),
     ];
 
     // Project 3: CRM Integration
     final proj3Tasks = [
-      ProjectTask(id: 'ct1', title: 'Database Auditing', category: 'Testing', status: 'Done', dueDate: DateTime(2024, 4, 10), assignee: allEmployees[3]),
-      ProjectTask(id: 'ct2', title: 'API Gateway Connector', category: 'Development', status: 'In Progress', dueDate: DateTime(2024, 4, 15), assignee: allEmployees[2]),
-      ProjectTask(id: 'ct3', title: 'Contact synchronization', category: 'Development', status: 'To Do', dueDate: DateTime(2024, 4, 20), assignee: allEmployees[1]),
-      ProjectTask(id: 'ct4', title: 'Sales Funnel mapping', category: 'Design', status: 'To Do', dueDate: DateTime(2024, 4, 22), assignee: allEmployees[0]),
+      ProjectTask(id: 'ct1', title: 'Database Auditing', category: 'Testing', status: 'Done', dueDate: DateTime(2024, 4, 10), assignee: allEmployees[3], moduleName: 'Data Pipeline', subModuleName: 'Auditing'),
+      ProjectTask(id: 'ct2', title: 'API Gateway Connector', category: 'Development', status: 'In Progress', dueDate: DateTime(2024, 4, 15), assignee: allEmployees[2], moduleName: 'Connector Engine', subModuleName: 'Sync Services'),
+      ProjectTask(id: 'ct3', title: 'Contact synchronization', category: 'Development', status: 'To Do', dueDate: DateTime(2024, 4, 20), assignee: allEmployees[1], moduleName: 'Connector Engine', subModuleName: 'Sync Services'),
+      ProjectTask(id: 'ct4', title: 'Sales Funnel mapping', category: 'Design', status: 'To Do', dueDate: DateTime(2024, 4, 22), assignee: allEmployees[0], moduleName: 'Funnel Logic', subModuleName: 'Visual Builder'),
     ];
 
     // Project 4: Marketing Campaign (Digital Marketing, Completed)
     final proj4Tasks = [
-      ProjectTask(id: 'mt1', title: 'Ad Creative Design', category: 'Design', status: 'Done', dueDate: DateTime(2024, 2, 10), assignee: allEmployees[0]),
-      ProjectTask(id: 'mt2', title: 'Copywriting Approvals', category: 'Design', status: 'Done', dueDate: DateTime(2024, 2, 15), assignee: allEmployees[1]),
-      ProjectTask(id: 'mt3', title: 'Social Ads Campaign launch', category: 'Development', status: 'Done', dueDate: DateTime(2024, 2, 20), assignee: allEmployees[2]),
-      ProjectTask(id: 'mt4', title: 'Weekly Reports collation', category: 'Testing', status: 'Done', dueDate: DateTime(2024, 3, 1), assignee: allEmployees[3]),
+      ProjectTask(id: 'mt1', title: 'Ad Creative Design', category: 'Design', status: 'Done', dueDate: DateTime(2024, 2, 10), assignee: allEmployees[0], moduleName: 'Creatives', subModuleName: 'Banners'),
+      ProjectTask(id: 'mt2', title: 'Copywriting Approvals', category: 'Design', status: 'Done', dueDate: DateTime(2024, 2, 15), assignee: allEmployees[1], moduleName: 'Copywriting', subModuleName: 'Headlines'),
+      ProjectTask(id: 'mt3', title: 'Social Ads Campaign launch', category: 'Development', status: 'Done', dueDate: DateTime(2024, 2, 20), assignee: allEmployees[2], moduleName: 'Campaign Setup', subModuleName: 'Ad Manager'),
+      ProjectTask(id: 'mt4', title: 'Weekly Reports collation', category: 'Testing', status: 'Done', dueDate: DateTime(2024, 3, 1), assignee: allEmployees[3], moduleName: 'Reporting', subModuleName: 'Roas Metrics'),
     ];
 
     // Project 5: E-commerce Platform (Web Development, Not Started)
     final proj5Tasks = [
-      ProjectTask(id: 'et1', title: 'Define Information Architecture', category: 'Design', status: 'To Do', dueDate: DateTime(2024, 6, 15), assignee: allEmployees[0]),
-      ProjectTask(id: 'et2', title: 'Payment Gateway selection', category: 'Development', status: 'To Do', dueDate: DateTime(2024, 6, 20), assignee: allEmployees[2]),
-      ProjectTask(id: 'et3', title: 'Database Schema creation', category: 'Development', status: 'To Do', dueDate: DateTime(2024, 6, 25), assignee: allEmployees[1]),
-      ProjectTask(id: 'et4', title: 'Product catalog loading', category: 'Testing', status: 'To Do', dueDate: DateTime(2024, 6, 30), assignee: allEmployees[4]),
+      ProjectTask(id: 'et1', title: 'Define Information Architecture', category: 'Design', status: 'To Do', dueDate: DateTime(2024, 6, 15), assignee: allEmployees[0], moduleName: 'Catalog Architecture', subModuleName: 'Category Hierarchy'),
+      ProjectTask(id: 'et2', title: 'Payment Gateway selection', category: 'Development', status: 'To Do', dueDate: DateTime(2024, 6, 20), assignee: allEmployees[2], moduleName: 'Checkout & Cart', subModuleName: 'Payment Flow'),
+      ProjectTask(id: 'et3', title: 'Database Schema creation', category: 'Development', status: 'To Do', dueDate: DateTime(2024, 6, 25), assignee: allEmployees[1], moduleName: 'Backend & Data', subModuleName: 'Schemas'),
+      ProjectTask(id: 'et4', title: 'Product catalog loading', category: 'Testing', status: 'To Do', dueDate: DateTime(2024, 6, 30), assignee: allEmployees[4], moduleName: 'Catalog Architecture', subModuleName: 'CSV Importer'),
     ];
 
     projects.addAll([
@@ -130,6 +284,7 @@ class ProjectsController extends GetxController {
         tasks: proj1Tasks,
         timeline: proj1Timeline,
         files: proj1Files,
+        modules: p1Modules,
       ),
       Project(
         id: 'p2',
@@ -148,6 +303,7 @@ class ProjectsController extends GetxController {
         files: const [
           ProjectFile(id: 'pf2_1', name: 'Mobile_Sitemap.pdf', sizeMb: 1.8, type: 'PDF'),
         ],
+        modules: p2Modules,
       ),
       Project(
         id: 'p3',
@@ -163,6 +319,11 @@ class ProjectsController extends GetxController {
           ProjectTimelineEvent(id: 'p3t1', title: 'Integration Kickoff', subtitle: '01 Mar 2024', date: DateTime(2024, 3, 1), isCompleted: true),
         ],
         files: const [],
+        modules: const [
+          ProjectModule(id: 'crm_m1', name: 'Connector Engine', description: 'Pipeline sync', subModules: [
+            ProjectSubModule(id: 'crm_s1', name: 'Sync Services', description: 'REST synchronizer'),
+          ]),
+        ],
       ),
       Project(
         id: 'p4',
@@ -181,6 +342,7 @@ class ProjectsController extends GetxController {
         files: const [
           ProjectFile(id: 'pf4_1', name: 'Marketing_Roas_Report.pdf', sizeMb: 4.1, type: 'PDF'),
         ],
+        modules: const [],
       ),
       Project(
         id: 'p5',
@@ -196,6 +358,7 @@ class ProjectsController extends GetxController {
           ProjectTimelineEvent(id: 'p5t1', title: 'Platform Scoping', subtitle: 'Scheduled for 20 May 2024', date: DateTime(2024, 5, 20), isCompleted: false),
         ],
         files: const [],
+        modules: const [],
       ),
     ]);
   }
@@ -369,8 +532,15 @@ class ProjectsController extends GetxController {
     }
   }
 
-  // Add a task to the active project
-  void addTaskToProject(String title, String category, AppUser? assignee, DateTime due) {
+  // Add a task to the active project (Jira-style with module and submodule)
+  void addTaskToProject(
+    String title,
+    String category,
+    AppUser? assignee,
+    DateTime due, {
+    String moduleName = 'General',
+    String subModuleName = 'Default',
+  }) {
     final current = selectedProject.value;
     if (current == null) return;
 
@@ -381,6 +551,8 @@ class ProjectsController extends GetxController {
       status: 'To Do',
       dueDate: due,
       assignee: assignee,
+      moduleName: moduleName,
+      subModuleName: subModuleName,
     );
 
     // Create a new tasks list and deep copy
@@ -396,7 +568,7 @@ class ProjectsController extends GetxController {
 
     Get.snackbar(
       'Task Added',
-      'New task assigned to ${assignee?.name ?? "unassigned"}',
+      'New task allocated to ${assignee?.name ?? "unassigned"} in [$moduleName]',
       snackPosition: SnackPosition.BOTTOM,
       backgroundColor: const Color(0xFF10B981),
       colorText: Colors.white,
@@ -458,14 +630,95 @@ class ProjectsController extends GetxController {
     selectedProject.value = updated;
   }
 
-  // Add multiple members to active project
+  // Add multiple members to active project - newly added members get access to all past tasks and project history!
   void assignMembersToProject(List<AppUser> members) {
     final current = selectedProject.value;
     if (current == null) return;
 
     final updatedMembers = Set<AppUser>.from(current.teamMembers)..addAll(members);
-    final updated = current.copyWith(teamMembers: updatedMembers.toList());
+    
+    // Add timeline milestone for newly onboarded member
+    final newEvents = members.map((m) => ProjectTimelineEvent(
+      id: 'onboard_${DateTime.now().millisecondsSinceEpoch}_${m.name.hashCode}',
+      title: '${m.name} joined project team',
+      subtitle: 'Granted full access to all past tasks, modules, and work history',
+      date: DateTime.now(),
+      isCompleted: true,
+    )).toList();
 
+    final updatedTimeline = List<ProjectTimelineEvent>.from(current.timeline)..addAll(newEvents);
+    final updated = current.copyWith(
+      teamMembers: updatedMembers.toList(),
+      timeline: updatedTimeline,
+    );
+
+    final idx = projects.indexWhere((p) => p.id == current.id);
+    if (idx != -1) {
+      projects[idx] = updated;
+    }
+    selectedProject.value = updated;
+
+    Get.snackbar(
+      'Member Added',
+      '${members.map((m) => m.name).join(", ")} added to project with full past work history.',
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: const Color(0xFF10B981),
+      colorText: Colors.white,
+    );
+  }
+
+  // Add Jira Module to Project
+  void addModuleToProject(String name, String description, List<String> subModuleNames) {
+    final current = selectedProject.value;
+    if (current == null) return;
+
+    final subModules = subModuleNames.map((s) => ProjectSubModule(
+      id: 'sub_${DateTime.now().millisecondsSinceEpoch}_${s.hashCode}',
+      name: s.trim(),
+    )).toList();
+
+    final newModule = ProjectModule(
+      id: 'mod_${DateTime.now().millisecondsSinceEpoch}',
+      name: name.trim(),
+      description: description.trim(),
+      subModules: subModules,
+    );
+
+    final updatedModules = List<ProjectModule>.from(current.modules)..add(newModule);
+    final updated = current.copyWith(modules: updatedModules);
+
+    final idx = projects.indexWhere((p) => p.id == current.id);
+    if (idx != -1) {
+      projects[idx] = updated;
+    }
+    selectedProject.value = updated;
+
+    Get.snackbar(
+      'Module Created',
+      'Module "$name" with ${subModules.length} sub-modules created successfully!',
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: const Color(0xFF10B981),
+      colorText: Colors.white,
+    );
+  }
+
+  // Add sub-module to existing module
+  void addSubModuleToModule(String moduleId, String subModuleName) {
+    final current = selectedProject.value;
+    if (current == null) return;
+
+    final updatedModules = current.modules.map((m) {
+      if (m.id == moduleId) {
+        final newSub = ProjectSubModule(
+          id: 'sub_${DateTime.now().millisecondsSinceEpoch}',
+          name: subModuleName.trim(),
+        );
+        return m.copyWith(subModules: List<ProjectSubModule>.from(m.subModules)..add(newSub));
+      }
+      return m;
+    }).toList();
+
+    final updated = current.copyWith(modules: updatedModules);
     final idx = projects.indexWhere((p) => p.id == current.id);
     if (idx != -1) {
       projects[idx] = updated;

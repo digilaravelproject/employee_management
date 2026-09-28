@@ -290,13 +290,135 @@ class CreateTaskScreen extends StatelessWidget {
                             );
                           }).toList(),
                           onChanged: (val) {
-                            if (val != null) controller.selectedProjectName.value = val;
+                            if (val != null) {
+                              controller.selectedProjectName.value = val;
+                              controller.selectedModuleName.value = 'General';
+                              controller.selectedSubModuleName.value = 'Default';
+                            }
                           },
                         );
                       }),
                     ),
                   ),
                   const SizedBox(height: 16),
+
+                  // Jira Module & SubModule Allocation (Conditional on Project)
+                  Obx(() {
+                    final currentProj = controller.selectedProjectName.value;
+                    if (currentProj == 'None') return const SizedBox.shrink();
+
+                    final projectObj = projController.projects.firstWhereOrNull((p) => p.name == currentProj);
+                    final moduleList = (projectObj?.modules.map((m) => m.name).toList() ?? []);
+                    if (!moduleList.contains('General')) moduleList.insert(0, 'General');
+
+                    final currentModule = controller.selectedModuleName.value;
+                    final activeModule = moduleList.contains(currentModule) ? currentModule : moduleList.first;
+
+                    final currentModObj = projectObj?.modules.firstWhereOrNull((m) => m.name == activeModule);
+                    final subModList = (currentModObj?.subModules.map((s) => s.name).toList() ?? []);
+                    if (!subModList.contains('Default')) subModList.insert(0, 'Default');
+
+                    final currentSubMod = controller.selectedSubModuleName.value;
+                    final activeSubMod = subModList.contains(currentSubMod) ? currentSubMod : subModList.first;
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            // Module Dropdown
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Row(
+                                    children: [
+                                      Icon(Iconsax.folder_2, size: 12, color: AppColors.primaryColor),
+                                      SizedBox(width: 4),
+                                      AppText('Module (Epic)', fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textColorPrimary),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.slate50,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(color: AppColors.borderColor),
+                                    ),
+                                    child: DropdownButtonHideUnderline(
+                                      child: DropdownButton<String>(
+                                        value: activeModule,
+                                        isExpanded: true,
+                                        dropdownColor: Colors.white,
+                                        icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textColorHint),
+                                        items: moduleList.map((m) {
+                                          return DropdownMenuItem<String>(
+                                            value: m,
+                                            child: AppText(m, fontSize: 12, fontWeight: FontWeight.w600),
+                                          );
+                                        }).toList(),
+                                        onChanged: (val) {
+                                          if (val != null) {
+                                            controller.selectedModuleName.value = val;
+                                            controller.selectedSubModuleName.value = 'Default';
+                                          }
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+
+                            // SubModule Dropdown
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Row(
+                                    children: [
+                                      Icon(Iconsax.category, size: 12, color: Color(0xFF6366F1)),
+                                      SizedBox(width: 4),
+                                      AppText('Sub-Module', fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textColorPrimary),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.slate50,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(color: AppColors.borderColor),
+                                    ),
+                                    child: DropdownButtonHideUnderline(
+                                      child: DropdownButton<String>(
+                                        value: activeSubMod,
+                                        isExpanded: true,
+                                        dropdownColor: Colors.white,
+                                        icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textColorHint),
+                                        items: subModList.map((s) {
+                                          return DropdownMenuItem<String>(
+                                            value: s,
+                                            child: AppText(s, fontSize: 12, fontWeight: FontWeight.w600),
+                                          );
+                                        }).toList(),
+                                        onChanged: (val) {
+                                          if (val != null) controller.selectedSubModuleName.value = val;
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+                    );
+                  }),
 
                   // Priority and Deadline Row
                   Row(

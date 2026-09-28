@@ -63,6 +63,50 @@ class TaskStatusUpdate {
   });
 }
 
+class TaskHandoverEvent {
+  final String id;
+  final AppUser fromUser;
+  final AppUser toUser;
+  final String type; // 'Handover' (reassign/cannot complete), 'Query' (question/clarification), 'Blocker'
+  final String reason;
+  final DateTime timestamp;
+  final bool isResolved;
+  final String? resolutionNote;
+
+  const TaskHandoverEvent({
+    required this.id,
+    required this.fromUser,
+    required this.toUser,
+    required this.type,
+    required this.reason,
+    required this.timestamp,
+    this.isResolved = false,
+    this.resolutionNote,
+  });
+
+  TaskHandoverEvent copyWith({
+    String? id,
+    AppUser? fromUser,
+    AppUser? toUser,
+    String? type,
+    String? reason,
+    DateTime? timestamp,
+    bool? isResolved,
+    String? resolutionNote,
+  }) {
+    return TaskHandoverEvent(
+      id: id ?? this.id,
+      fromUser: fromUser ?? this.fromUser,
+      toUser: toUser ?? this.toUser,
+      type: type ?? this.type,
+      reason: reason ?? this.reason,
+      timestamp: timestamp ?? this.timestamp,
+      isResolved: isResolved ?? this.isResolved,
+      resolutionNote: resolutionNote ?? this.resolutionNote,
+    );
+  }
+}
+
 class TaskTimeLog {
   final String id;
   final AppUser user;
@@ -70,6 +114,9 @@ class TaskTimeLog {
   final DateTime? endTime;
   final int durationSeconds;
   final String note;
+  final String module;
+  final String subModule;
+  final String taskTitle;
 
   const TaskTimeLog({
     required this.id,
@@ -78,6 +125,9 @@ class TaskTimeLog {
     this.endTime,
     required this.durationSeconds,
     this.note = '',
+    this.module = 'General',
+    this.subModule = 'Default',
+    this.taskTitle = '',
   });
 
   String get formattedDuration {
@@ -113,6 +163,16 @@ class TaskModel {
   final List<TaskStatusUpdate> statusUpdates;
   final List<String> attachments; // Mock file names
 
+  // Jira Module & Sub-Module tagging
+  final String module;
+  final String subModule;
+
+  // Task Handover & Query Escalation
+  final List<TaskHandoverEvent> handovers;
+  final bool hasActiveQuery;
+  final String? activeQueryNote;
+  final AppUser? queryToUser;
+
   // Time Tracking Attributes
   final int totalTrackedSeconds;
   final bool isTimerRunning;
@@ -132,6 +192,12 @@ class TaskModel {
     required this.comments,
     required this.statusUpdates,
     required this.attachments,
+    this.module = 'General',
+    this.subModule = 'Default',
+    this.handovers = const [],
+    this.hasActiveQuery = false,
+    this.activeQueryNote,
+    this.queryToUser,
     this.totalTrackedSeconds = 0,
     this.isTimerRunning = false,
     this.timerStartedAt,
@@ -203,6 +269,12 @@ class TaskModel {
     List<TaskComment>? comments,
     List<TaskStatusUpdate>? statusUpdates,
     List<String>? attachments,
+    String? module,
+    String? subModule,
+    List<TaskHandoverEvent>? handovers,
+    bool? hasActiveQuery,
+    String? activeQueryNote,
+    AppUser? queryToUser,
     int? totalTrackedSeconds,
     bool? isTimerRunning,
     DateTime? timerStartedAt,
@@ -221,6 +293,12 @@ class TaskModel {
       comments: comments ?? this.comments,
       statusUpdates: statusUpdates ?? this.statusUpdates,
       attachments: attachments ?? this.attachments,
+      module: module ?? this.module,
+      subModule: subModule ?? this.subModule,
+      handovers: handovers ?? this.handovers,
+      hasActiveQuery: hasActiveQuery ?? this.hasActiveQuery,
+      activeQueryNote: activeQueryNote ?? this.activeQueryNote,
+      queryToUser: queryToUser ?? this.queryToUser,
       totalTrackedSeconds: totalTrackedSeconds ?? this.totalTrackedSeconds,
       isTimerRunning: isTimerRunning ?? this.isTimerRunning,
       timerStartedAt: timerStartedAt ?? this.timerStartedAt,

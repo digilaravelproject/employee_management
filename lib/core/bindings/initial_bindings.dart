@@ -7,6 +7,11 @@ import 'package:dio/dio.dart';
 import '../services/translations/localization_controller.dart';
 import '../../features/dashboard/controllers/dashboard_controller.dart';
 import '../../features/attendance/controllers/attendance_history_controller.dart';
+import '../../features/projects/controllers/projects_controller.dart';
+import '../../features/tasks/controllers/tasks_controller.dart';
+import '../../features/notification/repositories/notification_repository.dart';
+import '../../features/notification/repositories/notification_repository_interface.dart';
+import '../../features/notification/controllers/notification_controller.dart';
 
 class InitialBindings extends Bindings {
   @override
@@ -20,5 +25,15 @@ class InitialBindings extends Bindings {
     Get.put(AppController(), permanent: true);
     Get.lazyPut(() => DashboardController(), fenix: true);
     Get.lazyPut(() => AttendanceHistoryController(), fenix: true);
+    Get.lazyPut(() => ProjectsController(), fenix: true);
+    Get.lazyPut(() => TasksController(), fenix: true);
+    Get.lazyPut<NotificationRepositoryInterface>(
+      () => NotificationRepository(apiClient: Get.find<ApiClient>()),
+      fenix: true,
+    );
+    Get.lazyPut(
+      () => NotificationController(repository: Get.find<NotificationRepositoryInterface>()),
+      fenix: true,
+    );
   }
 }

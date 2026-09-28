@@ -36,6 +36,9 @@ import '../features/shift_management/views/shift_management_screen.dart';
 import '../features/shift_management/views/create_shift_screen.dart';
 import '../features/leave_management/bindings/admin_leave_binding.dart';
 import '../features/leave_management/views/leave_requests_screen.dart';
+import '../features/notification/bindings/notification_binding.dart';
+import '../features/notification/views/notification_screen.dart';
+import '../features/notification/views/notification_details_screen.dart';
 import '../core/services/network/api_client.dart';
 import 'app_routes.dart';
 
@@ -60,6 +63,8 @@ class RouteHelper {
   static String getLeaveRequestsRoute() => AppRoutes.leaveRequests;
   static String getLeadListRoute() => AppRoutes.leadList;
   static String getLeadSummaryRoute() => AppRoutes.leadSummary;
+  static String getNotificationsRoute() => AppRoutes.notifications;
+  static String getNotificationDetailsRoute() => AppRoutes.notificationDetails;
 
   /// Shared binding builder for AuthController – reused across login/signup/otp
   static BindingsBuilder _authBinding() => BindingsBuilder(() {
@@ -246,6 +251,20 @@ class RouteHelper {
       name: AppRoutes.leaveRequests,
       page: () => const LeaveRequestsScreen(),
       binding: AdminLeaveBinding(),
+      transition: Transition.rightToLeft,
+    ),
+
+    GetPage(
+      name: AppRoutes.notifications,
+      page: () => const NotificationScreen(),
+      binding: NotificationBinding(),
+      transition: Transition.rightToLeft,
+    ),
+
+    GetPage(
+      name: AppRoutes.notificationDetails,
+      page: () => const NotificationDetailsScreen(),
+      binding: NotificationBinding(),
       transition: Transition.rightToLeft,
     ),
   ];

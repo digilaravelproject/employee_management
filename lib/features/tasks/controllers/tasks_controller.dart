@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:get/get.dart';
 import '../../projects/controllers/projects_controller.dart';
 import '../../projects/models/project_model.dart';
@@ -19,6 +20,9 @@ class TasksController extends GetxController {
   Timer? _timerTicker;
   final RxInt liveTicker = 0.obs;
 
+  // Scope switcher for employees (My Tasks vs All Project Tasks / Project History)
+  final RxString employeeTaskScope = 'My Tasks'.obs; // 'My Tasks', 'All Project Tasks'
+
   // Task Creation & Edit Form State
   final titleController = TextEditingController();
   final descriptionController = TextEditingController();
@@ -28,6 +32,8 @@ class TasksController extends GetxController {
   final RxList<AppUser> tempAssignees = <AppUser>[].obs;
   final RxList<String> tempAttachments = <String>[].obs;
   final RxString selectedProjectName = 'None'.obs;
+  final RxString selectedModuleName = 'General'.obs;
+  final RxString selectedSubModuleName = 'Default'.obs;
 
   @override
   void onInit() {
@@ -58,10 +64,8 @@ class TasksController extends GetxController {
     final projs = projController.projects;
 
     final websiteRedesign = projs.isNotEmpty ? projs[0] : null;
-    final mobileApp = projs.length > 1 ? projs[1] : null;
-    final crmIntegration = projs.length > 2 ? projs[2] : null;
 
-    // Task 1: UI/UX Design (In Progress with tracked time)
+    // Task 1: UI/UX Design (Sarah Johnson - In Progress with tracked time)
     final t1SubTasks = [
       SubTask(id: 'st1', title: 'Create wireframes', isCompleted: true, date: DateTime(2024, 4, 12)),
       SubTask(id: 'st2', title: 'Design login screen', isCompleted: true, date: DateTime(2024, 4, 14)),
@@ -113,6 +117,9 @@ class TasksController extends GetxController {
         endTime: DateTime.now().subtract(const Duration(hours: 2)),
         durationSeconds: 7200,
         note: 'Completed first pass of wireframes and navigation architecture.',
+        module: 'UI/UX & Design System',
+        subModule: 'Wireframes & Architecture',
+        taskTitle: 'UI/UX Design',
       ),
       TaskTimeLog(
         id: 'tl_2',
@@ -120,7 +127,33 @@ class TasksController extends GetxController {
         startTime: DateTime.now().subtract(const Duration(hours: 1)),
         endTime: DateTime.now().subtract(const Duration(minutes: 15)),
         durationSeconds: 2700,
-        note: 'Design iterations for login screen.',
+        note: 'Design iterations for login screen tokens.',
+        module: 'UI/UX & Design System',
+        subModule: 'Design Tokens & Theme',
+        taskTitle: 'UI/UX Design',
+      ),
+    ];
+
+    // Task 6: Handed-over task with query / blocker (Jira pass/query flow example)
+    final t6Handovers = [
+      TaskHandoverEvent(
+        id: 'ho_1',
+        fromUser: emps[1], // Sarah Johnson passed to Michael Brown
+        toUser: emps[2],   // Michael Brown
+        type: 'Handover',
+        reason: 'Requires backend token validation support before UI review.',
+        timestamp: DateTime(2024, 4, 16, 14, 20),
+        isResolved: true,
+        resolutionNote: 'Backend endpoints provided and tested.',
+      ),
+      TaskHandoverEvent(
+        id: 'ho_2',
+        fromUser: emps[2], // Michael Brown asked question to John Smith (Manager)
+        toUser: emps[0],   // John Smith (Manager)
+        type: 'Query',
+        reason: 'Do we need multi-tenant JWT refresh or standard cookie session?',
+        timestamp: DateTime.now().subtract(const Duration(hours: 2)),
+        isResolved: false,
       ),
     ];
 
@@ -138,19 +171,21 @@ class TasksController extends GetxController {
         comments: t1Comments,
         statusUpdates: t1Timeline,
         attachments: ['Wireframes_v1.pdf', 'Design_System_v2.fig'],
+        module: 'UI/UX & Design System',
+        subModule: 'Wireframes & Architecture',
         totalTrackedSeconds: 9900, // 2h 45m
         isTimerRunning: false,
         timeLogs: t1TimeLogs,
       ),
       TaskModel(
         id: 'task_2',
-        title: 'API Integration',
+        title: 'API Integration & Auth Client',
         description: 'Integrate payment gateway with backend APIs and verify secure callbacks.',
         assignees: [emps[2]], // Michael Brown
-        project: mobileApp,
+        project: websiteRedesign,
         priority: 'High',
         deadline: DateTime(2024, 5, 20),
-        status: TaskModel.statusToDo,
+        status: TaskModel.statusInProgress,
         subTasks: [],
         comments: [],
         statusUpdates: [
@@ -164,16 +199,30 @@ class TasksController extends GetxController {
           )
         ],
         attachments: [],
-        totalTrackedSeconds: 0,
+        module: 'Backend & APIs',
+        subModule: 'OAuth & Session Management',
+        totalTrackedSeconds: 14400, // 4 hours
         isTimerRunning: false,
-        timeLogs: [],
+        timeLogs: [
+          TaskTimeLog(
+            id: 'tl_mb1',
+            user: emps[2], // Michael Brown
+            startTime: DateTime.now().subtract(const Duration(days: 2, hours: 4)),
+            endTime: DateTime.now().subtract(const Duration(days: 2)),
+            durationSeconds: 14400,
+            note: 'Implemented JWT token refresh interceptor in Dio client.',
+            module: 'Backend & APIs',
+            subModule: 'OAuth & Session Management',
+            taskTitle: 'API Integration & Auth Client',
+          ),
+        ],
       ),
       TaskModel(
         id: 'task_3',
-        title: 'Database Optimization',
+        title: 'Database Optimization & Indexing',
         description: 'Optimize database queries and indexes to improve query response times under high payload.',
         assignees: [emps[3]], // David Wilson
-        project: crmIntegration,
+        project: websiteRedesign,
         priority: 'Low',
         deadline: DateTime(2024, 5, 25),
         status: TaskModel.statusTesting, // Ready for Manager/QA review!
@@ -206,6 +255,8 @@ class TasksController extends GetxController {
           ),
         ],
         attachments: ['QueryBenchmarkReport.pdf'],
+        module: 'Backend & APIs',
+        subModule: 'Database Schemas',
         totalTrackedSeconds: 12600, // 3h 30m
         isTimerRunning: false,
         timeLogs: [
@@ -215,16 +266,19 @@ class TasksController extends GetxController {
             startTime: DateTime.now().subtract(const Duration(days: 1)),
             endTime: DateTime.now().subtract(const Duration(days: 1)).add(const Duration(hours: 3, minutes: 30)),
             durationSeconds: 12600,
-            note: 'Index execution plan analysis and index creation.',
+            note: 'Index execution plan analysis and index creation on tasks table.',
+            module: 'Backend & APIs',
+            subModule: 'Database Schemas',
+            taskTitle: 'Database Optimization & Indexing',
           )
         ],
       ),
       TaskModel(
         id: 'task_4',
-        title: 'Bug Fixing',
-        description: 'Fix reported crash issues and API failures in the mobile app release candidate.',
+        title: 'Regression Bug Fixing',
+        description: 'Fix reported crash issues and API failures in the responsive web viewport.',
         assignees: [emps[4]], // Emily Davis
-        project: mobileApp,
+        project: websiteRedesign,
         priority: 'High',
         deadline: DateTime(2024, 5, 10),
         status: TaskModel.statusCompleted,
@@ -244,6 +298,8 @@ class TasksController extends GetxController {
           )
         ],
         attachments: ['CrashLog_v1.txt'],
+        module: 'QA & Testing',
+        subModule: 'Regression Testing',
         totalTrackedSeconds: 18000, // 5h
         isTimerRunning: false,
         timeLogs: [
@@ -253,15 +309,18 @@ class TasksController extends GetxController {
             startTime: DateTime(2024, 5, 8, 10),
             endTime: DateTime(2024, 5, 8, 15),
             durationSeconds: 18000,
-            note: 'Resolved crash on logout and socket timeout.',
+            note: 'Resolved crash on logout and socket timeout across Safari and Chrome.',
+            module: 'QA & Testing',
+            subModule: 'Regression Testing',
+            taskTitle: 'Regression Bug Fixing',
           )
         ],
       ),
       TaskModel(
         id: 'task_5',
-        title: 'User Testing',
+        title: 'User Testing & Panel Interviews',
         description: 'Perform exhaustive user testing sessions on new beta features with 10 test user profiles.',
-        assignees: [emps[5]], // James Anderson
+        assignees: [emps[0]], // John Smith
         project: websiteRedesign,
         priority: 'Medium',
         deadline: DateTime(2024, 5, 18),
@@ -275,32 +334,83 @@ class TasksController extends GetxController {
             title: 'In Progress',
             description: 'User testing panel set up and ready.',
             timestamp: DateTime(2024, 5, 14, 14, 00),
-            user: emps[5],
+            user: emps[0],
           )
         ],
         attachments: [],
-        totalTrackedSeconds: 5400, // 1h 30m
+        module: 'UI/UX & Design System',
+        subModule: 'Interactive Prototypes',
+        totalTrackedSeconds: 7200, // 2h
         isTimerRunning: false,
         timeLogs: [
           TaskTimeLog(
             id: 'tl_ut1',
-            user: emps[5],
+            user: emps[0],
             startTime: DateTime.now().subtract(const Duration(hours: 3)),
-            endTime: DateTime.now().subtract(const Duration(hours: 1, minutes: 30)),
-            durationSeconds: 5400,
-            note: 'Cohort 1 feedback interviews.',
+            endTime: DateTime.now().subtract(const Duration(hours: 1)),
+            durationSeconds: 7200,
+            note: 'Cohort 1 feedback interviews and usability evaluation.',
+            module: 'UI/UX & Design System',
+            subModule: 'Interactive Prototypes',
+            taskTitle: 'User Testing & Panel Interviews',
+          )
+        ],
+      ),
+      TaskModel(
+        id: 'task_6',
+        title: 'Stripe Payment Gateway Integration',
+        description: 'Setup Stripe checkout sessions and webhook signatures verification. Blocker query active.',
+        assignees: [emps[2]], // Michael Brown
+        project: websiteRedesign,
+        priority: 'High',
+        deadline: DateTime(2024, 5, 22),
+        status: TaskModel.statusInProgress,
+        subTasks: [],
+        comments: [],
+        statusUpdates: [
+          TaskStatusUpdate(
+            id: 'st_u1',
+            status: TaskModel.statusInProgress,
+            title: 'Task Handed Over & Query Raised',
+            description: 'Handed over from Sarah Johnson to Michael Brown. Query asked to Manager John Smith.',
+            timestamp: DateTime.now().subtract(const Duration(hours: 2)),
+            user: emps[2],
+          )
+        ],
+        attachments: ['StripeDoc_v2.pdf'],
+        module: 'Backend & APIs',
+        subModule: 'Payment Integrations',
+        handovers: t6Handovers,
+        hasActiveQuery: true,
+        activeQueryNote: 'Do we need multi-tenant JWT refresh or standard cookie session?',
+        queryToUser: emps[0],
+        totalTrackedSeconds: 10800, // 3h
+        isTimerRunning: false,
+        timeLogs: [
+          TaskTimeLog(
+            id: 'tl_st1',
+            user: emps[2],
+            startTime: DateTime.now().subtract(const Duration(hours: 5)),
+            endTime: DateTime.now().subtract(const Duration(hours: 2)),
+            durationSeconds: 10800,
+            note: 'Configured webhook secret validation and event handling in Node.js server.',
+            module: 'Backend & APIs',
+            subModule: 'Payment Integrations',
+            taskTitle: 'Stripe Payment Gateway Integration',
           )
         ],
       ),
     ]);
 
     // Initial synchronization of tasks with their corresponding project
-    for (final t in tasks) {
-      _syncTaskStatusWithProject(t);
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      for (final t in tasks) {
+        _syncTaskStatusWithProject(t);
+      }
+    });
   }
 
-  // Filtered task list feed
+  // Filtered task list feed (with employee scope switcher: My Tasks vs All Project Tasks/History)
   List<TaskModel> get filteredTasks {
     List<TaskModel> results = tasks;
 
@@ -309,10 +419,21 @@ class TasksController extends GetxController {
     final isEmployee = appController?.userRole.value.toLowerCase() == 'employee';
 
     if (isEmployee) {
-      // Scope strictly to tasks assigned to current employee
       final projController = Get.find<ProjectsController>();
       final myUser = projController.allEmployees[1]; // Sarah Johnson
-      results = results.where((t) => t.assignees.any((a) => a.name == myUser.name || a.email == myUser.email)).toList();
+
+      if (employeeTaskScope.value == 'My Tasks') {
+        // Scope strictly to tasks assigned to current employee
+        results = results.where((t) => t.assignees.any((a) => a.name == myUser.name || a.email == myUser.email)).toList();
+      } else {
+        // 'All Project Tasks / Project History': All tasks belonging to projects where this employee is a member!
+        // This ensures when an employee joins a project, they see all past and present work of that project!
+        results = results.where((t) {
+          if (t.project == null) return false;
+          final proj = projController.projects.firstWhereOrNull((p) => p.id == t.project!.id || p.name == t.project!.name);
+          return proj?.teamMembers.any((m) => m.name == myUser.name || m.email == myUser.email) ?? false;
+        }).toList();
+      }
     }
 
     // Filter by tab selection
@@ -333,11 +454,14 @@ class TasksController extends GetxController {
       results = results.where((t) =>
           t.title.toLowerCase().contains(q) ||
           t.description.toLowerCase().contains(q) ||
+          t.module.toLowerCase().contains(q) ||
+          t.subModule.toLowerCase().contains(q) ||
           (t.project?.name.toLowerCase().contains(q) ?? false)).toList();
     }
 
     return results;
   }
+
 
   // ── Manager Metrics & Summaries ──
   int get totalTeamTrackedSeconds {
@@ -449,13 +573,16 @@ class TasksController extends GetxController {
       endTime: DateTime.now(),
       durationSeconds: elapsed,
       note: 'Work session logged.',
+      module: current.module,
+      subModule: current.subModule,
+      taskTitle: current.title,
     );
 
     final newUpdate = TaskStatusUpdate(
       id: 'timer_pause_${DateTime.now().millisecondsSinceEpoch}',
       status: current.status,
       title: 'Timer Paused',
-      description: 'Session ended: ${newLog.formattedDuration} logged.',
+      description: 'Session ended: ${newLog.formattedDuration} logged for [${current.module} > ${current.subModule}].',
       timestamp: DateTime.now(),
       user: currentUser,
     );
@@ -506,6 +633,9 @@ class TasksController extends GetxController {
         endTime: DateTime.now(),
         durationSeconds: addedSeconds,
         note: note ?? 'Completed work before testing.',
+        module: current.module,
+        subModule: current.subModule,
+        taskTitle: current.title,
       ));
     }
 
@@ -567,6 +697,9 @@ class TasksController extends GetxController {
         endTime: DateTime.now(),
         durationSeconds: addedSeconds,
         note: managerNote ?? 'Final approval logged.',
+        module: current.module,
+        subModule: current.subModule,
+        taskTitle: current.title,
       ));
     }
 
@@ -642,6 +775,240 @@ class TasksController extends GetxController {
       backgroundColor: const Color(0xFFF59E0B),
       colorText: Colors.white,
     );
+  }
+
+  // ── Jira Task Handover & Query Escalation Flow ──
+  // If someone cannot complete a task, they pass it to someone else with reason.
+  // Or if they have questions/blockers, they pass a query/blocker to another person.
+  void handoverTask({
+    required String taskId,
+    required AppUser toUser,
+    required String type, // 'Handover', 'Query', 'Blocker'
+    required String reason,
+  }) {
+    final idx = tasks.indexWhere((t) => t.id == taskId);
+    if (idx == -1) return;
+
+    final current = tasks[idx];
+    final projController = Get.find<ProjectsController>();
+    final currentUser = current.assignees.isNotEmpty ? current.assignees.first : projController.allEmployees[1];
+
+    final handoverEvent = TaskHandoverEvent(
+      id: 'handover_${DateTime.now().millisecondsSinceEpoch}',
+      fromUser: currentUser,
+      toUser: toUser,
+      type: type,
+      reason: reason.trim(),
+      timestamp: DateTime.now(),
+    );
+
+    String updateTitle;
+    String updateDesc;
+    List<AppUser> updatedAssignees = List<AppUser>.from(current.assignees);
+    bool hasQuery = current.hasActiveQuery;
+    String? queryNote = current.activeQueryNote;
+    AppUser? queryTarget = current.queryToUser;
+
+    if (type == 'Handover') {
+      updateTitle = 'Task Handed Over';
+      updateDesc = 'Reassigned from ${currentUser.name} to ${toUser.name}.\nReason: ${reason.trim()}';
+      updatedAssignees = [toUser];
+    } else if (type == 'Query') {
+      updateTitle = 'Question / Help Escalated';
+      updateDesc = 'Question asked to ${toUser.name}:\n"${reason.trim()}"';
+      hasQuery = true;
+      queryNote = reason.trim();
+      queryTarget = toUser;
+    } else {
+      updateTitle = 'Blocker Reported';
+      updateDesc = 'Blocker reported to ${toUser.name}:\n"${reason.trim()}"';
+      hasQuery = true;
+      queryNote = reason.trim();
+      queryTarget = toUser;
+    }
+
+    final newStatusUpdate = TaskStatusUpdate(
+      id: 'update_ho_${DateTime.now().millisecondsSinceEpoch}',
+      status: current.status,
+      title: updateTitle,
+      description: updateDesc,
+      timestamp: DateTime.now(),
+      user: currentUser,
+    );
+
+    final updated = current.copyWith(
+      assignees: updatedAssignees,
+      handovers: List<TaskHandoverEvent>.from(current.handovers)..add(handoverEvent),
+      statusUpdates: List<TaskStatusUpdate>.from(current.statusUpdates)..add(newStatusUpdate),
+      hasActiveQuery: hasQuery,
+      activeQueryNote: queryNote,
+      queryToUser: queryTarget,
+    );
+
+    tasks[idx] = updated;
+    if (selectedTask.value?.id == taskId) {
+      selectedTask.value = updated;
+    }
+    _syncTaskStatusWithProject(updated);
+
+    Get.snackbar(
+      type == 'Handover' ? 'Task Handed Over' : (type == 'Query' ? 'Question Passed' : 'Blocker Raised'),
+      type == 'Handover'
+          ? 'Task successfully reassigned to ${toUser.name}'
+          : 'Query passed to ${toUser.name}. They will be notified to review.',
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: type == 'Handover' ? const Color(0xFF3B82F6) : const Color(0xFFF59E0B),
+      colorText: Colors.white,
+    );
+  }
+
+  // Resolve pending question/blocker
+  void resolveTaskQuery(String taskId, String resolutionNote) {
+    final idx = tasks.indexWhere((t) => t.id == taskId);
+    if (idx == -1) return;
+
+    final current = tasks[idx];
+    final projController = Get.find<ProjectsController>();
+    final currentUser = projController.allEmployees[0];
+
+    final updatedHandovers = current.handovers.map((h) {
+      if (!h.isResolved) {
+        return h.copyWith(isResolved: true, resolutionNote: resolutionNote.trim());
+      }
+      return h;
+    }).toList();
+
+    final resolutionUpdate = TaskStatusUpdate(
+      id: 'res_${DateTime.now().millisecondsSinceEpoch}',
+      status: current.status,
+      title: 'Query / Blocker Resolved',
+      description: resolutionNote.trim().isNotEmpty
+          ? 'Resolved by ${currentUser.name}: ${resolutionNote.trim()}'
+          : 'Query resolved by ${currentUser.name}.',
+      timestamp: DateTime.now(),
+      user: currentUser,
+    );
+
+    final updated = current.copyWith(
+      hasActiveQuery: false,
+      activeQueryNote: null,
+      queryToUser: null,
+      handovers: updatedHandovers,
+      statusUpdates: List<TaskStatusUpdate>.from(current.statusUpdates)..add(resolutionUpdate),
+    );
+
+    tasks[idx] = updated;
+    if (selectedTask.value?.id == taskId) {
+      selectedTask.value = updated;
+    }
+
+    Get.snackbar(
+      'Resolved',
+      'Task query marked as resolved.',
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: const Color(0xFF10B981),
+      colorText: Colors.white,
+    );
+  }
+
+  // ── Jira Member-wise & Module-wise Project Timesheet Reports (Admin/Manager) ──
+  List<Map<String, dynamic>> getMemberProjectTimesheet(String projectId) {
+    final projController = Get.find<ProjectsController>();
+    final proj = projController.projects.firstWhereOrNull((p) => p.id == projectId);
+    if (proj == null) return [];
+
+    final results = <Map<String, dynamic>>[];
+
+    for (final member in proj.teamMembers) {
+      int totalSeconds = 0;
+      final memberLogs = <TaskTimeLog>[];
+      final moduleSecondsMap = <String, int>{};
+      final subModuleSecondsMap = <String, int>{};
+      final tasksContributed = <String>{};
+
+      for (final task in tasks) {
+        if (task.project?.id == proj.id || task.project?.name.toLowerCase().trim() == proj.name.toLowerCase().trim()) {
+          for (final log in task.timeLogs) {
+            if (log.user.name == member.name || log.user.email == member.email) {
+              totalSeconds += log.durationSeconds;
+              memberLogs.add(log);
+              final mod = log.module.isNotEmpty && log.module != 'General' ? log.module : task.module;
+              final subMod = log.subModule.isNotEmpty && log.subModule != 'Default' ? log.subModule : task.subModule;
+              moduleSecondsMap[mod] = (moduleSecondsMap[mod] ?? 0) + log.durationSeconds;
+              subModuleSecondsMap['$mod > $subMod'] = (subModuleSecondsMap['$mod > $subMod'] ?? 0) + log.durationSeconds;
+              tasksContributed.add(task.title);
+            }
+          }
+          // Include live running timer if active for this member
+          if (task.isTimerRunning && task.timerStartedAt != null && task.assignees.any((a) => a.name == member.name)) {
+            final runningElapsed = DateTime.now().difference(task.timerStartedAt!).inSeconds;
+            totalSeconds += runningElapsed;
+            final mod = task.module;
+            moduleSecondsMap[mod] = (moduleSecondsMap[mod] ?? 0) + runningElapsed;
+            tasksContributed.add(task.title);
+          }
+        }
+      }
+
+      results.add({
+        'member': member,
+        'totalSeconds': totalSeconds,
+        'worklogs': memberLogs,
+        'moduleHours': moduleSecondsMap,
+        'subModuleHours': subModuleSecondsMap,
+        'tasksCount': tasksContributed.length,
+        'tasksList': tasksContributed.toList(),
+      });
+    }
+
+    return results;
+  }
+
+  List<Map<String, dynamic>> getModuleProjectTimesheet(String projectId) {
+    final projController = Get.find<ProjectsController>();
+    final proj = projController.projects.firstWhereOrNull((p) => p.id == projectId);
+    if (proj == null) return [];
+
+    final results = <Map<String, dynamic>>[];
+    final modules = proj.modules;
+
+    for (final mod in modules) {
+      int totalSeconds = 0;
+      final contributorSecondsMap = <String, int>{};
+      final subModuleSecondsMap = <String, int>{};
+      int moduleTasksCount = 0;
+
+      for (final task in tasks) {
+        if ((task.project?.id == proj.id || task.project?.name.toLowerCase().trim() == proj.name.toLowerCase().trim()) &&
+            (task.module.toLowerCase().trim() == mod.name.toLowerCase().trim())) {
+          moduleTasksCount++;
+          for (final log in task.timeLogs) {
+            totalSeconds += log.durationSeconds;
+            contributorSecondsMap[log.user.name] = (contributorSecondsMap[log.user.name] ?? 0) + log.durationSeconds;
+            final sub = log.subModule.isNotEmpty && log.subModule != 'Default' ? log.subModule : task.subModule;
+            subModuleSecondsMap[sub] = (subModuleSecondsMap[sub] ?? 0) + log.durationSeconds;
+          }
+          if (task.isTimerRunning && task.timerStartedAt != null) {
+            final running = DateTime.now().difference(task.timerStartedAt!).inSeconds;
+            totalSeconds += running;
+            if (task.assignees.isNotEmpty) {
+              final aName = task.assignees.first.name;
+              contributorSecondsMap[aName] = (contributorSecondsMap[aName] ?? 0) + running;
+            }
+          }
+        }
+      }
+
+      results.add({
+        'module': mod,
+        'totalSeconds': totalSeconds,
+        'tasksCount': moduleTasksCount,
+        'contributors': contributorSecondsMap,
+        'subModules': subModuleSecondsMap,
+      });
+    }
+
+    return results;
   }
 
   void updateTaskStatus(String newStatus, String comment) {
@@ -773,6 +1140,8 @@ class TasksController extends GetxController {
     tempAssignees.clear();
     tempAttachments.clear();
     selectedProjectName.value = 'None';
+    selectedModuleName.value = 'General';
+    selectedSubModuleName.value = 'Default';
   }
 
   void populateTaskForm(TaskModel task) {
@@ -784,6 +1153,8 @@ class TasksController extends GetxController {
     tempAssignees.assignAll(task.assignees);
     tempAttachments.assignAll(task.attachments);
     selectedProjectName.value = task.project?.name ?? 'None';
+    selectedModuleName.value = task.module;
+    selectedSubModuleName.value = task.subModule;
   }
 
   void saveTask() {
@@ -815,12 +1186,14 @@ class TasksController extends GetxController {
       status: selectedStatus.value,
       subTasks: [],
       comments: [],
+      module: selectedModuleName.value,
+      subModule: selectedSubModuleName.value,
       statusUpdates: [
         TaskStatusUpdate(
           id: 'status_init_${DateTime.now().millisecondsSinceEpoch}',
           status: selectedStatus.value,
           title: selectedStatus.value,
-          description: 'Task created by ${currentUser.name}.',
+          description: 'Task allocated by ${currentUser.name} in [${selectedModuleName.value}].',
           timestamp: DateTime.now(),
           user: currentUser,
         )
@@ -870,6 +1243,8 @@ class TasksController extends GetxController {
       priority: selectedPriority.value,
       deadline: selectedDeadline.value,
       status: selectedStatus.value,
+      module: selectedModuleName.value,
+      subModule: selectedSubModuleName.value,
       attachments: List<String>.from(tempAttachments),
       statusUpdates: [
         ...oldTask.statusUpdates,
@@ -934,6 +1309,12 @@ class TasksController extends GetxController {
   void _syncTaskStatusWithProject(TaskModel task) {
     if (task.project == null) return;
     if (!Get.isRegistered<ProjectsController>()) return;
+
+    if (WidgetsBinding.instance.schedulerPhase == SchedulerPhase.persistentCallbacks) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _syncTaskStatusWithProject(task));
+      return;
+    }
+
     final projController = Get.find<ProjectsController>();
 
     final pIdx = projController.projects.indexWhere(

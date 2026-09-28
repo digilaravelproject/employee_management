@@ -1,5 +1,57 @@
 import '../../role_permissions/models/role_permission_models.dart';
 
+class ProjectSubModule {
+  final String id;
+  final String name;
+  final String description;
+
+  const ProjectSubModule({
+    required this.id,
+    required this.name,
+    this.description = '',
+  });
+
+  ProjectSubModule copyWith({
+    String? id,
+    String? name,
+    String? description,
+  }) {
+    return ProjectSubModule(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      description: description ?? this.description,
+    );
+  }
+}
+
+class ProjectModule {
+  final String id;
+  final String name;
+  final String description;
+  final List<ProjectSubModule> subModules;
+
+  const ProjectModule({
+    required this.id,
+    required this.name,
+    this.description = '',
+    this.subModules = const [],
+  });
+
+  ProjectModule copyWith({
+    String? id,
+    String? name,
+    String? description,
+    List<ProjectSubModule>? subModules,
+  }) {
+    return ProjectModule(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      subModules: subModules ?? this.subModules,
+    );
+  }
+}
+
 class ProjectTask {
   final String id;
   final String title;
@@ -7,6 +59,8 @@ class ProjectTask {
   String status;         // To Do, In Progress, Review, Done
   final DateTime dueDate;
   final AppUser? assignee;
+  final String moduleName;
+  final String subModuleName;
 
   ProjectTask({
     required this.id,
@@ -15,6 +69,8 @@ class ProjectTask {
     this.status = 'To Do',
     required this.dueDate,
     this.assignee,
+    this.moduleName = 'General',
+    this.subModuleName = 'Default',
   });
 
   ProjectTask copyWith({
@@ -24,6 +80,8 @@ class ProjectTask {
     String? status,
     DateTime? dueDate,
     AppUser? assignee,
+    String? moduleName,
+    String? subModuleName,
   }) {
     return ProjectTask(
       id: id ?? this.id,
@@ -32,6 +90,8 @@ class ProjectTask {
       status: status ?? this.status,
       dueDate: dueDate ?? this.dueDate,
       assignee: assignee ?? this.assignee,
+      moduleName: moduleName ?? this.moduleName,
+      subModuleName: subModuleName ?? this.subModuleName,
     );
   }
 }
@@ -78,6 +138,7 @@ class Project {
   final List<ProjectTask> tasks;
   final List<ProjectTimelineEvent> timeline;
   final List<ProjectFile> files;
+  final List<ProjectModule> modules;
 
   const Project({
     required this.id,
@@ -91,6 +152,7 @@ class Project {
     required this.tasks,
     required this.timeline,
     required this.files,
+    this.modules = const [],
   });
 
   // Dynamic progress calculation based on tasks
@@ -112,6 +174,7 @@ class Project {
     List<ProjectTask>? tasks,
     List<ProjectTimelineEvent>? timeline,
     List<ProjectFile>? files,
+    List<ProjectModule>? modules,
   }) {
     return Project(
       id: id ?? this.id,
@@ -125,6 +188,8 @@ class Project {
       tasks: tasks ?? this.tasks,
       timeline: timeline ?? this.timeline,
       files: files ?? this.files,
+      modules: modules ?? this.modules,
     );
   }
 }
+

@@ -5,6 +5,9 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_text.dart';
 import '../../../core/controllers/app_controller.dart';
 import '../../role_permissions/models/role_permission_models.dart';
+import '../../tasks/controllers/tasks_controller.dart';
+import '../../tasks/models/task_model.dart';
+import '../../tasks/views/task_details_screen.dart';
 import '../controllers/projects_controller.dart';
 import '../models/project_model.dart';
 import 'create_project_screen.dart';
@@ -29,7 +32,7 @@ class ProjectDetailsScreen extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
             ),
             child: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textColorPrimary, size: 20),
+              icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textColorPrimary, size: 18),
               onPressed: () => Get.back(),
             ),
           ),
@@ -38,13 +41,13 @@ class ProjectDetailsScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             AppText(
-              'Project Details',
-              fontSize: 18,
+              'Project Workspace',
+              fontSize: 17,
               fontWeight: FontWeight.bold,
               color: AppColors.textColorPrimary,
             ),
             AppText(
-              'Track progress and allocations',
+              'Jira tracking, modules & timesheets',
               fontSize: 11,
               fontWeight: FontWeight.w500,
               color: AppColors.textColorHint,
@@ -58,6 +61,7 @@ class ProjectDetailsScreen extends StatelessWidget {
             final appController = Get.isRegistered<AppController>() ? Get.find<AppController>() : null;
             final isEmployee = appController?.userRole.value.toLowerCase() == 'employee';
             if (isEmployee) return const SizedBox();
+
             return PopupMenuButton<String>(
               icon: const Icon(Icons.more_vert_rounded, color: AppColors.textColorHint),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -105,7 +109,7 @@ class ProjectDetailsScreen extends StatelessWidget {
 
         return Column(
           children: [
-            // ── Header Summary Card ──
+            // ── Jira-Style Header Summary Card ──
             Container(
               color: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -118,9 +122,9 @@ class ProjectDetailsScreen extends StatelessWidget {
                   border: Border.all(color: AppColors.slate200),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.01),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
+                      color: Colors.black.withValues(alpha: 0.02),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
                     ),
                   ],
                 ),
@@ -134,7 +138,7 @@ class ProjectDetailsScreen extends StatelessWidget {
                             color: AppColors.primaryColor.withValues(alpha: 0.08),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Iconsax.folder_open, color: AppColors.primaryColor, size: 22),
+                          child: const Icon(Iconsax.briefcase, color: AppColors.primaryColor, size: 22),
                         ),
                         const SizedBox(width: 14),
                         Expanded(
@@ -142,42 +146,58 @@ class ProjectDetailsScreen extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               AppText(p.name, fontSize: 16, fontWeight: FontWeight.bold),
-                              AppText(p.category, fontSize: 11, color: AppColors.textColorHint),
+                              const SizedBox(height: 2),
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.slate100,
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: AppText(p.category, fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textColorSecondary),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  AppText('${p.modules.length} Modules', fontSize: 10, color: AppColors.textColorHint, fontWeight: FontWeight.w500),
+                                ],
+                              ),
                             ],
                           ),
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                           decoration: BoxDecoration(
-                            color: AppColors.successColor.withValues(alpha: 0.08),
+                            color: AppColors.successColor.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const AppText(
-                            'In Progress',
-                            fontSize: 9,
+                          child: AppText(
+                            p.status,
+                            fontSize: 10,
                             fontWeight: FontWeight.w800,
                             color: AppColors.successColor,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 18),
-                    const Divider(height: 1, color: AppColors.slate100),
                     const SizedBox(height: 14),
+                    const Divider(height: 1, color: AppColors.slate100),
+                    const SizedBox(height: 12),
 
-                    // Metrics: Start Date, End Date, Progress %
+                    // Metrics: Total Tasks, Modules, Progress
                     Row(
                       children: [
-                        _buildMetricCol('Start Date', _formatDate(p.startDate)),
+                        _buildMetricCol('Tasks', '${p.tasks.length}', Iconsax.task),
                         _buildVerticalDivider(),
-                        _buildMetricCol('End Date', _formatDate(p.endDate)),
+                        _buildMetricCol('Modules', '${p.modules.length}', Iconsax.hierarchy_2),
+                        _buildVerticalDivider(),
+                        _buildMetricCol('Team', '${p.teamMembers.length}', Iconsax.people),
                         _buildVerticalDivider(),
                         Expanded(
                           child: Column(
                             children: [
-                              AppText('${(progress * 100).toInt()}%', fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.primaryColor),
+                              AppText('${(progress * 100).toInt()}%', fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primaryColor),
                               const SizedBox(height: 4),
-                              const AppText('Progress', fontSize: 10, color: AppColors.textColorHint),
+                              const AppText('Done', fontSize: 10, color: AppColors.textColorHint),
                             ],
                           ),
                         ),
@@ -188,20 +208,20 @@ class ProjectDetailsScreen extends StatelessWidget {
               ),
             ),
 
-            // ── Tab Selection Bar ──
+            // ── Clean Jira Tab Selection Bar ──
             Container(
               color: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
               child: SizedBox(
                 height: 40,
                 child: Obx(() {
                   final currentIdx = controller.selectedDetailsTabIdx.value;
                   final tabs = [
-                    {'label': 'Overview', 'icon': Iconsax.category},
-                    {'label': 'Tasks', 'icon': Iconsax.task_square},
+                    {'label': 'Board & Tasks', 'icon': Iconsax.task_square},
+                    {'label': 'Modules', 'icon': Iconsax.hierarchy_2},
+                    {'label': 'Timesheet', 'icon': Iconsax.timer_1},
+                    {'label': 'Activity', 'icon': Iconsax.clock},
                     {'label': 'Team', 'icon': Iconsax.people},
-                    {'label': 'Files', 'icon': Iconsax.document_text},
-                    {'label': 'Timeline', 'icon': Iconsax.calendar},
                   ];
 
                   return ListView.builder(
@@ -231,8 +251,8 @@ class ProjectDetailsScreen extends StatelessWidget {
                             boxShadow: isSelected ? [
                               BoxShadow(
                                 color: AppColors.primaryColor.withValues(alpha: 0.2),
-                                blurRadius: 8,
-                                offset: const Offset(0, 3),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
                               )
                             ] : null,
                           ),
@@ -267,17 +287,17 @@ class ProjectDetailsScreen extends StatelessWidget {
                 final idx = controller.selectedDetailsTabIdx.value;
                 switch (idx) {
                   case 0:
-                    return _OverviewTab(project: p);
+                    return _JiraBoardTab(project: p);
                   case 1:
-                    return _TasksTab(project: p);
+                    return _ModulesTab(project: p);
                   case 2:
-                    return _TeamTab(project: p);
+                    return _TimesheetTab(project: p);
                   case 3:
-                    return _FilesTab(project: p);
+                    return _ProjectActivityTab(project: p);
                   case 4:
-                    return _TimelineTab(project: p);
+                    return _TeamTab(project: p);
                   default:
-                    return _OverviewTab(project: p);
+                    return _JiraBoardTab(project: p);
                 }
               }),
             ),
@@ -287,12 +307,19 @@ class ProjectDetailsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildMetricCol(String label, String value) {
+  Widget _buildMetricCol(String label, String value, IconData icon) {
     return Expanded(
       child: Column(
         children: [
-          AppText(value, fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textColorPrimary),
-          const SizedBox(height: 4),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 13, color: AppColors.textColorSecondary),
+              const SizedBox(width: 4),
+              AppText(value, fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textColorPrimary),
+            ],
+          ),
+          const SizedBox(height: 3),
           AppText(label, fontSize: 10, color: AppColors.textColorHint),
         ],
       ),
@@ -300,12 +327,7 @@ class ProjectDetailsScreen extends StatelessWidget {
   }
 
   Widget _buildVerticalDivider() {
-    return Container(width: 1, height: 28, color: const Color(0xFFE2E8F0));
-  }
-
-  String _formatDate(DateTime date) {
-    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return '${date.day} ${months[date.month - 1]} ${date.year}';
+    return Container(width: 1, height: 24, color: AppColors.slate200);
   }
 
   void _showDeleteConfirm(BuildContext context, ProjectsController controller, String id) {
@@ -313,7 +335,7 @@ class ProjectDetailsScreen extends StatelessWidget {
       AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const AppText('Delete Project', fontSize: 16, fontWeight: FontWeight.bold),
-        content: const AppText('Are you sure you want to delete this project permanently? All tasks and attachments will be lost.', fontSize: 13),
+        content: const AppText('Are you sure you want to delete this project permanently? All tasks and timesheet data will be lost.', fontSize: 13),
         actions: [
           TextButton(
             onPressed: () => Get.back(),
@@ -335,464 +357,12 @@ class ProjectDetailsScreen extends StatelessWidget {
   }
 }
 
-// ── OVERVIEW TAB ─────────────────────────────────────────────────────────────
-class _OverviewTab extends StatelessWidget {
+// ─────────────────────────────────────────────────────────────────────────────
+// 1. JIRA BOARD & TASKS TAB (With Modules, Sub-modules & Past Work Access)
+// ─────────────────────────────────────────────────────────────────────────────
+class _JiraBoardTab extends StatelessWidget {
   final Project project;
-  const _OverviewTab({required this.project});
-
-  @override
-  Widget build(BuildContext context) {
-    final controller = Get.find<ProjectsController>();
-    final done = project.tasks.where((t) => t.status == 'Done' || t.status == 'Completed').length;
-    final inProgress = project.tasks.where((t) => t.status == 'In Progress').length;
-    final testing = project.tasks.where((t) => t.status == 'Testing' || t.status == 'Review').length;
-    final pending = project.tasks.where((t) => t.status == 'To Do').length;
-    final total = project.tasks.length;
-
-    return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Project Description
-          const AppText('Description', fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textColorPrimary),
-          const SizedBox(height: 8),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.slate200),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.01),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                AppText(
-                  project.description,
-                  fontSize: 12,
-                  color: AppColors.textColorSecondary,
-                ),
-                const SizedBox(height: 10),
-                GestureDetector(
-                  onTap: () {},
-                  child: const AppText(
-                    'Show more',
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.primaryColor,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // Team members row
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const AppText('Team Members', fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textColorPrimary),
-            ],
-          ),
-          const SizedBox(height: 10),
-          _buildTeamStack(context, controller, project),
-          const SizedBox(height: 24),
-
-          // Project Status timeline track (Not Started -> In Progress -> Completed)
-          const AppText('Project Status Track', fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textColorPrimary),
-          const SizedBox(height: 10),
-          Container(
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.slate200),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.01),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                _buildStatusTimelineNode(
-                  'Not Started',
-                  project.status == 'In Progress' || project.status == 'Completed',
-                  project.status == 'Not Started',
-                ),
-                _buildStatusTimelineLine(project.status == 'In Progress' || project.status == 'Completed'),
-                _buildStatusTimelineNode(
-                  'In Progress',
-                  project.status == 'Completed',
-                  project.status == 'In Progress',
-                ),
-                _buildStatusTimelineLine(project.status == 'Completed'),
-                _buildStatusTimelineNode(
-                  'Completed',
-                  project.status == 'Completed',
-                  project.status == 'Completed',
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // Tasks Analytics Donut representation
-          const AppText('Tasks Overview', fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textColorPrimary),
-          const SizedBox(height: 10),
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.slate200),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.01),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                // Mock chart representation
-                Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    SizedBox(
-                      width: 90,
-                      height: 90,
-                      child: CircularProgressIndicator(
-                        value: total > 0 ? done / total : 0.0,
-                        strokeWidth: 8,
-                        backgroundColor: AppColors.slate100,
-                        valueColor: const AlwaysStoppedAnimation<Color>(AppColors.successColor),
-                      ),
-                    ),
-                    SizedBox(
-                      width: 70,
-                      height: 70,
-                      child: CircularProgressIndicator(
-                        value: total > 0 ? inProgress / total : 0.0,
-                        strokeWidth: 6,
-                        backgroundColor: Colors.transparent,
-                        valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primaryColor),
-                      ),
-                    ),
-                    Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        AppText('$total', fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textColorPrimary),
-                        const AppText('Tasks', fontSize: 8, color: AppColors.textColorHint, fontWeight: FontWeight.bold),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(width: 24),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildBulletMetric('Completed', done, AppColors.successColor, total),
-                      const SizedBox(height: 8),
-                      _buildBulletMetric('In Progress', inProgress, AppColors.primaryColor, total),
-                      const SizedBox(height: 8),
-                      _buildBulletMetric('Testing', testing, const Color(0xFF6366F1), total),
-                      const SizedBox(height: 8),
-                      _buildBulletMetric('To Do', pending, AppColors.warningColor, total),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTeamStack(BuildContext context, ProjectsController controller, Project project) {
-    const maxVisible = 5;
-    final members = project.teamMembers;
-    final displayCount = members.length > maxVisible ? maxVisible : members.length;
-    final remaining = members.length - displayCount;
-
-    return Row(
-      children: [
-        if (members.isEmpty)
-          const AppText('No team members', fontSize: 12, color: AppColors.textColorHint)
-        else
-          SizedBox(
-            height: 36,
-            width: (displayCount * 26.0) + (remaining > 0 ? 36.0 : 10.0),
-            child: Stack(
-              children: [
-                for (int i = 0; i < displayCount; i++)
-                  Positioned(
-                    left: i * 22.0,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.05),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: CircleAvatar(
-                        radius: 16,
-                        backgroundImage: NetworkImage(members[i].avatarUrl),
-                      ),
-                    ),
-                  ),
-                if (remaining > 0)
-                  Positioned(
-                    left: displayCount * 22.0,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: AppColors.slate100,
-                        border: Border.all(color: Colors.white, width: 2),
-                      ),
-                      child: CircleAvatar(
-                        radius: 16,
-                        backgroundColor: AppColors.slate300,
-                        child: AppText(
-                          '+$remaining',
-                          fontSize: 9,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textColorSecondary,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        const SizedBox(width: 12),
-        GestureDetector(
-          onTap: () => _showAddMemberSheet(context, controller, project),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: AppColors.primaryColor.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Iconsax.user_add, size: 14, color: AppColors.primaryColor),
-                SizedBox(width: 6),
-                AppText(
-                  'Add Member',
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primaryColor,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStatusTimelineNode(String label, bool isDone, bool isActive) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: isActive 
-                ? AppColors.primaryColor.withValues(alpha: 0.12) 
-                : (isDone ? AppColors.successColor.withValues(alpha: 0.08) : Colors.transparent),
-          ),
-          child: Container(
-            width: 22,
-            height: 22,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: isActive 
-                  ? AppColors.primaryColor 
-                  : (isDone ? AppColors.successColor : Colors.white),
-              border: Border.all(
-                color: isActive 
-                    ? AppColors.primaryColor 
-                    : (isDone ? AppColors.successColor : AppColors.slate200),
-                width: 2,
-              ),
-              boxShadow: isActive ? [
-                BoxShadow(
-                  color: AppColors.primaryColor.withValues(alpha: 0.25),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
-                )
-              ] : null,
-            ),
-            child: Icon(
-              isDone ? Icons.check : Icons.circle,
-              color: isDone ? Colors.white : (isActive ? Colors.white : AppColors.slate300),
-              size: 10,
-            ),
-          ),
-        ),
-        const SizedBox(height: 6),
-        AppText(
-          label,
-          fontSize: 10,
-          fontWeight: (isActive || isDone) ? FontWeight.bold : FontWeight.w600,
-          color: isActive 
-              ? AppColors.primaryColor 
-              : (isDone ? AppColors.successColor : AppColors.slate500),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStatusTimelineLine(bool isDone) {
-    return Expanded(
-      child: Container(
-        height: 3,
-        decoration: BoxDecoration(
-          color: isDone ? AppColors.successColor : AppColors.slate200,
-          borderRadius: BorderRadius.circular(2),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBulletMetric(String label, int count, Color color, int total) {
-    final pct = total > 0 ? ((count / total) * 100).toInt() : 0;
-    return Row(
-      children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: color,
-            boxShadow: [
-              BoxShadow(
-                color: color.withValues(alpha: 0.3),
-                blurRadius: 4,
-                offset: const Offset(0, 1),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: AppText(
-            label,
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-            color: AppColors.textColorSecondary,
-          ),
-        ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: AppText(
-            '$count ($pct%)',
-            fontSize: 10,
-            fontWeight: FontWeight.bold,
-            color: color,
-          ),
-        ),
-      ],
-    );
-  }
-
-  void _showAddMemberSheet(BuildContext context, ProjectsController controller, Project p) {
-    Get.bottomSheet(
-      Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: const BoxDecoration(color: AppColors.slate300, borderRadius: BorderRadius.all(Radius.circular(10))),
-              ),
-            ),
-            const SizedBox(height: 18),
-            const AppText('Add Team Members', fontSize: 15, fontWeight: FontWeight.bold),
-            const SizedBox(height: 14),
-            Expanded(
-              child: ListView.builder(
-                itemCount: controller.allEmployees.length,
-                itemBuilder: (context, idx) {
-                  final emp = controller.allEmployees[idx];
-                  final isAssigned = p.teamMembers.contains(emp);
-                  return ListTile(
-                    leading: CircleAvatar(backgroundImage: NetworkImage(emp.avatarUrl)),
-                    title: AppText(emp.name, fontSize: 13, fontWeight: FontWeight.bold),
-                    subtitle: AppText(emp.email, fontSize: 10, color: AppColors.textColorHint),
-                    trailing: isAssigned
-                        ? const Icon(Icons.check_circle, color: AppColors.primaryColor)
-                        : IconButton(
-                            icon: const Icon(Icons.add_circle_outline, color: AppColors.primaryColor),
-                            onPressed: () {
-                              controller.assignMembersToProject([emp]);
-                              Get.back();
-                            },
-                          ),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── TASKS TAB ────────────────────────────────────────────────────────────────
-class _TasksTab extends StatelessWidget {
-  final Project project;
-  const _TasksTab({required this.project});
-
-  Color _getCategoryColor(String cat) {
-    switch (cat.toLowerCase()) {
-      case 'design':
-        return AppColors.indigo500; // Violet/Indigo
-      case 'development':
-      case 'dev':
-        return AppColors.primaryColor; // Blue
-      case 'testing':
-      case 'test':
-        return AppColors.successColor; // Emerald
-      default:
-        return AppColors.slate500; // Slate
-    }
-  }
+  const _JiraBoardTab({required this.project});
 
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
@@ -822,8 +392,8 @@ class _TasksTab extends StatelessWidget {
         // Sub-filter tabs inside tasks list
         Container(
           color: Colors.white,
-          height: 52,
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          height: 48,
+          padding: const EdgeInsets.symmetric(vertical: 6),
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -837,26 +407,19 @@ class _TasksTab extends StatelessWidget {
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 180),
                     margin: const EdgeInsets.only(right: 8),
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       color: isSelected ? AppColors.primaryColor : AppColors.slate100,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(10),
                       border: Border.all(
                         color: isSelected ? AppColors.primaryColor : AppColors.slate200,
                         width: 1.0,
                       ),
-                      boxShadow: isSelected ? [
-                        BoxShadow(
-                          color: AppColors.primaryColor.withValues(alpha: 0.2),
-                          blurRadius: 8,
-                          offset: const Offset(0, 3),
-                        )
-                      ] : null,
                     ),
                     child: AppText(
                       subTab,
-                      fontSize: 12,
+                      fontSize: 11,
                       fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
                       color: isSelected ? Colors.white : AppColors.textColorSecondary,
                     ),
@@ -879,131 +442,147 @@ class _TasksTab extends StatelessWidget {
             }).toList();
 
             if (tList.isEmpty) {
-              return const Center(child: AppText('No tasks in this category', fontSize: 12, color: AppColors.textColorHint));
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Iconsax.task_square, size: 40, color: AppColors.textColorHint.withValues(alpha: 0.4)),
+                    const SizedBox(height: 10),
+                    const AppText('No tasks in this status filter', fontSize: 13, color: AppColors.textColorHint),
+                  ],
+                ),
+              );
             }
 
             return ListView.separated(
               padding: const EdgeInsets.all(16),
               itemCount: tList.length,
-              separatorBuilder: (context, idx) => const SizedBox(height: 12),
+              separatorBuilder: (context, idx) => const SizedBox(height: 10),
               itemBuilder: (context, index) {
                 final task = tList[index];
                 final isDone = task.status == 'Done' || task.status == 'Completed';
-                final categoryColor = _getCategoryColor(task.category);
                 final statusColor = _getStatusColor(task.status);
 
-                return Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppColors.slate200),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.01),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      // Custom premium Checkbox click changes state
-                      GestureDetector(
-                        onTap: () {
-                          if (isDone) {
-                            controller.changeTaskStatus(task.id, 'In Progress');
-                          } else {
-                            controller.changeTaskStatus(task.id, 'Done');
-                          }
-                        },
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          width: 22,
-                          height: 22,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: isDone ? AppColors.primaryColor : Colors.white,
-                            border: Border.all(
-                              color: isDone ? AppColors.primaryColor : AppColors.slate300,
-                              width: 2,
-                            ),
-                            boxShadow: isDone ? [
-                              BoxShadow(
-                                color: AppColors.primaryColor.withValues(alpha: 0.2),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
-                              )
-                            ] : null,
-                          ),
-                          child: isDone
-                              ? const Icon(Icons.check, size: 14, color: Colors.white)
-                              : null,
+                return GestureDetector(
+                  onTap: () {
+                    // Open full Task Details Screen
+                    if (Get.isRegistered<TasksController>()) {
+                      final tasksCtrl = Get.find<TasksController>();
+                      final matched = tasksCtrl.tasks.firstWhereOrNull((t) => t.id == task.id || t.title == task.title);
+                      if (matched != null) {
+                        tasksCtrl.selectTask(matched);
+                        Get.to(() => const TaskDetailsScreen());
+                      }
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.slate200),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.01),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
                         ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            AppText(
-                              task.title,
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: isDone ? AppColors.textColorHint : AppColors.textColorPrimary,
-                              decoration: isDone ? TextDecoration.lineThrough : null,
+                      ],
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Status toggle circle
+                        GestureDetector(
+                          onTap: () {
+                            if (isDone) {
+                              controller.changeTaskStatus(task.id, 'In Progress');
+                            } else {
+                              controller.changeTaskStatus(task.id, 'Done');
+                            }
+                          },
+                          child: Container(
+                            margin: const EdgeInsets.only(top: 2),
+                            width: 20,
+                            height: 20,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: isDone ? AppColors.successColor : Colors.white,
+                              border: Border.all(
+                                color: isDone ? AppColors.successColor : AppColors.slate300,
+                                width: 1.8,
+                              ),
                             ),
-                            const SizedBox(height: 6),
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                  decoration: BoxDecoration(
-                                    color: categoryColor.withValues(alpha: 0.08),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: AppText(
-                                    task.category, 
-                                    fontSize: 9, 
-                                    fontWeight: FontWeight.bold, 
-                                    color: categoryColor,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                  decoration: BoxDecoration(
-                                    color: statusColor.withValues(alpha: 0.08),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: AppText(
-                                    task.status, 
-                                    fontSize: 9, 
-                                    fontWeight: FontWeight.bold, 
-                                    color: statusColor,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                const Icon(Iconsax.calendar, size: 12, color: AppColors.textColorHint),
-                                const SizedBox(width: 4),
-                                AppText('Due ${task.dueDate.day}/${task.dueDate.month}', fontSize: 10, color: AppColors.textColorHint),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (task.assignee != null)
-                        Container(
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(color: AppColors.slate100, width: 2),
-                          ),
-                          child: CircleAvatar(
-                            radius: 14,
-                            backgroundImage: NetworkImage(task.assignee!.avatarUrl),
+                            child: isDone
+                                ? const Icon(Icons.check, size: 12, color: Colors.white)
+                                : null,
                           ),
                         ),
-                    ],
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              AppText(
+                                task.title,
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: isDone ? AppColors.textColorHint : AppColors.textColorPrimary,
+                                decoration: isDone ? TextDecoration.lineThrough : null,
+                              ),
+                              const SizedBox(height: 6),
+                              // Module and Sub-module breadcrumbs badge
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primaryColor.withValues(alpha: 0.08),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(Iconsax.hierarchy_2, size: 10, color: AppColors.primaryColor),
+                                        const SizedBox(width: 4),
+                                        AppText(
+                                          task.moduleName.isNotEmpty ? task.moduleName : 'General',
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppColors.primaryColor,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: statusColor.withValues(alpha: 0.08),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: AppText(
+                                      task.status,
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold,
+                                      color: statusColor,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (task.assignee != null)
+                          Tooltip(
+                            message: 'Assigned to ${task.assignee!.name}',
+                            child: CircleAvatar(
+                              radius: 13,
+                              backgroundImage: NetworkImage(task.assignee!.avatarUrl),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 );
               },
@@ -1011,7 +590,7 @@ class _TasksTab extends StatelessWidget {
           }),
         ),
 
-        // "+ Add Task" capsule action button (Admin / Manager only)
+        // "+ Add Task" button (Admin / Manager only)
         Obx(() {
           final appController = Get.isRegistered<AppController>() ? Get.find<AppController>() : null;
           final isEmployee = appController?.userRole.value.toLowerCase() == 'employee';
@@ -1019,19 +598,18 @@ class _TasksTab extends StatelessWidget {
 
           return Container(
             color: Colors.white,
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(14),
             child: SafeArea(
               top: false,
               child: SizedBox(
                 width: double.infinity,
-                height: 48,
+                height: 46,
                 child: ElevatedButton.icon(
                   onPressed: () => _showAddTaskSheet(context, controller, project),
                   icon: const Icon(Iconsax.add, size: 16, color: Colors.white),
-                  label: const AppText('Add Task', fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white, height: 1.1),
+                  label: const AppText('Add Task to Project', fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primaryColor,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     elevation: 0,
                   ),
@@ -1046,7 +624,8 @@ class _TasksTab extends StatelessWidget {
 
   void _showAddTaskSheet(BuildContext context, ProjectsController controller, Project p) {
     final titleField = TextEditingController();
-    final RxString cat = 'Design'.obs;
+    final RxString selectedMod = (p.modules.isNotEmpty ? p.modules.first.name : 'General').obs;
+    final RxString selectedSub = 'Default'.obs;
     final Rxn<AppUser> assignee = Rxn<AppUser>();
     if (p.teamMembers.isNotEmpty) assignee.value = p.teamMembers.first;
 
@@ -1069,8 +648,8 @@ class _TasksTab extends StatelessWidget {
                   decoration: const BoxDecoration(color: AppColors.slate300, borderRadius: BorderRadius.all(Radius.circular(10))),
                 ),
               ),
-              const SizedBox(height: 18),
-              const AppText('Assign New Task', fontSize: 15, fontWeight: FontWeight.bold),
+              const SizedBox(height: 16),
+              const AppText('Assign New Task (Jira Module)', fontSize: 15, fontWeight: FontWeight.bold),
               const SizedBox(height: 14),
               TextField(
                 controller: titleField,
@@ -1085,28 +664,27 @@ class _TasksTab extends StatelessWidget {
               ),
               const SizedBox(height: 14),
 
-              // Category row
-              const AppText('Category', fontSize: 12, fontWeight: FontWeight.bold),
+              // Module Selector
+              const AppText('Module', fontSize: 12, fontWeight: FontWeight.bold),
               const SizedBox(height: 6),
-              Row(
-                children: ['Design', 'Development', 'Testing'].map((c) {
-                  return Obx(() {
-                    final selected = cat.value == c;
-                    return GestureDetector(
-                      onTap: () => cat.value = c,
-                      child: Container(
-                        margin: const EdgeInsets.only(right: 8),
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: selected ? AppColors.primaryColor : AppColors.slate100,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: AppText(c, fontSize: 11, fontWeight: FontWeight.bold, color: selected ? Colors.white : AppColors.textColorSecondary),
-                      ),
-                    );
-                  });
-                }).toList(),
-              ),
+              Obx(() {
+                final modNames = p.modules.isNotEmpty ? p.modules.map((m) => m.name).toList() : ['General'];
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(color: AppColors.slate50, borderRadius: BorderRadius.circular(10)),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: modNames.contains(selectedMod.value) ? selectedMod.value : modNames.first,
+                      isExpanded: true,
+                      dropdownColor: Colors.white,
+                      items: modNames.map((m) => DropdownMenuItem(value: m, child: AppText(m, fontSize: 12))).toList(),
+                      onChanged: (val) {
+                        if (val != null) selectedMod.value = val;
+                      },
+                    ),
+                  ),
+                );
+              }),
               const SizedBox(height: 14),
 
               // Assignee drop-down
@@ -1143,14 +721,16 @@ class _TasksTab extends StatelessWidget {
                     if (titleField.text.trim().isEmpty) return;
                     controller.addTaskToProject(
                       titleField.text.trim(),
-                      cat.value,
+                      'Development',
                       assignee.value,
                       DateTime.now().add(const Duration(days: 7)),
+                      moduleName: selectedMod.value,
+                      subModuleName: selectedSub.value,
                     );
                     Get.back();
                   },
                   style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryColor, elevation: 0),
-                  child: const AppText('Assign Task', color: Colors.white, fontWeight: FontWeight.bold),
+                  child: const AppText('Allocate Task', color: Colors.white, fontWeight: FontWeight.bold),
                 ),
               ),
             ],
@@ -1161,251 +741,646 @@ class _TasksTab extends StatelessWidget {
   }
 }
 
-// ── TEAM ROSTER TAB ──────────────────────────────────────────────────────────
-class _TeamTab extends StatelessWidget {
+// ─────────────────────────────────────────────────────────────────────────────
+// 2. MODULES & SUB-MODULES TAB (Jira Epics / Components Architecture)
+// ─────────────────────────────────────────────────────────────────────────────
+class _ModulesTab extends StatelessWidget {
   final Project project;
-  const _TeamTab({required this.project});
+  const _ModulesTab({required this.project});
 
   @override
   Widget build(BuildContext context) {
     final controller = Get.find<ProjectsController>();
+    final modules = project.modules;
 
-    if (project.teamMembers.isEmpty) {
-      return const Center(
-        child: AppText('No team members assigned', fontSize: 12, color: AppColors.textColorHint),
-      );
-    }
+    return Column(
+      children: [
+        Expanded(
+          child: modules.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Iconsax.hierarchy_2, size: 44, color: AppColors.textColorHint.withValues(alpha: 0.4)),
+                      const SizedBox(height: 10),
+                      const AppText('No modules configured yet', fontSize: 13, fontWeight: FontWeight.bold),
+                      const SizedBox(height: 4),
+                      const AppText('Create modules to organize tasks Jira-style', fontSize: 11, color: AppColors.textColorHint),
+                    ],
+                  ),
+                )
+              : ListView.separated(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: modules.length,
+                  separatorBuilder: (context, idx) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    final mod = modules[index];
+                    final modTasks = project.tasks.where((t) => t.moduleName.toLowerCase().trim() == mod.name.toLowerCase().trim()).toList();
+                    final doneTasks = modTasks.where((t) => t.status == 'Done' || t.status == 'Completed').length;
+                    final progress = modTasks.isNotEmpty ? (doneTasks / modTasks.length) : 0.0;
 
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
-      itemCount: project.teamMembers.length,
-      separatorBuilder: (context, idx) => const SizedBox(height: 12),
-      itemBuilder: (context, index) {
-        final emp = project.teamMembers[index];
-        return Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: AppColors.slate200),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.01),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Container(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.primaryLight, width: 3),
-                ),
-                child: CircleAvatar(
-                  radius: 22,
-                  backgroundImage: NetworkImage(emp.avatarUrl),
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    AppText(emp.name, fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textColorPrimary),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        const Icon(Iconsax.sms, size: 12, color: AppColors.textColorHint),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: AppText(
-                            emp.email,
-                            fontSize: 10,
-                            color: AppColors.textColorHint,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                    return Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: AppColors.slate200),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.01),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primaryColor.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(Iconsax.hierarchy_2, color: AppColors.primaryColor, size: 18),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    AppText(mod.name, fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textColorPrimary),
+                                    if (mod.description.isNotEmpty) ...[
+                                      const SizedBox(height: 2),
+                                      AppText(mod.description, fontSize: 10, color: AppColors.textColorHint),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: AppColors.slate100,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: AppText(
+                                  '${modTasks.length} Tasks',
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primaryColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+
+                          // Progress line
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: LinearProgressIndicator(
+                              value: progress,
+                              minHeight: 5,
+                              backgroundColor: AppColors.slate100,
+                              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.successColor),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+
+                          // Sub-modules tags
+                          if (mod.subModules.isNotEmpty) ...[
+                            const AppText('Sub-Modules:', fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textColorSecondary),
+                            const SizedBox(height: 6),
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 6,
+                              children: mod.subModules.map((sub) {
+                                return Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.slate50,
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(color: AppColors.slate200),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.subdirectory_arrow_right_rounded, size: 10, color: AppColors.textColorHint),
+                                      const SizedBox(width: 4),
+                                      AppText(sub.name, fontSize: 9, fontWeight: FontWeight.w600, color: AppColors.textColorPrimary),
+                                    ],
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          ],
+                        ],
+                      ),
+                    );
+                  },
+                ),
+        ),
+
+        // "+ Add Module" action for Admin
+        Obx(() {
+          final appController = Get.isRegistered<AppController>() ? Get.find<AppController>() : null;
+          final isEmployee = appController?.userRole.value.toLowerCase() == 'employee';
+          if (isEmployee) return const SizedBox.shrink();
+
+          return Container(
+            color: Colors.white,
+            padding: const EdgeInsets.all(14),
+            child: SafeArea(
+              top: false,
+              child: SizedBox(
+                width: double.infinity,
+                height: 46,
+                child: ElevatedButton.icon(
+                  onPressed: () => _showAddModuleSheet(context, controller),
+                  icon: const Icon(Iconsax.add, size: 16, color: Colors.white),
+                  label: const AppText('Create New Module', fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryColor,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    elevation: 0,
+                  ),
                 ),
               ),
-              GestureDetector(
-                onTap: () {
-                  Get.snackbar('Message', 'Opening chat with ${emp.name}', snackPosition: SnackPosition.BOTTOM);
-                },
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
+  void _showAddModuleSheet(BuildContext context, ProjectsController controller) {
+    final nameField = TextEditingController();
+    final descField = TextEditingController();
+    final subModulesField = TextEditingController();
+
+    Get.bottomSheet(
+      Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.all(20),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
                 child: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryColor.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(Iconsax.sms, color: AppColors.primaryColor, size: 16),
+                  width: 40,
+                  height: 4,
+                  decoration: const BoxDecoration(color: AppColors.slate300, borderRadius: BorderRadius.all(Radius.circular(10))),
                 ),
               ),
-              const SizedBox(width: 8),
-              GestureDetector(
-                onTap: () => controller.removeMember(emp),
-                child: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: AppColors.errorColorAccent,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(Icons.close_rounded, color: AppColors.errorColor, size: 16),
+              const SizedBox(height: 16),
+              const AppText('Create Jira Module', fontSize: 15, fontWeight: FontWeight.bold),
+              const SizedBox(height: 14),
+              TextField(
+                controller: nameField,
+                style: const TextStyle(fontSize: 13),
+                decoration: InputDecoration(
+                  hintText: 'Module Name (e.g. Authentication & Security)',
+                  hintStyle: const TextStyle(color: AppColors.textColorHint, fontSize: 12),
+                  filled: true,
+                  fillColor: AppColors.slate50,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: descField,
+                style: const TextStyle(fontSize: 13),
+                decoration: InputDecoration(
+                  hintText: 'Description',
+                  hintStyle: const TextStyle(color: AppColors.textColorHint, fontSize: 12),
+                  filled: true,
+                  fillColor: AppColors.slate50,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: subModulesField,
+                style: const TextStyle(fontSize: 13),
+                decoration: InputDecoration(
+                  hintText: 'Sub-modules (comma separated, e.g. Login, Signup, OTP)',
+                  hintStyle: const TextStyle(color: AppColors.textColorHint, fontSize: 12),
+                  filled: true,
+                  fillColor: AppColors.slate50,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                height: 46,
+                child: ElevatedButton(
+                  onPressed: () {
+                    if (nameField.text.trim().isEmpty) return;
+                    final subList = subModulesField.text.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
+                    controller.addModuleToProject(nameField.text.trim(), descField.text.trim(), subList);
+                    Get.back();
+                  },
+                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryColor, elevation: 0),
+                  child: const AppText('Save Module', color: Colors.white, fontWeight: FontWeight.bold),
                 ),
               ),
             ],
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 }
 
-// ── FILES TAB ────────────────────────────────────────────────────────────────
-class _FilesTab extends StatelessWidget {
+// ─────────────────────────────────────────────────────────────────────────────
+// 3. JIRA TIMESHEET & WORKLOG TAB (Admin & Manager Tracking by Member & Module)
+// ─────────────────────────────────────────────────────────────────────────────
+class _TimesheetTab extends StatelessWidget {
   final Project project;
-  const _FilesTab({required this.project});
+  const _TimesheetTab({required this.project});
+
+  String _formatSeconds(int secs) {
+    final hours = secs ~/ 3600;
+    final mins = (secs % 3600) ~/ 60;
+    if (hours > 0) {
+      return '${hours}h ${mins}m';
+    } else {
+      return '${mins}m';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    if (project.files.isEmpty) {
-      return const Center(child: AppText('No attached documents found', fontSize: 12, color: AppColors.textColorHint));
-    }
+    final tasksController = Get.find<TasksController>();
+    final mode = 'Members'.obs; // 'Members' vs 'Modules'
 
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
-      itemCount: project.files.length,
-      separatorBuilder: (context, idx) => const SizedBox(height: 12),
-      itemBuilder: (context, index) {
-        final file = project.files[index];
-
-        Color accentColor;
-        Color bgColor;
-        IconData fileIcon;
-
-        switch (file.type.toUpperCase()) {
-          case 'PDF':
-            accentColor = AppColors.errorColor; // Crimson Red
-            bgColor = AppColors.errorColorAccent;
-            fileIcon = Iconsax.document_text;
-            break;
-          case 'FIG':
-          case 'FIGMA':
-            accentColor = AppColors.indigo500; // Violet/Purple
-            bgColor = AppColors.indigo500.withValues(alpha: 0.1);
-            fileIcon = Iconsax.bezier;
-            break;
-          case 'PNG':
-          case 'JPG':
-          case 'JPEG':
-          case 'IMAGE':
-            accentColor = AppColors.infoColor; // Azure/Blue
-            bgColor = AppColors.infoColor.withValues(alpha: 0.1);
-            fileIcon = Iconsax.image;
-            break;
-          default:
-            accentColor = AppColors.slate500; // Slate Grey
-            bgColor = AppColors.slate100;
-            fileIcon = Iconsax.document;
-        }
-
-        return Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: AppColors.slate200),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.01),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
+    return Column(
+      children: [
+        // Mode Switcher Header
+        Container(
+          color: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: bgColor,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(fileIcon, color: accentColor, size: 22),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    AppText(file.name, fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textColorPrimary),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              const AppText('Jira Timesheet Report', fontSize: 13, fontWeight: FontWeight.bold),
+              Obx(() {
+                return Container(
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: AppColors.slate100,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    children: ['Members', 'Modules'].map((m) {
+                      final isSelected = mode.value == m;
+                      return GestureDetector(
+                        onTap: () => mode.value = m,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          alignment: Alignment.center,
                           decoration: BoxDecoration(
-                            color: AppColors.slate100,
-                            borderRadius: BorderRadius.circular(4),
+                            color: isSelected ? AppColors.primaryColor : Colors.transparent,
+                            borderRadius: BorderRadius.circular(10),
                           ),
                           child: AppText(
-                            file.type.toUpperCase(),
-                            fontSize: 8,
+                            m,
+                            fontSize: 10,
                             fontWeight: FontWeight.bold,
-                            color: AppColors.textColorSecondary,
+                            color: isSelected ? Colors.white : AppColors.textColorSecondary,
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        AppText(
-                          '${file.sizeMb} MB',
-                          fontSize: 10,
-                          color: AppColors.textColorHint,
-                          fontWeight: FontWeight.w500,
+                      );
+                    }).toList(),
+                  ),
+                );
+              }),
+            ],
+          ),
+        ),
+
+        // Timesheet Content
+        Expanded(
+          child: Obx(() {
+            // Read ticker for reactive updates
+            tasksController.liveTicker.value;
+
+            if (mode.value == 'Members') {
+              final memberData = tasksController.getMemberProjectTimesheet(project.id);
+              if (memberData.isEmpty) {
+                return const Center(child: AppText('No team members in project', fontSize: 12, color: AppColors.textColorHint));
+              }
+
+              return ListView.separated(
+                padding: const EdgeInsets.all(16),
+                itemCount: memberData.length,
+                separatorBuilder: (context, idx) => const SizedBox(height: 12),
+                itemBuilder: (context, index) {
+                  final item = memberData[index];
+                  final AppUser member = item['member'] as AppUser;
+                  final int totalSecs = item['totalSeconds'] as int;
+                  final Map<String, int> moduleHours = item['moduleHours'] as Map<String, int>;
+                  final List<TaskTimeLog> worklogs = item['worklogs'] as List<TaskTimeLog>;
+
+                  return Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: AppColors.slate200),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.01),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
                         ),
                       ],
                     ),
-                  ],
-                ),
-              ),
-              GestureDetector(
-                onTap: () {
-                  Get.snackbar('Downloading', 'Saved ${file.name} to device storage', snackPosition: SnackPosition.BOTTOM);
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Member Header Row
+                        Row(
+                          children: [
+                            CircleAvatar(radius: 20, backgroundImage: NetworkImage(member.avatarUrl)),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  AppText(member.name, fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textColorPrimary),
+                                  const SizedBox(height: 2),
+                                  AppText(member.email, fontSize: 10, color: AppColors.textColorHint),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: AppColors.primaryColor.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Iconsax.clock, size: 12, color: AppColors.primaryColor),
+                                  const SizedBox(width: 4),
+                                  AppText(
+                                    _formatSeconds(totalSecs),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.primaryColor,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        const Divider(height: 1, color: AppColors.slate100),
+                        const SizedBox(height: 10),
+
+                        // Module breakdown pills for this member
+                        const AppText('Modules Worked:', fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textColorSecondary),
+                        const SizedBox(height: 6),
+                        if (moduleHours.isEmpty)
+                          const AppText('No time logged on modules yet', fontSize: 10, color: AppColors.textColorHint)
+                        else
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 6,
+                            children: moduleHours.entries.map((entry) {
+                              return Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: AppColors.slate50,
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(color: AppColors.slate200),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    AppText(entry.key, fontSize: 9, fontWeight: FontWeight.w600, color: AppColors.textColorPrimary),
+                                    const SizedBox(width: 5),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.primaryColor.withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: AppText(
+                                        _formatSeconds(entry.value),
+                                        fontSize: 8,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.primaryColor,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                          ),
+
+                        // Worklogs history summary
+                        if (worklogs.isNotEmpty) ...[
+                          const SizedBox(height: 12),
+                          const AppText('Recent Work Sessions:', fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textColorSecondary),
+                          const SizedBox(height: 6),
+                          ...worklogs.take(3).map((log) {
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 6),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Icon(Icons.circle, size: 6, color: AppColors.primaryColor),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Expanded(
+                                              child: AppText(
+                                                log.taskTitle.isNotEmpty ? log.taskTitle : 'Work Session',
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                                color: AppColors.textColorPrimary,
+                                              ),
+                                            ),
+                                            AppText(
+                                              log.formattedDuration,
+                                              fontSize: 9,
+                                              fontWeight: FontWeight.bold,
+                                              color: AppColors.primaryColor,
+                                            ),
+                                          ],
+                                        ),
+                                        if (log.note.isNotEmpty)
+                                          AppText(
+                                            log.note,
+                                            fontSize: 9,
+                                            color: AppColors.textColorHint,
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }),
+                        ],
+                      ],
+                    ),
+                  );
                 },
-                child: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryColor.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(Iconsax.import, color: AppColors.primaryColor, size: 18),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
+              );
+            } else {
+              // Modules-wise Timesheet View
+              final moduleData = tasksController.getModuleProjectTimesheet(project.id);
+              if (moduleData.isEmpty) {
+                return const Center(child: AppText('No modules to track', fontSize: 12, color: AppColors.textColorHint));
+              }
+
+              return ListView.separated(
+                padding: const EdgeInsets.all(16),
+                itemCount: moduleData.length,
+                separatorBuilder: (context, idx) => const SizedBox(height: 12),
+                itemBuilder: (context, index) {
+                  final item = moduleData[index];
+                  final ProjectModule mod = item['module'] as ProjectModule;
+                  final int totalSecs = item['totalSeconds'] as int;
+                  final int tasksCount = item['tasksCount'] as int;
+                  final Map<String, int> contributors = item['contributors'] as Map<String, int>;
+
+                  return Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: AppColors.slate200),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.01),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primaryColor.withValues(alpha: 0.08),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: const Icon(Iconsax.hierarchy_2, color: AppColors.primaryColor, size: 16),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        AppText(mod.name, fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textColorPrimary),
+                                        AppText('$tasksCount Tasks in Module', fontSize: 10, color: AppColors.textColorHint),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: AppColors.successColor.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: AppText(
+                                _formatSeconds(totalSecs),
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.successColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        const Divider(height: 1, color: AppColors.slate100),
+                        const SizedBox(height: 10),
+
+                        const AppText('Member Hours Contributed:', fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textColorSecondary),
+                        const SizedBox(height: 6),
+                        if (contributors.isEmpty)
+                          const AppText('No hours logged for this module yet', fontSize: 10, color: AppColors.textColorHint)
+                        else
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 6,
+                            children: contributors.entries.map((c) {
+                              return Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: AppColors.slate50,
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(color: AppColors.slate200),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    AppText(c.key, fontSize: 9, fontWeight: FontWeight.w600, color: AppColors.textColorPrimary),
+                                    const SizedBox(width: 4),
+                                    AppText(_formatSeconds(c.value), fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.primaryColor),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                      ],
+                    ),
+                  );
+                },
+              );
+            }
+          }),
+        ),
+      ],
     );
   }
 }
 
-// ── TIMELINE TAB ─────────────────────────────────────────────────────────────
-class _TimelineTab extends StatelessWidget {
+// ─────────────────────────────────────────────────────────────────────────────
+// 4. PROJECT ACTIVITY & PAST WORK HISTORY TAB (Full Visibility for New Joiners)
+// ─────────────────────────────────────────────────────────────────────────────
+class _ProjectActivityTab extends StatelessWidget {
   final Project project;
-  const _TimelineTab({required this.project});
+  const _ProjectActivityTab({required this.project});
 
   @override
   Widget build(BuildContext context) {
     if (project.timeline.isEmpty) {
-      return const Center(child: AppText('No milestones established', fontSize: 12, color: AppColors.textColorHint));
+      return const Center(child: AppText('No past activity recorded', fontSize: 12, color: AppColors.textColorHint));
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       itemCount: project.timeline.length,
       itemBuilder: (context, index) {
         final event = project.timeline[index];
@@ -1414,20 +1389,17 @@ class _TimelineTab extends StatelessWidget {
         return Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Vertical timeline dot and line connectors
             Column(
               children: [
                 Container(
                   padding: const EdgeInsets.all(3),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: event.isCompleted 
-                        ? AppColors.successColor.withValues(alpha: 0.15) 
-                        : AppColors.slate100,
+                    color: event.isCompleted ? AppColors.successColor.withValues(alpha: 0.15) : AppColors.slate100,
                   ),
                   child: Container(
-                    width: 18,
-                    height: 18,
+                    width: 16,
+                    height: 16,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: event.isCompleted ? AppColors.successColor : Colors.white,
@@ -1436,15 +1408,13 @@ class _TimelineTab extends StatelessWidget {
                         width: 2,
                       ),
                     ),
-                    child: event.isCompleted
-                        ? const Icon(Icons.check, size: 10, color: Colors.white)
-                        : null,
+                    child: event.isCompleted ? const Icon(Icons.check, size: 9, color: Colors.white) : null,
                   ),
                 ),
                 if (!isLast)
                   Container(
                     width: 2,
-                    height: 60,
+                    height: 55,
                     decoration: BoxDecoration(
                       color: event.isCompleted ? AppColors.successColor : AppColors.slate200,
                       borderRadius: BorderRadius.circular(1),
@@ -1452,24 +1422,15 @@ class _TimelineTab extends StatelessWidget {
                   ),
               ],
             ),
-            const SizedBox(width: 16),
-
-            // Text descriptions in modern cards
+            const SizedBox(width: 14),
             Expanded(
               child: Container(
-                margin: const EdgeInsets.only(bottom: 20),
-                padding: const EdgeInsets.all(14),
+                margin: const EdgeInsets.only(bottom: 14),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(14),
                   border: Border.all(color: AppColors.slate200),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.01),
-                      blurRadius: 8,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1480,36 +1441,31 @@ class _TimelineTab extends StatelessWidget {
                         Expanded(
                           child: AppText(
                             event.title,
-                            fontSize: 13,
+                            fontSize: 12,
                             fontWeight: FontWeight.bold,
                             color: event.isCompleted ? AppColors.textColorPrimary : AppColors.textColorSecondary,
                           ),
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                            color: event.isCompleted 
-                                ? AppColors.successColor.withValues(alpha: 0.08)
-                                : AppColors.slate100,
-                            borderRadius: BorderRadius.circular(6),
+                            color: event.isCompleted ? AppColors.successColor.withValues(alpha: 0.08) : AppColors.slate100,
+                            borderRadius: BorderRadius.circular(4),
                           ),
                           child: AppText(
                             event.isCompleted ? 'Completed' : 'Pending',
                             fontSize: 8,
                             fontWeight: FontWeight.bold,
-                            color: event.isCompleted 
-                                ? AppColors.successColor 
-                                : AppColors.slate500,
+                            color: event.isCompleted ? AppColors.successColor : AppColors.slate500,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 4),
                     AppText(
                       event.subtitle,
-                      fontSize: 11,
+                      fontSize: 10,
                       color: AppColors.textColorHint,
-                      fontWeight: FontWeight.w500,
                     ),
                   ],
                 ),
@@ -1518,6 +1474,147 @@ class _TimelineTab extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 5. TEAM ROSTER TAB (Add members with full past history access)
+// ─────────────────────────────────────────────────────────────────────────────
+class _TeamTab extends StatelessWidget {
+  final Project project;
+  const _TeamTab({required this.project});
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = Get.find<ProjectsController>();
+
+    return Column(
+      children: [
+        Expanded(
+          child: project.teamMembers.isEmpty
+              ? const Center(child: AppText('No team members assigned', fontSize: 12, color: AppColors.textColorHint))
+              : ListView.separated(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: project.teamMembers.length,
+                  separatorBuilder: (context, idx) => const SizedBox(height: 10),
+                  itemBuilder: (context, index) {
+                    final emp = project.teamMembers[index];
+                    return Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppColors.slate200),
+                      ),
+                      child: Row(
+                        children: [
+                          CircleAvatar(radius: 20, backgroundImage: NetworkImage(emp.avatarUrl)),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                AppText(emp.name, fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textColorPrimary),
+                                const SizedBox(height: 2),
+                                AppText(emp.email, fontSize: 10, color: AppColors.textColorHint),
+                              ],
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () => controller.removeMember(emp),
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: AppColors.errorColorAccent,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(Icons.close_rounded, color: AppColors.errorColor, size: 14),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+        ),
+
+        // "+ Add Member" Button
+        Container(
+          color: Colors.white,
+          padding: const EdgeInsets.all(14),
+          child: SafeArea(
+            top: false,
+            child: SizedBox(
+              width: double.infinity,
+              height: 46,
+              child: ElevatedButton.icon(
+                onPressed: () => _showAddMemberSheet(context, controller, project),
+                icon: const Icon(Iconsax.user_add, size: 16, color: Colors.white),
+                label: const AppText('Add Team Member to Project', fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryColor,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showAddMemberSheet(BuildContext context, ProjectsController controller, Project p) {
+    Get.bottomSheet(
+      Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: const BoxDecoration(color: AppColors.slate300, borderRadius: BorderRadius.all(Radius.circular(10))),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const AppText('Add Team Member', fontSize: 15, fontWeight: FontWeight.bold),
+            const SizedBox(height: 4),
+            const AppText('New member will get complete access to past tasks and project work history.', fontSize: 11, color: AppColors.textColorHint),
+            const SizedBox(height: 14),
+            Expanded(
+              child: ListView.builder(
+                itemCount: controller.allEmployees.length,
+                itemBuilder: (context, idx) {
+                  final emp = controller.allEmployees[idx];
+                  final isAssigned = p.teamMembers.contains(emp);
+                  return ListTile(
+                    leading: CircleAvatar(backgroundImage: NetworkImage(emp.avatarUrl)),
+                    title: AppText(emp.name, fontSize: 13, fontWeight: FontWeight.bold),
+                    subtitle: AppText(emp.email, fontSize: 10, color: AppColors.textColorHint),
+                    trailing: isAssigned
+                        ? const Icon(Icons.check_circle, color: AppColors.primaryColor)
+                        : IconButton(
+                            icon: const Icon(Icons.add_circle_outline, color: AppColors.primaryColor),
+                            onPressed: () {
+                              controller.assignMembersToProject([emp]);
+                              Get.back();
+                            },
+                          ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

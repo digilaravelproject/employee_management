@@ -6,6 +6,7 @@ import '../../../core/utils/custom_snackbar.dart';
 import '../../../core/utils/logger.dart';
 import '../../attendance/models/check_in_model.dart';
 import '../../attendance/repositories/attendance_repository.dart';
+import '../models/admin_dashboard_model.dart';
 import '../models/employee_dashboard_model.dart';
 import '../repositories/dashboard_repository.dart';
 
@@ -35,6 +36,9 @@ class DashboardController extends GetxController {
   final RxBool isCheckingOut = false.obs;
   final Rxn<EmployeeDashboardData> employeeDashboardData =
       Rxn<EmployeeDashboardData>();
+  final Rxn<AdminDashboardData> adminDashboardData =
+      Rxn<AdminDashboardData>();
+  final RxBool isAdminDashboardLoading = false.obs;
 
   void changeIndex(int index) {
     currentIndex.value = index;
@@ -47,7 +51,9 @@ class DashboardController extends GetxController {
 
     if (Get.isRegistered<AppController>()) {
       ever(Get.find<AppController>().userRole, (role) {
-        if (role != 'admin') {
+        if (role == 'admin') {
+          fetchAdminDashboard();
+        } else {
           fetchEmployeeDashboard();
         }
       });
@@ -57,11 +63,30 @@ class DashboardController extends GetxController {
   void _initDashboardData() {
     if (Get.isRegistered<AppController>()) {
       final role = Get.find<AppController>().userRole.value;
-      if (role != 'admin') {
+      if (role == 'admin') {
+        fetchAdminDashboard();
+      } else {
         fetchEmployeeDashboard();
       }
     } else {
-      fetchEmployeeDashboard();
+      fetchAdminDashboard();
+    }
+  }
+
+  Future<void> fetchAdminDashboard() async {
+    try {
+      isAdminDashboardLoading.value = true;
+      final response = await _repository.getAdminDashboard();
+      if (response.status && response.data != null) {
+        adminDashboardData.value = response.data;
+        Logger.d('DashboardController => Admin Dashboard loaded successfully: ${response.data?.greeting}');
+      } else {
+        Logger.w('DashboardController => Failed to load admin dashboard: ${response.message}');
+      }
+    } catch (e) {
+      Logger.e('DashboardController => Exception loading admin dashboard: $e');
+    } finally {
+      isAdminDashboardLoading.value = false;
     }
   }
 

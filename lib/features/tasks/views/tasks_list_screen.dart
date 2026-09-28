@@ -234,6 +234,88 @@ class TasksListScreen extends StatelessWidget {
             ),
           ),
 
+          // ── Employee Scope Switcher: My Assigned Tasks vs All Project Tasks & Past History ──
+          Obx(() {
+            final role = appController.userRole.value.toLowerCase();
+            if (role != 'employee') return const SizedBox.shrink();
+
+            final currentScope = controller.employeeTaskScope.value;
+
+            return Container(
+              color: Colors.white,
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+              child: Container(
+                padding: const EdgeInsets.all(3),
+                decoration: BoxDecoration(
+                  color: AppColors.slate100,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => controller.employeeTaskScope.value = 'My Tasks',
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: currentScope == 'My Tasks' ? Colors.white : Colors.transparent,
+                            borderRadius: BorderRadius.circular(8),
+                            boxShadow: currentScope == 'My Tasks'
+                                ? [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 4, offset: const Offset(0, 2))]
+                                : null,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.person_rounded, size: 14, color: currentScope == 'My Tasks' ? AppColors.primaryColor : AppColors.slate500),
+                              const SizedBox(width: 5),
+                              AppText(
+                                'My Tasks',
+                                fontSize: 11,
+                                fontWeight: currentScope == 'My Tasks' ? FontWeight.bold : FontWeight.w600,
+                                color: currentScope == 'My Tasks' ? AppColors.primaryColor : AppColors.slate600,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => controller.employeeTaskScope.value = 'All Project Tasks',
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: currentScope == 'All Project Tasks' ? Colors.white : Colors.transparent,
+                            borderRadius: BorderRadius.circular(8),
+                            boxShadow: currentScope == 'All Project Tasks'
+                                ? [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 4, offset: const Offset(0, 2))]
+                                : null,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Iconsax.folder_connection, size: 14, color: currentScope == 'All Project Tasks' ? AppColors.primaryColor : AppColors.slate500),
+                              const SizedBox(width: 5),
+                              AppText(
+                                'All Project Tasks & History',
+                                fontSize: 11,
+                                fontWeight: currentScope == 'All Project Tasks' ? FontWeight.bold : FontWeight.w600,
+                                color: currentScope == 'All Project Tasks' ? AppColors.primaryColor : AppColors.slate600,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
+
           // ── Filter Sub-Tabs (Pills) ──
           Container(
             color: Colors.white,
@@ -494,7 +576,92 @@ class TasksListScreen extends StatelessWidget {
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 10),
+
+                          // Jira Module & Query/Handover Badge Line
+                          if (task.project != null || task.module != 'General' || task.hasActiveQuery || task.handovers.isNotEmpty) ...[
+                            Row(
+                              children: [
+                                if (task.project != null) ...[
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.slate100,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(Iconsax.briefcase, size: 10, color: AppColors.slate600),
+                                        const SizedBox(width: 4),
+                                        AppText(
+                                          task.project!.name,
+                                          fontSize: 9.5,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppColors.slate700,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 5),
+                                ],
+                                if (task.module != 'General') ...[
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFEFF6FF),
+                                      borderRadius: BorderRadius.circular(4),
+                                      border: Border.all(color: const Color(0xFFBFDBFE)),
+                                    ),
+                                    child: AppText(
+                                      task.subModule != 'Default'
+                                          ? '${task.module} > ${task.subModule}'
+                                          : task.module,
+                                      fontSize: 9.5,
+                                      fontWeight: FontWeight.w600,
+                                      color: const Color(0xFF1D4ED8),
+                                    ),
+                                  ),
+                                ],
+                                const Spacer(),
+                                if (task.hasActiveQuery) ...[
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFFEF3C7),
+                                      borderRadius: BorderRadius.circular(4),
+                                      border: Border.all(color: const Color(0xFFFCD34D)),
+                                    ),
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Iconsax.message_question, size: 10, color: Color(0xFFD97706)),
+                                        SizedBox(width: 3),
+                                        AppText('Query', fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFFB45309)),
+                                      ],
+                                    ),
+                                  ),
+                                ] else if (task.handovers.isNotEmpty) ...[
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF3E8FF),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Iconsax.arrow_swap_horizontal, size: 10, color: Color(0xFF7E22CE)),
+                                        SizedBox(width: 3),
+                                        AppText('Handover', fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF7E22CE)),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                          ],
 
                           // Live Timer / Tracked Time Pill + Quick action bar
                           Container(

@@ -6,6 +6,8 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_text.dart';
 import '../controllers/tasks_controller.dart';
 import '../models/task_model.dart';
+import '../../role_permissions/models/role_permission_models.dart';
+import '../../projects/controllers/projects_controller.dart';
 import 'create_task_screen.dart';
 
 class TaskDetailsScreen extends StatefulWidget {
@@ -241,6 +243,12 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                     _buildWorkflowStepper(task),
                     const SizedBox(height: 14),
 
+                    // Blocker / Query Alert Banner (if any)
+                    if (task.hasActiveQuery) ...[
+                      _buildActiveQueryBanner(task),
+                      const SizedBox(height: 14),
+                    ],
+
                     // 2. Role-Based Dynamic Control Card
                     if (isEmployee)
                       _buildEmployeeTimerCard(task)
@@ -248,6 +256,11 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                       _buildManagerReviewCard(task)
                     else if (isAdmin)
                       _buildAdminOversightCard(task),
+
+                    const SizedBox(height: 14),
+
+                    // Jira Collaboration Actions: Pass / Handover & Ask Question / Blocker
+                    _buildCollaborationBar(task),
 
                     const SizedBox(height: 16),
 
@@ -333,6 +346,12 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                           // Metadata List
                           _buildMetaRow(Iconsax.briefcase, 'Project', task.project?.name ?? 'None'),
                           const SizedBox(height: 12),
+                          _buildMetaRow(
+                            Iconsax.folder_2,
+                            'Module / Sub-Module',
+                            '${task.module} ${task.subModule != 'Default' ? '• ${task.subModule}' : ''}',
+                          ),
+                          const SizedBox(height: 12),
                           _buildAssigneeRow(task),
                           const SizedBox(height: 12),
                           _buildMetaRow(Iconsax.calendar_1, 'Deadline', _formatDate(task.deadline)),
@@ -359,10 +378,12 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                         case 1:
                           return _buildTimeLogsTab(task);
                         case 2:
-                          return _buildCommentsTab(task);
+                          return _buildHandoversTab(task);
                         case 3:
-                          return _buildUpdatesTab(task);
+                          return _buildCommentsTab(task);
                         case 4:
+                          return _buildUpdatesTab(task);
+                        case 5:
                           return _buildFilesTab(task);
                         default:
                           return const SizedBox.shrink();
@@ -375,7 +396,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
 
             // If comments tab is active, show the bottom comment input bar
             Obx(() {
-              if (selectedTabIdx.value == 2) {
+              if (selectedTabIdx.value == 3) {
                 return _buildCommentInputBar();
               }
               return const SizedBox.shrink();
@@ -500,6 +521,157 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                 ),
               );
             }),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Blocker / Query Escalation Alert Banner ──
+  Widget _buildActiveQueryBanner(TaskModel task) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFBEB), // amber 50
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFFCD34D), width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFFEF3C7),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Iconsax.message_question, color: Color(0xFFD97706), size: 18),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const AppText(
+                      'Active Question / Blocker Escalation',
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF92400E),
+                    ),
+                    if (task.queryToUser != null)
+                      AppText(
+                        'Directed to: ${task.queryToUser!.name}',
+                        fontSize: 10,
+                        color: const Color(0xFFB45309),
+                      ),
+                  ],
+                ),
+              ),
+              SizedBox(
+                height: 32,
+                child: ElevatedButton(
+                  onPressed: () => _showResolveQueryDialog(context, task),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFD97706),
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    elevation: 0,
+                  ),
+                  child: const AppText('Resolve', fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+          if (task.activeQueryNote != null && task.activeQueryNote!.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFFDE68A)),
+              ),
+              child: AppText(
+                task.activeQueryNote!,
+                fontSize: 11.5,
+                color: const Color(0xFF78350F),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // ── Jira Collaboration Actions: Pass / Handover & Ask Question / Blocker ──
+  Widget _buildCollaborationBar(TaskModel task) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.borderColor),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: InkWell(
+              onTap: () => _showHandoverDialog(context, task),
+              borderRadius: BorderRadius.circular(10),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF6FF),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFBFDBFE)),
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Iconsax.arrow_swap_horizontal, size: 16, color: Color(0xFF2563EB)),
+                    SizedBox(width: 6),
+                    AppText(
+                      'Pass / Handover',
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1D4ED8),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: InkWell(
+              onTap: () => _showQueryOrBlockerDialog(context, task),
+              borderRadius: BorderRadius.circular(10),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFFBEB),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFFDE68A)),
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Iconsax.message_question, size: 16, color: Color(0xFFD97706)),
+                    SizedBox(width: 6),
+                    AppText(
+                      'Ask Question / Blocker',
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFFB45309),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -1187,6 +1359,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
         final tabs = [
           'Overview',
           'Time Logs (${task.timeLogs.length})',
+          'Handover & Q&A (${task.handovers.length})',
           'Comments (${task.comments.length})',
           'Updates (${task.statusUpdates.length})',
           'Files (${task.attachments.length})',
@@ -1508,6 +1681,23 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                             color: AppColors.textColorSecondary,
                           ),
                         ],
+                        if (log.module.isNotEmpty && log.module != 'General') ...[
+                          const SizedBox(height: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEFF6FF),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: const Color(0xFFBFDBFE)),
+                            ),
+                            child: AppText(
+                              '${log.module} ${log.subModule != 'Default' ? '• ${log.subModule}' : ''}',
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF1D4ED8),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -1520,7 +1710,245 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
     );
   }
 
-  // ── Tab 2: Comments ──
+  // ── Tab 2: Handover & Queries Audit Trail ──
+  Widget _buildHandoversTab(TaskModel task) {
+    if (task.handovers.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(28),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.borderColor),
+        ),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: const BoxDecoration(
+                color: Color(0xFFEFF6FF),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Iconsax.arrow_swap_horizontal, size: 30, color: Color(0xFF2563EB)),
+            ),
+            const SizedBox(height: 12),
+            const AppText('No Handover or Queries', fontSize: 14, fontWeight: FontWeight.bold),
+            const SizedBox(height: 4),
+            const AppText(
+              'If you are blocked, need clarification, or cannot complete this task, use the "Pass / Handover" or "Ask Question" actions above to reassign or escalate.',
+              fontSize: 11,
+              color: AppColors.textColorHint,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 14),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: () => _showHandoverDialog(context, task),
+                  icon: const Icon(Iconsax.arrow_swap_horizontal, size: 14, color: Color(0xFF2563EB)),
+                  label: const AppText('Pass Task', fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF2563EB)),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Color(0xFF93C5FD)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                ElevatedButton.icon(
+                  onPressed: () => _showQueryOrBlockerDialog(context, task),
+                  icon: const Icon(Iconsax.message_question, size: 14, color: Colors.white),
+                  label: const AppText('Ask Question', fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFD97706),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    elevation: 0,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      children: [
+        // Action Header
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: const Color(0xFFEFF6FF),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFBFDBFE)),
+          ),
+          child: Row(
+            children: [
+              const Icon(Iconsax.info_circle, size: 18, color: Color(0xFF1D4ED8)),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AppText('Collaboration & Handover Audit', fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF1E3A8A)),
+                    AppText('Full audit log of task reassignments, doubts, and blocker escalations.', fontSize: 10, color: Color(0xFF3B82F6)),
+                  ],
+                ),
+              ),
+              TextButton(
+                onPressed: () => _showHandoverDialog(context, task),
+                child: const AppText('+ Pass', fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF1D4ED8)),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // List of Handover Events
+        ListView.separated(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: task.handovers.length,
+          separatorBuilder: (context, idx) => const SizedBox(height: 10),
+          itemBuilder: (context, index) {
+            final event = task.handovers.reversed.toList()[index];
+            final isQuery = event.type == 'Query';
+            final isBlocker = event.type == 'Blocker';
+            final tagColor = isBlocker ? AppColors.errorColor : (isQuery ? const Color(0xFFD97706) : const Color(0xFF2563EB));
+            final tagBg = tagColor.withValues(alpha: 0.1);
+
+            return Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: !event.isResolved && (isQuery || isBlocker) ? const Color(0xFFFCD34D) : AppColors.borderColor,
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(color: tagBg, borderRadius: BorderRadius.circular(6)),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              isBlocker
+                                  ? Iconsax.danger
+                                  : (isQuery ? Iconsax.message_question : Iconsax.arrow_swap_horizontal),
+                              size: 11,
+                              color: tagColor,
+                            ),
+                            const SizedBox(width: 4),
+                            AppText(
+                              event.type.toUpperCase(),
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.bold,
+                              color: tagColor,
+                            ),
+                          ],
+                        ),
+                      ),
+                      AppText(
+                        _formatDateTime(event.timestamp),
+                        fontSize: 10,
+                        color: AppColors.textColorHint,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      CircleAvatar(radius: 12, backgroundImage: NetworkImage(event.fromUser.avatarUrl)),
+                      const SizedBox(width: 6),
+                      AppText(event.fromUser.name, fontSize: 11, fontWeight: FontWeight.bold),
+                      const SizedBox(width: 6),
+                      const Icon(Icons.arrow_forward_rounded, size: 12, color: AppColors.textColorHint),
+                      const SizedBox(width: 6),
+                      CircleAvatar(radius: 12, backgroundImage: NetworkImage(event.toUser.avatarUrl)),
+                      const SizedBox(width: 6),
+                      AppText(event.toUser.name, fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primaryColor),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.slate50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppColors.slate200),
+                    ),
+                    child: AppText(
+                      event.reason,
+                      fontSize: 11.5,
+                      color: AppColors.textColorPrimary,
+                    ),
+                  ),
+                  if (event.isResolved && event.resolutionNote != null && event.resolutionNote!.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFECFDF5),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFA7F3D0)),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(Icons.check_circle_rounded, size: 14, color: AppColors.successColor),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const AppText('Resolution Note:', fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF065F46)),
+                                const SizedBox(height: 2),
+                                AppText(event.resolutionNote!, fontSize: 11, color: const Color(0xFF047857)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ] else if (!event.isResolved && (isQuery || isBlocker)) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEF3C7),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const AppText('Awaiting Answer', fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFFB45309)),
+                        ),
+                        TextButton.icon(
+                          onPressed: () => _showResolveQueryDialog(context, task),
+                          icon: const Icon(Icons.check_circle_outline_rounded, size: 14, color: AppColors.primaryColor),
+                          label: const AppText('Answer / Resolve', fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primaryColor),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  // ── Tab 3: Comments ──
   Widget _buildCommentsTab(TaskModel task) {
     if (task.comments.isEmpty) {
       return Container(
@@ -2193,6 +2621,394 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
             child: const AppText('Delete', color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Handover Modal Dialog ──
+  void _showHandoverDialog(BuildContext context, TaskModel task) {
+    final projController = Get.find<ProjectsController>();
+    final projectMembers = projController.projects
+        .firstWhereOrNull((p) => p.name == task.project?.name)
+        ?.teamMembers ?? projController.allEmployees;
+    final candidates = projectMembers.where((m) => !task.assignees.any((a) => a.email == m.email)).toList();
+    final targetCandidates = candidates.isNotEmpty ? candidates : projController.allEmployees;
+
+    final selectedMember = Rx<AppUser>(targetCandidates.first);
+    final reasonController = TextEditingController();
+
+    Get.dialog(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: const BoxDecoration(
+                color: Color(0xFFEFF6FF),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Iconsax.arrow_swap_horizontal, color: Color(0xFF2563EB), size: 18),
+            ),
+            const SizedBox(width: 10),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  AppText('Pass / Handover Task', fontSize: 15, fontWeight: FontWeight.bold),
+                  AppText('Reassign to team member with audit note', fontSize: 10, color: AppColors.textColorHint),
+                ],
+              ),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const AppText('Select Teammate to Pass To', fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textColorPrimary),
+              const SizedBox(height: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  color: AppColors.slate50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.borderColor),
+                ),
+                child: Obx(() {
+                  return DropdownButtonHideUnderline(
+                    child: DropdownButton<AppUser>(
+                      value: selectedMember.value,
+                      isExpanded: true,
+                      dropdownColor: Colors.white,
+                      items: targetCandidates.map((user) {
+                        return DropdownMenuItem<AppUser>(
+                          value: user,
+                          child: Row(
+                            children: [
+                              CircleAvatar(radius: 10, backgroundImage: NetworkImage(user.avatarUrl)),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  user.name,
+                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) selectedMember.value = val;
+                      },
+                    ),
+                  );
+                }),
+              ),
+              const SizedBox(height: 14),
+              const AppText('Reason for Handover *', fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textColorPrimary),
+              const SizedBox(height: 6),
+              TextField(
+                controller: reasonController,
+                maxLines: 3,
+                style: const TextStyle(fontSize: 12),
+                decoration: InputDecoration(
+                  hintText: 'e.g. Current workload full / Specialized backend expertise needed...',
+                  hintStyle: const TextStyle(color: AppColors.textColorHint, fontSize: 11),
+                  filled: true,
+                  fillColor: AppColors.slate50,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.borderColor)),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.borderColor)),
+                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primaryColor, width: 1.5)),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const AppText('Cancel', color: AppColors.textColorSecondary, fontWeight: FontWeight.w600),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (reasonController.text.trim().isEmpty) {
+                Get.snackbar('Reason Required', 'Please provide a brief reason for handing over this task',
+                    snackPosition: SnackPosition.BOTTOM, backgroundColor: AppColors.errorColor, colorText: Colors.white);
+                return;
+              }
+              Get.back();
+              controller.handoverTask(
+                taskId: task.id,
+                toUser: selectedMember.value,
+                type: 'Handover',
+                reason: reasonController.text.trim(),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF2563EB),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const AppText('Confirm Pass', color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Ask Question / Blocker Dialog ──
+  void _showQueryOrBlockerDialog(BuildContext context, TaskModel task) {
+    final projController = Get.find<ProjectsController>();
+    final allEmployees = projController.allEmployees;
+    final selectedMember = Rx<AppUser>(allEmployees.first);
+    final isBlocker = false.obs;
+    final noteController = TextEditingController();
+
+    Get.dialog(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: const BoxDecoration(
+                color: Color(0xFFFFFBEB),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Iconsax.message_question, color: Color(0xFFD97706), size: 18),
+            ),
+            const SizedBox(width: 10),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  AppText('Ask Question / Blocker', fontSize: 15, fontWeight: FontWeight.bold),
+                  AppText('Escalate blocker or seek clarification', fontSize: 10, color: AppColors.textColorHint),
+                ],
+              ),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Type Toggle
+              Obx(() {
+                final blocker = isBlocker.value;
+                return Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(color: AppColors.slate100, borderRadius: BorderRadius.circular(10)),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => isBlocker.value = false,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 6),
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: !blocker ? Colors.white : Colors.transparent,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: AppText(
+                              'Question / Help',
+                              fontSize: 11,
+                              fontWeight: !blocker ? FontWeight.bold : FontWeight.w500,
+                              color: !blocker ? const Color(0xFFD97706) : AppColors.slate600,
+                            ),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => isBlocker.value = true,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 6),
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: blocker ? Colors.white : Colors.transparent,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: AppText(
+                              'Blocker Issue',
+                              fontSize: 11,
+                              fontWeight: blocker ? FontWeight.bold : FontWeight.w500,
+                              color: blocker ? AppColors.errorColor : AppColors.slate600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+              const SizedBox(height: 14),
+
+              const AppText('Ask / Direct To', fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textColorPrimary),
+              const SizedBox(height: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  color: AppColors.slate50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.borderColor),
+                ),
+                child: Obx(() {
+                  return DropdownButtonHideUnderline(
+                    child: DropdownButton<AppUser>(
+                      value: selectedMember.value,
+                      isExpanded: true,
+                      dropdownColor: Colors.white,
+                      items: allEmployees.map((user) {
+                        return DropdownMenuItem<AppUser>(
+                          value: user,
+                          child: Row(
+                            children: [
+                              CircleAvatar(radius: 10, backgroundImage: NetworkImage(user.avatarUrl)),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  user.name,
+                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) selectedMember.value = val;
+                      },
+                    ),
+                  );
+                }),
+              ),
+              const SizedBox(height: 14),
+
+              const AppText('Details / Question *', fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textColorPrimary),
+              const SizedBox(height: 6),
+              TextField(
+                controller: noteController,
+                maxLines: 3,
+                style: const TextStyle(fontSize: 12),
+                decoration: InputDecoration(
+                  hintText: 'Describe what you need clarification on or what is blocking you...',
+                  hintStyle: const TextStyle(color: AppColors.textColorHint, fontSize: 11),
+                  filled: true,
+                  fillColor: AppColors.slate50,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.borderColor)),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.borderColor)),
+                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFD97706), width: 1.5)),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const AppText('Cancel', color: AppColors.textColorSecondary, fontWeight: FontWeight.w600),
+          ),
+          Obx(() {
+            final isB = isBlocker.value;
+            return ElevatedButton(
+              onPressed: () {
+                if (noteController.text.trim().isEmpty) {
+                  Get.snackbar('Input Required', 'Please enter your question or describe the blocker.',
+                      snackPosition: SnackPosition.BOTTOM, backgroundColor: AppColors.errorColor, colorText: Colors.white);
+                  return;
+                }
+                Get.back();
+                controller.handoverTask(
+                  taskId: task.id,
+                  toUser: selectedMember.value,
+                  type: isB ? 'Blocker' : 'Query',
+                  reason: noteController.text.trim(),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isB ? AppColors.errorColor : const Color(0xFFD97706),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: AppText(isB ? 'Report Blocker' : 'Send Question', color: Colors.white, fontWeight: FontWeight.bold),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  // ── Resolve Query Dialog ──
+  void _showResolveQueryDialog(BuildContext context, TaskModel task) {
+    final noteController = TextEditingController();
+
+    Get.dialog(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.check_circle_outline_rounded, color: AppColors.successColor, size: 22),
+            SizedBox(width: 8),
+            AppText('Resolve Query / Blocker', fontSize: 15, fontWeight: FontWeight.bold),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (task.activeQueryNote != null) ...[
+              const AppText('Pending Query / Blocker:', fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textColorHint),
+              const SizedBox(height: 4),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFFBEB),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFFCD34D)),
+                ),
+                child: AppText(task.activeQueryNote!, fontSize: 11.5, color: const Color(0xFF78350F)),
+              ),
+              const SizedBox(height: 12),
+            ],
+            const AppText('Answer / Resolution Note', fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textColorPrimary),
+            const SizedBox(height: 6),
+            TextField(
+              controller: noteController,
+              maxLines: 3,
+              style: const TextStyle(fontSize: 12),
+              decoration: InputDecoration(
+                hintText: 'Enter guidance or how blocker was unblocked...',
+                hintStyle: const TextStyle(color: AppColors.textColorHint, fontSize: 11),
+                filled: true,
+                fillColor: AppColors.slate50,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.borderColor)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const AppText('Cancel', color: AppColors.textColorSecondary),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Get.back();
+              controller.resolveTaskQuery(task.id, noteController.text.trim());
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.successColor,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const AppText('Mark Resolved', color: Colors.white, fontWeight: FontWeight.bold),
           ),
         ],
       ),
