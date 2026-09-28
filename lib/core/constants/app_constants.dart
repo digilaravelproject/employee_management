@@ -48,6 +48,7 @@ class AppConstants {
   static const String adminEmployeesUrl = 'https://yellowgreen-stork-427223.hostingersite.com/public/api/admin/employees';
   static const String adminLeaveRequestsUrl = '/api/admin/leave-requests';
   static const String adminLeaveTypesUrl = '/api/admin/leave-types';
+  static const String adminAttendanceUrl = '/api/admin/attendance';
   static const String adminAttendanceCheckInUrl = '/api/admin/attendance/check-in';
   static const String adminAttendanceCheckOutUrl = '/api/admin/attendance/check-out';
   static const String adminNotificationsUrl = '/api/admin/notifications';

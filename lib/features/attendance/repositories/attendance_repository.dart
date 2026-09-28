@@ -1,5 +1,6 @@
 import '../../../core/constants/app_constants.dart';
 import '../../../core/services/network/api_client.dart';
+import '../models/admin_attendance_model.dart';
 import '../models/attendance_history_response_model.dart';
 import '../models/check_in_model.dart';
 
@@ -7,6 +8,46 @@ class AttendanceRepository {
   final ApiClient apiClient;
 
   AttendanceRepository({required this.apiClient});
+
+  Future<AdminAttendanceResponseModel> getAdminAttendance({
+    required String date,
+    String? search,
+    String? status,
+    String? sort = 'name',
+    String? direction = 'asc',
+  }) async {
+    final Map<String, dynamic> query = {
+      'date': date,
+    };
+    if (search != null && search.trim().isNotEmpty) {
+      query['search'] = search.trim();
+    }
+    if (status != null && status.isNotEmpty) {
+      query['status'] = status;
+    }
+    if (sort != null && sort.isNotEmpty) {
+      query['sort'] = sort;
+    }
+    if (direction != null && direction.isNotEmpty) {
+      query['direction'] = direction;
+    }
+
+    final response = await apiClient.get(
+      AppConstants.adminAttendanceUrl,
+      queryParameters: query,
+      handleError: false,
+      showToaster: false,
+    );
+
+    final json = response.json ?? (response.body is Map<String, dynamic> ? response.body as Map<String, dynamic> : null);
+    if (json != null) {
+      return AdminAttendanceResponseModel.fromJson(json);
+    }
+    return AdminAttendanceResponseModel(
+      status: false,
+      message: response.message.isNotEmpty ? response.message : 'Failed to retrieve attendance data',
+    );
+  }
 
   Future<CheckInResponseModel> checkIn(CheckInRequestModel request) async {
     final response = await apiClient.post(
