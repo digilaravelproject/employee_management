@@ -64,7 +64,7 @@ class NotificationRepository implements NotificationRepositoryInterface {
   @override
   Future<NotificationDetailResponseModel> getNotificationDetail(dynamic id) async {
     try {
-      final url = '${AppConstants.adminNotificationsUrl}/$id';
+      final url = AppConstants.adminNotificationDetailUrl(id);
       Logger.d('NotificationRepository => Fetching notification detail from: $url');
       final response = await apiClient.get(
         url,
@@ -101,7 +101,7 @@ class NotificationRepository implements NotificationRepositoryInterface {
   @override
   Future<ResponseModel> markAsRead(dynamic id) async {
     try {
-      final url = '${AppConstants.adminNotificationsUrl}/$id/read';
+      final url = AppConstants.adminNotificationMarkReadUrl(id);
       Logger.d('NotificationRepository => Marking notification $id as read via PATCH: $url');
       final response = await apiClient.patch(
         url,
@@ -121,7 +121,7 @@ class NotificationRepository implements NotificationRepositoryInterface {
   @override
   Future<ResponseModel> markAllAsRead() async {
     try {
-      final url = '${AppConstants.adminNotificationsUrl}/read-all';
+      final url = AppConstants.adminNotificationMarkAllReadUrl;
       Logger.d('NotificationRepository => Marking all notifications as read via PATCH: $url');
       final response = await apiClient.patch(
         url,
@@ -141,7 +141,7 @@ class NotificationRepository implements NotificationRepositoryInterface {
   @override
   Future<ResponseModel> deleteNotification(dynamic id) async {
     try {
-      final url = '${AppConstants.adminNotificationsUrl}/$id';
+      final url = AppConstants.adminNotificationDetailUrl(id);
       Logger.d('NotificationRepository => Deleting notification via DELETE: $url');
       final response = await apiClient.delete(
         url,

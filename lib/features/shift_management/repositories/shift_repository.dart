@@ -1,3 +1,4 @@
+import '../../../core/constants/app_constants.dart';
 import '../../../core/services/network/api_client.dart';
 import '../../../core/utils/logger.dart';
 import '../models/create_shift_request_model.dart';
@@ -13,7 +14,7 @@ class ShiftRepository implements ShiftRepositoryInterface {
   Future<ShiftResponseModel> createShift(CreateShiftRequestModel request) async {
     try {
       final response = await apiClient.post(
-        '/api/admin/shifts',
+        AppConstants.adminShiftsUrl,
         data: request.toJson(),
       );
 
@@ -38,7 +39,7 @@ class ShiftRepository implements ShiftRepositoryInterface {
   Future<ShiftResponseModel> updateShift(String id, CreateShiftRequestModel request) async {
     try {
       final response = await apiClient.put(
-        '/api/admin/shifts/$id',
+        AppConstants.adminShiftUrl(id),
         data: request.toJson(),
       );
 
@@ -63,7 +64,7 @@ class ShiftRepository implements ShiftRepositoryInterface {
   Future<ShiftResponseModel> assignEmployeesToShift(String shiftId, List<int> employeeIds) async {
     try {
       final response = await apiClient.put(
-        '/api/admin/shifts/$shiftId',
+        AppConstants.adminShiftUrl(shiftId),
         data: {
           'employee_ids': employeeIds,
         },
@@ -91,7 +92,7 @@ class ShiftRepository implements ShiftRepositoryInterface {
   @override
   Future<ShiftResponseModel> deleteShift(String id) async {
     try {
-      final response = await apiClient.delete('/api/admin/shifts/$id');
+      final response = await apiClient.delete(AppConstants.adminShiftUrl(id));
 
       if (response.isSuccess && response.json != null) {
         return ShiftResponseModel.fromJson(response.json!);
@@ -118,7 +119,7 @@ class ShiftRepository implements ShiftRepositoryInterface {
       final queryParams = (status != null && status.isNotEmpty && status != 'All Status')
           ? '?status=$status'
           : '';
-      final response = await apiClient.get('/api/admin/shifts$queryParams');
+      final response = await apiClient.get('${AppConstants.adminShiftsUrl}$queryParams');
 
       if (response.isSuccess && response.json != null) {
         return ShiftListResponseModel.fromJson(response.json!);
@@ -142,7 +143,7 @@ class ShiftRepository implements ShiftRepositoryInterface {
   @override
   Future<ShiftResponseModel> getShiftDetails(String id) async {
     try {
-      final response = await apiClient.get('/api/admin/shifts/$id');
+      final response = await apiClient.get(AppConstants.adminShiftUrl(id));
 
       if (response.isSuccess && response.json != null) {
         return ShiftResponseModel.fromJson(response.json!);

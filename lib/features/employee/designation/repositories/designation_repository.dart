@@ -1,5 +1,5 @@
+import '../../../../core/constants/app_constants.dart';
 import '../../../../core/services/network/api_client.dart';
-import '../../../../core/services/network/response_model.dart';
 import '../../../../core/utils/logger.dart';
 import '../models/designation_request_model.dart';
 import '../models/designation_response_model.dart';
@@ -12,7 +12,7 @@ class DesignationRepository {
 
   Future<DesignationResponseModel> createDesignation(DesignationRequestModel data) async {
     try {
-      final response = await apiClient.post('/api/admin/designations', data: data.toJson());
+      final response = await apiClient.post(AppConstants.adminDesignationsUrl, data: data.toJson());
       
       if (response.isSuccess && response.json != null) {
         return DesignationResponseModel.fromJson(response.json!);
@@ -33,7 +33,7 @@ class DesignationRepository {
 
   Future<DesignationResponseModel> updateDesignation(String id, DesignationRequestModel data) async {
     try {
-      final response = await apiClient.patch('/api/admin/designations/$id', data: data.toJson());
+      final response = await apiClient.patch(AppConstants.adminDesignationUrl(id), data: data.toJson());
       
       if (response.isSuccess && response.json != null) {
         return DesignationResponseModel.fromJson(response.json!);
@@ -54,7 +54,7 @@ class DesignationRepository {
 
   Future<DesignationResponseModel> deleteDesignation(String id) async {
     try {
-      final response = await apiClient.delete('/api/admin/designations/$id');
+      final response = await apiClient.delete(AppConstants.adminDesignationUrl(id));
       
       if (response.isSuccess && response.json != null) {
         return DesignationResponseModel.fromJson(response.json!);
@@ -75,7 +75,7 @@ class DesignationRepository {
 
   Future<DesignationResponseModel> removeEmployeeFromDesignation(String designationId, String employeeId) async {
     try {
-      final response = await apiClient.delete('/api/admin/designations/$designationId/employees/$employeeId');
+      final response = await apiClient.delete(AppConstants.adminDesignationEmployeeUrl(designationId, employeeId));
       
       if (response.isSuccess && response.json != null) {
         return DesignationResponseModel.fromJson(response.json!);
@@ -96,7 +96,7 @@ class DesignationRepository {
 
   Future<DesignationListResponseModel> getDesignations() async {
     try {
-      final response = await apiClient.get('/api/admin/designations');
+      final response = await apiClient.get(AppConstants.adminDesignationsUrl);
       
       if (response.isSuccess && response.json != null) {
         return DesignationListResponseModel.fromJson(response.json!);
@@ -121,7 +121,7 @@ class DesignationRepository {
 
   Future<DesignationResponseModel> getDesignationDetails(String id) async {
     try {
-      final response = await apiClient.get('/api/admin/designations/$id');
+      final response = await apiClient.get(AppConstants.adminDesignationUrl(id));
       
       if (response.isSuccess && response.json != null) {
         return DesignationResponseModel.fromJson(response.json!);

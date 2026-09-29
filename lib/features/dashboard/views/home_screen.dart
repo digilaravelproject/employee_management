@@ -21,6 +21,7 @@ import '../../role_permissions/views/role_list_screen.dart';
 import '../../shift_management/views/shift_details_screen.dart';
 import '../../shift_management/models/shift_model.dart';
 import '../models/admin_dashboard_model.dart';
+import '../models/employee_dashboard_model.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -111,16 +112,6 @@ class HomeScreen extends StatelessWidget {
                       const AppText("Quick Actions", fontSize: 15, fontWeight: FontWeight.w700),
                       const SizedBox(height: 16),
                       const _EmployeeQuickActions(),
-                      const SizedBox(height: 24),
-
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const AppText("Recent Announcements", fontSize: 15, fontWeight: FontWeight.w700),
-                          TextButton(onPressed: () {}, child: const AppText('View all >', fontSize: 12, color: AppColors.primaryColor)),
-                        ],
-                      ),
-                      const _AnnouncementsCard(),
                       const SizedBox(height: 30),
                     ],
                   );
@@ -680,6 +671,24 @@ class _QuickActionsGrid extends StatelessWidget {
 class EmployeeShiftAttendanceCard extends StatelessWidget {
   const EmployeeShiftAttendanceCard({super.key});
 
+  void _openShiftDetails(DashboardCurrentShift? shift) {
+    if (shift == null || shift.id == null) return;
+    Get.to(
+      () => ShiftDetailsScreen(
+        shift: ShiftModel(
+          id: shift.id.toString(),
+          name: shift.name ?? 'Current Shift',
+          code: shift.code ?? '',
+          type: 'Fixed Shift',
+          isActive: true,
+          startTime: shift.startTime ?? '',
+          endTime: shift.endTime ?? '',
+          workingHours: '9h 00m',
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final dashboardController = Get.isRegistered<DashboardController>()
@@ -734,103 +743,111 @@ class EmployeeShiftAttendanceCard extends StatelessWidget {
         ),
         child: Column(
           children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(18, 18, 18, 70),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF2563EB), Color(0xFF3B82F6)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+            InkWell(
+              onTap: () => _openShiftDetails(currentShift),
+              borderRadius: BorderRadius.circular(20),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(18, 18, 18, 70),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF2563EB), Color(0xFF3B82F6)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(20),
                 ),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const AppText(
-                            'Current Shift',
-                            color: Colors.white,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
+                          Row(
+                            children: [
+                              const AppText(
+                                'Current Shift',
+                                color: Colors.white,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isOngoing
+                                      ? const Color(0xFF10B981)
+                                      : Colors.white.withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: AppText(
+                                  isOngoing ? '• Ongoing' : '• Scheduled',
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white70, size: 12),
+                            ],
                           ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: isOngoing
-                                  ? const Color(0xFF10B981)
-                                  : Colors.white.withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: AppText(
-                              isOngoing ? '• Ongoing' : '• Scheduled',
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                            ),
+                          const SizedBox(height: 14),
+                          AppText(
+                            shiftTiming,
+                            color: Colors.white,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                          ),
+                          const SizedBox(height: 8),
+                          AppText(
+                            shiftName,
+                            color: Colors.white70,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
                           ),
                         ],
                       ),
-                      const SizedBox(height: 14),
-                      AppText(
-                        shiftTiming,
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      decoration: BoxDecoration(
                         color: Colors.white,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
+                        borderRadius: BorderRadius.circular(18),
                       ),
-                      const SizedBox(height: 8),
-                      AppText(
-                        shiftName,
-                        color: Colors.white70,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
+                      child: Column(
+                        children: [
+                          AppText(
+                            monthStr,
+                            color: AppColors.primaryColor,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          const SizedBox(height: 4),
+                          AppText(
+                            dayNum,
+                            color: AppColors.textColorPrimary,
+                            fontSize: 26,
+                            fontWeight: FontWeight.w900,
+                          ),
+                          AppText(
+                            weekdayStr,
+                            color: AppColors.textColorPrimary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
                     ),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                    child: Column(
-                      children: [
-                        AppText(
-                          monthStr,
-                          color: AppColors.primaryColor,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        const SizedBox(height: 4),
-                        AppText(
-                          dayNum,
-                          color: AppColors.textColorPrimary,
-                          fontSize: 26,
-                          fontWeight: FontWeight.w900,
-                        ),
-                        AppText(
-                          weekdayStr,
-                          color: AppColors.textColorPrimary,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
 
@@ -1693,49 +1710,4 @@ class _EmployeeQuickActions extends StatelessWidget {
   }
 }
 
-class _AnnouncementsCard extends StatelessWidget {
-  const _AnnouncementsCard();
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.green.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.green.withValues(alpha: 0.1)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Colors.green.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Iconsax.notification_bing, color: Colors.green, size: 20),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const AppText('Office Closed on 25 May', fontSize: 14, fontWeight: FontWeight.w700),
-                const SizedBox(height: 4),
-                const AppText(
-                  'The office will remain closed on 25 May 2025 on account of public holiday.',
-                  fontSize: 11,
-                  color: AppColors.textColorSecondary,
-                ),
-                const SizedBox(height: 12),
-                const AppText('2h ago', fontSize: 10, color: AppColors.textColorHint),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}

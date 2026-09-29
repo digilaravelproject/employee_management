@@ -1,3 +1,4 @@
+import '../../../core/constants/app_constants.dart';
 import '../../../core/services/network/api_client.dart';
 import '../../../core/utils/logger.dart';
 import '../models/department_request_model.dart';
@@ -10,7 +11,7 @@ class DepartmentRepository {
 
   Future<DepartmentResponseModel> createDepartment(DepartmentRequestModel data) async {
     try {
-      final response = await apiClient.post('/api/admin/departments', data: data.toJson());
+      final response = await apiClient.post(AppConstants.adminDepartmentsUrl, data: data.toJson());
 
       if (response.isSuccess && response.json != null) {
         return DepartmentResponseModel.fromJson(response.json!);
@@ -32,7 +33,7 @@ class DepartmentRepository {
   Future<DepartmentListResponseModel> getDepartments({String? status}) async {
     try {
       final queryParams = status != null ? '?status=$status' : '';
-      final response = await apiClient.get('/api/admin/departments$queryParams');
+      final response = await apiClient.get('${AppConstants.adminDepartmentsUrl}$queryParams');
 
       if (response.isSuccess && response.json != null) {
         return DepartmentListResponseModel.fromJson(response.json!);
@@ -53,7 +54,7 @@ class DepartmentRepository {
 
   Future<DepartmentResponseModel> getDepartmentDetails(String id) async {
     try {
-      final response = await apiClient.get('/api/admin/departments/$id');
+      final response = await apiClient.get(AppConstants.adminDepartmentUrl(id));
 
       if (response.isSuccess && response.json != null) {
         return DepartmentResponseModel.fromJson(response.json!);
@@ -74,7 +75,7 @@ class DepartmentRepository {
 
   Future<DepartmentListResponseModel> searchDepartments(String query) async {
     try {
-      final response = await apiClient.get('/api/admin/departments/search?query=$query');
+      final response = await apiClient.get(AppConstants.adminSearchDepartmentsUrl(query));
 
       if (response.isSuccess && response.json != null) {
         return DepartmentListResponseModel.fromJson(response.json!);
@@ -95,7 +96,7 @@ class DepartmentRepository {
 
   Future<DepartmentResponseModel> updateDepartment(String id, DepartmentRequestModel data) async {
     try {
-      final response = await apiClient.patch('/api/admin/departments/$id', data: data.toJson());
+      final response = await apiClient.patch(AppConstants.adminDepartmentUrl(id), data: data.toJson());
 
       if (response.isSuccess && response.json != null) {
         return DepartmentResponseModel.fromJson(response.json!);
@@ -116,7 +117,7 @@ class DepartmentRepository {
 
   Future<DepartmentResponseModel> deleteDepartment(String id) async {
     try {
-      final response = await apiClient.delete('/api/admin/departments/$id');
+      final response = await apiClient.delete(AppConstants.adminDepartmentUrl(id));
 
       if (response.isSuccess && response.json != null) {
         return DepartmentResponseModel.fromJson(response.json!);
@@ -138,7 +139,7 @@ class DepartmentRepository {
   Future<DepartmentResponseModel> addEmployeesToDepartment(String departmentId, List<int> employeeIds) async {
     try {
       final response = await apiClient.post(
-        '/api/admin/departments/$departmentId/employees',
+        AppConstants.adminDepartmentEmployeesUrl(departmentId),
         data: {'employee_ids': employeeIds},
       );
 
@@ -161,7 +162,7 @@ class DepartmentRepository {
 
   Future<DepartmentResponseModel> removeEmployeeFromDepartment(String departmentId, String employeeId) async {
     try {
-      final response = await apiClient.delete('/api/admin/departments/$departmentId/employees/$employeeId');
+      final response = await apiClient.delete(AppConstants.adminDepartmentEmployeeUrl(departmentId, employeeId));
 
       if (response.isSuccess && response.json != null) {
         return DepartmentResponseModel.fromJson(response.json!);

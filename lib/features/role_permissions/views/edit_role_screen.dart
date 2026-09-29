@@ -5,7 +5,6 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_text.dart';
 import '../../departments/controllers/departments_controller.dart';
 import '../../departments/widgets/department_picker_bottom_sheet.dart';
-import '../../employee/designation/controllers/designation_controller.dart';
 import '../controllers/role_permissions_controller.dart';
 import '../models/role_permission_models.dart';
 
@@ -27,20 +26,6 @@ class _EditRoleScreenState extends State<EditRoleScreen> {
     'Accounts & Finance',
     'Customer Support',
     'General',
-  ];
-
-  final List<String> _fallbackDesignations = [
-    'Admin',
-    'HR Manager',
-    'Project Manager',
-    'Team Lead',
-    'Senior Flutter Developer',
-    'UI/UX Designer',
-    'PHP Developer',
-    'Sales Executive',
-    'Accountant',
-    'Intern',
-    'Staff',
   ];
 
   @override
@@ -65,19 +50,6 @@ class _EditRoleScreenState extends State<EditRoleScreen> {
     if (widget.role.departmentName != null &&
         !departmentOptions.contains(widget.role.departmentName!)) {
       departmentOptions.add(widget.role.departmentName!);
-    }
-
-    List<String> designationOptions = _fallbackDesignations;
-    if (Get.isRegistered<DesignationController>()) {
-      final desigCtrl = Get.find<DesignationController>();
-      if (desigCtrl.designations.isNotEmpty) {
-        final dynamicNames = desigCtrl.designations.map((d) => d.name).toList();
-        designationOptions = {...designationOptions, ...dynamicNames}.toList();
-      }
-    }
-    if (widget.role.designationName != null &&
-        !designationOptions.contains(widget.role.designationName!)) {
-      designationOptions.add(widget.role.designationName!);
     }
 
     return Scaffold(
@@ -156,7 +128,7 @@ class _EditRoleScreenState extends State<EditRoleScreen> {
               subtitle: 'Name, organizational classification & description',
             ),
             const SizedBox(height: 12),
-            _buildRoleInfoCard(controller, departmentOptions, designationOptions),
+            _buildRoleInfoCard(controller, departmentOptions),
 
             const SizedBox(height: 24),
 
@@ -274,7 +246,6 @@ class _EditRoleScreenState extends State<EditRoleScreen> {
   Widget _buildRoleInfoCard(
     RolePermissionsController controller,
     List<String> departmentOptions,
-    List<String> designationOptions,
   ) {
     return Container(
       padding: const EdgeInsets.all(18),
@@ -369,38 +340,6 @@ class _EditRoleScreenState extends State<EditRoleScreen> {
                       ),
                     ],
                   ),
-                ),
-              ),
-            );
-          }),
-          const SizedBox(height: 16),
-
-          _buildFieldLabel('Designation', isRequired: true),
-          const SizedBox(height: 8),
-          Obx(() {
-            final selected = controller.selectedDesignationName.value;
-            return Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              decoration: BoxDecoration(
-                color: AppColors.slate50,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.slate200),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  isExpanded: true,
-                  hint: const AppText('Select Designation',
-                      fontSize: 13, color: AppColors.textColorHint),
-                  value: designationOptions.contains(selected) ? selected : null,
-                  icon: const Icon(Icons.keyboard_arrow_down_rounded,
-                      color: AppColors.textColorSecondary),
-                  items: designationOptions.map((desig) {
-                    return DropdownMenuItem<String>(
-                      value: desig,
-                      child: AppText(desig, fontSize: 13, fontWeight: FontWeight.w600),
-                    );
-                  }).toList(),
-                  onChanged: (val) => controller.selectedDesignationName.value = val,
                 ),
               ),
             );

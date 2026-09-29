@@ -22,11 +22,11 @@ class UserDocument {
   factory UserDocument.fromJson(Map<String, dynamic> json) {
     return UserDocument(
       id: json['id'] != null ? int.tryParse(json['id'].toString()) : null,
-      originalName: json['original_name']?.toString(),
-      fileName: json['file_name']?.toString(),
+      originalName: json['original_name']?.toString() ?? json['name']?.toString() ?? json['title']?.toString(),
+      fileName: json['file_name']?.toString() ?? json['file']?.toString(),
       mimeType: json['mime_type']?.toString(),
       size: json['size'] != null ? int.tryParse(json['size'].toString()) : null,
-      url: json['url']?.toString(),
+      url: json['url']?.toString() ?? json['path']?.toString() ?? json['file_path']?.toString(),
       createdAt: json['created_at']?.toString(),
     );
   }
@@ -151,8 +151,12 @@ class UserModel {
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     List<UserDocument>? parsedDocuments;
-    if (json['documents'] != null && json['documents'] is List) {
-      parsedDocuments = (json['documents'] as List).map((doc) => UserDocument.fromJson(doc)).toList();
+    final rawDocs = json['documents'] ?? json['documnts'];
+    if (rawDocs != null && rawDocs is List) {
+      parsedDocuments = rawDocs
+          .whereType<Map>()
+          .map((doc) => UserDocument.fromJson(Map<String, dynamic>.from(doc)))
+          .toList();
     }
 
     return UserModel(

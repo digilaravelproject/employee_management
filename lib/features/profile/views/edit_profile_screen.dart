@@ -3,15 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:image_picker/image_picker.dart';
-import '../../../core/controllers/app_controller.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_input_field.dart';
 import '../../../core/widgets/app_text.dart';
-import '../controllers/user_document_controller.dart';
-import '../models/user_document_model.dart';
-import 'document_image_viewer_screen.dart';
-import 'employee_documents_screen.dart';
-import 'upload_document_bottom_sheet.dart';
+import '../../auth/domain/models/user_model.dart';
+import '../controllers/profile_controller.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -21,16 +17,14 @@ class EditProfileScreen extends StatefulWidget {
 }
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
-  File? _profileImage;
+  late final ProfileController controller;
 
-  Future<void> _pickImage(ImageSource source) async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: source);
-    if (pickedFile != null) {
-      setState(() {
-        _profileImage = File(pickedFile.path);
-      });
-    }
+  @override
+  void initState() {
+    super.initState();
+    controller = Get.isRegistered<ProfileController>()
+        ? Get.find<ProfileController>()
+        : Get.put(ProfileController());
   }
 
   void _showPhotoPicker() {
@@ -48,15 +42,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           children: [
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              child: AppText('Select Profile Photo',
-                  fontSize: 18, fontWeight: FontWeight.bold),
+              child: AppText(
+                'Select Profile Photo',
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             ListTile(
               leading: const Icon(Iconsax.gallery, color: AppColors.primaryColor),
               title: const AppText('Choose from Gallery', fontSize: 15),
               onTap: () {
                 Get.back();
-                _pickImage(ImageSource.gallery);
+                controller.pickAvatar(ImageSource.gallery);
               },
             ),
             ListTile(
@@ -64,13 +61,47 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               title: const AppText('Take Photo with Camera', fontSize: 15),
               onTap: () {
                 Get.back();
-                _pickImage(ImageSource.camera);
+                controller.pickAvatar(ImageSource.camera);
               },
             ),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _pickDate(BuildContext context) async {
+    DateTime initialDate = DateTime.now();
+    try {
+      if (controller.dateOfJoiningController.text.isNotEmpty) {
+        initialDate = DateTime.parse(controller.dateOfJoiningController.text.trim());
+      }
+    } catch (_) {}
+
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: DateTime(1980),
+      lastDate: DateTime(2100),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: AppColors.primaryColor,
+              onPrimary: Colors.white,
+              onSurface: AppColors.textColorPrimary,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      final formatted =
+          "${picked.year.toString().padLeft(4, '0')}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
+      controller.dateOfJoiningController.text = formatted;
+    }
   }
 
   @override
@@ -85,8 +116,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               color: AppColors.textColorPrimary, size: 18),
           onPressed: () => Get.back(),
         ),
-        title: const AppText('Edit Profile',
-            fontSize: 18, fontWeight: FontWeight.bold),
+        title: Obx(() => AppText(
+              controller.isUserAdmin ? 'Edit Admin Profile' : 'Edit Profile',
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            )),
         centerTitle: false,
       ),
       body: Column(
@@ -107,31 +141,75 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     title: 'Basic Information',
                     subtitle: 'Update your name and primary contact details',
                     children: [
-                      _buildTextField('Full Name', 'Rahul Sharma'),
+                      AppInputField(
+                        label: 'Full Name',
+                        hint: 'Enter your full name',
+                        controller: controller.nameController,
+                      ),
                       const SizedBox(height: 14),
-                      _buildTextField('Email Address', 'rahul.sharma@company.com'),
+                      AppInputField(
+                        label: 'Email Address',
+                        hint: 'Email address',
+                        controller: controller.emailController,
+                        readOnly: true,
+                      ),
                       const SizedBox(height: 14),
-                      _buildTextField('Phone Number', '+91 98765 43210'),
+                      AppInputField(
+                        label: 'Phone Number',
+                        hint: 'Enter phone number',
+                        controller: controller.phoneController,
+                        keyboardType: TextInputType.phone,
+                      ),
                     ],
                   ),
 
-                  // ── Section 2: Professional Details (Hide for Admin) ──
-                  Obx(() => Get.find<AppController>().userRole.value != 'admin'
-                      ? _buildSectionCard(
-                          icon: Iconsax.briefcase,
-                          title: 'Professional Details',
-                          subtitle: 'Department, designation & employee credentials',
-                          children: [
-                            _buildTextField('Department', 'Design'),
-                            const SizedBox(height: 14),
-                            _buildTextField('Designation', 'UI/UX Designer'),
-                            const SizedBox(height: 14),
-                            _buildTextField('Employee ID', 'EMP1025'),
-                            const SizedBox(height: 14),
-                            _buildTextField('Date of Joining', '15 Jan 2024'),
-                          ],
-                        )
-                      : const SizedBox.shrink()),
+                  // ── Section 2: Professional Details (Employee Only) ──
+                  Obx(() {
+                    if (controller.isUserAdmin) {
+                      return const SizedBox.shrink();
+                    }
+                    return _buildSectionCard(
+                      icon: Iconsax.briefcase,
+                      title: 'Professional Details',
+                      subtitle:
+                          'Department, designation & employee credentials',
+                      children: [
+                        AppInputField(
+                          label: 'Department',
+                          hint: 'Enter department',
+                          controller: controller.departmentController,
+                        ),
+                        const SizedBox(height: 14),
+                        AppInputField(
+                          label: 'Designation',
+                          hint: 'Enter designation',
+                          controller: controller.designationController,
+                        ),
+                        const SizedBox(height: 14),
+                        AppInputField(
+                          label: 'Employee ID',
+                          hint: 'Enter employee ID',
+                          controller: controller.employeeIdController,
+                        ),
+                        const SizedBox(height: 14),
+                        GestureDetector(
+                          onTap: () => _pickDate(context),
+                          child: AbsorbPointer(
+                            child: AppInputField(
+                              label: 'Date of Joining',
+                              hint: 'YYYY-MM-DD',
+                              controller: controller.dateOfJoiningController,
+                              suffixIcon: const Icon(
+                                Iconsax.calendar,
+                                color: AppColors.primaryColor,
+                                size: 20,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  }),
 
                   // ── Section 3: Address Details ──
                   _buildSectionCard(
@@ -139,34 +217,66 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     title: 'Address Details',
                     subtitle: 'Permanent and communication residential address',
                     children: [
-                      _buildTextField(
-                        'Full Address',
-                        '123, Green Park Street, Sector 45,\nNoida, Uttar Pradesh - 201301',
+                      AppInputField(
+                        label: 'Full Address',
+                        hint: 'Enter residential or official address',
+                        controller: controller.addressController,
                         maxLines: 3,
                       ),
                     ],
                   ),
 
-                  // ── Section 4: Bank Details (if not admin) ──
-                  Obx(() => Get.find<AppController>().userRole.value != 'admin'
-                      ? _buildSectionCard(
-                          icon: Iconsax.bank,
-                          title: 'Bank Details',
-                          subtitle: 'Salary and payout account information',
-                          children: [
-                            _buildTextField('Bank Name', 'HDFC Bank'),
-                            const SizedBox(height: 14),
-                            _buildTextField('Account Number', '5010 1234 5678 90'),
-                            const SizedBox(height: 14),
-                            _buildTextField('Account Holder Name', 'Rahul Sharma'),
-                            const SizedBox(height: 14),
-                            _buildTextField('IFSC Code', 'HDFC0001234'),
-                          ],
-                        )
-                      : const SizedBox.shrink()),
+                  // ── Section 4: Bank Details (Employee Only) ──
+                  Obx(() {
+                    if (controller.isUserAdmin) {
+                      return const SizedBox.shrink();
+                    }
+                    return _buildSectionCard(
+                      icon: Iconsax.bank,
+                      title: 'Bank Details',
+                      subtitle: 'Salary and payout account information',
+                      children: [
+                        AppInputField(
+                          label: 'Bank Name',
+                          hint: 'Enter bank name',
+                          controller: controller.bankNameController,
+                        ),
+                        const SizedBox(height: 14),
+                        AppInputField(
+                          label: 'Account Number',
+                          hint: 'Enter account number',
+                          controller: controller.accountNumberController,
+                          keyboardType: TextInputType.number,
+                        ),
+                        const SizedBox(height: 14),
+                        AppInputField(
+                          label: 'Account Holder Name',
+                          hint: 'Enter account holder name',
+                          controller: controller.accountHolderNameController,
+                        ),
+                        const SizedBox(height: 14),
+                        AppInputField(
+                          label: 'IFSC Code',
+                          hint: 'Enter IFSC code',
+                          controller: controller.ifscCodeController,
+                        ),
+                        const SizedBox(height: 14),
+                        AppInputField(
+                          label: 'Branch Name',
+                          hint: 'Enter branch name',
+                          controller: controller.branchNameController,
+                        ),
+                      ],
+                    );
+                  }),
 
-                  // ── Section 5: Documents & ID Proofs ──
-                  _buildDocumentsSection(context),
+                  // ── Section 5: Documents & ID Proofs (Employee Only) ──
+                  Obx(() {
+                    if (controller.isUserAdmin) {
+                      return const SizedBox.shrink();
+                    }
+                    return _buildDocumentsSection(context);
+                  }),
 
                   const SizedBox(height: 24),
                 ],
@@ -189,29 +299,42 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             ),
             child: SafeArea(
               top: false,
-              child: ElevatedButton(
-                onPressed: () {
-                  Get.back();
-                  Get.snackbar(
-                    'Success',
-                    'Profile updated successfully',
-                    snackPosition: SnackPosition.BOTTOM,
-                    backgroundColor: Colors.green,
-                    colorText: Colors.white,
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryColor,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14)),
-                  minimumSize: const Size(double.infinity, 50),
+              child: Obx(
+                () => ElevatedButton(
+                  onPressed: controller.isUpdating.value
+                      ? null
+                      : () async {
+                          final success = await controller.updateProfile();
+                          if (success) {
+                            Get.back();
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryColor,
+                    disabledBackgroundColor:
+                        AppColors.primaryColor.withValues(alpha: 0.6),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
+                    minimumSize: const Size(double.infinity, 50),
+                  ),
+                  child: controller.isUpdating.value
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const AppText(
+                          'Save Changes',
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
                 ),
-                child: const AppText('Save Changes',
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white),
               ),
             ),
           ),
@@ -240,28 +363,35 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         children: [
           Stack(
             children: [
-              Container(
-                width: 76,
-                height: 76,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.primaryLight, width: 3),
-                  image: _profileImage != null
-                      ? DecorationImage(
-                          image: FileImage(_profileImage!),
-                          fit: BoxFit.cover,
-                        )
-                      : const DecorationImage(
-                          image: AssetImage('assets/images/user1.png'),
-                          fit: BoxFit.cover,
-                        ),
-                  color: AppColors.slate200,
-                ),
-                child: _profileImage == null
-                    ? const Icon(Icons.person,
-                        size: 38, color: AppColors.slate400)
-                    : null,
-              ),
+              Obx(() {
+                final File? file = controller.selectedAvatar.value;
+                final String? avatarUrl = controller.currentUser.value?.avatar;
+
+                ImageProvider imageProvider;
+                if (file != null) {
+                  imageProvider = FileImage(file);
+                } else if (avatarUrl != null &&
+                    avatarUrl.isNotEmpty &&
+                    avatarUrl.startsWith('http')) {
+                  imageProvider = NetworkImage(avatarUrl);
+                } else {
+                  imageProvider = const AssetImage('assets/images/user1.png');
+                }
+
+                return Container(
+                  width: 76,
+                  height: 76,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppColors.primaryLight, width: 3),
+                    image: DecorationImage(
+                      image: imageProvider,
+                      fit: BoxFit.cover,
+                    ),
+                    color: AppColors.slate200,
+                  ),
+                );
+              }),
               Positioned(
                 bottom: 0,
                 right: 0,
@@ -406,11 +536,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     return _buildSectionCard(
       icon: Iconsax.document_upload,
       title: 'Documents & ID Proofs',
-      subtitle: 'Upload and preview verified documents',
+      subtitle: 'Upload document images (Camera or Gallery)',
       trailing: TextButton.icon(
-        onPressed: () => UploadDocumentBottomSheet.show(context),
-        icon: const Icon(Icons.add, size: 15, color: AppColors.primaryColor),
-        label: const AppText('Upload New',
+        onPressed: () => controller.showAddDocumentImagePicker(context),
+        icon: const Icon(Icons.add_a_photo_outlined, size: 15, color: AppColors.primaryColor),
+        label: const AppText('Add Image',
             fontSize: 12,
             fontWeight: FontWeight.bold,
             color: AppColors.primaryColor),
@@ -423,7 +553,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       children: [
         // Upload Button Box
         InkWell(
-          onTap: () => UploadDocumentBottomSheet.show(context),
+          onTap: () => controller.showAddDocumentImagePicker(context),
           borderRadius: BorderRadius.circular(14),
           child: Container(
             width: double.infinity,
@@ -444,19 +574,19 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     color: AppColors.primaryColor.withValues(alpha: 0.12),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Iconsax.document_upload,
+                  child: const Icon(Iconsax.camera,
                       color: AppColors.primaryColor, size: 24),
                 ),
                 const SizedBox(height: 10),
                 const AppText(
-                  'Click here to Upload Document',
+                  'Click here to Add Document Image',
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
                   color: AppColors.primaryColor,
                 ),
                 const SizedBox(height: 3),
                 const AppText(
-                  'Aadhar, PAN, Student ID, Marksheets or Certificates',
+                  'Camera or Gallery (Images only: JPG, PNG, WEBP)',
                   fontSize: 11,
                   color: AppColors.textColorSecondary,
                   textAlign: TextAlign.center,
@@ -468,10 +598,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
         const SizedBox(height: 16),
 
-        // List of uploaded documents
+        // ── Newly Selected Documents (to be synced) ──
         Obx(() {
-          final docController = Get.put(UserDocumentController());
-          if (docController.documents.isEmpty) {
+          if (controller.selectedDocuments.isEmpty) {
             return const SizedBox.shrink();
           }
 
@@ -482,99 +611,175 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   AppText(
-                    'Uploaded Documents (${docController.documents.length})',
+                    'Selected for Upload (${controller.selectedDocuments.length})',
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
-                    color: AppColors.textColorSecondary,
+                    color: AppColors.primaryColor,
                   ),
-                  GestureDetector(
-                    onTap: () => Get.to(() => const EmployeeDocumentsScreen()),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        AppText(
-                          'View Full List',
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primaryColor,
-                        ),
-                        SizedBox(width: 2),
-                        Icon(Icons.keyboard_arrow_right,
-                            size: 14, color: AppColors.primaryColor),
-                      ],
+                  TextButton(
+                    onPressed: () => controller.selectedDocuments.clear(),
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
+                    child: const AppText('Clear All',
+                        fontSize: 11, color: Colors.redAccent),
                   ),
                 ],
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 8),
               ListView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                itemCount: docController.documents.length,
+                itemCount: controller.selectedDocuments.length,
                 itemBuilder: (context, index) {
-                  final doc = docController.documents[index];
+                  final file = controller.selectedDocuments[index];
+                  final name = file.path.split(Platform.pathSeparator).last;
+                  final sizeKb = (file.lengthSync() / 1024).toStringAsFixed(1);
+
                   return Container(
-                    margin: const EdgeInsets.only(bottom: 10),
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryLight.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                          color:
+                              AppColors.primaryColor.withValues(alpha: 0.2)),
+                    ),
+                    child: Row(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: Image.file(
+                            file,
+                            width: 38,
+                            height: 38,
+                            fit: BoxFit.cover,
+                            errorBuilder: (ctx, err, stack) => const Icon(
+                              Iconsax.image,
+                              color: AppColors.primaryColor,
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              AppText(name,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis),
+                              AppText('$sizeKb KB • Ready to submit',
+                                  fontSize: 10,
+                                  color: AppColors.textColorSecondary),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close,
+                              size: 18, color: Colors.redAccent),
+                          onPressed: () =>
+                              controller.removeSelectedDocument(index),
+                          tooltip: 'Remove',
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 12),
+            ],
+          );
+        }),
+
+        // ── Server Uploaded Documents (from API response) ──
+        Obx(() {
+          final List<UserDocument>? serverDocs =
+              controller.currentUser.value?.documents;
+          if (serverDocs == null || serverDocs.isEmpty) {
+            return const SizedBox.shrink();
+          }
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AppText(
+                'Synced Server Documents (${serverDocs.length})',
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textColorSecondary,
+              ),
+              const SizedBox(height: 8),
+              ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: serverDocs.length,
+                itemBuilder: (context, index) {
+                  final doc = serverDocs[index];
+                  final displayName =
+                      doc.originalName ?? doc.fileName ?? 'Document ${index + 1}';
+                  final sizeKb = doc.size != null
+                      ? '${(doc.size! / 1024).toStringAsFixed(1)} KB'
+                      : 'File';
+
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 8),
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
                       color: AppColors.slate50,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(10),
                       border: Border.all(color: AppColors.slate200),
                     ),
                     child: Row(
                       children: [
-                        // Thumbnail with zoom on tap
-                        GestureDetector(
-                          onTap: () {
-                            Get.to(() =>
-                                DocumentImageViewerScreen(document: doc));
-                          },
-                          child: ClipRRect(
+                        Container(
+                          width: 38,
+                          height: 38,
+                          decoration: BoxDecoration(
+                            color: Colors.green.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(8),
-                            child: Container(
-                              width: 44,
-                              height: 44,
-                              color:
-                                  AppColors.primaryColor.withValues(alpha: 0.1),
-                              child: _buildDocThumbnail(doc),
-                            ),
                           ),
+                          child: const Icon(Iconsax.tick_circle,
+                              color: Colors.green, size: 20),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 10),
                         Expanded(
-                          child: GestureDetector(
-                            onTap: () {
-                              Get.to(() =>
-                                  DocumentImageViewerScreen(document: doc));
-                            },
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                AppText(doc.name,
-                                    fontSize: 13, fontWeight: FontWeight.w700),
-                                const SizedBox(height: 2),
-                                AppText('${doc.type} • ${doc.size}',
-                                    fontSize: 11,
-                                    color: AppColors.textColorSecondary),
-                              ],
-                            ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              AppText(displayName,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis),
+                              const SizedBox(height: 2),
+                              AppText(
+                                '$sizeKb • Verified',
+                                fontSize: 10,
+                                color: Colors.green,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ],
                           ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.zoom_in_rounded,
-                              size: 20, color: AppColors.primaryColor),
-                          tooltip: 'Preview & Zoom',
-                          onPressed: () {
-                            Get.to(() =>
-                                DocumentImageViewerScreen(document: doc));
-                          },
                         ),
                         IconButton(
                           icon: const Icon(Iconsax.trash,
-                              size: 17, color: Colors.redAccent),
-                          tooltip: 'Delete',
+                              size: 18, color: Colors.redAccent),
+                          tooltip: 'Delete Document',
                           onPressed: () {
-                            docController.deleteDocument(doc.id);
+                            if (doc.id != null) {
+                              controller.showDeleteDocumentDialog(
+                                context,
+                                documentId: doc.id!,
+                                documentName: displayName,
+                              );
+                            }
                           },
                         ),
                       ],
@@ -582,40 +787,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   );
                 },
               ),
+              const SizedBox(height: 12),
             ],
           );
         }),
       ],
     );
-  }
-
-  Widget _buildTextField(String label, String initialValue, {int maxLines = 1}) {
-    return AppInputField(
-      label: label,
-      hint: 'Enter $label',
-      controller: TextEditingController(text: initialValue),
-      maxLines: maxLines,
-    );
-  }
-
-  Widget _buildDocThumbnail(UserDocumentItem doc) {
-    if (doc.filePath != null && File(doc.filePath!).existsSync()) {
-      return Image.file(
-        File(doc.filePath!),
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) =>
-            const Icon(Iconsax.gallery, color: AppColors.primaryColor, size: 22),
-      );
-    } else if (doc.assetPath != null && doc.assetPath!.isNotEmpty) {
-      return Image.asset(
-        doc.assetPath!,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) =>
-            const Icon(Iconsax.gallery, color: AppColors.primaryColor, size: 22),
-      );
-    } else {
-      return const Icon(Iconsax.document_text,
-          color: AppColors.primaryColor, size: 22);
-    }
   }
 }

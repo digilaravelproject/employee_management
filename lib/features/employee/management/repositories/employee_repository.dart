@@ -18,7 +18,7 @@ class EmployeeRepository implements EmployeeRepositoryInterface {
   Future<CreateEmployeeResponseModel> createEmployee(CreateEmployeeRequestModel request) async {
     try {
       final formData = await request.toFormData();
-      final response = await apiClient.post('/api/admin/employees', data: formData);
+      final response = await apiClient.post(AppConstants.adminEmployeesUrl, data: formData);
 
       if (response.isSuccess && response.json != null) {
         return CreateEmployeeResponseModel.fromJson(response.json!);
@@ -77,9 +77,10 @@ class EmployeeRepository implements EmployeeRepositoryInterface {
   @override
   Future<EmployeeDetailResponseModel> getEmployeeById(String id) async {
     try {
-      Logger.d('EmployeeRepository => Calling getEmployeeById for ID: $id');
+      final url = AppConstants.adminEmployeeUrl(id);
+      Logger.d('EmployeeRepository => Calling getEmployeeById for ID: $id at $url');
       final response = await apiClient.get(
-        '/api/admin/employees/$id',
+        url,
         handleError: false,
         showToaster: false,
       );
@@ -112,9 +113,10 @@ class EmployeeRepository implements EmployeeRepositoryInterface {
   @override
   Future<ResponseModel> updateEmployee(String id, Map<String, dynamic> data) async {
     try {
-      Logger.d('EmployeeRepository => Calling updateEmployee for ID: $id at /api/admin/employees/$id with data: $data');
+      final url = AppConstants.adminEmployeeUrl(id);
+      Logger.d('EmployeeRepository => Calling updateEmployee for ID: $id at $url with data: $data');
       final response = await apiClient.patch(
-        '/api/admin/employees/$id',
+        url,
         data: data,
         handleError: false,
         showToaster: false,
@@ -136,7 +138,8 @@ class EmployeeRepository implements EmployeeRepositoryInterface {
   @override
   Future<ResponseModel> updateEmployeeAvatar(String id, File imageFile) async {
     try {
-      Logger.d('EmployeeRepository => Calling updateEmployeeAvatar for ID: $id at /api/admin/employees/$id');
+      final url = AppConstants.adminEmployeeUrl(id);
+      Logger.d('EmployeeRepository => Calling updateEmployeeAvatar for ID: $id at $url');
       final filename = imageFile.path.split(Platform.pathSeparator).last;
       final formData = FormData.fromMap({
         'avatar': await MultipartFile.fromFile(
@@ -146,7 +149,7 @@ class EmployeeRepository implements EmployeeRepositoryInterface {
       });
 
       final response = await apiClient.post(
-        '/api/admin/employees/$id',
+        url,
         data: formData,
         handleError: false,
         showToaster: false,
@@ -168,9 +171,10 @@ class EmployeeRepository implements EmployeeRepositoryInterface {
   @override
   Future<ResponseModel> deleteEmployee(String id) async {
     try {
-      Logger.d('EmployeeRepository => Calling deleteEmployee for ID: $id at /api/admin/employees/$id');
+      final url = AppConstants.adminEmployeeUrl(id);
+      Logger.d('EmployeeRepository => Calling deleteEmployee for ID: $id at $url');
       final response = await apiClient.delete(
-        '/api/admin/employees/$id',
+        url,
         handleError: false,
         showToaster: false,
       );

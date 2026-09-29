@@ -87,7 +87,7 @@ class AttendanceRepository {
 
   Future<AttendanceHistoryResponseModel> getAttendanceHistory(String month) async {
     final response = await apiClient.get(
-      '/api/admin/attendance/history',
+      AppConstants.adminAttendanceHistoryUrl,
       queryParameters: {'month': month},
       handleError: false,
       showToaster: false,

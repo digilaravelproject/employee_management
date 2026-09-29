@@ -9,16 +9,34 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/custom_snackbar.dart';
 import '../../../core/utils/logger.dart';
 import '../../../core/widgets/app_text.dart';
-import '../../../core/controllers/app_controller.dart';
 import '../../../routes/route_helper.dart';
 import '../../auth/controllers/auth_controller.dart';
+import '../controllers/profile_controller.dart';
 import 'edit_profile_screen.dart';
 import 'change_password_screen.dart';
 import 'employee_documents_screen.dart';
-import '../controllers/user_document_controller.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  late final ProfileController controller;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = Get.isRegistered<ProfileController>()
+        ? Get.find<ProfileController>()
+        : Get.put(ProfileController());
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      controller.fetchProfile();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,290 +45,486 @@ class ProfileScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        // leading: IconButton(
-        //   icon: const Icon(Icons.arrow_back, color: AppColors.textColorPrimary),
-        //   onPressed: () {},
-        // ),
-        title: const AppText('Profile', fontSize: 18, fontWeight: FontWeight.bold),
+        title: Obx(() => AppText(
+              controller.isUserAdmin ? 'Admin Profile' : 'My Profile',
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            )),
         centerTitle: false,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded,
+                color: AppColors.textColorPrimary, size: 22),
+            tooltip: 'Refresh Profile',
+            onPressed: () => controller.fetchProfile(),
+          ),
+        ],
       ),
-      body: ListView(
-        children: [
-          // Profile Header
-          Container(
-            margin: const EdgeInsets.all(20),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.slate50,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
+      body: Obx(() {
+        if (controller.isLoading.value && controller.currentUser.value == null) {
+          return const Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 4),
-                    image: const DecorationImage(
-                      image: AssetImage('assets/images/user1.png'), // Will fallback to icon if not found
-                      fit: BoxFit.cover,
-                    ),
-                    color: AppColors.slate200,
-                  ),
-                  child: const Icon(Icons.person, size: 40, color: AppColors.slate400),
+                CircularProgressIndicator(
+                    color: AppColors.primaryColor, strokeWidth: 2.5),
+                SizedBox(height: 16),
+                AppText('Loading profile details...',
+                    fontSize: 13, color: AppColors.textColorSecondary),
+              ],
+            ),
+          );
+        }
+
+        final user = controller.currentUser.value;
+        final bool isAdmin = controller.isUserAdmin;
+
+        final String name = user?.name.isNotEmpty == true
+            ? user!.name
+            : (isAdmin ? 'Admin User' : 'Employee User');
+        final String designation = user?.designation?.isNotEmpty == true
+            ? user!.designation!
+            : (isAdmin
+                ? (user?.companyName ?? 'Administrator')
+                : 'UI/UX Designer');
+        final String email = user?.email.isNotEmpty == true
+            ? user!.email
+            : (isAdmin ? 'admin@empmanagement.com' : 'user@company.com');
+        final String phone = user?.phone ??
+            user?.mobileNumber ??
+            '+91 98765 43210';
+        final String employeeId = user?.employeeId ?? 'EMP1025';
+        final String status =
+            user?.status ?? user?.employmentStatus ?? 'Active';
+        final String department =
+            user?.department ?? (isAdmin ? 'Management' : 'Design');
+        final String dateOfJoining = user?.dateOfJoining ?? '2024-01-15';
+        final String address = user?.address ??
+            user?.streetAddress ??
+            '123, Green Park Street, Sector 45, Noida, Uttar Pradesh - 201301';
+
+        final String bankName = user?.bankName ?? 'HDFC Bank';
+        final String accountNumber =
+            user?.accountNumber ?? '5010 1234 5678 90';
+        final String accountHolder = user?.accountHolderName ?? name;
+        final String ifsc = user?.ifscCode ?? 'HDFC0001234';
+
+        return RefreshIndicator(
+          onRefresh: () => controller.fetchProfile(),
+          color: AppColors.primaryColor,
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(
+                parent: BouncingScrollPhysics()),
+            children: [
+              if (controller.isLoading.value)
+                const LinearProgressIndicator(
+                  minHeight: 2,
+                  color: AppColors.primaryColor,
+                  backgroundColor: AppColors.primaryLight,
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const AppText('Rahul Sharma', fontSize: 16, fontWeight: FontWeight.bold),
-                      const SizedBox(height: 4),
-                      const AppText('UI/UX Designer', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.primaryColor),
-                      const SizedBox(height: 8),
-                      _buildContactRow(Iconsax.sms, 'rahul.sharma@company.com'),
-                      const SizedBox(height: 4),
-                      _buildContactRow(Iconsax.call, '+91 98765 43210'),
-                      const SizedBox(height: 8),
-                      Row(
+
+              // ── Profile Header ──
+              Container(
+                margin: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.slate50,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.slate100),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    _buildAvatarWidget(user?.avatar, name),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Iconsax.document_copy, color: AppColors.textColorSecondary, size: 14),
-                          const SizedBox(width: 4),
-                          const AppText('EMP1025', fontSize: 12, color: AppColors.textColorSecondary),
-                          const SizedBox(width: 12),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: Colors.green.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Container(width: 6, height: 6, decoration: const BoxDecoration(color: Colors.green, shape: BoxShape.circle)),
+                          AppText(name,
+                              fontSize: 16, fontWeight: FontWeight.bold),
+                          const SizedBox(height: 4),
+                          AppText(designation,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.primaryColor),
+                          const SizedBox(height: 8),
+                          _buildContactRow(Iconsax.sms, email),
+                          const SizedBox(height: 4),
+                          _buildContactRow(Iconsax.call, phone),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              if (!isAdmin) ...[
+                                const Icon(Iconsax.card,
+                                    color: AppColors.textColorSecondary,
+                                    size: 14),
                                 const SizedBox(width: 4),
-                                const AppText('Active', fontSize: 10, fontWeight: FontWeight.bold, color: Colors.green),
+                                AppText(employeeId,
+                                    fontSize: 12,
+                                    color: AppColors.textColorSecondary),
+                                const SizedBox(width: 12),
                               ],
-                            ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.green.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 6,
+                                      height: 6,
+                                      decoration: const BoxDecoration(
+                                          color: Colors.green,
+                                          shape: BoxShape.circle),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    AppText(status,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.green),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // ── Action Buttons (Edit Profile & Change Password) ──
+              Padding(
+                padding:
+                    const EdgeInsets.only(left: 20, right: 20, bottom: 20),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () async {
+                          await Get.to(() => const EditProfileScreen());
+                          controller.fetchProfile();
+                        },
+                        icon: const Icon(Iconsax.edit,
+                            size: 16, color: AppColors.primaryColor),
+                        label: const AppText('Edit Profile',
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primaryColor),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          side: const BorderSide(color: AppColors.primaryColor),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10)),
+                          backgroundColor:
+                              AppColors.primaryColor.withValues(alpha: 0.05),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () =>
+                            Get.to(() => const ChangePasswordScreen()),
+                        icon: const Icon(Iconsax.lock,
+                            size: 16, color: AppColors.textColorPrimary),
+                        label: const AppText('Change Password',
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textColorPrimary),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          side: const BorderSide(color: AppColors.borderColor),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10)),
+                          backgroundColor: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // ── Overview Sections ──
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  children: [
+                    // Section 1: Basic Information
+                    _buildSectionCard(
+                      icon: Iconsax.user,
+                      title: 'Basic Information',
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(child: _buildDetailItem('Name', name)),
+                            Expanded(child: _buildDetailItem('Email', email)),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(child: _buildDetailItem('Phone', phone)),
+                            if (isAdmin && user?.companyName != null)
+                              Expanded(
+                                  child: _buildDetailItem(
+                                      'Company', user!.companyName!))
+                            else if (isAdmin && user?.ownerName != null)
+                              Expanded(
+                                  child: _buildDetailItem(
+                                      'Owner', user!.ownerName!))
+                            else
+                              const Expanded(child: SizedBox()),
+                          ],
+                        ),
+                      ],
+                    ),
+
+                    // Section 2: Professional Details (Employee Only)
+                    if (!isAdmin) ...[
+                      const SizedBox(height: 16),
+                      _buildSectionCard(
+                        icon: Iconsax.briefcase,
+                        title: 'Professional Details',
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                  child:
+                                      _buildDetailItem('Department', department)),
+                              Expanded(
+                                  child: _buildDetailItem(
+                                      'Designation', designation)),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Expanded(
+                                  child:
+                                      _buildDetailItem('Employee ID', employeeId)),
+                              Expanded(
+                                  child: _buildDetailItem(
+                                      'Date of Joining', dateOfJoining)),
+                            ],
                           ),
                         ],
                       ),
                     ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          
-          Padding(
-            padding: const EdgeInsets.only(left: 20, right: 20, bottom: 20),
-            child: Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => Get.to(() => const EditProfileScreen()),
-                    icon: const Icon(Iconsax.edit, size: 16, color: AppColors.primaryColor),
-                    label: const AppText('Edit Profile', fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.primaryColor),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      side: const BorderSide(color: AppColors.primaryColor),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      backgroundColor: AppColors.primaryColor.withValues(alpha: 0.05),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => Get.to(() => const ChangePasswordScreen()),
-                    icon: const Icon(Iconsax.lock, size: 16, color: AppColors.textColorPrimary),
-                    label: const AppText('Change Password', fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textColorPrimary),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      side: const BorderSide(color: AppColors.borderColor),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      backgroundColor: Colors.white,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          
-          // Overview Sections
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Column(
-              children: [
-                _buildSectionCard(
-                  icon: Iconsax.user,
-                  title: 'Basic Information',
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(child: _buildDetailItem('Name', 'Rahul Sharma')),
-                        Expanded(child: _buildDetailItem('Email', 'rahul.sharma@company.com')),
-                      ],
-                    ),
+
                     const SizedBox(height: 16),
-                    Row(
+
+                    // Section 3: Address Details
+                    _buildSectionCard(
+                      icon: Iconsax.location,
+                      title: 'Address Details',
                       children: [
-                        Expanded(child: _buildDetailItem('Phone', '+91 98765 43210')),
-                        const Expanded(child: SizedBox()),
+                        AppText(
+                          address,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ],
                     ),
-                  ],
-                ),
-                
-                // Professional Details (Hide for Admin)
-                Obx(() => Get.find<AppController>().userRole.value != 'admin'
-                    ? Column(
+
+                    // Section 4: Bank Details (Employee Only)
+                    if (!isAdmin) ...[
+                      const SizedBox(height: 16),
+                      _buildSectionCard(
+                        icon: Iconsax.bank,
+                        title: 'Bank Details',
                         children: [
-                          const SizedBox(height: 16),
-                          _buildSectionCard(
-                            icon: Iconsax.briefcase,
-                            title: 'Professional Details',
+                          Row(
                             children: [
-                              Row(
-                                children: [
-                                  Expanded(child: _buildDetailItem('Department', 'Design')),
-                                  Expanded(child: _buildDetailItem('Designation', 'UI/UX Designer')),
-                                ],
-                              ),
-                              const SizedBox(height: 16),
-                              Row(
-                                children: [
-                                  Expanded(child: _buildDetailItem('Employee ID', 'EMP1025')),
-                                  Expanded(child: _buildDetailItem('Date of Joining', '15 Jan 2024')),
-                                ],
-                              ),
+                              Expanded(
+                                  child: _buildDetailItem(
+                                      'Bank Name', bankName)),
+                              Expanded(
+                                  child: _buildDetailItem(
+                                      'Account Number', accountNumber)),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Expanded(
+                                  child: _buildDetailItem(
+                                      'Account Holder Name', accountHolder)),
+                              Expanded(
+                                  child:
+                                      _buildDetailItem('IFSC Code', ifsc)),
                             ],
                           ),
                         ],
-                      )
-                    : const SizedBox.shrink()),
-                
-                const SizedBox(height: 16),
-                
-                _buildSectionCard(
-                  icon: Iconsax.location,
-                  title: 'Address Details',
-                  children: [
-                    const AppText(
-                      '123, Green Park Street, Sector 45,\nNoida, Uttar Pradesh - 201301',
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ],
-                ),
-                
-                // Bank Details (Hide for Admin)
-                Obx(() => Get.find<AppController>().userRole.value != 'admin'
-                    ? Column(
-                        children: [
-                          const SizedBox(height: 16),
-                          _buildSectionCard(
-                            icon: Iconsax.bank,
-                            title: 'Bank Details',
-                            children: [
-                              Row(
-                                children: [
-                                  Expanded(child: _buildDetailItem('Bank Name', 'HDFC Bank')),
-                                  Expanded(child: _buildDetailItem('Account Number', '5010 1234 5678 90')),
-                                ],
-                              ),
-                              const SizedBox(height: 16),
-                              Row(
-                                children: [
-                                  Expanded(child: _buildDetailItem('Account Holder Name', 'Rahul Sharma')),
-                                  Expanded(child: _buildDetailItem('IFSC Code', 'HDFC0001234')),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ],
-                      )
-                    : const SizedBox.shrink()),
+                      ),
+                    ],
 
-                const SizedBox(height: 16),
-
-                // View Documents Button
-                InkWell(
-                  onTap: () => Get.to(() => const EmployeeDocumentsScreen()),
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.borderColor),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
+                    // Section 5: View Documents (Employee Only - only show if documents exist)
+                    if (!isAdmin &&
+                        user?.documents != null &&
+                        user!.documents!.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      InkWell(
+                        onTap: () =>
+                            Get.to(() => const EmployeeDocumentsScreen()),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 14),
                           decoration: BoxDecoration(
-                            color: AppColors.slate100,
-                            borderRadius: BorderRadius.circular(8),
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppColors.borderColor),
                           ),
-                          child: const Icon(Iconsax.folder_open, color: AppColors.textColorPrimary, size: 20),
-                        ),
-                        const SizedBox(width: 14),
-                        const Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          child: Row(
                             children: [
-                              AppText(
-                                'View Documents',
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.textColorPrimary,
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: AppColors.slate100,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Icon(Iconsax.folder_open,
+                                    color: AppColors.textColorPrimary,
+                                    size: 20),
                               ),
-                              SizedBox(height: 2),
-                              AppText(
-                                'View, zoom & review uploaded documents',
-                                fontSize: 11,
-                                color: AppColors.textColorSecondary,
+                              const SizedBox(width: 14),
+                              const Expanded(
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    AppText(
+                                      'View Documents',
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.textColorPrimary,
+                                    ),
+                                    SizedBox(height: 2),
+                                    AppText(
+                                      'View, zoom & review uploaded documents',
+                                      fontSize: 11,
+                                      color: AppColors.textColorSecondary,
+                                    ),
+                                  ],
+                                ),
                               ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primaryColor
+                                      .withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: AppText(
+                                  '${user.documents!.length} Files',
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.primaryColor,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              const Icon(Icons.keyboard_arrow_right,
+                                  color: AppColors.textColorSecondary),
                             ],
                           ),
                         ),
-                        Obx(() {
-                          final docController = Get.put(UserDocumentController());
-                          return Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: AppColors.primaryColor.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: AppText(
-                              '${docController.documents.length} Files',
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.primaryColor,
-                            ),
-                          );
-                        }),
-                        const SizedBox(width: 6),
-                        const Icon(Icons.keyboard_arrow_right, color: AppColors.textColorSecondary),
-                      ],
-                    ),
-                  ),
+                      ),
+                    ],
+
+                    const SizedBox(height: 20),
+
+                    // Logout Option
+                    _buildLogoutButton(context),
+
+                    const SizedBox(height: 40),
+                  ],
                 ),
-                
-                const SizedBox(height: 20),
+              ),
+            ],
+          ),
+        );
+      }),
+    );
+  }
 
-                // Logout Option
-                _buildLogoutButton(context),
-
-                const SizedBox(height: 40),
-              ],
-            ),
+  Widget _buildAvatarWidget(String? avatarUrl, String name) {
+    return Container(
+      width: 80,
+      height: 80,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white, width: 4),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
+      ),
+      child: ClipOval(
+        child: SizedBox(
+          width: 80,
+          height: 80,
+          child: controller.selectedAvatar.value != null
+              ? Image.file(
+                  controller.selectedAvatar.value!,
+                  fit: BoxFit.cover,
+                )
+              : (avatarUrl != null &&
+                      avatarUrl.isNotEmpty &&
+                      avatarUrl.startsWith('http'))
+                  ? Image.network(
+                      avatarUrl,
+                      fit: BoxFit.cover,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Container(
+                          color: AppColors.slate200,
+                          child: const Center(
+                            child: SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppColors.primaryColor,
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        color: AppColors.primaryLight,
+                        alignment: Alignment.center,
+                        child: Text(
+                          name.isNotEmpty ? name[0].toUpperCase() : 'A',
+                          style: const TextStyle(
+                            fontSize: 30,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primaryColor,
+                          ),
+                        ),
+                      ),
+                    )
+                  : Image.asset(
+                      'assets/images/user1.png',
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        color: AppColors.slate200,
+                        child: const Icon(Icons.person,
+                            size: 40, color: AppColors.slate400),
+                      ),
+                    ),
+        ),
       ),
     );
   }
@@ -368,7 +582,8 @@ class ProfileScreen extends StatelessWidget {
                   color: Colors.red.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Iconsax.logout, color: Colors.redAccent, size: 28),
+                child: const Icon(Iconsax.logout,
+                    color: Colors.redAccent, size: 28),
               ),
               const SizedBox(height: 16),
               const AppText(
@@ -393,7 +608,8 @@ class ProfileScreen extends StatelessWidget {
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         side: const BorderSide(color: AppColors.slate200),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
                       ),
                       child: const AppText(
                         'Cancel',
@@ -406,52 +622,61 @@ class ProfileScreen extends StatelessWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Obx(() => ElevatedButton(
-                      onPressed: isLoggingOut.value
-                          ? null
-                          : () async {
-                              isLoggingOut.value = true;
-                              try {
-                                final apiClient = Get.isRegistered<ApiClient>() ? Get.find<ApiClient>() : ApiClient();
-                                await apiClient.post(
-                                  AppConstants.adminLogoutUrl,
-                                  handleError: false,
-                                  showToaster: false,
-                                );
-                              } catch (e) {
-                                Logger.e('Logout error: $e');
-                              } finally {
-                                await TokenManager.clearToken();
-                                await SharedPrefs.remove(AppConstants.userData);
-                                await SharedPrefs.setBool(AppConstants.isLoggedIn, false);
-                                if (Get.isRegistered<AuthController>()) {
-                                  final authCtrl = Get.find<AuthController>();
-                                  authCtrl.currentUser.value = null;
-                                  authCtrl.currentMobile.value = '';
-                                }
-                                Get.back();
-                                CustomSnackbar.showSuccess('Logged out successfully');
-                                Get.offAllNamed(RouteHelper.getLoginRoute());
-                              }
-                            },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.redAccent,
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      child: isLoggingOut.value
-                          ? const SizedBox(
-                              height: 18,
-                              width: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                            )
-                          : const AppText(
-                              'Log Out',
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                    )),
+                          onPressed: isLoggingOut.value
+                              ? null
+                              : () async {
+                                  isLoggingOut.value = true;
+                                  try {
+                                    final apiClient =
+                                        Get.isRegistered<ApiClient>()
+                                            ? Get.find<ApiClient>()
+                                            : ApiClient();
+                                    await apiClient.post(
+                                      AppConstants.adminLogoutUrl,
+                                      handleError: false,
+                                      showToaster: false,
+                                    );
+                                  } catch (e) {
+                                    Logger.e('Logout error: $e');
+                                  } finally {
+                                    await TokenManager.clearToken();
+                                    await SharedPrefs.remove(
+                                        AppConstants.userData);
+                                    await SharedPrefs.setBool(
+                                        AppConstants.isLoggedIn, false);
+                                    if (Get.isRegistered<AuthController>()) {
+                                      final authCtrl =
+                                          Get.find<AuthController>();
+                                      authCtrl.currentUser.value = null;
+                                      authCtrl.currentMobile.value = '';
+                                    }
+                                    Get.back();
+                                    CustomSnackbar.showSuccess(
+                                        'Logged out successfully');
+                                    Get.offAllNamed(RouteHelper.getLoginRoute());
+                                  }
+                                },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.redAccent,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
+                          ),
+                          child: isLoggingOut.value
+                              ? const SizedBox(
+                                  height: 18,
+                                  width: 18,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2, color: Colors.white),
+                                )
+                              : const AppText(
+                                  'Log Out',
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                        )),
                   ),
                 ],
               ),
@@ -467,12 +692,21 @@ class ProfileScreen extends StatelessWidget {
       children: [
         Icon(icon, color: AppColors.textColorSecondary, size: 14),
         const SizedBox(width: 6),
-        AppText(text, fontSize: 11, color: AppColors.textColorSecondary),
+        Expanded(
+          child: AppText(text,
+              fontSize: 11,
+              color: AppColors.textColorSecondary,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis),
+        ),
       ],
     );
   }
 
-  Widget _buildSectionCard({required IconData icon, required String title, required List<Widget> children}) {
+  Widget _buildSectionCard(
+      {required IconData icon,
+      required String title,
+      required List<Widget> children}) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -495,9 +729,9 @@ class ProfileScreen extends StatelessWidget {
               ),
               const SizedBox(width: 16),
               Expanded(
-                child: AppText(title, fontSize: 14, fontWeight: FontWeight.bold),
+                child:
+                    AppText(title, fontSize: 14, fontWeight: FontWeight.bold),
               ),
-              const Icon(Icons.keyboard_arrow_right, color: AppColors.textColorSecondary),
             ],
           ),
           const SizedBox(height: 16),

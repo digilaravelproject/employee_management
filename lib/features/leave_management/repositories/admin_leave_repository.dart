@@ -102,7 +102,7 @@ class AdminLeaveRepository implements AdminLeaveRepositoryInterface {
   @override
   Future<AdminLeaveDetailResponseModel> getLeaveRequestDetails(int id) async {
     try {
-      final endpoint = '${AppConstants.adminLeaveRequestsUrl}/$id';
+      final endpoint = AppConstants.adminLeaveRequestDetailsUrl(id);
       Logger.d('AdminLeaveRepository => Calling endpoint: $endpoint');
 
       final response = await apiClient.get(
@@ -139,7 +139,7 @@ class AdminLeaveRepository implements AdminLeaveRepositoryInterface {
   @override
   Future<ResponseModel> approveLeaveRequest(int id, {String? note}) async {
     try {
-      final endpoint = '${AppConstants.adminLeaveRequestsUrl}/$id/approve';
+      final endpoint = AppConstants.adminLeaveRequestApproveUrl(id);
       Logger.d('AdminLeaveRepository => Approving leave request: $endpoint with note: $note');
 
       final response = await apiClient.post(
@@ -166,7 +166,7 @@ class AdminLeaveRepository implements AdminLeaveRepositoryInterface {
   @override
   Future<ResponseModel> rejectLeaveRequest(int id, {String? note}) async {
     try {
-      final endpoint = '${AppConstants.adminLeaveRequestsUrl}/$id/reject';
+      final endpoint = AppConstants.adminLeaveRequestRejectUrl(id);
       Logger.d('AdminLeaveRepository => Rejecting leave request: $endpoint with note: $note');
 
       final response = await apiClient.post(

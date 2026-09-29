@@ -30,49 +30,15 @@ class UserDocumentController extends GetxController {
         final List<dynamic> decoded = jsonDecode(savedData);
         final list = decoded
             .map((item) => UserDocumentItem.fromJson(item as Map<String, dynamic>))
+            .where((doc) =>
+                !doc.id.startsWith('doc_1') &&
+                !doc.id.startsWith('doc_2') &&
+                !doc.id.startsWith('doc_3') &&
+                !doc.id.startsWith('doc_4'))
             .toList();
         documents.assignAll(list);
       } else {
-        // Initial default documents
-        documents.assignAll([
-          UserDocumentItem(
-            id: 'doc_1',
-            name: 'Aadhar Card',
-            type: 'Image',
-            size: '2.4 MB',
-            status: 'Verified',
-            assetPath: 'assets/images/intro_img_1.png',
-            uploadDate: DateTime.now().subtract(const Duration(days: 30)),
-          ),
-          UserDocumentItem(
-            id: 'doc_2',
-            name: 'PAN Card',
-            type: 'Image',
-            size: '1.1 MB',
-            status: 'Verified',
-            assetPath: 'assets/images/intro_img_2.png',
-            uploadDate: DateTime.now().subtract(const Duration(days: 20)),
-          ),
-          UserDocumentItem(
-            id: 'doc_3',
-            name: 'Student ID Card',
-            type: 'Image',
-            size: '1.8 MB',
-            status: 'Verified',
-            assetPath: 'assets/images/intro_img_3.png',
-            uploadDate: DateTime.now().subtract(const Duration(days: 10)),
-          ),
-          UserDocumentItem(
-            id: 'doc_4',
-            name: 'Marksheet / Certificate',
-            type: 'Image',
-            size: '3.2 MB',
-            status: 'Uploaded',
-            assetPath: 'assets/images/holiday_banner.png',
-            uploadDate: DateTime.now().subtract(const Duration(days: 2)),
-          ),
-        ]);
-        saveDocuments();
+        documents.clear();
       }
     } catch (e) {
       Logger.e('UserDocumentController => Error loading documents: $e');

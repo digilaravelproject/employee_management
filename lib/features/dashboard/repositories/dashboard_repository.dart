@@ -1,3 +1,4 @@
+import '../../../core/constants/app_constants.dart';
 import '../../../core/services/network/api_client.dart';
 import '../models/admin_dashboard_model.dart';
 import '../models/employee_dashboard_model.dart';
@@ -8,7 +9,7 @@ class DashboardRepository {
   DashboardRepository({required this.apiClient});
 
   Future<AdminDashboardResponseModel> getAdminDashboard() async {
-    final response = await apiClient.get('/api/admin/dashboard', handleError: false, showToaster: false);
+    final response = await apiClient.get(AppConstants.adminDashboardUrl, handleError: false, showToaster: false);
     final json = response.json ?? (response.body is Map<String, dynamic> ? response.body as Map<String, dynamic> : null);
     if (json != null) {
       return AdminDashboardResponseModel.fromJson(json);
@@ -20,7 +21,7 @@ class DashboardRepository {
   }
 
   Future<EmployeeDashboardResponseModel> getEmployeeDashboard() async {
-    final response = await apiClient.get('/api/employee/dashboard', handleError: false, showToaster: false);
+    final response = await apiClient.get(AppConstants.adminDashboardUrl, handleError: false, showToaster: false);
     final json = response.json ?? (response.body is Map<String, dynamic> ? response.body as Map<String, dynamic> : null);
     if (json != null) {
       return EmployeeDashboardResponseModel.fromJson(json);

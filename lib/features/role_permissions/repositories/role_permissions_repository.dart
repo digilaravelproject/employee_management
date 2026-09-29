@@ -1,3 +1,4 @@
+import '../../../core/constants/app_constants.dart';
 import '../../../core/services/network/api_client.dart';
 import '../../../core/services/network/response_model.dart';
 import '../../../core/utils/logger.dart';
@@ -9,7 +10,7 @@ class RolePermissionsRepository {
 
   Future<ResponseModel> getPermissions() async {
     try {
-      final response = await apiClient.get('/api/admin/permissions');
+      final response = await apiClient.get(AppConstants.adminPermissionsUrl);
       return response;
     } catch (e) {
       Logger.e('RolePermissionsRepository => Failed to fetch permissions: $e');
@@ -18,7 +19,7 @@ class RolePermissionsRepository {
   }
   Future<ResponseModel> createRole(Map<String, dynamic> data) async {
     try {
-      final response = await apiClient.post('/api/admin/roles', data: data);
+      final response = await apiClient.post(AppConstants.adminRolesUrl, data: data);
       return response;
     } catch (e) {
       Logger.e('RolePermissionsRepository => Failed to create role: $e');
@@ -27,7 +28,7 @@ class RolePermissionsRepository {
   }
   Future<ResponseModel> getRoles() async {
     try {
-      final response = await apiClient.get('/api/admin/roles');
+      final response = await apiClient.get(AppConstants.adminRolesUrl);
       return response;
     } catch (e) {
       Logger.e('RolePermissionsRepository => Failed to fetch roles: $e');
@@ -36,7 +37,7 @@ class RolePermissionsRepository {
   }
   Future<ResponseModel> getRoleDetails(String id) async {
     try {
-      final response = await apiClient.get('/api/admin/roles/$id');
+      final response = await apiClient.get(AppConstants.adminRoleUrl(id));
       return response;
     } catch (e) {
       Logger.e('RolePermissionsRepository => Failed to fetch role details: $e');
@@ -45,7 +46,7 @@ class RolePermissionsRepository {
   }
   Future<ResponseModel> updateRole(String id, Map<String, dynamic> data) async {
     try {
-      final response = await apiClient.put('/api/admin/roles/$id', data: data);
+      final response = await apiClient.put(AppConstants.adminRoleUrl(id), data: data);
       return response;
     } catch (e) {
       Logger.e('RolePermissionsRepository => Failed to update role: $e');
@@ -54,7 +55,7 @@ class RolePermissionsRepository {
   }
   Future<ResponseModel> deleteRole(String id) async {
     try {
-      final response = await apiClient.delete('/api/admin/roles/$id');
+      final response = await apiClient.delete(AppConstants.adminRoleUrl(id));
       return response;
     } catch (e) {
       Logger.e('RolePermissionsRepository => Failed to delete role: $e');
@@ -63,7 +64,7 @@ class RolePermissionsRepository {
   }
   Future<ResponseModel> searchRoles(String query) async {
     try {
-      final response = await apiClient.get('/api/admin/roles/search?query=$query');
+      final response = await apiClient.get(AppConstants.adminSearchRolesUrl(query));
       return response;
     } catch (e) {
       Logger.e('RolePermissionsRepository => Failed to search roles: $e');

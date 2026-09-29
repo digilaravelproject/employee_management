@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../../core/services/network/api_client.dart';
 import '../../../core/utils/logger.dart';
 import '../models/admin_leave_model.dart';
@@ -126,7 +127,7 @@ class AdminLeaveController extends GetxController {
     try {
       if (Get.isRegistered<ApiClient>()) {
         final apiClient = Get.find<ApiClient>();
-        final response = await apiClient.get('/api/admin/departments', handleError: false, showToaster: false);
+        final response = await apiClient.get(AppConstants.adminDepartmentsUrl, handleError: false, showToaster: false);
         if (response.isSuccess && response.json != null) {
           final data = response.json!['data'];
           if (data is List) {
