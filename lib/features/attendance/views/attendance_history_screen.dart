@@ -215,7 +215,7 @@ class AttendanceHistoryScreen extends StatelessWidget {
 
                   // Horizontal list of years
                   Row(
-                    children: [2023, 2024, 2025, 2026].map((year) {
+                    children: [2023, 2024, 2025, 2026].where((year) => year <= DateTime.now().year).map((year) {
                       final isSelectedYear = localSelectedYear == year;
                       return Padding(
                         padding: const EdgeInsets.only(right: 8.0),
@@ -273,22 +273,30 @@ class AttendanceHistoryScreen extends StatelessWidget {
                         final monthVal = index + 1;
                         final targetDate = DateTime(localSelectedYear, monthVal, 1);
                         final monthName = DateFormat('MMM').format(targetDate);
+                        final now = DateTime.now();
+                        final isFutureMonth = targetDate.isAfter(DateTime(now.year, now.month, 1));
                         
                         final isSelected = controller.selectedMonth.value.month == monthVal &&
                             controller.selectedMonth.value.year == localSelectedYear;
                         
                         return InkWell(
-                          onTap: () {
-                            controller.changeMonth(targetDate);
-                            Navigator.pop(context);
-                          },
+                          onTap: isFutureMonth
+                              ? null
+                              : () {
+                                  controller.changeMonth(targetDate);
+                                  Navigator.pop(context);
+                                },
                           borderRadius: BorderRadius.circular(10),
                           child: Container(
                             decoration: BoxDecoration(
-                              color: isSelected ? AppColors.primaryColor : AppColors.slate100,
+                              color: isFutureMonth
+                                  ? AppColors.slate50
+                                  : (isSelected ? AppColors.primaryColor : AppColors.slate100),
                               borderRadius: BorderRadius.circular(10),
                               border: Border.all(
-                                color: isSelected ? AppColors.primaryColor : AppColors.borderColor,
+                                color: isFutureMonth
+                                    ? AppColors.slate200.withValues(alpha: 0.5)
+                                    : (isSelected ? AppColors.primaryColor : AppColors.borderColor),
                               ),
                             ),
                             alignment: Alignment.center,
@@ -296,7 +304,9 @@ class AttendanceHistoryScreen extends StatelessWidget {
                               monthName,
                               fontSize: 12,
                               fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                              color: isSelected ? AppColors.white : AppColors.textColorPrimary,
+                              color: isFutureMonth
+                                  ? AppColors.slate300
+                                  : (isSelected ? AppColors.white : AppColors.textColorPrimary),
                             ),
                           ),
                         );

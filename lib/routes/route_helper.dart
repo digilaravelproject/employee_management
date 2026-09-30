@@ -39,6 +39,9 @@ import '../features/leave_management/views/leave_requests_screen.dart';
 import '../features/notification/bindings/notification_binding.dart';
 import '../features/notification/views/notification_screen.dart';
 import '../features/notification/views/notification_details_screen.dart';
+import '../features/payroll/bindings/salary_history_binding.dart';
+import '../features/payroll/views/employee_my_salary_screen.dart';
+import '../features/payslip/views/payslip_history_screen.dart';
 import '../core/services/network/api_client.dart';
 import 'app_routes.dart';
 
@@ -65,6 +68,7 @@ class RouteHelper {
   static String getLeadSummaryRoute() => AppRoutes.leadSummary;
   static String getNotificationsRoute() => AppRoutes.notifications;
   static String getNotificationDetailsRoute() => AppRoutes.notificationDetails;
+  static String getSalaryHistoryRoute() => AppRoutes.salaryHistory;
 
   /// Shared binding builder for AuthController – reused across login/signup/otp
   static BindingsBuilder _authBinding() => BindingsBuilder(() {
@@ -265,6 +269,20 @@ class RouteHelper {
       name: AppRoutes.notificationDetails,
       page: () => const NotificationDetailsScreen(),
       binding: NotificationBinding(),
+      transition: Transition.rightToLeft,
+    ),
+
+    GetPage(
+      name: AppRoutes.salaryHistory,
+      page: () => const EmployeeMySalaryScreen(),
+      binding: SalaryHistoryBinding(),
+      transition: Transition.rightToLeft,
+    ),
+
+    GetPage(
+      name: AppRoutes.payslipHistory,
+      page: () => const PayslipHistoryScreen(),
+      binding: SalaryHistoryBinding(),
       transition: Transition.rightToLeft,
     ),
   ];

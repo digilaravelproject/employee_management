@@ -1,38 +1,117 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
+import '../../../core/services/network/api_client.dart';
+import '../../../core/utils/logger.dart';
 import '../models/payroll_record_model.dart';
+import '../models/salary_detail_model.dart';
+import '../models/salary_model.dart';
+import '../repositories/payroll_repository.dart';
+import '../repositories/payroll_repository_interface.dart';
+
+class PayrollMonthOption {
+  final String code; // e.g. "2026-09"
+  final String label; // e.g. "September 2026"
+
+  const PayrollMonthOption({required this.code, required this.label});
+}
+
+class SalaryLineItemController {
+  final TextEditingController nameController;
+  final TextEditingController amountController;
+
+  SalaryLineItemController({String name = '', String amount = ''})
+      : nameController = TextEditingController(text: name),
+        amountController = TextEditingController(text: amount);
+
+  void dispose() {
+    nameController.dispose();
+    amountController.dispose();
+  }
+}
 
 class PayrollController extends GetxController {
+  final PayrollRepositoryInterface repository;
+
+  PayrollController({PayrollRepositoryInterface? repository})
+      : repository = repository ??
+            PayrollRepository(
+              apiClient: Get.isRegistered<ApiClient>()
+                  ? Get.find<ApiClient>()
+                  : Get.put(ApiClient()),
+            );
+
   // Symmetrical reactive list of payroll records
-  final payrollRecords = <PayrollRecord>[].obs;
-  
-  // Selected period
-  final selectedMonth = 'May 2024'.obs;
-  final availableMonths = ['May 2024', 'April 2024', 'March 2024'];
-  
+  final RxList<PayrollRecord> payrollRecords = <PayrollRecord>[].obs;
+  final RxList<SalaryEmployeeRecord> salaryEmployees = <SalaryEmployeeRecord>[].obs;
+  final Rxn<SalaryDataModel> salaryData = Rxn<SalaryDataModel>();
+  final Rxn<SalarySummaryModel> summary = Rxn<SalarySummaryModel>();
+
+  final RxBool isLoading = false.obs;
+  final RxBool isRefreshing = false.obs;
+  final RxString errorMessage = ''.obs;
+
+  // Selected single detail
+  final Rxn<SalaryDetailDataModel> selectedSalaryDetail = Rxn<SalaryDetailDataModel>();
+  final RxBool isDetailLoading = false.obs;
+  final RxString detailErrorMessage = ''.obs;
+
+  static List<PayrollMonthOption> getAvailableMonthOptions() {
+    final now = DateTime.now();
+    final List<PayrollMonthOption> list = [];
+    for (int i = 0; i < 12; i++) {
+      final date = DateTime(now.year, now.month - i, 1);
+      final code = DateFormat('yyyy-MM').format(date);
+      final label = DateFormat('MMMM yyyy').format(date);
+      list.add(PayrollMonthOption(code: code, label: label));
+    }
+    return list;
+  }
+
+  // Selected period (defaults to current month)
+  late final RxString selectedMonth = DateFormat('yyyy-MM').format(DateTime.now()).obs;
+  late final RxString selectedMonthLabel = DateFormat('MMMM yyyy').format(DateTime.now()).obs;
+
+  late final List<PayrollMonthOption> availableMonthOptions = getAvailableMonthOptions();
+
+  List<String> get availableMonths => availableMonthOptions.map((e) => e.label).toList();
+
   // Filter variables
-  final searchQuery = ''.obs;
-  final selectedFilter = 'All'.obs; // 'All', 'Created', 'Pending'
-  
+  final RxString searchQuery = ''.obs;
+  final RxString selectedFilter = 'All'.obs; // 'All', 'Created', 'Pending'
+
   // Selected single record
-  final selectedRecord = Rxn<PayrollRecord>();
-  
+  final Rxn<PayrollRecord> selectedRecord = Rxn<PayrollRecord>();
+  final Rxn<SalaryEmployeeRecord> selectedSalaryRecord = Rxn<SalaryEmployeeRecord>();
+
   // Create Salary Form Elements
   late TextEditingController bankNameController;
   late TextEditingController accountController;
   late TextEditingController remarksController;
-  
+
   final paymentDate = Rxn<DateTime>();
   final selectedPaymentMode = Rxn<String>();
   final confirmReviewed = false.obs;
-  
+
   final List<String> paymentModes = ['Bank Transfer', 'Cash', 'Cheque', 'UPI'];
+
+  // Dynamic form lists for earnings and deductions
+  final RxList<SalaryLineItemController> formEarnings = <SalaryLineItemController>[].obs;
+  final RxList<SalaryLineItemController> formDeductions = <SalaryLineItemController>[].obs;
+  final RxBool isSubmittingSalary = false.obs;
 
   @override
   void onInit() {
     super.onInit();
     _initializeControllers();
-    _seedMockPayrollData();
+    fetchSalaries();
+
+    // Auto debounce search
+    debounce(
+      searchQuery,
+      (_) => fetchSalaries(),
+      time: const Duration(milliseconds: 350),
+    );
   }
 
   void _initializeControllers() {
@@ -46,236 +125,144 @@ class PayrollController extends GetxController {
     bankNameController.dispose();
     accountController.dispose();
     remarksController.dispose();
+    for (final item in formEarnings) {
+      item.dispose();
+    }
+    for (final item in formDeductions) {
+      item.dispose();
+    }
     super.onClose();
   }
 
-  // Pre-seed mock payroll records matching the reference mockups
-  void _seedMockPayrollData() {
-    payrollRecords.assignAll([
-      PayrollRecord(
-        id: 'PR001',
-        employeeId: 'EMP001',
-        employeeName: 'Rahul Sharma',
-        designation: 'Sales Executive',
-        department: 'Sales Department',
-        profilePic: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-        salaryMonth: 'May 2024',
-        status: 'Pending',
-        totalWorkingDays: 26,
-        presentDays: 22,
-        absentDays: 2,
-        paidLeaves: 1,
-        unpaidLeaves: 1,
-        halfDays: 0,
-        lateComingDays: 2,
-        overtimeHours: 5.5,
-        basicSalary: 20000.00,
-        hra: 5000.00,
-        conveyance: 2000.00,
-        specialAllowance: 2500.00,
-        incentive: 2000.00,
-        bonus: 1500.00,
-        overtimeAmount: 1500.00,
-        leaveDeduction: 1000.00,
-        lateDeduction: 500.00,
-        pf: 2400.00,
-        esi: 200.00,
-        loanAdvance: 250.00,
-        otherDeduction: 0.0,
-      ),
-      PayrollRecord(
-        id: 'PR002',
-        employeeId: 'EMP002',
-        employeeName: 'Priya Verma',
-        designation: 'HR Manager',
-        department: 'HR Department',
-        profilePic: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
-        salaryMonth: 'May 2024',
-        status: 'Created',
-        totalWorkingDays: 26,
-        presentDays: 25,
-        absentDays: 0,
-        paidLeaves: 1,
-        unpaidLeaves: 0,
-        halfDays: 0,
-        lateComingDays: 0,
-        overtimeHours: 0.0,
-        basicSalary: 23000.00,
-        hra: 6000.00,
-        conveyance: 2000.00,
-        specialAllowance: 3000.00,
-        incentive: 1500.00,
-        bonus: 1000.00,
-        overtimeAmount: 0.0,
-        leaveDeduction: 0.0,
-        lateDeduction: 0.0,
-        pf: 2760.00,
-        esi: 230.00,
-        loanAdvance: 0.0,
-        otherDeduction: 0.0,
-        paymentDate: '31 May 2024',
-        paymentMode: 'Bank Transfer',
-        bankName: 'HDFC Bank',
-        accountIfsc: 'XXXX XXXX XXXX 1234',
-        remarks: 'Salary processed successfully',
-      ),
-      PayrollRecord(
-        id: 'PR003',
-        employeeId: 'EMP003',
-        employeeName: 'Amit Kumar',
-        designation: 'IT Engineer',
-        department: 'IT Department',
-        profilePic: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
-        salaryMonth: 'May 2024',
-        status: 'Pending',
-        totalWorkingDays: 26,
-        presentDays: 23,
-        absentDays: 1,
-        paidLeaves: 2,
-        unpaidLeaves: 0,
-        halfDays: 0,
-        lateComingDays: 1,
-        overtimeHours: 3.0,
-        basicSalary: 21000.00,
-        hra: 5500.00,
-        conveyance: 2000.00,
-        specialAllowance: 2500.00,
-        incentive: 1000.00,
-        bonus: 1200.00,
-        overtimeAmount: 800.00,
-        leaveDeduction: 500.00,
-        lateDeduction: 200.00,
-        pf: 2520.00,
-        esi: 200.00,
-        loanAdvance: 800.00,
-        otherDeduction: 0.0,
-      ),
-      PayrollRecord(
-        id: 'PR004',
-        employeeId: 'EMP004',
-        employeeName: 'Neha Singh',
-        designation: 'Marketing Executive',
-        department: 'Marketing Department',
-        profilePic: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&auto=format&fit=crop&q=80',
-        salaryMonth: 'May 2024',
-        status: 'Pending',
-        totalWorkingDays: 26,
-        presentDays: 21,
-        absentDays: 3,
-        paidLeaves: 1,
-        unpaidLeaves: 1,
-        halfDays: 0,
-        lateComingDays: 4,
-        overtimeHours: 0.0,
-        basicSalary: 18500.00,
-        hra: 4500.00,
-        conveyance: 1800.00,
-        specialAllowance: 2000.00,
-        incentive: 1000.00,
-        bonus: 500.00,
-        overtimeAmount: 0.0,
-        leaveDeduction: 1200.00,
-        lateDeduction: 800.00,
-        pf: 2220.00,
-        esi: 180.00,
-        loanAdvance: 0.0,
-        otherDeduction: 0.0,
-      ),
-      PayrollRecord(
-        id: 'PR005',
-        employeeId: 'EMP005',
-        employeeName: 'Vikash Yadav',
-        designation: 'Operations Specialist',
-        department: 'Operations',
-        profilePic: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80',
-        salaryMonth: 'May 2024',
-        status: 'Created',
-        totalWorkingDays: 26,
-        presentDays: 24,
-        absentDays: 0,
-        paidLeaves: 2,
-        unpaidLeaves: 0,
-        halfDays: 0,
-        lateComingDays: 0,
-        overtimeHours: 2.0,
-        basicSalary: 17000.00,
-        hra: 4000.00,
-        conveyance: 1500.00,
-        specialAllowance: 1500.00,
-        incentive: 800.00,
-        bonus: 1000.00,
-        overtimeAmount: 500.00,
-        leaveDeduction: 0.0,
-        lateDeduction: 0.0,
-        pf: 2040.00,
-        esi: 160.00,
-        loanAdvance: 600.00,
-        otherDeduction: 0.0,
-        paymentDate: '30 May 2024',
-        paymentMode: 'UPI',
-        bankName: 'SBI Bank',
-        accountIfsc: 'vikash@ybl',
-        remarks: 'Salary paid via UPI Transfer',
-      ),
-      PayrollRecord(
-        id: 'PR006',
-        employeeId: 'EMP006',
-        employeeName: 'Sanjay Patel',
-        designation: 'Accountant',
-        department: 'Accounts',
-        profilePic: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=80',
-        salaryMonth: 'May 2024',
-        status: 'Pending',
-        totalWorkingDays: 26,
-        presentDays: 22,
-        absentDays: 2,
-        paidLeaves: 2,
-        unpaidLeaves: 0,
-        halfDays: 0,
-        lateComingDays: 2,
-        overtimeHours: 0.0,
-        basicSalary: 20000.00,
-        hra: 5000.00,
-        conveyance: 2000.00,
-        specialAllowance: 2500.00,
-        incentive: 1000.00,
-        bonus: 800.00,
-        overtimeAmount: 0.0,
-        leaveDeduction: 1200.00,
-        lateDeduction: 400.00,
-        pf: 2400.00,
-        esi: 200.00,
-        loanAdvance: 250.00,
-        otherDeduction: 0.0,
-      ),
-    ]);
+  Future<void> fetchSalaries({bool isRefresh = false}) async {
+    try {
+      if (isRefresh) {
+        isRefreshing.value = true;
+      } else {
+        isLoading.value = true;
+      }
+      errorMessage.value = '';
+
+      final String statusParam = selectedFilter.value == 'All'
+          ? 'all'
+          : selectedFilter.value.toLowerCase();
+
+      final response = await repository.getSalaries(
+        month: selectedMonth.value,
+        search: searchQuery.value.trim(),
+        status: statusParam,
+      );
+
+      if (response != null && response.status && response.data != null) {
+        final data = response.data!;
+        salaryData.value = data;
+        summary.value = data.summary;
+        salaryEmployees.assignAll(data.employees);
+
+        if (data.monthLabel.isNotEmpty) {
+          selectedMonthLabel.value = data.monthLabel;
+        }
+
+        final convertedRecords = data.employees.map((e) => e.toPayrollRecord()).toList();
+        payrollRecords.assignAll(convertedRecords);
+
+        Logger.d('PayrollController => Loaded ${data.employees.length} salary records from server');
+      } else {
+        errorMessage.value = response?.message ?? 'Failed to retrieve salaries.';
+      }
+    } catch (e, stack) {
+      Logger.e('PayrollController => Error in fetchSalaries: $e\n$stack');
+      errorMessage.value = 'Failed to load salary data.';
+    } finally {
+      isLoading.value = false;
+      isRefreshing.value = false;
+    }
   }
 
-  // Active statistics counts
-  int get totalEmployeesCount => payrollRecords.length;
-  int get createdCount => payrollRecords.where((r) => r.status == 'Created').length;
-  int get pendingCount => payrollRecords.where((r) => r.status == 'Pending').length;
+  Future<void> fetchEmployeeSalaryDetails(String employeeId, {String? month}) async {
+    try {
+      isDetailLoading.value = true;
+      detailErrorMessage.value = '';
+      final targetMonth = month ?? selectedMonth.value;
+
+      Logger.d('PayrollController => Fetching salary detail for employee: $employeeId, month: $targetMonth');
+
+      final response = await repository.getEmployeeSalaryDetails(
+        employeeId: employeeId,
+        month: targetMonth,
+      );
+
+      if (response != null && response.status && response.data != null) {
+        final detail = response.data!;
+        selectedSalaryDetail.value = detail;
+        selectedRecord.value = detail.toPayrollRecord();
+        Logger.d('PayrollController => Detail retrieved successfully for employee: $employeeId');
+      } else {
+        detailErrorMessage.value = response?.message ?? 'Failed to retrieve salary details.';
+      }
+    } catch (e, stack) {
+      Logger.e('PayrollController => Error in fetchEmployeeSalaryDetails: $e\n$stack');
+      detailErrorMessage.value = 'Failed to load employee salary details.';
+    } finally {
+      isDetailLoading.value = false;
+    }
+  }
+
+  void changeMonth(String monthCode, String monthLabel) {
+    try {
+      final now = DateTime.now();
+      final parsed = DateFormat('yyyy-MM').parse(monthCode);
+      if (DateTime(parsed.year, parsed.month, 1).isAfter(DateTime(now.year, now.month, 1))) {
+        return;
+      }
+    } catch (_) {}
+    if (selectedMonth.value != monthCode) {
+      selectedMonth.value = monthCode;
+      selectedMonthLabel.value = monthLabel;
+      fetchSalaries();
+    }
+  }
+
+  void onFilterChanged(String filter) {
+    if (selectedFilter.value != filter) {
+      selectedFilter.value = filter;
+      fetchSalaries();
+    }
+  }
+
+  // Active statistics counts from API summary
+  int get totalEmployeesCount =>
+      summary.value?.totalEmployees ?? payrollRecords.length;
+
+  int get createdCount =>
+      summary.value?.created ??
+      payrollRecords.where((r) => r.status.toLowerCase() == 'created').length;
+
+  int get pendingCount =>
+      summary.value?.pending ??
+      payrollRecords.where((r) => r.status.toLowerCase() == 'pending').length;
 
   // Filtered list based on search queries and tabs
   List<PayrollRecord> get filteredPayrollRecords {
     List<PayrollRecord> temp = List.from(payrollRecords);
-    
-    // Apply selected tab filter
+
+    // Apply selected tab filter locally if backend returned 'all'
     if (selectedFilter.value != 'All') {
-      temp = temp.where((r) => r.status == selectedFilter.value).toList();
+      temp = temp
+          .where((r) => r.status.toLowerCase() == selectedFilter.value.toLowerCase())
+          .toList();
     }
-    
+
     // Apply search query
     if (searchQuery.value.isNotEmpty) {
       final query = searchQuery.value.toLowerCase();
       temp = temp.where((r) =>
-        r.employeeName.toLowerCase().contains(query) ||
-        r.employeeId.toLowerCase().contains(query) ||
-        r.designation.toLowerCase().contains(query) ||
-        r.department.toLowerCase().contains(query)
-      ).toList();
+          r.employeeName.toLowerCase().contains(query) ||
+          r.employeeId.toLowerCase().contains(query) ||
+          r.designation.toLowerCase().contains(query) ||
+          r.department.toLowerCase().contains(query)).toList();
     }
-    
+
     return temp;
   }
 
@@ -287,62 +274,243 @@ class PayrollController extends GetxController {
     paymentDate.value = DateTime.now();
     selectedPaymentMode.value = 'Bank Transfer';
     confirmReviewed.value = false;
+
+    for (final item in formEarnings) {
+      item.dispose();
+    }
+    formEarnings.clear();
+
+    for (final item in formDeductions) {
+      item.dispose();
+    }
+    formDeductions.clear();
   }
+
+  void addEarningItem({String name = '', String amount = ''}) {
+    formEarnings.add(SalaryLineItemController(name: name, amount: amount));
+  }
+
+  void removeEarningItem(int index) {
+    if (index >= 0 && index < formEarnings.length) {
+      formEarnings[index].dispose();
+      formEarnings.removeAt(index);
+    }
+  }
+
+  void addDeductionItem({String name = '', String amount = ''}) {
+    formDeductions.add(SalaryLineItemController(name: name, amount: amount));
+  }
+
+  void removeDeductionItem(int index) {
+    if (index >= 0 && index < formDeductions.length) {
+      formDeductions[index].dispose();
+      formDeductions.removeAt(index);
+    }
+  }
+
+  num get calculatedGrossEarnings {
+    num total = 0;
+    for (final item in formEarnings) {
+      total += num.tryParse(item.amountController.text.trim()) ?? 0;
+    }
+    return total;
+  }
+
+  num get calculatedTotalDeductions {
+    num total = 0;
+    for (final item in formDeductions) {
+      total += num.tryParse(item.amountController.text.trim()) ?? 0;
+    }
+    return total;
+  }
+
+  num get calculatedNetPayable => calculatedGrossEarnings - calculatedTotalDeductions;
 
   // Set values to selected record for paying
   void initializePaymentForm(PayrollRecord record) {
     clearForm();
     selectedRecord.value = record;
-  }
 
-  // Commit salary creation transaction
-  void processCreateSalary() {
-    if (selectedRecord.value == null) return;
-    
-    final record = selectedRecord.value!;
-    final index = payrollRecords.indexWhere((r) => r.id == record.id);
-    
-    if (index != -1) {
-      final formattedDate = paymentDate.value != null 
-          ? "${paymentDate.value!.day} ${_getMonthName(paymentDate.value!.month)} ${paymentDate.value!.year}"
-          : "31 May 2024";
+    final detail = selectedSalaryDetail.value;
+    if (detail != null && detail.earnings.isNotEmpty) {
+      for (final e in detail.earnings) {
+        addEarningItem(name: e.name, amount: e.amount.toInt().toString());
+      }
+    } else {
+      final gross = record.grossEarnings > 0 ? record.grossEarnings : record.netPayable;
+      addEarningItem(name: 'Basic', amount: (gross * 0.5).toInt().toString());
+      addEarningItem(name: 'HRA', amount: (gross * 0.25).toInt().toString());
+      addEarningItem(name: 'Allowances', amount: (gross * 0.25).toInt().toString());
+    }
 
-      final updated = record.copyWith(
-        status: 'Created',
-        paymentDate: formattedDate,
-        paymentMode: selectedPaymentMode.value ?? 'Bank Transfer',
-        bankName: bankNameController.text.trim().isNotEmpty ? bankNameController.text.trim() : 'Standard Bank',
-        accountIfsc: accountController.text.trim().isNotEmpty ? accountController.text.trim() : 'XXXX XXXX XXXX 5678',
-        remarks: remarksController.text.trim().isNotEmpty ? remarksController.text.trim() : 'Salary Paid Successfully',
-      );
-      
-      payrollRecords[index] = updated;
-      selectedRecord.value = updated;
-      
-      // Trigger dynamic SaaS snackbar notification
-      Get.snackbar(
-        'Salary Processed Successfully 🎉',
-        'Payslip generated and recorded for ${record.employeeName}.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: const Color(0xFF10B981), // success green
-        colorText: Colors.white,
-        duration: const Duration(seconds: 3),
-        margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-        borderRadius: 16,
-        boxShadows: [
-          BoxShadow(
-            color: const Color(0xFF10B981).withValues(alpha: 0.2),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
-          )
-        ],
-      );
+    if (detail != null && detail.deductions.isNotEmpty) {
+      for (final d in detail.deductions) {
+        addDeductionItem(name: d.name, amount: d.amount.toInt().toString());
+      }
+    } else if (record.totalDeductions > 0) {
+      addDeductionItem(name: 'Leaves/LWP', amount: record.totalDeductions.toInt().toString());
+    } else {
+      addDeductionItem(name: 'Leaves/LWP', amount: '0');
     }
   }
 
-  String _getMonthName(int month) {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    if (month >= 1 && month <= 12) return months[month - 1];
-    return 'May';
+  // Commit salary creation transaction via live API
+  Future<bool> submitCreateSalary() async {
+    final record = selectedRecord.value;
+    final detail = selectedSalaryDetail.value;
+
+    final employeeId = record?.employeeId ?? detail?.employee.employeeId;
+    if (employeeId == null || employeeId.isEmpty) {
+      Get.snackbar(
+        'Error',
+        'No employee selected.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: const Color(0xFFEF4444),
+        colorText: Colors.white,
+      );
+      return false;
+    }
+
+    final pDate = paymentDate.value ?? DateTime.now();
+    final formattedDate =
+        "${pDate.year}-${pDate.month.toString().padLeft(2, '0')}-${pDate.day.toString().padLeft(2, '0')}";
+    final targetMonth = selectedMonth.value.isNotEmpty
+        ? selectedMonth.value
+        : (detail?.month ?? '2026-09');
+
+    // Build earnings list
+    final List<SalaryLineItem> earningsList = [];
+    for (final e in formEarnings) {
+      final name = e.nameController.text.trim();
+      final amount = num.tryParse(e.amountController.text.trim()) ?? 0;
+      if (name.isNotEmpty) {
+        earningsList.add(SalaryLineItem(name: name, amount: amount));
+      }
+    }
+
+    // Build deductions list
+    final List<SalaryLineItem> deductionsList = [];
+    for (final d in formDeductions) {
+      final name = d.nameController.text.trim();
+      final amount = num.tryParse(d.amountController.text.trim()) ?? 0;
+      if (name.isNotEmpty) {
+        deductionsList.add(SalaryLineItem(name: name, amount: amount));
+      }
+    }
+
+    final request = CreateSalaryRequestModel(
+      employeeId: employeeId,
+      salaryMonth: targetMonth,
+      paymentDate: formattedDate,
+      paymentMode: selectedPaymentMode.value ?? 'Bank Transfer',
+      bankName: bankNameController.text.trim().isNotEmpty
+          ? bankNameController.text.trim()
+          : 'HDFC Bank',
+      accountUpiAddress: accountController.text.trim().isNotEmpty
+          ? accountController.text.trim()
+          : 'XXXX XXXX XXXX 1234',
+      remarks: remarksController.text.trim().isNotEmpty
+          ? remarksController.text.trim()
+          : 'Processed successfully',
+      earnings: earningsList,
+      deductions: deductionsList,
+      confirmed: confirmReviewed.value,
+    );
+
+    try {
+      isSubmittingSalary.value = true;
+      Logger.d('PayrollController => Submitting create salary: ${request.toJson()}');
+
+      final response = await repository.createSalary(request);
+
+      if (response != null && response.status) {
+        Logger.d('PayrollController => Salary created successfully: ${response.message}');
+
+        // Locally update record for immediate UI sync
+        final index = payrollRecords.indexWhere((r) => r.id == record?.id || r.employeeId == employeeId);
+        final grossAmount = calculatedGrossEarnings;
+        final deductAmount = calculatedTotalDeductions;
+
+        if (index != -1 && record != null) {
+          final updated = record.copyWith(
+            status: 'Created',
+            paymentDate: formattedDate,
+            paymentMode: request.paymentMode,
+            bankName: request.bankName,
+            accountIfsc: request.accountUpiAddress,
+            remarks: request.remarks,
+            basicSalary: grossAmount.toDouble(),
+            hra: 0,
+            conveyance: 0,
+            specialAllowance: 0,
+            incentive: 0,
+            bonus: 0,
+            overtimeAmount: 0,
+            leaveDeduction: deductAmount.toDouble(),
+            lateDeduction: 0,
+            pf: 0,
+            esi: 0,
+            loanAdvance: 0,
+            otherDeduction: 0,
+          );
+          payrollRecords[index] = updated;
+          selectedRecord.value = updated;
+        }
+
+        // Update summary counts locally
+        if (summary.value != null) {
+          final currentSummary = summary.value!;
+          summary.value = SalarySummaryModel(
+            totalEmployees: currentSummary.totalEmployees,
+            created: currentSummary.created + 1,
+            pending: (currentSummary.pending - 1).clamp(0, 9999),
+          );
+        }
+
+        // Re-fetch detail for this employee
+        await fetchEmployeeSalaryDetails(employeeId, month: targetMonth);
+
+        // Refresh salary listing in background
+        fetchSalaries(isRefresh: true);
+
+        Get.snackbar(
+          'Salary Processed Successfully 🎉',
+          response.message ?? 'Salary created successfully.',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: const Color(0xFF10B981),
+          colorText: Colors.white,
+          duration: const Duration(seconds: 3),
+        );
+        return true;
+      } else {
+        final error = response?.message ?? 'Failed to create salary.';
+        Logger.e('PayrollController => Failed to create salary: $error');
+        Get.snackbar(
+          'Error',
+          error,
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: const Color(0xFFEF4444),
+          colorText: Colors.white,
+          duration: const Duration(seconds: 4),
+        );
+        return false;
+      }
+    } catch (e, stack) {
+      Logger.e('PayrollController => Exception in submitCreateSalary: $e\n$stack');
+      Get.snackbar(
+        'Error',
+        'Something went wrong while creating salary: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: const Color(0xFFEF4444),
+        colorText: Colors.white,
+      );
+      return false;
+    } finally {
+      isSubmittingSalary.value = false;
+    }
+  }
+
+  void processCreateSalary() {
+    submitCreateSalary();
   }
 }

@@ -1,4 +1,5 @@
 import 'package:intl/intl.dart';
+import '../../../core/constants/app_constants.dart';
 
 class AdminLeaveCountsModel {
   final int all;
@@ -322,6 +323,21 @@ class AdminLeaveEmployeeModel {
       if (companyName != null) 'company_name': companyName,
     };
   }
+
+  String? get fullAvatarUrl {
+    if (avatar == null || avatar!.trim().isEmpty) return null;
+    final trimmed = avatar!.trim();
+    if (trimmed.startsWith('http://127.0.0.1:8000')) {
+      return trimmed.replaceFirst('http://127.0.0.1:8000', AppConstants.baseUrl);
+    }
+    if (trimmed.startsWith('http://localhost:8000')) {
+      return trimmed.replaceFirst('http://localhost:8000', AppConstants.baseUrl);
+    }
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      return trimmed;
+    }
+    return '${AppConstants.baseUrl}/${trimmed.startsWith('/') ? trimmed.substring(1) : trimmed}';
+  }
 }
 
 class AdminLeaveItemModel {
@@ -465,7 +481,9 @@ class AdminLeaveItemModel {
       appliedAt: appAt,
       rejectionReason: json['review_note']?.toString() ?? json['rejection_reason']?.toString(),
       approvedBy: json['reviewed_by_user_id']?.toString(),
-      documentUrl: json['attachment_path']?.toString() ?? json['document']?.toString(),
+      documentUrl: json['attachment_url']?.toString() ??
+          json['attachment_path']?.toString() ??
+          json['document']?.toString(),
       createdAt: json['created_at']?.toString(),
       updatedAt: json['updated_at']?.toString(),
       leaveTypeCode: lCode,

@@ -44,12 +44,14 @@ class ProjectListScreen extends StatelessWidget {
               fontWeight: FontWeight.bold,
               color: AppColors.textColorPrimary,
             ),
-            AppText(
-              'Manage all projects',
+            Obx(() => AppText(
+              controller.totalProjectsCount.value > 0
+                  ? '${controller.totalProjectsCount.value} Total Projects'
+                  : 'Manage all projects',
               fontSize: 11,
               fontWeight: FontWeight.w500,
               color: AppColors.textColorHint,
-            ),
+            )),
           ],
         ),
         actions: [
@@ -95,11 +97,37 @@ class ProjectListScreen extends StatelessWidget {
               children: [
                 Expanded(
                   child: TextField(
+                    controller: controller.searchController,
                     onChanged: (value) => controller.searchQuery.value = value,
                     decoration: InputDecoration(
                       hintText: 'Search projects...',
                       hintStyle: const TextStyle(color: AppColors.textColorHint, fontSize: 13),
                       prefixIcon: const Icon(Iconsax.search_normal, color: AppColors.textColorHint, size: 18),
+                      suffixIcon: Obx(() {
+                        if (controller.isSearchingProjects.value) {
+                          return const Padding(
+                            padding: EdgeInsets.all(12.0),
+                            child: SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryColor),
+                              ),
+                            ),
+                          );
+                        }
+                        if (controller.searchQuery.value.isNotEmpty) {
+                          return IconButton(
+                            icon: const Icon(Icons.close_rounded, size: 18, color: AppColors.textColorHint),
+                            onPressed: () {
+                              controller.searchController.clear();
+                              controller.searchQuery.value = '';
+                            },
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      }),
                       filled: true,
                       fillColor: AppColors.slate50,
                       contentPadding: const EdgeInsets.symmetric(vertical: 12),
@@ -173,30 +201,104 @@ class ProjectListScreen extends StatelessWidget {
           // ── Projects Feed List ──
           Expanded(
             child: Obx(() {
+              if (controller.isLoadingProjects.value && controller.projects.isEmpty) {
+                return const Center(
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryColor),
+                  ),
+                );
+              }
+
+              if (controller.projectErrorMessage.isNotEmpty && controller.projects.isEmpty) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Iconsax.info_circle, size: 52, color: AppColors.errorColor),
+                        const SizedBox(height: 12),
+                        const AppText('Failed to load projects', fontSize: 16, fontWeight: FontWeight.bold),
+                        const SizedBox(height: 6),
+                        AppText(
+                          controller.projectErrorMessage.value,
+                          fontSize: 12,
+                          color: AppColors.textColorHint,
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton.icon(
+                          onPressed: () => controller.fetchProjects(isRefresh: true),
+                          icon: const Icon(Icons.refresh, size: 16, color: Colors.white),
+                          label: const AppText('Retry', fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primaryColor,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
               final list = controller.filteredProjects;
               if (list.isEmpty) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                return RefreshIndicator(
+                  onRefresh: () => controller.fetchProjects(isRefresh: true),
+                  color: AppColors.primaryColor,
+                  child: ListView(
+                    physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
                     children: [
-                      Icon(Iconsax.folder_open, size: 60, color: AppColors.textColorHint.withValues(alpha: 0.3)),
-                      const SizedBox(height: 16),
-                      const AppText('No Projects Found', fontSize: 16, fontWeight: FontWeight.bold),
-                      const SizedBox(height: 4),
-                      const AppText('Try creating one or modifying your filters', fontSize: 12, color: AppColors.textColorHint),
+                      SizedBox(height: MediaQuery.of(context).size.height * 0.2),
+                      Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Iconsax.folder_open, size: 60, color: AppColors.textColorHint.withValues(alpha: 0.3)),
+                            const SizedBox(height: 16),
+                            const AppText('No Projects Found', fontSize: 16, fontWeight: FontWeight.bold),
+                            const SizedBox(height: 4),
+                            const AppText('Try creating one or modifying your filters', fontSize: 12, color: AppColors.textColorHint),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 );
               }
 
-              return ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                physics: const BouncingScrollPhysics(),
-                itemCount: list.length,
-                itemBuilder: (context, index) {
-                  final p = list[index];
-                  return _ProjectCard(project: p);
-                },
+              final hasMore = controller.currentPage.value < controller.lastPage.value;
+              final itemCount = list.length + (controller.isLoadingMoreProjects.value || hasMore ? 1 : 0);
+
+              return RefreshIndicator(
+                onRefresh: () => controller.fetchProjects(isRefresh: true),
+                color: AppColors.primaryColor,
+                child: ListView.builder(
+                  controller: controller.scrollController,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                  itemCount: itemCount,
+                  itemBuilder: (context, index) {
+                    if (index >= list.length) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 20),
+                        child: Center(
+                          child: controller.isLoadingMoreProjects.value
+                              ? const SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primaryColor),
+                                )
+                              : const SizedBox.shrink(),
+                        ),
+                      );
+                    }
+                    final p = list[index];
+                    return _ProjectCard(project: p);
+                  },
+                ),
               );
             }),
           ),
@@ -237,7 +339,8 @@ class _ProjectCard extends StatelessWidget {
           onTap: () {
             controller.selectedProject.value = project;
             controller.selectedDetailsTabIdx.value = 0;
-            Get.to(() => const ProjectDetailsScreen());
+            controller.fetchProjectDetails(project.id);
+            Get.to(() => ProjectDetailsScreen(projectId: project.id));
           },
           borderRadius: BorderRadius.circular(20),
           child: Padding(
@@ -318,13 +421,25 @@ class _ProjectCard extends StatelessWidget {
                                   ),
                                   child: CircleAvatar(
                                     radius: 12,
-                                    backgroundImage: NetworkImage(project.teamMembers[i].avatarUrl),
+                                    backgroundColor: AppColors.slate200,
+                                    backgroundImage: project.teamMembers[i].avatarUrl.isNotEmpty
+                                        ? NetworkImage(project.teamMembers[i].avatarUrl)
+                                        : null,
+                                    onBackgroundImageError: (error, stackTrace) {},
+                                    child: project.teamMembers[i].avatarUrl.isEmpty
+                                        ? Text(
+                                            project.teamMembers[i].name.isNotEmpty
+                                                ? project.teamMembers[i].name[0].toUpperCase()
+                                                : '?',
+                                            style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.textColorSecondary),
+                                          )
+                                        : null,
                                   ),
                                 ),
                               ),
-                            if (project.teamMembers.length > 4)
+                            if (project.teamMembers.length > 4 || (project.membersCount != null && project.membersCount! > project.teamMembers.length))
                               Positioned(
-                                left: 4 * 20.0,
+                                left: (project.teamMembers.length > 4 ? 4 : project.teamMembers.length) * 20.0,
                                 child: Container(
                                   width: 24,
                                   height: 24,
@@ -335,7 +450,7 @@ class _ProjectCard extends StatelessWidget {
                                   ),
                                   alignment: Alignment.center,
                                   child: AppText(
-                                    '+${project.teamMembers.length - 4}',
+                                    '+${(project.membersCount ?? project.teamMembers.length) - (project.teamMembers.length > 4 ? 4 : project.teamMembers.length)}',
                                     fontSize: 8,
                                     fontWeight: FontWeight.bold,
                                     color: AppColors.textColorSecondary,

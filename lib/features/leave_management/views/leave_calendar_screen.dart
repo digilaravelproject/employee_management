@@ -3,12 +3,18 @@ import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_text.dart';
+import '../controllers/leave_calendar_controller.dart';
+import '../models/holiday_calendar_model.dart';
 
 class LeaveCalendarScreen extends StatelessWidget {
   const LeaveCalendarScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final controller = Get.isRegistered<LeaveCalendarController>()
+        ? Get.find<LeaveCalendarController>()
+        : Get.put(LeaveCalendarController());
+
     return Scaffold(
       backgroundColor: AppColors.scaffoldBackgroundColor,
       appBar: AppBar(
@@ -22,289 +28,357 @@ class LeaveCalendarScreen extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
             ),
             child: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textColorPrimary, size: 20),
+              icon: const Icon(
+                Icons.arrow_back_ios_new_rounded,
+                color: AppColors.textColorPrimary,
+                size: 20,
+              ),
               onPressed: () => Get.back(),
             ),
           ),
         ),
-        title: const AppText('Holidays 2025', fontSize: 18, fontWeight: FontWeight.bold),
+        title: Obx(() => AppText(
+              'Holidays ${controller.selectedYear.value}',
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            )),
         centerTitle: false,
-        // actions: [
-        //   Padding(
-        //     padding: const EdgeInsets.all(8.0),
-        //     child: Container(
-        //       decoration: BoxDecoration(
-        //         color: AppColors.slate100,
-        //         borderRadius: BorderRadius.circular(12),
-        //       ),
-        //       child: IconButton(
-        //         icon: const Icon(Iconsax.document_download, color: AppColors.textColorPrimary, size: 20),
-        //         onPressed: () {},
-        //       ),
-        //     ),
-        //   ),
-        // ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.only(left: 20,right: 20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Top Banner
-            Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                color: const Color(0xFFE6EFFF), // Light blue fallback
-                image: const DecorationImage(
-                  image: AssetImage('assets/images/holiday_banner.png'), // Update this to match user's asset name if different
-                  fit: BoxFit.cover,
+        actions: [
+          // Year Selector Chip / Popup
+          Obx(
+            () => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                decoration: BoxDecoration(
+                  color: AppColors.slate100,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.slate200),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<int>(
+                    value: controller.selectedYear.value,
+                    icon: const Icon(Icons.keyboard_arrow_down, size: 18, color: AppColors.primaryColor),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primaryColor,
+                    ),
+                    items: controller.availableYears.map((year) {
+                      return DropdownMenuItem<int>(
+                        value: year,
+                        child: Text('$year'),
+                      );
+                    }).toList(),
+                    onChanged: (year) {
+                      if (year != null) {
+                        controller.changeYear(year);
+                      }
+                    },
+                  ),
                 ),
               ),
-              child: Stack(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const AppText(
-                          'Plan ahead for\nimportant days',
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textColorPrimary,
-                        ),
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          width: MediaQuery.of(context).size.width * 0.5,
-                          child: const AppText(
-                            'Check all company holidays, festivals and important observances for the year 2025.',
-                            fontSize: 11,
+            ),
+          ),
+        ],
+      ),
+      body: RefreshIndicator(
+        onRefresh: () => controller.fetchHolidays(isRefresh: true),
+        color: AppColors.primaryColor,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 10),
+
+              // Top Banner
+              Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  color: const Color(0xFFE6EFFF),
+                  image: const DecorationImage(
+                    image: AssetImage('assets/images/holiday_banner.png'),
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                child: Stack(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const AppText(
+                            'Plan ahead for\nimportant days',
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
                             color: AppColors.textColorPrimary,
-                           // height: 1.4,
+                          ),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: MediaQuery.of(context).size.width * 0.55,
+                            child: Obx(
+                              () => AppText(
+                                'Check all company holidays, festivals and important observances for the year ${controller.selectedYear.value}.',
+                                fontSize: 11,
+                                color: AppColors.textColorPrimary,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 40),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              // Location Selector Bar (Optional Filter)
+              Obx(() {
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const AppText(
+                      'Overview & Schedule',
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textColorPrimary,
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: AppColors.slate200),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: controller.selectedLocation.value,
+                          isDense: true,
+                          icon: const Icon(Icons.arrow_drop_down, size: 18, color: AppColors.textColorSecondary),
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textColorSecondary,
+                          ),
+                          items: controller.availableLocations.map((loc) {
+                            return DropdownMenuItem<String>(
+                              value: loc,
+                              child: Text(loc),
+                            );
+                          }).toList(),
+                          onChanged: (loc) {
+                            if (loc != null) {
+                              controller.changeLocation(loc);
+                            }
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              }),
+
+              const SizedBox(height: 12),
+
+              // Stats Card
+              Obx(() {
+                final summary = controller.summary.value;
+                final total = summary?.total ?? 0;
+                final national = summary?.national ?? 0;
+                final restricted = summary?.restricted ?? 0;
+                final optional = summary?.optional ?? 0;
+
+                return Container(
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.02),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _buildStatItem(
+                          Iconsax.calendar_1,
+                          Colors.blue,
+                          'Total Holidays',
+                          '$total',
+                        ),
+                      ),
+                      _buildDivider(),
+                      Expanded(
+                        child: _buildStatItem(
+                          Iconsax.tree,
+                          Colors.green,
+                          'National Holidays',
+                          '$national',
+                        ),
+                      ),
+                      _buildDivider(),
+                      Expanded(
+                        child: _buildStatItem(
+                          Iconsax.lamp,
+                          Colors.orange,
+                          'Restricted Holidays',
+                          '$restricted',
+                        ),
+                      ),
+                      _buildDivider(),
+                      Expanded(
+                        child: _buildStatItem(
+                          Iconsax.building,
+                          Colors.purple,
+                          'Optional Holidays',
+                          '$optional',
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+
+              const SizedBox(height: 20),
+
+              // Content: Loading / Error / Months List
+              Obx(() {
+                if (controller.isLoading.value) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 40),
+                    child: Center(
+                      child: CircularProgressIndicator(color: AppColors.primaryColor),
+                    ),
+                  );
+                }
+
+                if (controller.errorMessage.value.isNotEmpty && controller.months.isEmpty) {
+                  return Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.symmetric(vertical: 20),
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.slate200),
+                    ),
+                    child: Column(
+                      children: [
+                        const Icon(Iconsax.info_circle, size: 40, color: Colors.orange),
+                        const SizedBox(height: 12),
+                        AppText(
+                          controller.errorMessage.value,
+                          fontSize: 13,
+                          color: AppColors.textColorSecondary,
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton.icon(
+                          onPressed: () => controller.fetchHolidays(),
+                          icon: const Icon(Icons.refresh, size: 16, color: Colors.white),
+                          label: const AppText('Try Again', fontSize: 13, color: Colors.white),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primaryColor,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           ),
                         ),
-                        const SizedBox(height: 40), // Space for image elements on the right
                       ],
                     ),
-                  ),
-                ],
-              ),
-            ),
-            
-            const SizedBox(height: 20),
-            
-            // Stats Card
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.02),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _buildStatItem(Iconsax.calendar_1, Colors.blue, 'Total Holidays', '23'),
-                  ),
-                  _buildDivider(),
-                  Expanded(
-                    child: _buildStatItem(Iconsax.tree, Colors.green, 'National Holidays', '13'),
-                  ),
-                  _buildDivider(),
-                  Expanded(
-                    child: _buildStatItem(Iconsax.lamp, Colors.orange, 'Restricted Holidays', '7'),
-                  ),
-                  _buildDivider(),
-                  Expanded(
-                    child: _buildStatItem(Iconsax.building, Colors.purple, 'Optional Holidays', '3'),
-                  ),
-                ],
-              ),
-            ),
-            
-            const SizedBox(height: 20),
-            
-            // Months List
-            _buildMonthCard(
-              month: 'January',
-              holidayCount: '2 Holidays',
-              iconColor: Colors.blue,
-              iconBgColor: Colors.blue.withValues(alpha: 0.1),
-              holidays: [
-                _HolidayItem('01 Jan, Wed', 'New Year\'s Day', 'National Holiday', Colors.green),
-                _HolidayItem('26 Jan, Sun', 'Republic Day', 'National Holiday', Colors.green),
-              ],
-            ),
-            const SizedBox(height: 16),
-            
-            _buildMonthCard(
-              month: 'February',
-              holidayCount: '1 Holiday',
-              iconColor: Colors.purple,
-              iconBgColor: Colors.purple.withValues(alpha: 0.1),
-              holidays: [
-                _HolidayItem('26 Feb, Wed', 'Maha Shivratri', 'Restricted Holiday', Colors.orange),
-              ],
-            ),
-            const SizedBox(height: 16),
-            
-            _buildMonthCard(
-              month: 'March',
-              holidayCount: '2 Holidays',
-              iconColor: Colors.green,
-              iconBgColor: Colors.green.withValues(alpha: 0.1),
-              holidays: [
-                _HolidayItem('14 Mar, Fri', 'Holi', 'National Holiday', Colors.green),
-                _HolidayItem('31 Mar, Mon', 'Eid-ul-Fitr', 'National Holiday', Colors.green),
-              ],
-            ),
-            const SizedBox(height: 16),
-            
-            _buildMonthCard(
-              month: 'April',
-              holidayCount: '2 Holidays',
-              iconColor: Colors.orange,
-              iconBgColor: Colors.orange.withValues(alpha: 0.1),
-              holidays: [
-                _HolidayItem('10 Apr, Thu', 'Mahavir Jayanti', 'Restricted Holiday', Colors.orange),
-                _HolidayItem('18 Apr, Fri', 'Good Friday', 'Restricted Holiday', Colors.orange),
-              ],
-            ),
-            const SizedBox(height: 16),
-            
-            _buildMonthCard(
-              month: 'May',
-              holidayCount: '2 Holidays',
-              iconColor: Colors.pink,
-              iconBgColor: Colors.pink.withValues(alpha: 0.1),
-              holidays: [
-                _HolidayItem('01 May, Thu', 'Labour Day', 'National Holiday', Colors.green),
-                _HolidayItem('12 May, Mon', 'Buddha Purnima', 'Restricted Holiday', Colors.orange),
-              ],
-            ),
-            const SizedBox(height: 16),
-            
-            _buildMonthCard(
-              month: 'June',
-              holidayCount: '1 Holiday',
-              iconColor: Colors.blue,
-              iconBgColor: Colors.blue.withValues(alpha: 0.1),
-              holidays: [
-                _HolidayItem('07 Jun, Sat', 'Bakrid (Eid al-Adha)', 'Restricted Holiday', Colors.orange),
-              ],
-            ),
-            const SizedBox(height: 16),
-            
-            _buildMonthCard(
-              month: 'July',
-              holidayCount: '1 Holiday',
-              iconColor: Colors.indigo,
-              iconBgColor: Colors.indigo.withValues(alpha: 0.1),
-              holidays: [
-                _HolidayItem('06 Jul, Sun', 'Muharram', 'Restricted Holiday', Colors.orange),
-              ],
-            ),
-            const SizedBox(height: 16),
-            
-            _buildMonthCard(
-              month: 'August',
-              holidayCount: '3 Holidays',
-              iconColor: Colors.teal,
-              iconBgColor: Colors.teal.withValues(alpha: 0.1),
-              holidays: [
-                _HolidayItem('09 Aug, Sat', 'Raksha Bandhan', 'Restricted Holiday', Colors.orange),
-                _HolidayItem('15 Aug, Fri', 'Independence Day', 'National Holiday', Colors.green),
-                _HolidayItem('16 Aug, Sat', 'Janmashtami', 'Restricted Holiday', Colors.orange),
-              ],
-            ),
-            const SizedBox(height: 16),
-            
-            _buildMonthCard(
-              month: 'September',
-              holidayCount: '1 Holiday',
-              iconColor: Colors.orange,
-              iconBgColor: Colors.orange.withValues(alpha: 0.1),
-              holidays: [
-                _HolidayItem('06 Sep, Sat', 'Ganesh Chaturthi', 'Restricted Holiday', Colors.orange),
-              ],
-            ),
-            const SizedBox(height: 16),
-            
-            _buildMonthCard(
-              month: 'October',
-              holidayCount: '3 Holidays',
-              iconColor: Colors.purple,
-              iconBgColor: Colors.purple.withValues(alpha: 0.1),
-              holidays: [
-                _HolidayItem('02 Oct, Thu', 'Gandhi Jayanti', 'National Holiday', Colors.green),
-                _HolidayItem('02 Oct, Thu', 'Dussehra', 'National Holiday', Colors.green),
-                _HolidayItem('20 Oct, Mon', 'Diwali', 'National Holiday', Colors.green),
-              ],
-            ),
-            const SizedBox(height: 16),
-            
-            _buildMonthCard(
-              month: 'November',
-              holidayCount: '1 Holiday',
-              iconColor: Colors.pink,
-              iconBgColor: Colors.pink.withValues(alpha: 0.1),
-              holidays: [
-                _HolidayItem('05 Nov, Wed', 'Guru Nanak Jayanti', 'Restricted Holiday', Colors.orange),
-              ],
-            ),
-            const SizedBox(height: 16),
-            
-            _buildMonthCard(
-              month: 'December',
-              holidayCount: '1 Holiday',
-              iconColor: Colors.blue,
-              iconBgColor: Colors.blue.withValues(alpha: 0.1),
-              holidays: [
-                _HolidayItem('25 Dec, Thu', 'Christmas', 'National Holiday', Colors.green),
-              ],
-            ),
-            
-            const SizedBox(height: 24),
-            
-            // Note
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.primaryLight,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(Iconsax.info_circle, color: AppColors.primaryColor, size: 20),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  );
+                }
+
+                if (controller.months.isEmpty) {
+                  return Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.symmetric(vertical: 20),
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.slate200),
+                    ),
+                    child: const Column(
                       children: [
-                        const AppText('Note', fontSize: 13, fontWeight: FontWeight.bold),
-                        const SizedBox(height: 4),
-                        const AppText(
-                          'Holiday dates are subject to change as per government declarations and company announcements.',
-                          fontSize: 11,
+                        Icon(Iconsax.calendar_remove, size: 40, color: AppColors.slate400),
+                        SizedBox(height: 12),
+                        AppText(
+                          'No holidays found for this year.',
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
                           color: AppColors.textColorSecondary,
-                          //height: 1.4,
                         ),
                       ],
                     ),
-                  ),
-                ],
+                  );
+                }
+
+                // Months list
+                return ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: controller.months.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 14),
+                  itemBuilder: (context, index) {
+                    final monthItem = controller.months[index];
+                    final colorTheme = _getMonthTheme(index);
+
+                    return _buildMonthCard(
+                      month: monthItem.month,
+                      holidayCount:
+                          '${monthItem.count} ${monthItem.count == 1 ? 'Holiday' : 'Holidays'}',
+                      iconColor: colorTheme.color,
+                      iconBgColor: colorTheme.bgColor,
+                      holidays: monthItem.holidays,
+                      controller: controller,
+                    );
+                  },
+                );
+              }),
+
+              const SizedBox(height: 24),
+
+              // Note
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryLight,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Iconsax.info_circle, color: AppColors.primaryColor, size: 20),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          AppText('Note', fontSize: 13, fontWeight: FontWeight.bold),
+                          SizedBox(height: 4),
+                          AppText(
+                            'Holiday dates are subject to change as per government declarations and company announcements.',
+                            fontSize: 11,
+                            color: AppColors.textColorSecondary,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 40),
-          ],
+              const SizedBox(height: 40),
+            ],
+          ),
         ),
       ),
     );
@@ -342,18 +416,24 @@ class LeaveCalendarScreen extends StatelessWidget {
     required String holidayCount,
     required Color iconColor,
     required Color iconBgColor,
-    required List<_HolidayItem> holidays,
+    required List<HolidayItemModel> holidays,
+    required LeaveCalendarController controller,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
+    final isExpanded = controller.expandedMonths[month] ?? true;
+
+    return Material(
+      color: Colors.white,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderColor),
+        side: const BorderSide(color: AppColors.borderColor),
       ),
       child: Theme(
         data: ThemeData().copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
-          initiallyExpanded: month == 'January', // Expand the first one by default
+          key: PageStorageKey<String>('month_$month'),
+          initiallyExpanded: isExpanded,
+          onExpansionChanged: (_) => controller.toggleMonth(month),
           tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           leading: Container(
             padding: const EdgeInsets.all(8),
@@ -377,25 +457,78 @@ class LeaveCalendarScreen extends StatelessWidget {
               padding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
               child: Column(
                 children: holidays.map((holiday) {
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 12),
+                  final typeColor = _getTypeColor(holiday.type);
+                  return Container(
+                    margin: const EdgeInsets.only(top: 10),
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.slate50,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppColors.slate200, width: 0.6),
+                    ),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         SizedBox(
-                          width: 80,
-                          child: AppText(holiday.date, fontSize: 12, fontWeight: FontWeight.bold),
+                          width: 88,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              AppText(
+                                holiday.formattedDisplayDate,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textColorPrimary,
+                              ),
+                              if (holiday.dayName != null && holiday.dayName!.isNotEmpty)
+                                AppText(
+                                  holiday.dayName!,
+                                  fontSize: 10,
+                                  color: AppColors.textColorSecondary,
+                                ),
+                            ],
+                          ),
                         ),
+                        const SizedBox(width: 6),
                         Expanded(
-                          child: AppText(holiday.name, fontSize: 12, color: AppColors.textColorSecondary),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              AppText(
+                                holiday.name,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textColorPrimary,
+                              ),
+                              if (holiday.description != null &&
+                                  holiday.description!.isNotEmpty &&
+                                  holiday.description != holiday.name)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 2),
+                                  child: AppText(
+                                    holiday.description!,
+                                    fontSize: 10,
+                                    color: AppColors.textColorSecondary,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                            ],
+                          ),
                         ),
+                        const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: holiday.typeColor.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(4),
+                            color: typeColor.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(6),
                           ),
-                          child: AppText(holiday.type, fontSize: 10, fontWeight: FontWeight.bold, color: holiday.typeColor),
+                          child: AppText(
+                            '${holiday.type} Holiday',
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: typeColor,
+                          ),
                         ),
                       ],
                     ),
@@ -408,13 +541,41 @@ class LeaveCalendarScreen extends StatelessWidget {
       ),
     );
   }
+
+  Color _getTypeColor(String type) {
+    final lower = type.toLowerCase();
+    if (lower.contains('national')) {
+      return Colors.green;
+    } else if (lower.contains('restricted')) {
+      return Colors.orange;
+    } else if (lower.contains('optional')) {
+      return Colors.purple;
+    }
+    return AppColors.primaryColor;
+  }
+
+  _MonthTheme _getMonthTheme(int index) {
+    const themes = [
+      _MonthTheme(Colors.blue, Color(0x1A2196F3)),
+      _MonthTheme(Colors.purple, Color(0x1A9C27B0)),
+      _MonthTheme(Colors.green, Color(0x1A4CAF50)),
+      _MonthTheme(Colors.orange, Color(0x1AFF9800)),
+      _MonthTheme(Colors.pink, Color(0x1AE91E63)),
+      _MonthTheme(Colors.indigo, Color(0x1A3F51B5)),
+      _MonthTheme(Colors.teal, Color(0x1A009688)),
+      _MonthTheme(Colors.deepOrange, Color(0x1AFF5722)),
+      _MonthTheme(Colors.cyan, Color(0x1A00BCD4)),
+      _MonthTheme(Colors.amber, Color(0x1AFFC107)),
+      _MonthTheme(Colors.deepPurple, Color(0x1A673AB7)),
+      _MonthTheme(Colors.lightBlue, Color(0x1A03A9F4)),
+    ];
+    return themes[index % themes.length];
+  }
 }
 
-class _HolidayItem {
-  final String date;
-  final String name;
-  final String type;
-  final Color typeColor;
+class _MonthTheme {
+  final Color color;
+  final Color bgColor;
 
-  _HolidayItem(this.date, this.name, this.type, this.typeColor);
+  const _MonthTheme(this.color, this.bgColor);
 }

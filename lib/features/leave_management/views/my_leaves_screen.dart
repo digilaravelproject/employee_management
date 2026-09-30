@@ -7,6 +7,7 @@ import '../controllers/my_leaves_controller.dart';
 import 'apply_leave_screen.dart';
 import 'leave_approval_screen.dart';
 import 'leave_calendar_screen.dart';
+import '../bindings/leave_calendar_binding.dart';
 import 'my_approvals_screen.dart';
 
 class MyLeavesScreen extends StatelessWidget {
@@ -205,7 +206,10 @@ class MyLeavesScreen extends StatelessWidget {
                                 iconBgColor: AppColors.primaryLight,
                                 title: 'Leave Calendar',
                                 subtitle: 'View calendar',
-                                onTap: () => Get.to(() => const LeaveCalendarScreen()),
+                                onTap: () => Get.to(
+                                  () => const LeaveCalendarScreen(),
+                                  binding: LeaveCalendarBinding(),
+                                ),
                               ),
                             ),
                             const SizedBox(width: 12),

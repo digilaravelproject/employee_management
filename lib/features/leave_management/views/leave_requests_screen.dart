@@ -234,15 +234,20 @@ class _LeaveRequestsScreenState extends State<LeaveRequestsScreen> {
                                 onSelected: (sel) async {
                                   if (preset == 'Custom Range') {
                                     final now = DateTime.now();
+                                    final initial = tempDateRange ??
+                                        DateTimeRange(
+                                          start: now.subtract(const Duration(days: 7)),
+                                          end: now,
+                                        );
+                                    final safeInitial = DateTimeRange(
+                                      start: initial.start.isAfter(now) ? now : initial.start,
+                                      end: initial.end.isAfter(now) ? now : initial.end,
+                                    );
                                     final picked = await showDateRangePicker(
                                       context: context,
                                       firstDate: DateTime(2020),
-                                      lastDate: DateTime(2030),
-                                      initialDateRange: tempDateRange ??
-                                          DateTimeRange(
-                                            start: now.subtract(const Duration(days: 7)),
-                                            end: now,
-                                          ),
+                                      lastDate: now,
+                                      initialDateRange: safeInitial,
                                     );
                                     if (picked != null) {
                                       setSheetState(() {

@@ -1,10 +1,38 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../../../core/services/network/api_client.dart';
+import '../../../core/utils/logger.dart';
+import '../../leave_management/controllers/leave_calendar_controller.dart';
+import '../../leave_management/models/holiday_calendar_model.dart';
+import '../models/add_holiday_model.dart';
 import '../models/holiday_model.dart';
+import '../repositories/holidays_repository.dart';
+import '../repositories/holidays_repository_interface.dart';
 
 class HolidaysController extends GetxController {
+  final HolidaysRepositoryInterface repository;
+
+  HolidaysController({HolidaysRepositoryInterface? repository})
+      : repository = repository ??
+            HolidaysRepository(
+              apiClient: Get.isRegistered<ApiClient>()
+                  ? Get.find<ApiClient>()
+                  : Get.put(ApiClient()),
+            );
+
   // Reactive list of holidays
   final RxList<Holiday> holidays = <Holiday>[].obs;
+  final RxBool isLoading = false.obs;
+  final RxBool isRefreshing = false.obs;
+  final RxBool isSubmitting = false.obs;
+  final RxBool isDeleting = false.obs;
+  final RxBool isLoadingDetails = false.obs;
+  final RxString errorMessage = ''.obs;
+
+  final Rxn<HolidayItemModel> holidayDetails = Rxn<HolidayItemModel>();
+
+  final Rxn<HolidayCalendarResponse> calendarResponse = Rxn<HolidayCalendarResponse>();
+  final Rxn<HolidaySummary> summary = Rxn<HolidaySummary>();
 
   // Filters
   final RxInt filterYear = DateTime.now().year.obs;
@@ -20,7 +48,7 @@ class HolidaysController extends GetxController {
   final nameController = TextEditingController();
   final descriptionController = TextEditingController();
   final Rxn<DateTime> selectedDate = Rxn<DateTime>();
-  final RxString selectedType = 'National Holiday'.obs;
+  final RxString selectedType = 'National'.obs;
   final RxString selectedLocation = 'All Locations'.obs;
   final RxBool repeatEveryYear = true.obs;
 
@@ -34,179 +62,193 @@ class HolidaysController extends GetxController {
   ];
 
   final List<String> holidayTypes = [
-    'National Holiday',
-    'Optional Holiday',
-    'Restricted Holiday',
+    'National',
+    'Restricted',
+    'Optional',
   ];
 
   @override
   void onInit() {
     super.onInit();
-    _initializeDummyHolidays();
     // Expand the current month by default
     final currentMonth = DateTime.now().month;
     expandedMonths[currentMonth] = true;
+    fetchHolidays();
   }
 
-  // Initialize the list with realistic dates matching the current year
-  void _initializeDummyHolidays() {
-    final currentYear = DateTime.now().year;
-    holidays.addAll([
-      Holiday(
-        id: '1',
-        name: 'New Year\'s Day',
-        date: DateTime(currentYear, 1, 1),
-        type: 'Optional Holiday',
-        location: 'All Locations',
-        repeatEveryYear: true,
-        description: 'First day of the year on the modern Gregorian calendar.',
-        addedBy: 'Admin',
-        addedOn: DateTime(currentYear, 1, 1),
-      ),
-      Holiday(
-        id: '2',
-        name: 'Republic Day',
-        date: DateTime(currentYear, 1, 26),
-        type: 'National Holiday',
-        location: 'All Locations',
-        repeatEveryYear: true,
-        description: 'Honors the date on which the Constitution of India came into effect.',
-        addedBy: 'Admin',
-        addedOn: DateTime(currentYear, 1, 5),
-      ),
-      Holiday(
-        id: '3',
-        name: 'Maha Shivratri',
-        date: DateTime(currentYear, 3, 8),
-        type: 'Restricted Holiday',
-        location: 'Delhi HQ',
-        repeatEveryYear: false,
-        description: 'A major Hindu festival celebrated annually in honour of the God Shiva.',
-        addedBy: 'Admin',
-        addedOn: DateTime(currentYear, 2, 10),
-      ),
-      Holiday(
-        id: '4',
-        name: 'Holi',
-        date: DateTime(currentYear, 3, 25),
-        type: 'National Holiday',
-        location: 'All Locations',
-        repeatEveryYear: false,
-        description: 'The popular ancient Hindu festival of colors, love, and spring.',
-        addedBy: 'Admin',
-        addedOn: DateTime(currentYear, 2, 12),
-      ),
-      Holiday(
-        id: '5',
-        name: 'Good Friday',
-        date: DateTime(currentYear, 3, 29),
-        type: 'National Holiday',
-        location: 'All Locations',
-        repeatEveryYear: false,
-        description: 'Christian holiday commemorating the crucifixion of Jesus Christ.',
-        addedBy: 'Admin',
-        addedOn: DateTime(currentYear, 2, 15),
-      ),
-      Holiday(
-        id: '6',
-        name: 'Labour Day',
-        date: DateTime(currentYear, 5, 1),
-        type: 'National Holiday',
-        location: 'All Locations',
-        repeatEveryYear: true,
-        description: 'International Workers\' Day is celebrated to honor the contributions of workers.',
-        addedBy: 'Admin',
-        addedOn: DateTime(currentYear, 1, 10),
-      ),
-      Holiday(
-        id: '7',
-        name: 'Buddha Purnima',
-        date: DateTime(currentYear, 5, 15),
-        type: 'National Holiday',
-        location: 'All Locations',
-        repeatEveryYear: true,
-        description: 'Festival marks the birth, enlightenment and death of Gautama Buddha.',
-        addedBy: 'Admin',
-        addedOn: DateTime(currentYear, 1, 10),
-      ),
-      Holiday(
-        id: '8',
-        name: 'Eid al-Adha',
-        date: DateTime(currentYear, 6, 17),
-        type: 'National Holiday',
-        location: 'All Locations',
-        repeatEveryYear: false,
-        description: 'Feast of the Sacrifice, celebrated by Muslims worldwide.',
-        addedBy: 'Admin',
-        addedOn: DateTime(currentYear, 3, 1),
-      ),
-      Holiday(
-        id: '9',
-        name: 'Independence Day',
-        date: DateTime(currentYear, 8, 15),
-        type: 'National Holiday',
-        location: 'All Locations',
-        repeatEveryYear: true,
-        description: 'Commemorates the nation\'s independence from the United Kingdom.',
-        addedBy: 'Admin',
-        addedOn: DateTime(currentYear, 1, 10),
-      ),
-      Holiday(
-        id: '10',
-        name: 'Raksha Bandhan',
-        date: DateTime(currentYear, 8, 19),
-        type: 'Optional Holiday',
-        location: 'Mumbai Office',
-        repeatEveryYear: false,
-        description: 'Celebrates the bond between brothers and sisters.',
-        addedBy: 'Admin',
-        addedOn: DateTime(currentYear, 4, 15),
-      ),
-      Holiday(
-        id: '11',
-        name: 'Gandhi Jayanti',
-        date: DateTime(currentYear, 10, 2),
-        type: 'National Holiday',
-        location: 'All Locations',
-        repeatEveryYear: true,
-        description: 'Celebrated to mark the occasion of the birthday of Mahatma Gandhi.',
-        addedBy: 'Admin',
-        addedOn: DateTime(currentYear, 1, 10),
-      ),
-      Holiday(
-        id: '12',
-        name: 'Dussehra',
-        date: DateTime(currentYear, 10, 12),
-        type: 'National Holiday',
-        location: 'All Locations',
-        repeatEveryYear: false,
-        description: 'Major Hindu festival marks the victory of Rama over Ravana.',
-        addedBy: 'Admin',
-        addedOn: DateTime(currentYear, 4, 20),
-      ),
-      Holiday(
-        id: '13',
-        name: 'Diwali / Deepavali',
-        date: DateTime(currentYear, 11, 1),
-        type: 'National Holiday',
-        location: 'All Locations',
-        repeatEveryYear: true,
-        description: 'The festival of lights, representing the triumph of light over darkness.',
-        addedBy: 'Admin',
-        addedOn: DateTime(currentYear, 1, 10),
-      ),
-      Holiday(
-        id: '14',
-        name: 'Christmas',
-        date: DateTime(currentYear, 12, 25),
-        type: 'National Holiday',
-        location: 'All Locations',
-        repeatEveryYear: true,
-        description: 'Annual festival commemorating the birth of Jesus Christ.',
-        addedBy: 'Admin',
-        addedOn: DateTime(currentYear, 1, 10),
-      ),
-    ]);
+  // Change active calendar year and trigger reload
+  void changeYear(int year) {
+    if (filterYear.value != year) {
+      filterYear.value = year;
+      fetchHolidays();
+    }
+  }
+
+  // Change active location and trigger reload
+  void changeLocation(String location) {
+    if (filterLocation.value != location) {
+      filterLocation.value = location;
+      fetchHolidays();
+    }
+  }
+
+  // Summary statistics getters
+  int get totalHolidays => summary.value?.total ?? filteredHolidays.length;
+  int get nationalHolidays =>
+      summary.value?.national ??
+      filteredHolidays
+          .where((h) => h.type.toLowerCase().contains('national'))
+          .length;
+  int get restrictedHolidays =>
+      summary.value?.restricted ??
+      filteredHolidays
+          .where((h) => h.type.toLowerCase().contains('restricted'))
+          .length;
+  int get optionalHolidays =>
+      summary.value?.optional ??
+      filteredHolidays
+          .where((h) => h.type.toLowerCase().contains('optional'))
+          .length;
+
+  // Fetch holidays from server
+  Future<void> fetchHolidays({bool isRefresh = false}) async {
+    try {
+      if (isRefresh) {
+        isRefreshing.value = true;
+      } else {
+        isLoading.value = true;
+      }
+      errorMessage.value = '';
+
+      final response = await repository.getHolidays(
+        year: filterYear.value,
+        location: filterLocation.value,
+      );
+
+      if (response != null && response.status) {
+        calendarResponse.value = response;
+        summary.value = response.summary;
+
+        final List<Holiday> serverHolidays = [];
+
+        // Parse from months list
+        for (final m in response.months) {
+          for (final h in m.holidays) {
+            DateTime parsedDate;
+            try {
+              parsedDate = DateTime.parse(h.date);
+            } catch (_) {
+              parsedDate = DateTime.now();
+            }
+            serverHolidays.add(Holiday(
+              id: h.id.toString(),
+              name: h.name,
+              date: parsedDate,
+              type: h.type,
+              location: h.location ?? 'All Locations',
+              repeatEveryYear: h.repeatEveryYear,
+              description: h.description ?? '',
+              addedBy: 'Admin',
+              addedOn: DateTime.now(),
+            ));
+          }
+        }
+
+        // If months was empty but response.data has items
+        if (serverHolidays.isEmpty && response.data.isNotEmpty) {
+          for (final h in response.data) {
+            DateTime parsedDate;
+            try {
+              parsedDate = DateTime.parse(h.date);
+            } catch (_) {
+              parsedDate = DateTime.now();
+            }
+            serverHolidays.add(Holiday(
+              id: h.id.toString(),
+              name: h.name,
+              date: parsedDate,
+              type: h.type,
+              location: h.location ?? 'All Locations',
+              repeatEveryYear: h.repeatEveryYear,
+              description: h.description ?? '',
+              addedBy: 'Admin',
+              addedOn: DateTime.now(),
+            ));
+          }
+        }
+
+        holidays.assignAll(serverHolidays);
+
+        // Auto-expand any month that has holidays
+        for (final h in serverHolidays) {
+          expandedMonths[h.date.month] = true;
+        }
+
+        Logger.d('HolidaysController => Loaded ${serverHolidays.length} holidays from server for year ${filterYear.value}');
+      } else {
+        errorMessage.value = response?.message ?? 'Failed to load holidays.';
+        if (holidays.isEmpty) {
+          _initializeFallbackHolidays();
+        }
+      }
+    } catch (e, stack) {
+      Logger.e('HolidaysController => Error in fetchHolidays: $e\n$stack');
+      errorMessage.value = 'Failed to load holidays. Please try again.';
+      if (holidays.isEmpty) {
+        _initializeFallbackHolidays();
+      }
+    } finally {
+      isLoading.value = false;
+      isRefreshing.value = false;
+    }
+  }
+
+  // Fetch full holiday details by ID from API
+  Future<void> fetchHolidayDetails(String id) async {
+    try {
+      isLoadingDetails.value = true;
+      Logger.d('HolidaysController => Fetching details for holiday ID: $id');
+      final response = await repository.getHolidayDetails(id);
+
+      if (response != null && response.status && response.data != null) {
+        final item = response.data!;
+        holidayDetails.value = item;
+
+        DateTime parsedDate;
+        try {
+          parsedDate = DateTime.parse(item.date);
+        } catch (_) {
+          parsedDate = selectedHoliday.value?.date ?? DateTime.now();
+        }
+
+        DateTime addedOn;
+        try {
+          addedOn = item.createdAt != null
+              ? DateTime.parse(item.createdAt!)
+              : DateTime.now();
+        } catch (_) {
+          addedOn = DateTime.now();
+        }
+
+        final updated = Holiday(
+          id: item.id.toString(),
+          name: item.name,
+          date: parsedDate,
+          type: item.type,
+          location: item.location ?? 'All Locations',
+          repeatEveryYear: item.repeatEveryYear,
+          description: item.description ?? '',
+          addedBy: 'Admin',
+          addedOn: addedOn,
+        );
+        selectedHoliday.value = updated;
+        Logger.d('HolidaysController => Loaded details for: ${item.name}');
+      }
+    } catch (e, stack) {
+      Logger.e('HolidaysController => Error in fetchHolidayDetails: $e\n$stack');
+    } finally {
+      isLoadingDetails.value = false;
+    }
   }
 
   // Reactive filtered holidays list based on Year and Location
@@ -249,7 +291,7 @@ class HolidaysController extends GetxController {
     nameController.clear();
     descriptionController.clear();
     selectedDate.value = null;
-    selectedType.value = 'National Holiday';
+    selectedType.value = 'National';
     selectedLocation.value = 'All Locations';
     repeatEveryYear.value = true;
   }
@@ -259,66 +301,134 @@ class HolidaysController extends GetxController {
     nameController.text = holiday.name;
     descriptionController.text = holiday.description;
     selectedDate.value = holiday.date;
-    selectedType.value = holiday.type;
+    selectedType.value = _normalizeType(holiday.type);
     selectedLocation.value = holiday.location;
     repeatEveryYear.value = holiday.repeatEveryYear;
   }
 
-  // Save new holiday (Create)
+  String _normalizeType(String type) {
+    final lower = type.toLowerCase().trim();
+    if (lower.contains('national')) return 'National';
+    if (lower.contains('restricted')) return 'Restricted';
+    if (lower.contains('optional')) return 'Optional';
+    return 'National';
+  }
+
+  // Add new holiday via server API
+  Future<bool> addHoliday() async {
+    if (nameController.text.trim().isEmpty) {
+      Get.snackbar(
+        'Validation Error',
+        'Holiday Name is required!',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.redAccent,
+        colorText: Colors.white,
+      );
+      return false;
+    }
+
+    if (selectedDate.value == null) {
+      Get.snackbar(
+        'Validation Error',
+        'Please select a date!',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.redAccent,
+        colorText: Colors.white,
+      );
+      return false;
+    }
+
+    final normType = _normalizeType(selectedType.value);
+    final pDate = selectedDate.value!;
+    final formattedDate =
+        "${pDate.year}-${pDate.month.toString().padLeft(2, '0')}-${pDate.day.toString().padLeft(2, '0')}";
+
+    final request = AddHolidayRequestModel(
+      name: nameController.text.trim(),
+      date: formattedDate,
+      type: normType,
+      location: selectedLocation.value,
+      repeatEveryYear: repeatEveryYear.value,
+      description: descriptionController.text.trim(),
+    );
+
+    try {
+      isSubmitting.value = true;
+      Logger.d('HolidaysController => Calling addHoliday API with: ${request.toJson()}');
+
+      final response = await repository.addHoliday(request);
+
+      if (response != null && response.status) {
+        // Add to local list immediately for instant visual response
+        final newHoliday = Holiday(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          name: request.name,
+          date: pDate,
+          type: request.type,
+          location: request.location,
+          repeatEveryYear: request.repeatEveryYear,
+          description: request.description ?? '',
+          addedBy: 'Admin',
+          addedOn: DateTime.now(),
+        );
+        holidays.add(newHoliday);
+        expandedMonths[pDate.month] = true;
+
+        // Refresh from server
+        fetchHolidays(isRefresh: true);
+
+        // Also refresh LeaveCalendarController if active in memory
+        if (Get.isRegistered<LeaveCalendarController>()) {
+          Get.find<LeaveCalendarController>().fetchHolidays(isRefresh: true);
+        }
+
+        clearForm();
+        Get.back();
+        Get.snackbar(
+          'Success 🎉',
+          response.message ?? 'Holiday added successfully!',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: const Color(0xFF10B981),
+          colorText: Colors.white,
+          duration: const Duration(seconds: 3),
+        );
+        return true;
+      } else {
+        final err = response?.message ?? 'Failed to add holiday.';
+        Get.snackbar(
+          'Failed',
+          err,
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.redAccent,
+          colorText: Colors.white,
+          duration: const Duration(seconds: 4),
+        );
+        return false;
+      }
+    } catch (e, stack) {
+      Logger.e('HolidaysController => Exception in addHoliday: $e\n$stack');
+      Get.snackbar(
+        'Error',
+        'Something went wrong: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.redAccent,
+        colorText: Colors.white,
+      );
+      return false;
+    } finally {
+      isSubmitting.value = false;
+    }
+  }
+
+  // Alias for backward compatibility
   void saveHoliday() {
-    if (nameController.text.trim().isEmpty) {
-      Get.snackbar(
-        'Validation Error',
-        'Holiday Name is required!',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.redAccent,
-        colorText: Colors.white,
-      );
-      return;
-    }
-
-    if (selectedDate.value == null) {
-      Get.snackbar(
-        'Validation Error',
-        'Please select a date!',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.redAccent,
-        colorText: Colors.white,
-      );
-      return;
-    }
-
-    final newHoliday = Holiday(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      name: nameController.text.trim(),
-      date: selectedDate.value!,
-      type: selectedType.value,
-      location: selectedLocation.value,
-      repeatEveryYear: repeatEveryYear.value,
-      description: descriptionController.text.trim(),
-      addedBy: 'Admin',
-      addedOn: DateTime.now(),
-    );
-
-    holidays.add(newHoliday);
-    // Expand the month of the newly added holiday so the user sees it immediately
-    expandedMonths[newHoliday.date.month] = true;
-
-    clearForm();
-    Get.back();
-    Get.snackbar(
-      'Success',
-      'Holiday added successfully!',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: const Color(0xFF10B981),
-      colorText: Colors.white,
-    );
+    addHoliday();
   }
 
-  // Update existing holiday (Update)
-  void updateHoliday() {
+  // Update existing holiday via PATCH API
+  Future<bool> updateHoliday() async {
     final current = selectedHoliday.value;
-    if (current == null) return;
+    if (current == null) return false;
 
     if (nameController.text.trim().isEmpty) {
       Get.snackbar(
@@ -328,7 +438,7 @@ class HolidaysController extends GetxController {
         backgroundColor: Colors.redAccent,
         colorText: Colors.white,
       );
-      return;
+      return false;
     }
 
     if (selectedDate.value == null) {
@@ -339,47 +449,183 @@ class HolidaysController extends GetxController {
         backgroundColor: Colors.redAccent,
         colorText: Colors.white,
       );
-      return;
+      return false;
     }
 
-    final updated = current.copyWith(
+    final normType = _normalizeType(selectedType.value);
+    final pDate = selectedDate.value!;
+    final formattedDate =
+        "${pDate.year}-${pDate.month.toString().padLeft(2, '0')}-${pDate.day.toString().padLeft(2, '0')}";
+
+    final request = AddHolidayRequestModel(
       name: nameController.text.trim(),
-      date: selectedDate.value!,
-      type: selectedType.value,
+      date: formattedDate,
+      type: normType,
       location: selectedLocation.value,
       repeatEveryYear: repeatEveryYear.value,
       description: descriptionController.text.trim(),
     );
 
-    final idx = holidays.indexWhere((h) => h.id == current.id);
-    if (idx != -1) {
-      holidays[idx] = updated;
-    }
+    try {
+      isSubmitting.value = true;
+      Logger.d('HolidaysController => Calling updateHoliday PATCH API for ID ${current.id} with: ${request.toJson()}');
 
-    selectedHoliday.value = updated;
-    clearForm();
-    Get.back(); // Go back from Edit screen to Details screen
-    Get.snackbar(
-      'Updated',
-      'Holiday updated successfully!',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: const Color(0xFF2563EB),
-      colorText: Colors.white,
-    );
+      final response = await repository.updateHoliday(current.id, request);
+
+      if (response != null && response.status) {
+        final updated = current.copyWith(
+          name: request.name,
+          date: pDate,
+          type: request.type,
+          location: request.location,
+          repeatEveryYear: request.repeatEveryYear,
+          description: request.description ?? '',
+        );
+
+        final idx = holidays.indexWhere((h) => h.id == current.id);
+        if (idx != -1) {
+          holidays[idx] = updated;
+        }
+
+        selectedHoliday.value = updated;
+
+        // Re-fetch to sync months and summary
+        fetchHolidays(isRefresh: true);
+
+        // Also fetch single holiday details if active
+        fetchHolidayDetails(current.id);
+
+        if (Get.isRegistered<LeaveCalendarController>()) {
+          Get.find<LeaveCalendarController>().fetchHolidays(isRefresh: true);
+        }
+
+        clearForm();
+        Get.back();
+        Get.snackbar(
+          'Success 🎉',
+          response.message ?? 'Holiday updated successfully!',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: const Color(0xFF10B981),
+          colorText: Colors.white,
+          duration: const Duration(seconds: 3),
+        );
+        return true;
+      } else {
+        final err = response?.message ?? 'Failed to update holiday.';
+        Get.snackbar(
+          'Failed',
+          err,
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.redAccent,
+          colorText: Colors.white,
+          duration: const Duration(seconds: 4),
+        );
+        return false;
+      }
+    } catch (e, stack) {
+      Logger.e('HolidaysController => Exception in updateHoliday: $e\n$stack');
+      Get.snackbar(
+        'Error',
+        'Something went wrong: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.redAccent,
+        colorText: Colors.white,
+      );
+      return false;
+    } finally {
+      isSubmitting.value = false;
+    }
   }
 
-  // Delete holiday (Delete)
-  void deleteHoliday(String id) {
-    holidays.removeWhere((h) => h.id == id);
-    selectedHoliday.value = null;
-    Get.back(); // Go back from details to calendar screen
-    Get.snackbar(
-      'Deleted',
-      'Holiday deleted successfully!',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.redAccent,
-      colorText: Colors.white,
-    );
+  // Delete holiday via API
+  Future<bool> deleteHoliday(String id) async {
+    try {
+      isDeleting.value = true;
+      final success = await repository.deleteHoliday(id);
+      if (success) {
+        holidays.removeWhere((h) => h.id == id);
+        selectedHoliday.value = null;
+
+        // Re-fetch to sync summary and months from server
+        fetchHolidays(isRefresh: true);
+
+        // Also refresh leave calendar if active
+        if (Get.isRegistered<LeaveCalendarController>()) {
+          Get.find<LeaveCalendarController>().fetchHolidays(isRefresh: true);
+        }
+
+        Get.snackbar(
+          'Deleted 🎉',
+          'Holiday deleted successfully!',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: const Color(0xFF10B981),
+          colorText: Colors.white,
+          duration: const Duration(seconds: 3),
+        );
+        return true;
+      } else {
+        Get.snackbar(
+          'Failed',
+          'Could not delete holiday. Please try again.',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.redAccent,
+          colorText: Colors.white,
+          duration: const Duration(seconds: 3),
+        );
+        return false;
+      }
+    } catch (e, stack) {
+      Logger.e('HolidaysController => Error in deleteHoliday: $e\n$stack');
+      Get.snackbar(
+        'Error',
+        'Something went wrong: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.redAccent,
+        colorText: Colors.white,
+      );
+      return false;
+    } finally {
+      isDeleting.value = false;
+    }
+  }
+
+  void _initializeFallbackHolidays() {
+    final currentYear = filterYear.value;
+    holidays.addAll([
+      Holiday(
+        id: '1',
+        name: 'Republic Day',
+        date: DateTime(currentYear, 1, 26),
+        type: 'National',
+        location: 'All Locations',
+        repeatEveryYear: true,
+        description: 'Republic Day commemorates the Constitution of India.',
+        addedBy: 'Admin',
+        addedOn: DateTime(currentYear, 1, 5),
+      ),
+      Holiday(
+        id: '2',
+        name: 'Independence Day',
+        date: DateTime(currentYear, 8, 15),
+        type: 'National',
+        location: 'All Locations',
+        repeatEveryYear: true,
+        description: 'National holiday commemorating independence.',
+        addedBy: 'Admin',
+        addedOn: DateTime(currentYear, 1, 10),
+      ),
+      Holiday(
+        id: '3',
+        name: 'Gandhi Jayanti',
+        date: DateTime(currentYear, 10, 2),
+        type: 'National',
+        location: 'All Locations',
+        repeatEveryYear: true,
+        description: 'Celebrated to mark the birthday of Mahatma Gandhi.',
+        addedBy: 'Admin',
+        addedOn: DateTime(currentYear, 1, 10),
+      ),
+    ]);
   }
 
   @override

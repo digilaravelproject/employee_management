@@ -10,8 +10,29 @@ class AddHolidayScreen extends StatelessWidget {
   const AddHolidayScreen({super.key});
 
   String formatFullDate(DateTime date) {
-    const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const weekdays = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday'
+    ];
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
     final weekday = weekdays[date.weekday - 1];
     final monthName = months[date.month - 1];
     return '$weekday, ${date.day.toString().padLeft(2, '0')} $monthName ${date.year}';
@@ -19,11 +40,15 @@ class AddHolidayScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.find<HolidaysController>();
+    final controller = Get.isRegistered<HolidaysController>()
+        ? Get.find<HolidaysController>()
+        : Get.put(HolidaysController());
+
     final isEditMode = controller.selectedHoliday.value != null;
 
     // Local description character counter observable
-    final RxInt descCharCount = (controller.descriptionController.text.length).obs;
+    final RxInt descCharCount =
+        (controller.descriptionController.text.length).obs;
     controller.descriptionController.addListener(() {
       descCharCount.value = controller.descriptionController.text.length;
     });
@@ -33,6 +58,7 @@ class AddHolidayScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
+        scrolledUnderElevation: 0,
         leading: Padding(
           padding: const EdgeInsets.all(8.0),
           child: Container(
@@ -44,10 +70,9 @@ class AddHolidayScreen extends StatelessWidget {
               icon: const Icon(
                 Icons.arrow_back_ios_new_rounded,
                 color: AppColors.textColorPrimary,
-                size: 20,
+                size: 18,
               ),
               onPressed: () {
-                // Clear any edits on back
                 controller.clearForm();
                 Get.back();
               },
@@ -72,7 +97,7 @@ class AddHolidayScreen extends StatelessWidget {
               _buildFieldLabel('Holiday Name'),
               AppInputField(
                 controller: controller.nameController,
-                hint: 'Enter holiday name',
+                hint: 'e.g. Independence Day',
               ),
               const SizedBox(height: 20),
 
@@ -86,19 +111,14 @@ class AddHolidayScreen extends StatelessWidget {
                       context: context,
                       initialDate: dateSelected ?? DateTime.now(),
                       firstDate: DateTime(2020),
-                      lastDate: DateTime(2030),
+                      lastDate: DateTime(2035),
                       builder: (context, child) {
                         return Theme(
                           data: Theme.of(context).copyWith(
                             colorScheme: const ColorScheme.light(
-                              primary: AppColors.primaryColor, // Theme primary color
+                              primary: AppColors.primaryColor,
                               onPrimary: Colors.white,
                               onSurface: AppColors.textColorPrimary,
-                            ),
-                            textButtonTheme: TextButtonThemeData(
-                              style: TextButton.styleFrom(
-                                foregroundColor: AppColors.primaryColor,
-                              ),
                             ),
                           ),
                           child: child!,
@@ -109,8 +129,10 @@ class AddHolidayScreen extends StatelessWidget {
                       controller.selectedDate.value = picked;
                     }
                   },
+                  borderRadius: BorderRadius.circular(14),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 14),
                     decoration: BoxDecoration(
                       color: AppColors.slate50,
                       borderRadius: BorderRadius.circular(14),
@@ -119,16 +141,32 @@ class AddHolidayScreen extends StatelessWidget {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        AppText(
-                          dateSelected != null ? formatFullDate(dateSelected) : 'Select date',
-                          fontSize: 13,
-                          fontWeight: dateSelected != null ? FontWeight.bold : FontWeight.w500,
-                          color: dateSelected != null ? AppColors.textColorPrimary : AppColors.textColorHint,
+                        Row(
+                          children: [
+                            const Icon(
+                              Iconsax.calendar_1,
+                              color: AppColors.primaryColor,
+                              size: 18,
+                            ),
+                            const SizedBox(width: 10),
+                            AppText(
+                              dateSelected != null
+                                  ? formatFullDate(dateSelected)
+                                  : 'Select date (YYYY-MM-DD)',
+                              fontSize: 13,
+                              fontWeight: dateSelected != null
+                                  ? FontWeight.bold
+                                  : FontWeight.w500,
+                              color: dateSelected != null
+                                  ? AppColors.textColorPrimary
+                                  : AppColors.textColorHint,
+                            ),
+                          ],
                         ),
                         const Icon(
-                          Iconsax.calendar,
-                          color: AppColors.textColorHint,
-                          size: 20,
+                          Icons.arrow_forward_ios_rounded,
+                          color: AppColors.slate400,
+                          size: 13,
                         ),
                       ],
                     ),
@@ -149,7 +187,8 @@ class AddHolidayScreen extends StatelessWidget {
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<String>(
                         value: controller.selectedType.value,
-                        icon: const Icon(Iconsax.arrow_down_1, size: 18, color: AppColors.textColorSecondary),
+                        icon: const Icon(Iconsax.arrow_down_1,
+                            size: 18, color: AppColors.textColorSecondary),
                         isExpanded: true,
                         style: const TextStyle(
                           fontSize: 13,
@@ -162,9 +201,30 @@ class AddHolidayScreen extends StatelessWidget {
                           }
                         },
                         items: controller.holidayTypes.map((String val) {
+                          Color badgeColor = AppColors.primaryColor;
+                          if (val.toLowerCase() == 'national') {
+                            badgeColor = AppColors.successColor;
+                          } else if (val.toLowerCase() == 'restricted') {
+                            badgeColor = AppColors.errorColor;
+                          } else if (val.toLowerCase() == 'optional') {
+                            badgeColor = AppColors.warningColor;
+                          }
                           return DropdownMenuItem<String>(
                             value: val,
-                            child: Text(val),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    color: badgeColor,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(val),
+                              ],
+                            ),
                           );
                         }).toList(),
                       ),
@@ -184,7 +244,8 @@ class AddHolidayScreen extends StatelessWidget {
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<String>(
                         value: controller.selectedLocation.value,
-                        icon: const Icon(Iconsax.arrow_down_1, size: 18, color: AppColors.textColorSecondary),
+                        icon: const Icon(Iconsax.arrow_down_1,
+                            size: 18, color: AppColors.textColorSecondary),
                         isExpanded: true,
                         style: const TextStyle(
                           fontSize: 13,
@@ -199,7 +260,15 @@ class AddHolidayScreen extends StatelessWidget {
                         items: controller.locations.map((String val) {
                           return DropdownMenuItem<String>(
                             value: val,
-                            child: Text(val),
+                            child: Row(
+                              children: [
+                                const Icon(Iconsax.location,
+                                    size: 15,
+                                    color: AppColors.textColorSecondary),
+                                const SizedBox(width: 8),
+                                Text(val),
+                              ],
+                            ),
                           );
                         }).toList(),
                       ),
@@ -208,24 +277,45 @@ class AddHolidayScreen extends StatelessWidget {
               const SizedBox(height: 20),
 
               // ── Repeat Every Year ──
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const AppText(
-                    'Repeat Every Year',
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textColorPrimary,
-                  ),
-                  Obx(() => Switch(
-                        value: controller.repeatEveryYear.value,
-                        onChanged: (val) => controller.repeatEveryYear.value = val,
-                        activeThumbColor: Colors.white,
-                        activeTrackColor: AppColors.primaryColor,
-                        inactiveThumbColor: Colors.white,
-                        inactiveTrackColor: AppColors.slate300,
-                      )),
-                ],
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: AppColors.slate50,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppColors.slate200),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: const [
+                        AppText(
+                          'Repeat Every Year',
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textColorPrimary,
+                        ),
+                        SizedBox(height: 2),
+                        AppText(
+                          'Auto-applies to subsequent years',
+                          fontSize: 11,
+                          color: AppColors.textColorHint,
+                        ),
+                      ],
+                    ),
+                    Obx(() => Switch(
+                          value: controller.repeatEveryYear.value,
+                          onChanged: (val) =>
+                              controller.repeatEveryYear.value = val,
+                          activeThumbColor: Colors.white,
+                          activeTrackColor: AppColors.primaryColor,
+                          inactiveThumbColor: Colors.white,
+                          inactiveTrackColor: AppColors.slate300,
+                        )),
+                  ],
+                ),
               ),
               const SizedBox(height: 20),
 
@@ -235,7 +325,7 @@ class AddHolidayScreen extends StatelessWidget {
                 children: [
                   const AppText(
                     'Description (Optional)',
-                    fontSize: 14,
+                    fontSize: 13,
                     fontWeight: FontWeight.w700,
                     color: AppColors.textColorPrimary,
                   ),
@@ -243,17 +333,20 @@ class AddHolidayScreen extends StatelessWidget {
                         '${descCharCount.value}/200',
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        color: descCharCount.value > 200 ? Colors.redAccent : AppColors.textColorHint,
+                        color: descCharCount.value > 200
+                            ? Colors.redAccent
+                            : AppColors.textColorHint,
                       )),
                 ],
               ),
               const SizedBox(height: 8),
               AppInputField(
                 controller: controller.descriptionController,
-                hint: 'Enter description',
-                maxLines: 4,
+                hint:
+                    'National holiday commemorating the Constitution of India.',
+                maxLines: 3,
               ),
-              const SizedBox(height: 40),
+              const SizedBox(height: 36),
 
               // ── Cancel & Save Buttons ──
               Row(
@@ -268,7 +361,8 @@ class AddHolidayScreen extends StatelessWidget {
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         side: const BorderSide(color: AppColors.slate200),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
                       ),
                       child: const AppText(
                         'Cancel',
@@ -282,27 +376,42 @@ class AddHolidayScreen extends StatelessWidget {
 
                   // Save Button
                   Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        if (isEditMode) {
-                          controller.updateHoliday();
-                        } else {
-                          controller.saveHoliday();
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primaryColor, // Theme Primary Color Save button
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      child: AppText(
-                        isEditMode ? 'Save Changes' : 'Save Holiday',
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
+                    child: Obx(() {
+                      final isSubmitting = controller.isSubmitting.value;
+                      return ElevatedButton(
+                        onPressed: isSubmitting
+                            ? null
+                            : () {
+                                if (isEditMode) {
+                                  controller.updateHoliday();
+                                } else {
+                                  controller.addHoliday();
+                                }
+                              },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primaryColor,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: isSubmitting
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2.2,
+                                ),
+                              )
+                            : AppText(
+                                isEditMode ? 'Save Changes' : 'Save Holiday',
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                      );
+                    }),
                   ),
                 ],
               ),
@@ -328,7 +437,8 @@ class AddHolidayScreen extends StatelessWidget {
           children: const [
             TextSpan(
               text: ' *',
-              style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                  color: Colors.redAccent, fontWeight: FontWeight.bold),
             ),
           ],
         ),

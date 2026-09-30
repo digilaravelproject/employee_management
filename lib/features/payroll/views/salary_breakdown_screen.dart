@@ -40,13 +40,21 @@ class SalaryBreakdownScreen extends StatelessWidget {
       ),
       body: Obx(() {
         final record = controller.selectedRecord.value;
-        if (record == null) {
+        final detail = controller.selectedSalaryDetail.value;
+        if (record == null && detail == null) {
           return const Center(child: AppText('No employee selected.'));
         }
 
-        final grossVal = "₹${_formatSalary(record.grossEarnings.toInt())}";
-        final deductVal = "₹${_formatSalary(record.totalDeductions.toInt())}";
-        final netVal = "₹${_formatSalary(record.netPayable.toInt())}";
+        final hasApiEarnings = detail != null && detail.earnings.isNotEmpty;
+        final hasApiDeductions = detail != null && detail.deductions.isNotEmpty;
+
+        final grossAmount = (detail?.grossEarnings ?? record?.grossEarnings ?? 0).toInt();
+        final deductAmount = (detail?.totalDeductions ?? record?.totalDeductions ?? 0).toInt();
+        final netAmount = (detail?.netPayable ?? record?.netPayable ?? 0).toInt();
+
+        final grossVal = "₹${_formatSalary(grossAmount)}";
+        final deductVal = "₹${_formatSalary(deductAmount)}";
+        final netVal = "₹${_formatSalary(netAmount)}";
 
         return SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
@@ -88,13 +96,19 @@ class SalaryBreakdownScreen extends StatelessWidget {
                       padding: EdgeInsets.symmetric(vertical: 12.0),
                       child: Divider(color: AppColors.slate100, height: 1),
                     ),
-                    _buildBreakdownRow('Basic Salary', record.basicSalary),
-                    _buildBreakdownRow('House Rent Allowance (HRA)', record.hra),
-                    _buildBreakdownRow('Conveyance Allowance', record.conveyance),
-                    _buildBreakdownRow('Special Allowance', record.specialAllowance),
-                    _buildBreakdownRow('Incentive', record.incentive),
-                    _buildBreakdownRow('Bonus', record.bonus),
-                    _buildBreakdownRow('Overtime Amount', record.overtimeAmount),
+                    if (hasApiEarnings)
+                      ...detail.earnings.map(
+                        (item) => _buildBreakdownRow(item.name, item.amount.toDouble()),
+                      )
+                    else if (record != null) ...[
+                      _buildBreakdownRow('Basic Salary', record.basicSalary),
+                      _buildBreakdownRow('House Rent Allowance (HRA)', record.hra),
+                      _buildBreakdownRow('Conveyance Allowance', record.conveyance),
+                      _buildBreakdownRow('Special Allowance', record.specialAllowance),
+                      _buildBreakdownRow('Incentive', record.incentive),
+                      _buildBreakdownRow('Bonus', record.bonus),
+                      _buildBreakdownRow('Overtime Amount', record.overtimeAmount),
+                    ],
                   ],
                 ),
               ),
@@ -134,12 +148,18 @@ class SalaryBreakdownScreen extends StatelessWidget {
                       padding: EdgeInsets.symmetric(vertical: 12.0),
                       child: Divider(color: AppColors.slate100, height: 1),
                     ),
-                    _buildBreakdownRow('Leave Deduction', record.leaveDeduction),
-                    _buildBreakdownRow('Late Deduction', record.lateDeduction),
-                    _buildBreakdownRow('PF (12%)', record.pf),
-                    _buildBreakdownRow('ESI', record.esi),
-                    _buildBreakdownRow('Loan / Advance', record.loanAdvance),
-                    _buildBreakdownRow('Other Deduction', record.otherDeduction),
+                    if (hasApiDeductions)
+                      ...detail.deductions.map(
+                        (item) => _buildBreakdownRow(item.name, item.amount.toDouble()),
+                      )
+                    else if (record != null) ...[
+                      _buildBreakdownRow('Leave Deduction', record.leaveDeduction),
+                      _buildBreakdownRow('Late Deduction', record.lateDeduction),
+                      _buildBreakdownRow('PF (12%)', record.pf),
+                      _buildBreakdownRow('ESI', record.esi),
+                      _buildBreakdownRow('Loan / Advance', record.loanAdvance),
+                      _buildBreakdownRow('Other Deduction', record.otherDeduction),
+                    ],
                   ],
                 ),
               ),

@@ -102,6 +102,7 @@ class ProjectTimelineEvent {
   final String subtitle;
   final DateTime date;
   final bool isCompleted;
+  final String? actorName;
 
   const ProjectTimelineEvent({
     required this.id,
@@ -109,6 +110,7 @@ class ProjectTimelineEvent {
     required this.subtitle,
     required this.date,
     this.isCompleted = false,
+    this.actorName,
   });
 }
 
@@ -117,13 +119,40 @@ class ProjectFile {
   final String name;
   final double sizeMb;
   final String type; // PDF, FIG, PNG, etc.
+  final String? url;
+  final String? uploadedByName;
+  final String? createdAt;
+  final String? localPath;
 
   const ProjectFile({
     required this.id,
     required this.name,
     required this.sizeMb,
     required this.type,
+    this.url,
+    this.uploadedByName,
+    this.createdAt,
+    this.localPath,
   });
+
+  bool get isPdf {
+    final t = type.toLowerCase();
+    final n = name.toLowerCase();
+    return t == 'pdf' || n.endsWith('.pdf');
+  }
+
+  bool get isImage {
+    final t = type.toLowerCase();
+    final n = name.toLowerCase();
+    return ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'svg'].contains(t) ||
+        n.endsWith('.png') ||
+        n.endsWith('.jpg') ||
+        n.endsWith('.jpeg') ||
+        n.endsWith('.webp') ||
+        n.endsWith('.gif') ||
+        n.endsWith('.bmp') ||
+        n.endsWith('.svg');
+  }
 }
 
 class Project {
@@ -139,6 +168,9 @@ class Project {
   final List<ProjectTimelineEvent> timeline;
   final List<ProjectFile> files;
   final List<ProjectModule> modules;
+  final double? progress;
+  final int? membersCount;
+  final int? filesCount;
 
   const Project({
     required this.id,
@@ -153,13 +185,21 @@ class Project {
     required this.timeline,
     required this.files,
     this.modules = const [],
+    this.progress,
+    this.membersCount,
+    this.filesCount,
   });
 
-  // Dynamic progress calculation based on tasks
+  // Dynamic progress calculation based on tasks or API progress field
   double get progressPercentage {
-    if (tasks.isEmpty) return 0.0;
-    final doneCount = tasks.where((task) => task.status == 'Done' || task.status == 'Completed').length;
-    return (doneCount / tasks.length);
+    if (tasks.isNotEmpty) {
+      final doneCount = tasks.where((task) => task.status == 'Done' || task.status == 'Completed').length;
+      return (doneCount / tasks.length);
+    }
+    if (progress != null) {
+      return progress! > 1.0 ? (progress! / 100.0).clamp(0.0, 1.0) : progress!.clamp(0.0, 1.0);
+    }
+    return 0.0;
   }
 
   Project copyWith({
@@ -175,6 +215,9 @@ class Project {
     List<ProjectTimelineEvent>? timeline,
     List<ProjectFile>? files,
     List<ProjectModule>? modules,
+    double? progress,
+    int? membersCount,
+    int? filesCount,
   }) {
     return Project(
       id: id ?? this.id,
@@ -189,6 +232,9 @@ class Project {
       timeline: timeline ?? this.timeline,
       files: files ?? this.files,
       modules: modules ?? this.modules,
+      progress: progress ?? this.progress,
+      membersCount: membersCount ?? this.membersCount,
+      filesCount: filesCount ?? this.filesCount,
     );
   }
 }

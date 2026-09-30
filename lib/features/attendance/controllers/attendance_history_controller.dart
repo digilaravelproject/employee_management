@@ -151,6 +151,10 @@ class AttendanceHistoryController extends GetxController {
 
   // Dynamic Month Selector
   void changeMonth(DateTime month) {
+    final now = DateTime.now();
+    if (DateTime(month.year, month.month, 1).isAfter(DateTime(now.year, now.month, 1))) {
+      return;
+    }
     selectedMonth.value = month;
     fetchAttendanceHistory(month);
   }

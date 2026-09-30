@@ -8,6 +8,7 @@ import '../../projects/views/project_list_screen.dart';
 import '../../tasks/views/tasks_list_screen.dart';
 import '../../assets/views/assets_list_screen.dart';
 import '../../holidays/views/holiday_calendar_screen.dart';
+import '../../holidays/bindings/holidays_binding.dart';
 import '../../performance/views/performance_dashboard_screen.dart';
 import '../../company_profile/views/company_profile_view_screen.dart';
 import '../../leads/views/leads_dashboard_shell.dart';
@@ -16,6 +17,7 @@ import '../../clients/views/client_list_screen.dart';
 import '../../hr/views/hr_portal_dashboard.dart';
 import '../../compliance/views/compliance_dashboard_screen.dart';
 import '../../hr/views/announcements_screen.dart';
+import '../../payroll/bindings/payroll_binding.dart';
 import '../../followup/views/followup_dashboard_screen.dart';
 import '../../reports/views/reports_dashboard_screen.dart';
 import '../../security/views/security_dashboard_screen.dart';
@@ -706,7 +708,7 @@ class _ModuleCard extends StatelessWidget {
             } else if (item.label == 'Assets') {
               Get.to(() => const AssetsListScreen());
             } else if (item.label == 'Calendar') {
-              Get.to(() => const HolidayCalendarScreen());
+              Get.to(() => const HolidayCalendarScreen(), binding: HolidaysBinding());
             } else if (item.label == 'Performance') {
               Get.to(() => const PerformanceDashboardScreen());
             } else if (item.label == 'Company Profile') {
@@ -716,7 +718,7 @@ class _ModuleCard extends StatelessWidget {
             } else if (item.label == 'Clients') {
               Get.to(() => const ClientListScreen());
             } else if (item.label == 'Payroll / Salary') {
-              Get.to(() => const SalaryEmployeeListScreen());
+              Get.to(() => const SalaryEmployeeListScreen(), binding: PayrollBinding());
             } else if (item.label.trim() == 'Hr') {
               Get.to(() => const HrPortalDashboard());
             } else if (item.label == 'Policies') {

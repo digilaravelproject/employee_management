@@ -53,10 +53,16 @@ class AppConstants {
   static const String adminEmployeesUrl = 'https://yellowgreen-stork-427223.hostingersite.com/public/api/admin/employees';
   static String adminEmployeeUrl(dynamic id) => '$adminEmployeesUrl/$id';
   static const String adminLeaveRequestsUrl = '/api/admin/leave-requests';
+  static const String adminEmployeeLeavesUrl = '/api/admin/employees/leaves';
+  static const String adminLeaveReportsUrl = '/api/admin/employees/leave-reports';
   static const String adminLeaveTypesUrl = '/api/admin/leave-types';
   static String adminLeaveRequestDetailsUrl(dynamic id) => '$adminLeaveRequestsUrl/$id';
   static String adminLeaveRequestApproveUrl(dynamic id) => '$adminLeaveRequestsUrl/$id/approve';
   static String adminLeaveRequestRejectUrl(dynamic id) => '$adminLeaveRequestsUrl/$id/reject';
+  static const String adminHolidaysUrl = '/api/admin/holidays';
+  static const String adminSalariesUrl = '/api/admin/salaries';
+  static String adminSalaryEmployeeDetailsUrl(String employeeId) => '$adminSalariesUrl/employee/$employeeId';
+  static const String adminSalaryHistoryUrl = '/api/admin/salary-history';
   static const String adminAttendanceUrl = '/api/admin/attendance';
   static const String adminAttendanceCheckInUrl = '/api/admin/attendance/check-in';
   static const String adminAttendanceCheckOutUrl = '/api/admin/attendance/check-out';
@@ -79,6 +85,9 @@ class AppConstants {
   static const String adminRolesUrl = '/api/admin/roles';
   static String adminRoleUrl(dynamic id) => '/api/admin/roles/$id';
   static String adminSearchRolesUrl(String query) => '/api/admin/roles/search?query=$query';
+  static const String adminProjectsUrl = '/api/admin/projects';
+  static const String adminSearchProjectsUrl = '/api/admin/projects/search';
+  static String adminProjectDetailsUrl(dynamic id) => '$adminProjectsUrl/$id';
   static const String userLoginUrl = '/api/user_login';
   static const String otpVerifyUrl = '/api/otp_verify';
   static const String documentTemplatesEndpoint = '/api/v1/document-templates/';

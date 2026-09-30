@@ -59,6 +59,7 @@ class AppRoutes {
   static const String salaryManagement = '/salary-management';
   static const String salaryPaymentEntry = '/salary-payment-entry';
   static const String salaryHistory = '/salary-history';
+  static const String payslipHistory = '/PayslipHistoryScreen';
   static const String advancePaymentEntry = '/advance-payment-entry';
   static const String advanceHistory = '/advance-history';
   static const String staffDocuments = '/staff-documents';

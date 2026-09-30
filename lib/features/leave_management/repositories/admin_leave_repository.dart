@@ -3,6 +3,7 @@ import '../../../core/services/network/api_client.dart';
 import '../../../core/services/network/response_model.dart';
 import '../../../core/utils/logger.dart';
 import '../models/admin_leave_model.dart';
+import '../models/leave_report_model.dart';
 import 'admin_leave_repository_interface.dart';
 
 class AdminLeaveRepository implements AdminLeaveRepositoryInterface {
@@ -94,6 +95,122 @@ class AdminLeaveRepository implements AdminLeaveRepositoryInterface {
       return AdminLeaveListResponseModel(
         status: false,
         message: 'Something went wrong while fetching leave requests: ${e.toString()}',
+        data: [],
+      );
+    }
+  }
+
+  @override
+  Future<AdminLeaveListResponseModel> getEmployeeLeaves({
+    String status = 'all',
+    required String fromDate,
+    required String toDate,
+    int perPage = 100,
+  }) async {
+    try {
+      final Map<String, dynamic> queryParams = {
+        'status': status.toLowerCase(),
+        'from_date': fromDate,
+        'to_date': toDate,
+        'per_page': perPage,
+      };
+
+      Logger.d('AdminLeaveRepository => Calling ${AppConstants.adminEmployeeLeavesUrl} with: $queryParams');
+
+      final response = await apiClient.get(
+        AppConstants.adminEmployeeLeavesUrl,
+        queryParameters: queryParams,
+        handleError: false,
+        showToaster: false,
+      );
+
+      Logger.d('AdminLeaveRepository => Status: ${response.statusCode}, isSuccess: ${response.isSuccess}');
+      Logger.d('AdminLeaveRepository => Data: ${response.json ?? response.body}');
+
+      if (response.json != null) {
+        return AdminLeaveListResponseModel.fromJson(response.json!);
+      } else if (response.body is Map<String, dynamic>) {
+        return AdminLeaveListResponseModel.fromJson(response.body as Map<String, dynamic>);
+      } else {
+        return AdminLeaveListResponseModel(
+          status: response.isSuccess,
+          message: response.message.isNotEmpty
+              ? response.message
+              : (response.isSuccess ? 'Leave requests retrieved successfully.' : 'Failed to retrieve leaves.'),
+          data: [],
+        );
+      }
+    } catch (e, stackTrace) {
+      Logger.e('AdminLeaveRepository => Exception in getEmployeeLeaves: $e');
+      Logger.e('AdminLeaveRepository => StackTrace: $stackTrace');
+      return AdminLeaveListResponseModel(
+        status: false,
+        message: 'Something went wrong: ${e.toString()}',
+        data: [],
+      );
+    }
+  }
+
+  @override
+  Future<LeaveReportResponseModel> getLeaveReports({
+    required String fromDate,
+    required String toDate,
+    dynamic departmentId,
+    dynamic leaveTypeId,
+    String status = 'all',
+  }) async {
+    try {
+      final Map<String, dynamic> queryParams = {
+        'from_date': fromDate,
+        'to_date': toDate,
+        'status': status.toLowerCase(),
+      };
+
+      if (departmentId != null &&
+          departmentId.toString().isNotEmpty &&
+          departmentId.toString() != 'All' &&
+          departmentId.toString() != '0') {
+        queryParams['department_id'] = departmentId;
+      }
+
+      if (leaveTypeId != null &&
+          leaveTypeId.toString().isNotEmpty &&
+          leaveTypeId.toString() != 'All' &&
+          leaveTypeId.toString() != '0') {
+        queryParams['leave_type_id'] = leaveTypeId;
+      }
+
+      Logger.d('AdminLeaveRepository => Calling ${AppConstants.adminLeaveReportsUrl} with: $queryParams');
+
+      final response = await apiClient.get(
+        AppConstants.adminLeaveReportsUrl,
+        queryParameters: queryParams,
+        handleError: false,
+        showToaster: false,
+      );
+
+      Logger.d('AdminLeaveRepository => Status: ${response.statusCode}, isSuccess: ${response.isSuccess}');
+      Logger.d('AdminLeaveRepository => Reports Data: ${response.json ?? response.body}');
+
+      if (response.json != null) {
+        return LeaveReportResponseModel.fromJson(response.json!);
+      } else if (response.body is Map<String, dynamic>) {
+        return LeaveReportResponseModel.fromJson(response.body as Map<String, dynamic>);
+      } else {
+        return LeaveReportResponseModel(
+          status: response.isSuccess,
+          message: response.message.isNotEmpty
+              ? response.message
+              : (response.isSuccess ? 'Leave report retrieved successfully.' : 'Failed to retrieve leave report.'),
+          data: [],
+        );
+      }
+    } catch (e, stackTrace) {
+      Logger.e('AdminLeaveRepository => Exception in getLeaveReports: $e');
+      Logger.e('AdminLeaveRepository => StackTrace: $stackTrace');
+      return LeaveReportResponseModel(
+        status: false,
+        message: 'Something went wrong: ${e.toString()}',
         data: [],
       );
     }

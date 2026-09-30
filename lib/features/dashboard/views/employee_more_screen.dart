@@ -9,6 +9,7 @@ import '../../chat/views/chat_list_screen.dart';
 import '../../company_profile/views/company_profile_view_screen.dart';
 
 // Employee specific screens
+import '../../payroll/bindings/salary_history_binding.dart';
 import '../../payroll/views/employee_my_salary_screen.dart';
 import '../../tasks/views/employee_projects_for_update_screen.dart';
 import '../../compliance/views/compliance_dashboard_screen.dart';
@@ -109,7 +110,7 @@ class EmployeeMoreScreen extends StatelessWidget {
               subtitle: 'View payslips and salary details',
               iconColor: Colors.green,
               onTap: () {
-                Get.to(() => const EmployeeMySalaryScreen());
+                Get.to(() => const EmployeeMySalaryScreen(), binding: SalaryHistoryBinding());
               },
             ),
             _MoreMenuItem(

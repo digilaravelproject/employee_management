@@ -93,6 +93,10 @@ class AttendanceController extends GetxController {
   }
 
   void changeDate(DateTime date) {
+    final now = DateTime.now();
+    if (DateTime(date.year, date.month, date.day).isAfter(DateTime(now.year, now.month, now.day))) {
+      return;
+    }
     selectedDate.value = date;
     fetchAttendance();
   }
@@ -103,7 +107,12 @@ class AttendanceController extends GetxController {
   }
 
   void nextDay() {
-    selectedDate.value = selectedDate.value.add(const Duration(days: 1));
+    final now = DateTime.now();
+    final next = selectedDate.value.add(const Duration(days: 1));
+    if (DateTime(next.year, next.month, next.day).isAfter(DateTime(now.year, now.month, now.day))) {
+      return;
+    }
+    selectedDate.value = next;
     fetchAttendance();
   }
 
@@ -113,11 +122,13 @@ class AttendanceController extends GetxController {
   }
 
   Future<void> selectDateFromPicker(BuildContext context) async {
+    final now = DateTime.now();
+    final initial = selectedDate.value.isAfter(now) ? now : selectedDate.value;
     final picked = await showDatePicker(
       context: context,
-      initialDate: selectedDate.value,
+      initialDate: initial,
       firstDate: DateTime(2020),
-      lastDate: DateTime(2035),
+      lastDate: now,
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(

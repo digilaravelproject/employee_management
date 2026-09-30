@@ -119,6 +119,8 @@ class _DateSelectionStrip extends StatelessWidget {
       final selectedDate = controller.selectedDate.value;
       final selectedDateStr = DateFormat('yyyy-MM-dd').format(selectedDate);
       final dateCards = controller.attendanceData.value?.dateCards ?? [];
+      final now = DateTime.now();
+      final isTodayOrFuture = !selectedDate.isBefore(DateTime(now.year, now.month, now.day));
 
       return Column(
         children: [
@@ -160,18 +162,22 @@ class _DateSelectionStrip extends StatelessWidget {
                 ),
               ),
 
-              // Forward Button
+              // Forward Button (Disabled if already today or future)
               InkWell(
-                onTap: controller.nextDay,
+                onTap: isTodayOrFuture ? null : controller.nextDay,
                 borderRadius: BorderRadius.circular(8),
                 child: Container(
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: isTodayOrFuture ? AppColors.slate100 : Colors.white,
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: AppColors.slate200),
                   ),
-                  child: const Icon(Icons.chevron_right_rounded, color: AppColors.textColorSecondary, size: 20),
+                  child: Icon(
+                    Icons.chevron_right_rounded,
+                    color: isTodayOrFuture ? AppColors.slate300 : AppColors.textColorSecondary,
+                    size: 20,
+                  ),
                 ),
               ),
 
@@ -200,29 +206,42 @@ class _DateSelectionStrip extends StatelessWidget {
               children: dateCards.isNotEmpty
                   ? dateCards.map((card) {
                       final isSelected = card.date == selectedDateStr;
-                      String dayNum = '';
+                      DateTime? cardParsedDate;
                       try {
-                        dayNum = DateFormat('dd').format(DateTime.parse(card.date));
-                      } catch (_) {
+                        cardParsedDate = DateTime.parse(card.date);
+                      } catch (_) {}
+                      final isCardFuture = cardParsedDate != null &&
+                          DateTime(cardParsedDate.year, cardParsedDate.month, cardParsedDate.day)
+                              .isAfter(DateTime(now.year, now.month, now.day));
+
+                      String dayNum = '';
+                      if (cardParsedDate != null) {
+                        dayNum = DateFormat('dd').format(cardParsedDate);
+                      } else {
                         dayNum = card.date.split('-').last;
                       }
 
                       return GestureDetector(
-                        onTap: () {
-                          try {
-                            final parsed = DateTime.parse(card.date);
-                            controller.changeDate(parsed);
-                          } catch (_) {}
-                        },
+                        onTap: isCardFuture
+                            ? null
+                            : () {
+                                if (cardParsedDate != null) {
+                                  controller.changeDate(cardParsedDate);
+                                }
+                              },
                         child: Container(
                           margin: const EdgeInsets.only(right: 10),
                           width: 58,
                           padding: const EdgeInsets.symmetric(vertical: 10),
                           decoration: BoxDecoration(
-                            color: isSelected ? AppColors.primaryColor : Colors.white,
+                            color: isSelected
+                                ? AppColors.primaryColor
+                                : (isCardFuture ? AppColors.slate50 : Colors.white),
                             borderRadius: BorderRadius.circular(14),
                             border: Border.all(
-                              color: isSelected ? AppColors.primaryColor : AppColors.slate200,
+                              color: isSelected
+                                  ? AppColors.primaryColor
+                                  : (isCardFuture ? AppColors.slate100 : AppColors.slate200),
                             ),
                             boxShadow: isSelected
                                 ? [

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_text.dart';
 import '../../../core/controllers/app_controller.dart';
@@ -11,9 +12,29 @@ import '../../tasks/views/task_details_screen.dart';
 import '../controllers/projects_controller.dart';
 import '../models/project_model.dart';
 import 'create_project_screen.dart';
+import 'project_file_viewer_screen.dart';
+import 'project_list_screen.dart';
 
-class ProjectDetailsScreen extends StatelessWidget {
-  const ProjectDetailsScreen({super.key});
+class ProjectDetailsScreen extends StatefulWidget {
+  final String? projectId;
+  const ProjectDetailsScreen({super.key, this.projectId});
+
+  @override
+  State<ProjectDetailsScreen> createState() => _ProjectDetailsScreenState();
+}
+
+class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
+  @override
+  void initState() {
+    super.initState();
+    final controller = Get.find<ProjectsController>();
+    final id = widget.projectId ?? controller.selectedProject.value?.id;
+    if (id != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        controller.fetchProjectDetails(id);
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -37,23 +58,28 @@ class ProjectDetailsScreen extends StatelessWidget {
             ),
           ),
         ),
-        title: const Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            AppText(
-              'Project Workspace',
-              fontSize: 17,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textColorPrimary,
-            ),
-            AppText(
-              'Jira tracking, modules & timesheets',
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-              color: AppColors.textColorHint,
-            ),
-          ],
-        ),
+        title: Obx(() {
+          final p = controller.selectedProject.value;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AppText(
+                p?.name.isNotEmpty == true ? p!.name : 'Project Details',
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textColorPrimary,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              AppText(
+                p != null ? '${p.category} • ${p.status}' : 'Full details & workspace',
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: AppColors.textColorHint,
+              ),
+            ],
+          );
+        }),
         actions: [
           Obx(() {
             final project = controller.selectedProject.value;
@@ -70,7 +96,7 @@ class ProjectDetailsScreen extends StatelessWidget {
                   controller.populateForm(project);
                   Get.to(() => const CreateProjectScreen(isEditMode: true));
                 } else if (val == 'delete') {
-                  _showDeleteConfirm(context, controller, project.id);
+                  _showDeleteConfirm(context, controller, project);
                 }
               },
               itemBuilder: (context) => [
@@ -100,15 +126,61 @@ class ProjectDetailsScreen extends StatelessWidget {
         ],
       ),
       body: Obx(() {
+        if (controller.isLoadingProjectDetails.value && controller.selectedProject.value == null) {
+          return const Center(
+            child: CircularProgressIndicator(
+              strokeWidth: 2.5,
+              valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryColor),
+            ),
+          );
+        }
+
         final p = controller.selectedProject.value;
         if (p == null) {
-          return const Center(child: AppText('No project details found'));
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Iconsax.info_circle, size: 48, color: AppColors.errorColor),
+                  const SizedBox(height: 12),
+                  const AppText('Failed to load project details', fontSize: 16, fontWeight: FontWeight.bold),
+                  const SizedBox(height: 6),
+                  AppText(
+                    controller.projectDetailsError.value.isNotEmpty
+                        ? controller.projectDetailsError.value
+                        : 'No project details found',
+                    fontSize: 12,
+                    color: AppColors.textColorHint,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  if (widget.projectId != null)
+                    ElevatedButton.icon(
+                      onPressed: () => controller.fetchProjectDetails(widget.projectId!),
+                      icon: const Icon(Icons.refresh, size: 16, color: Colors.white),
+                      label: const AppText('Retry', fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primaryColor,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          );
         }
 
         final progress = p.progressPercentage;
 
-        return Column(
-          children: [
+        return RefreshIndicator(
+          onRefresh: () => controller.fetchProjectDetails(widget.projectId ?? p.id),
+          color: AppColors.primaryColor,
+          child: Column(
+            children: [
+              if (controller.isLoadingProjectDetails.value)
+                const LinearProgressIndicator(minHeight: 2.5, color: AppColors.primaryColor),
             // ── Jira-Style Header Summary Card ──
             Container(
               color: Colors.white,
@@ -183,21 +255,21 @@ class ProjectDetailsScreen extends StatelessWidget {
                     const Divider(height: 1, color: AppColors.slate100),
                     const SizedBox(height: 12),
 
-                    // Metrics: Total Tasks, Modules, Progress
+                    // Metrics: Total Tasks, Team, Files, Progress
                     Row(
                       children: [
-                        _buildMetricCol('Tasks', '${p.tasks.length}', Iconsax.task),
+                        _buildMetricCol('Tasks', '${p.tasks.length}', Iconsax.task, onTap: () => controller.selectedDetailsTabIdx.value = 1),
                         _buildVerticalDivider(),
-                        _buildMetricCol('Modules', '${p.modules.length}', Iconsax.hierarchy_2),
+                        _buildMetricCol('Team', '${p.membersCount ?? p.teamMembers.length}', Iconsax.people, onTap: () => controller.selectedDetailsTabIdx.value = 2),
                         _buildVerticalDivider(),
-                        _buildMetricCol('Team', '${p.teamMembers.length}', Iconsax.people),
+                        _buildMetricCol('Files', '${p.filesCount ?? p.files.length}', Iconsax.document, onTap: () => controller.selectedDetailsTabIdx.value = 3),
                         _buildVerticalDivider(),
                         Expanded(
                           child: Column(
                             children: [
                               AppText('${(progress * 100).toInt()}%', fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primaryColor),
                               const SizedBox(height: 4),
-                              const AppText('Done', fontSize: 10, color: AppColors.textColorHint),
+                              const AppText('Progress', fontSize: 10, color: AppColors.textColorHint),
                             ],
                           ),
                         ),
@@ -217,11 +289,13 @@ class ProjectDetailsScreen extends StatelessWidget {
                 child: Obx(() {
                   final currentIdx = controller.selectedDetailsTabIdx.value;
                   final tabs = [
+                    {'label': 'Overview', 'icon': Iconsax.category},
                     {'label': 'Board & Tasks', 'icon': Iconsax.task_square},
+                    {'label': 'Team', 'icon': Iconsax.people},
+                    {'label': 'Files', 'icon': Iconsax.folder_2},
+                    {'label': 'Activity', 'icon': Iconsax.clock},
                     {'label': 'Modules', 'icon': Iconsax.hierarchy_2},
                     {'label': 'Timesheet', 'icon': Iconsax.timer_1},
-                    {'label': 'Activity', 'icon': Iconsax.clock},
-                    {'label': 'Team', 'icon': Iconsax.people},
                   ];
 
                   return ListView.builder(
@@ -287,41 +361,50 @@ class ProjectDetailsScreen extends StatelessWidget {
                 final idx = controller.selectedDetailsTabIdx.value;
                 switch (idx) {
                   case 0:
-                    return _JiraBoardTab(project: p);
+                    return _OverviewTab(project: p);
                   case 1:
-                    return _ModulesTab(project: p);
-                  case 2:
-                    return _TimesheetTab(project: p);
-                  case 3:
-                    return _ProjectActivityTab(project: p);
-                  case 4:
-                    return _TeamTab(project: p);
-                  default:
                     return _JiraBoardTab(project: p);
+                  case 2:
+                    return _TeamTab(project: p);
+                  case 3:
+                    return _FilesTab(project: p);
+                  case 4:
+                    return _ProjectActivityTab(project: p);
+                  case 5:
+                    return _ModulesTab(project: p);
+                  case 6:
+                    return _TimesheetTab(project: p);
+                  default:
+                    return _OverviewTab(project: p);
                 }
               }),
             ),
           ],
-        );
+        ),
+      );
       }),
     );
   }
 
-  Widget _buildMetricCol(String label, String value, IconData icon) {
+  Widget _buildMetricCol(String label, String value, IconData icon, {VoidCallback? onTap}) {
     return Expanded(
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 13, color: AppColors.textColorSecondary),
-              const SizedBox(width: 4),
-              AppText(value, fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textColorPrimary),
-            ],
-          ),
-          const SizedBox(height: 3),
-          AppText(label, fontSize: 10, color: AppColors.textColorHint),
-        ],
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, size: 13, color: AppColors.textColorSecondary),
+                const SizedBox(width: 4),
+                AppText(value, fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textColorPrimary),
+              ],
+            ),
+            const SizedBox(height: 3),
+            AppText(label, fontSize: 10, color: AppColors.textColorHint),
+          ],
+        ),
       ),
     );
   }
@@ -330,29 +413,160 @@ class ProjectDetailsScreen extends StatelessWidget {
     return Container(width: 1, height: 24, color: AppColors.slate200);
   }
 
-  void _showDeleteConfirm(BuildContext context, ProjectsController controller, String id) {
+  void _showDeleteConfirm(BuildContext context, ProjectsController controller, Project project) {
     Get.dialog(
-      AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const AppText('Delete Project', fontSize: 16, fontWeight: FontWeight.bold),
-        content: const AppText('Are you sure you want to delete this project permanently? All tasks and timesheet data will be lost.', fontSize: 13),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const AppText('Cancel', color: AppColors.textColorSecondary, fontWeight: FontWeight.w600),
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        backgroundColor: Colors.white,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Red danger trash icon
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEE2E2),
+                  shape: BoxShape.circle,
+                ),
+                child: const Center(
+                  child: Icon(
+                    Iconsax.trash,
+                    color: Color(0xFFDC2626),
+                    size: 30,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+
+              // Title
+              const AppText(
+                'Delete Project?',
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textColorPrimary,
+              ),
+              const SizedBox(height: 10),
+
+              // Project Name badge
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.slate100,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: AppText(
+                  project.name,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textColorPrimary,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Detailed warning text
+              const AppText(
+                'Are you sure you want to permanently delete this project? All associated tasks, milestones, and project files will be permanently lost. This action cannot be undone.',
+                fontSize: 12,
+                color: AppColors.textColorSecondary,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+
+              // Action buttons (Cancel & Delete)
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        side: const BorderSide(color: AppColors.slate300),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed: () => Get.back(),
+                      child: const AppText(
+                        'Cancel',
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textColorPrimary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Obx(() {
+                      final isDeleting = controller.isDeletingProject.value;
+                      return ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFDC2626),
+                          disabledBackgroundColor: const Color(0xFFDC2626).withValues(alpha: 0.6),
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        onPressed: isDeleting
+                            ? null
+                            : () async {
+                                final success = await controller.deleteProject(project.id);
+                                if (success) {
+                                  // 1. Close dialog if open
+                                  if (Get.isDialogOpen ?? false) {
+                                    Get.back();
+                                  }
+                                  // 2. Return to ProjectListScreen
+                                  if (context.mounted && Navigator.canPop(context)) {
+                                    Navigator.pop(context);
+                                  } else {
+                                    Get.off(() => const ProjectListScreen());
+                                  }
+                                  // 3. Show success snackbar on the list screen
+                                  Get.snackbar(
+                                    'Deleted',
+                                    'Project "${project.name}" deleted successfully!',
+                                    snackPosition: SnackPosition.BOTTOM,
+                                    backgroundColor: const Color(0xFFEF4444),
+                                    colorText: Colors.white,
+                                    duration: const Duration(seconds: 3),
+                                  );
+                                }
+                              },
+                        child: isDeleting
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Iconsax.trash, color: Colors.white, size: 16),
+                                  SizedBox(width: 6),
+                                  AppText(
+                                    'Delete',
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ],
+                              ),
+                      );
+                    }),
+                  ),
+                ],
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () {
-              controller.deleteProject(id);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.redAccent,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            child: const AppText('Delete', color: Colors.white, fontWeight: FontWeight.bold),
-          ),
-        ],
+        ),
       ),
+      barrierDismissible: true,
     );
   }
 }
@@ -1461,11 +1675,36 @@ class _ProjectActivityTab extends StatelessWidget {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 4),
-                    AppText(
-                      event.subtitle,
-                      fontSize: 10,
-                      color: AppColors.textColorHint,
+                    if (event.subtitle.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      AppText(
+                        event.subtitle,
+                        fontSize: 10,
+                        color: AppColors.textColorHint,
+                      ),
+                    ],
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        const Icon(Iconsax.calendar, size: 10, color: AppColors.textColorHint),
+                        const SizedBox(width: 4),
+                        AppText(
+                          DateFormat('dd MMM yyyy, hh:mm a').format(event.date),
+                          fontSize: 9,
+                          color: AppColors.textColorHint,
+                        ),
+                        if (event.actorName != null && event.actorName!.isNotEmpty) ...[
+                          const SizedBox(width: 8),
+                          const AppText('•', fontSize: 9, color: AppColors.textColorHint),
+                          const SizedBox(width: 8),
+                          AppText(
+                            'By ${event.actorName}',
+                            fontSize: 9,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primaryColor,
+                          ),
+                        ],
+                      ],
                     ),
                   ],
                 ),
@@ -1509,13 +1748,43 @@ class _TeamTab extends StatelessWidget {
                       ),
                       child: Row(
                         children: [
-                          CircleAvatar(radius: 20, backgroundImage: NetworkImage(emp.avatarUrl)),
+                          CircleAvatar(
+                            radius: 20,
+                            backgroundColor: AppColors.slate200,
+                            backgroundImage: emp.avatarUrl.isNotEmpty ? NetworkImage(emp.avatarUrl) : null,
+                            onBackgroundImageError: (error, stackTrace) {},
+                            child: emp.avatarUrl.isEmpty
+                                ? Text(
+                                    emp.name.isNotEmpty ? emp.name[0].toUpperCase() : '?',
+                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                  )
+                                : null,
+                          ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                AppText(emp.name, fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textColorPrimary),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: AppText(emp.name, fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textColorPrimary),
+                                    ),
+                                    if (emp.employeeId != null && emp.employeeId!.isNotEmpty)
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.slate100,
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: AppText(emp.employeeId!, fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.textColorSecondary),
+                                      ),
+                                  ],
+                                ),
+                                if (emp.designation != null && emp.designation!.isNotEmpty) ...[
+                                  const SizedBox(height: 2),
+                                  AppText(emp.designation!, fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.primaryColor),
+                                ],
                                 const SizedBox(height: 2),
                                 AppText(emp.email, fontSize: 10, color: AppColors.textColorHint),
                               ],
@@ -1615,6 +1884,329 @@ class _TeamTab extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 6. OVERVIEW TAB (Status Workflow, Project Details, Info Grid)
+// ─────────────────────────────────────────────────────────────────────────────
+class _OverviewTab extends StatelessWidget {
+  final Project project;
+  const _OverviewTab({required this.project});
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = Get.find<ProjectsController>();
+    final rawData = controller.projectDetailsRaw.value;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      physics: const BouncingScrollPhysics(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Project Description Card
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.slate200),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Iconsax.note_text, size: 16, color: AppColors.primaryColor),
+                    SizedBox(width: 8),
+                    AppText('Description', fontSize: 13, fontWeight: FontWeight.bold),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                AppText(
+                  project.description.isNotEmpty ? project.description : 'No description provided.',
+                  fontSize: 12,
+                  color: AppColors.textColorSecondary,
+                  height: 1.5,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // Status Track Workflow Card
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.slate200),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Iconsax.status, size: 16, color: AppColors.primaryColor),
+                    SizedBox(width: 8),
+                    AppText('Workflow Status Track', fontSize: 13, fontWeight: FontWeight.bold),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    _buildStatusStep('Not Started', true, project.status.toLowerCase() == 'not started'),
+                    Expanded(child: Container(height: 2, color: project.status.toLowerCase() != 'not started' ? AppColors.successColor : AppColors.slate200)),
+                    _buildStatusStep('In Progress', project.status.toLowerCase() == 'in progress' || project.status.toLowerCase() == 'completed', project.status.toLowerCase() == 'in progress'),
+                    Expanded(child: Container(height: 2, color: project.status.toLowerCase() == 'completed' ? AppColors.successColor : AppColors.slate200)),
+                    _buildStatusStep('Completed', project.status.toLowerCase() == 'completed', project.status.toLowerCase() == 'completed'),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // Project Information Grid
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.slate200),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Iconsax.info_circle, size: 16, color: AppColors.primaryColor),
+                    SizedBox(width: 8),
+                    AppText('Project Information', fontSize: 13, fontWeight: FontWeight.bold),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                _buildInfoRow('Category', project.category),
+                const Divider(height: 16, color: AppColors.slate100),
+                _buildInfoRow('Start Date', _formatDate(project.startDate)),
+                const Divider(height: 16, color: AppColors.slate100),
+                _buildInfoRow('End Date', _formatDate(project.endDate)),
+                const Divider(height: 16, color: AppColors.slate100),
+                _buildInfoRow('Total Team Members', '${project.membersCount ?? project.teamMembers.length} Members'),
+                const Divider(height: 16, color: AppColors.slate100),
+                InkWell(
+                  onTap: () => controller.selectedDetailsTabIdx.value = 3,
+                  borderRadius: BorderRadius.circular(8),
+                  child: _buildInfoRow('Attached Files', '${project.filesCount ?? project.files.length} Files  •  Tap to view'),
+                ),
+                if (rawData != null && rawData.startDate.isNotEmpty) ...[
+                  const Divider(height: 16, color: AppColors.slate100),
+                  _buildInfoRow('Progress', '${rawData.progress}%'),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusStep(String title, bool isCompleted, bool isCurrent) {
+    Color color = isCurrent ? AppColors.primaryColor : (isCompleted ? AppColors.successColor : AppColors.slate300);
+    return Column(
+      children: [
+        Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.15),
+            shape: BoxShape.circle,
+            border: Border.all(color: color, width: 2),
+          ),
+          child: Icon(
+            isCompleted ? Icons.check : Icons.circle,
+            size: 14,
+            color: color,
+          ),
+        ),
+        const SizedBox(height: 4),
+        AppText(
+          title,
+          fontSize: 10,
+          fontWeight: isCurrent ? FontWeight.bold : FontWeight.w500,
+          color: isCurrent ? AppColors.primaryColor : AppColors.textColorSecondary,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        AppText(label, fontSize: 12, color: AppColors.textColorHint),
+        AppText(value, fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textColorPrimary),
+      ],
+    );
+  }
+
+  String _formatDate(DateTime dt) => DateFormat('dd MMM yyyy').format(dt);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 7. FILES TAB (Attachments, downloads, uploaded by, full screen view)
+// ─────────────────────────────────────────────────────────────────────────────
+class _FilesTab extends StatelessWidget {
+  final Project project;
+  const _FilesTab({required this.project});
+
+  @override
+  Widget build(BuildContext context) {
+    if (project.files.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Iconsax.folder_open, size: 54, color: AppColors.textColorHint.withValues(alpha: 0.3)),
+            const SizedBox(height: 12),
+            const AppText('No Files Uploaded', fontSize: 15, fontWeight: FontWeight.bold),
+            const SizedBox(height: 4),
+            const AppText('This project has no attachments yet', fontSize: 11, color: AppColors.textColorHint),
+          ],
+        ),
+      );
+    }
+
+    return ListView.separated(
+      padding: const EdgeInsets.all(16),
+      itemCount: project.files.length,
+      separatorBuilder: (context, index) => const SizedBox(height: 10),
+      itemBuilder: (context, index) {
+        final file = project.files[index];
+        final isPdf = file.isPdf;
+        final isImage = file.isImage;
+
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: () => ProjectFileViewer.open(context, file),
+            child: Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.slate200),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.02),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: (isPdf
+                              ? Colors.redAccent
+                              : (isImage ? AppColors.indigo500 : AppColors.primaryColor))
+                          .withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      isPdf
+                          ? Iconsax.document_text
+                          : (isImage ? Iconsax.gallery : Iconsax.document),
+                      color: isPdf
+                          ? Colors.redAccent
+                          : (isImage ? AppColors.indigo500 : AppColors.primaryColor),
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        AppText(
+                          file.name,
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 3),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                              decoration: BoxDecoration(
+                                color: (isPdf
+                                        ? Colors.redAccent
+                                        : (isImage ? AppColors.indigo500 : AppColors.slate500))
+                                    .withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: AppText(
+                                file.type,
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                                color: isPdf
+                                    ? Colors.redAccent
+                                    : (isImage ? AppColors.indigo500 : AppColors.slate600),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            AppText('${file.sizeMb.toStringAsFixed(2)} MB',
+                                fontSize: 10, color: AppColors.textColorHint),
+                            if (file.uploadedByName != null && file.uploadedByName!.isNotEmpty) ...[
+                              const SizedBox(width: 6),
+                              const AppText('•', fontSize: 10, color: AppColors.textColorHint),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: AppText(
+                                  'By ${file.uploadedByName}',
+                                  fontSize: 10,
+                                  color: AppColors.textColorSecondary,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  // Full view button
+                  Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryColor.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: IconButton(
+                      icon: const Icon(Icons.fullscreen_rounded,
+                          color: AppColors.primaryColor, size: 22),
+                      tooltip: 'Full Screen View',
+                      onPressed: () => ProjectFileViewer.open(context, file),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

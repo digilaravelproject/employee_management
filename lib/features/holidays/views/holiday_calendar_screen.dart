@@ -7,6 +7,7 @@ import '../controllers/holidays_controller.dart';
 import '../models/holiday_model.dart';
 import 'add_holiday_screen.dart';
 import 'holiday_details_screen.dart';
+import 'widgets/delete_holiday_dialog.dart';
 
 class HolidayCalendarScreen extends StatelessWidget {
   const HolidayCalendarScreen({super.key});
@@ -14,7 +15,9 @@ class HolidayCalendarScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Inject controller
-    final controller = Get.put(HolidaysController());
+    final controller = Get.isRegistered<HolidaysController>()
+        ? Get.find<HolidaysController>()
+        : Get.put(HolidaysController());
 
     return Scaffold(
       backgroundColor: AppColors.scaffoldBackgroundColor,
@@ -51,29 +54,114 @@ class HolidayCalendarScreen extends StatelessWidget {
             // ── Filters Section ──
             _buildFilters(context, controller),
 
-            // ── Scrollable Collapsible Months List ──
+            // ── Summary Metrics Strip (Total, National, Restricted, Optional) ──
+            _buildSummaryRow(controller),
+
+            // ── Linear Loading Indicator on Refresh ──
+            Obx(() {
+              if (controller.isLoading.value && controller.holidays.isNotEmpty) {
+                return const LinearProgressIndicator(
+                  minHeight: 2.5,
+                  backgroundColor: Colors.transparent,
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryColor),
+                );
+              }
+              return const SizedBox.shrink();
+            }),
+
+            // ── Scrollable Collapsible Months List with Pull-to-Refresh ──
             Expanded(
               child: Obx(() {
-                final grouped = controller.holidaysByMonth;
-                return ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  physics: const BouncingScrollPhysics(),
-                  itemCount: 12,
-                  itemBuilder: (context, index) {
-                    final monthIndex = index + 1;
-                    return Obx(() {
-                      final list = grouped[monthIndex] ?? [];
-                      final isExpanded = controller.expandedMonths[monthIndex] ?? false;
+                if (controller.isLoading.value && controller.holidays.isEmpty) {
+                  return const Center(
+                    child: CircularProgressIndicator(
+                      color: AppColors.primaryColor,
+                    ),
+                  );
+                }
 
-                      return _MonthAccordionItem(
-                        monthIndex: monthIndex,
-                        holidays: list,
-                        isExpanded: isExpanded,
-                        onToggle: () => controller.toggleMonth(monthIndex),
-                        controller: controller,
-                      );
-                    });
-                  },
+                final grouped = controller.holidaysByMonth;
+                final allHolidays = controller.filteredHolidays;
+
+                return RefreshIndicator(
+                  onRefresh: () => controller.fetchHolidays(isRefresh: true),
+                  color: AppColors.primaryColor,
+                  child: allHolidays.isEmpty
+                      ? ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          children: [
+                            SizedBox(height: MediaQuery.of(context).size.height * 0.18),
+                            Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(20),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primaryLight,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      Iconsax.calendar_remove,
+                                      size: 44,
+                                      color: AppColors.primaryColor,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  const AppText(
+                                    'No Holidays Found',
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.textColorPrimary,
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 32),
+                                    child: AppText(
+                                      'No holidays listed for ${controller.filterYear.value} in ${controller.filterLocation.value}.',
+                                      fontSize: 13,
+                                      color: AppColors.textColorSecondary,
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 18),
+                                  OutlinedButton.icon(
+                                    onPressed: () => controller.fetchHolidays(isRefresh: true),
+                                    icon: const Icon(Icons.refresh_rounded, size: 18),
+                                    label: const Text('Refresh'),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: AppColors.primaryColor,
+                                      side: const BorderSide(color: AppColors.primaryColor),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          physics: const AlwaysScrollableScrollPhysics(
+                            parent: BouncingScrollPhysics(),
+                          ),
+                          itemCount: 12,
+                          itemBuilder: (context, index) {
+                            final monthIndex = index + 1;
+                            return Obx(() {
+                              final list = grouped[monthIndex] ?? [];
+                              final isExpanded = controller.expandedMonths[monthIndex] ?? false;
+
+                              return _MonthAccordionItem(
+                                monthIndex: monthIndex,
+                                holidays: list,
+                                isExpanded: isExpanded,
+                                onToggle: () => controller.toggleMonth(monthIndex),
+                                controller: controller,
+                              );
+                            });
+                          },
+                        ),
                 );
               }),
             ),
@@ -228,6 +316,89 @@ class HolidayCalendarScreen extends StatelessWidget {
     );
   }
 
+  // Summary Metrics Strip: Total, National, Restricted, Optional
+  Widget _buildSummaryRow(HolidaysController controller) {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.only(left: 16, right: 16, bottom: 12),
+      child: Obx(() {
+        return Row(
+          children: [
+            _buildSummaryPill(
+              label: 'Total',
+              count: controller.totalHolidays,
+              bgColor: const Color(0xFFEFF6FF),
+              textColor: const Color(0xFF2563EB),
+              borderColor: const Color(0xFFBFDBFE),
+            ),
+            const SizedBox(width: 8),
+            _buildSummaryPill(
+              label: 'National',
+              count: controller.nationalHolidays,
+              bgColor: const Color(0xFFECFDF5),
+              textColor: const Color(0xFF059669),
+              borderColor: const Color(0xFFA7F3D0),
+            ),
+            const SizedBox(width: 8),
+            _buildSummaryPill(
+              label: 'Restricted',
+              count: controller.restrictedHolidays,
+              bgColor: const Color(0xFFFFFBEB),
+              textColor: const Color(0xFFD97706),
+              borderColor: const Color(0xFFFDE68A),
+            ),
+            const SizedBox(width: 8),
+            _buildSummaryPill(
+              label: 'Optional',
+              count: controller.optionalHolidays,
+              bgColor: const Color(0xFFFAF5FF),
+              textColor: const Color(0xFF7C3AED),
+              borderColor: const Color(0xFFE9D5FF),
+            ),
+          ],
+        );
+      }),
+    );
+  }
+
+  Widget _buildSummaryPill({
+    required String label,
+    required int count,
+    required Color bgColor,
+    required Color textColor,
+    required Color borderColor,
+  }) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: borderColor, width: 1),
+        ),
+        child: Column(
+          children: [
+            AppText(
+              '$count',
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+              color: textColor,
+            ),
+            const SizedBox(height: 2),
+            AppText(
+              label,
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: textColor.withValues(alpha: 0.85),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   // Beautiful Custom Year Selector Bottom Sheet
   void _showYearBottomSheet(BuildContext context, HolidaysController controller) {
     showModalBottomSheet(
@@ -277,7 +448,8 @@ class HolidayCalendarScreen extends StatelessWidget {
               // Year list options
               Obx(() {
                 final currentYear = controller.filterYear.value;
-                final years = [DateTime.now().year - 2, DateTime.now().year - 1, DateTime.now().year];
+                final baseYear = DateTime.now().year;
+                final years = [baseYear - 1, baseYear, baseYear + 1, baseYear + 2];
                 return Column(
                   children: years.map((year) {
                     final isSelected = currentYear == year;
@@ -285,7 +457,7 @@ class HolidayCalendarScreen extends StatelessWidget {
                       padding: const EdgeInsets.only(bottom: 10),
                       child: InkWell(
                         onTap: () {
-                          controller.filterYear.value = year;
+                          controller.changeYear(year);
                           Navigator.pop(context);
                         },
                         borderRadius: BorderRadius.circular(12),
@@ -396,7 +568,7 @@ class HolidayCalendarScreen extends StatelessWidget {
                       padding: const EdgeInsets.only(bottom: 10),
                       child: InkWell(
                         onTap: () {
-                          controller.filterLocation.value = loc;
+                          controller.changeLocation(loc);
                           Navigator.pop(context);
                         },
                         borderRadius: BorderRadius.circular(12),
@@ -742,7 +914,8 @@ class _HolidayItemCard extends StatelessWidget {
           child: InkWell(
             onTap: () {
               controller.selectedHoliday.value = holiday;
-              Get.to(() => const HolidayDetailsScreen());
+              controller.fetchHolidayDetails(holiday.id);
+              Get.to(() => HolidayDetailsScreen(holidayId: holiday.id));
             },
             child: IntrinsicHeight(
               child: Row(
@@ -908,7 +1081,8 @@ class _HolidayItemCard extends StatelessWidget {
                 onTap: () {
                   Navigator.pop(context);
                   controller.selectedHoliday.value = holiday;
-                  Get.to(() => const HolidayDetailsScreen());
+                  controller.fetchHolidayDetails(holiday.id);
+                  Get.to(() => HolidayDetailsScreen(holidayId: holiday.id));
                 },
               ),
 
@@ -944,7 +1118,7 @@ class _HolidayItemCard extends StatelessWidget {
                 title: const AppText('Delete Holiday', fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.errorColor),
                 onTap: () {
                   Navigator.pop(context);
-                  _showDeleteConfirmationDialog();
+                  _showDeleteConfirmationDialog(context);
                 },
               ),
             ],
@@ -955,42 +1129,11 @@ class _HolidayItemCard extends StatelessWidget {
   }
 
   // Confirmation Alert Dialog before deleting
-  void _showDeleteConfirmationDialog() {
-    Get.dialog(
-      AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            const Icon(Iconsax.warning_2, color: AppColors.errorColor, size: 26),
-            const SizedBox(width: 10),
-            const AppText('Delete Holiday?', fontSize: 16, fontWeight: FontWeight.bold),
-          ],
-        ),
-        content: AppText(
-          'Are you sure you want to delete "${holiday.name}"? This action cannot be undone.',
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
-          color: AppColors.textColorSecondary,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const AppText('Cancel', fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textColorSecondary),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Get.back();
-              controller.deleteHoliday(holiday.id);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.errorColor,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              elevation: 0,
-            ),
-            child: const AppText('Delete', fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
-          ),
-        ],
-      ),
+  void _showDeleteConfirmationDialog(BuildContext context) {
+    showDeleteHolidayDialog(
+      context: context,
+      holiday: holiday,
+      controller: controller,
     );
   }
 }
