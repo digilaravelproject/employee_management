@@ -124,81 +124,6 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
           color: AppColors.textColorPrimary,
         ),
         actions: [
-          // Quick Role Switcher Pill for easy review
-          Obx(() {
-            final role = appController.userRole.value;
-            return Container(
-              margin: const EdgeInsets.symmetric(vertical: 10),
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              decoration: BoxDecoration(
-                color: AppColors.slate100,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppColors.slate200),
-              ),
-              child: PopupMenuButton<String>(
-                tooltip: 'Switch Role View',
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      role == 'admin'
-                          ? Icons.admin_panel_settings_rounded
-                          : role == 'manager'
-                              ? Icons.manage_accounts_rounded
-                              : Icons.person_rounded,
-                      size: 14,
-                      color: AppColors.primaryColor,
-                    ),
-                    const SizedBox(width: 4),
-                    AppText(
-                      role.capitalizeFirst ?? role,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primaryColor,
-                    ),
-                    const Icon(Icons.arrow_drop_down, size: 16, color: AppColors.textColorSecondary),
-                  ],
-                ),
-                onSelected: (val) {
-                  appController.setRole(val);
-                },
-                itemBuilder: (context) => [
-                  const PopupMenuItem(
-                    value: 'admin',
-                    child: Row(
-                      children: [
-                        Icon(Icons.admin_panel_settings_rounded, size: 16, color: Colors.purple),
-                        SizedBox(width: 8),
-                        AppText('Admin View (Create / Edit / Delete)', fontSize: 12),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'manager',
-                    child: Row(
-                      children: [
-                        Icon(Icons.manage_accounts_rounded, size: 16, color: Colors.blue),
-                        SizedBox(width: 8),
-                        AppText('Manager View (Time Tracking & Review)', fontSize: 12),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'employee',
-                    child: Row(
-                      children: [
-                        Icon(Icons.person_rounded, size: 16, color: Colors.teal),
-                        SizedBox(width: 8),
-                        AppText('Employee View (Live Timer & Tasks)', fontSize: 12),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }),
-          const SizedBox(width: 8),
-
           // Admin Edit & Delete actions
           Obx(() {
             final task = controller.selectedTask.value;
@@ -285,10 +210,11 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
 
                     const SizedBox(height: 14),
 
-                    // Jira Collaboration Actions: Pass / Handover & Ask Question / Blocker
-                    _buildCollaborationBar(task),
-
-                    const SizedBox(height: 16),
+                    // Jira Collaboration Actions: Pass / Handover & Ask Question / Blocker (Employee only)
+                    if (isEmployee) ...[
+                      _buildCollaborationBar(task),
+                      const SizedBox(height: 16),
+                    ],
 
                     // 3. Task Heading Card & Metadata
                     Container(
@@ -511,13 +437,9 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                 iconColor = AppColors.textColorHint;
               }
 
-              return GestureDetector(
-                onTap: () {
-                  _showChangeStatusConfirmation(context, stage['key'] as String);
-                },
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
                     Container(
                       width: 28,
                       height: 28,
@@ -545,7 +467,6 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                       color: isCurrent ? AppColors.textColorPrimary : AppColors.textColorHint,
                     ),
                   ],
-                ),
               );
             }),
           ),
@@ -2672,39 +2593,6 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
     );
   }
 
-  void _showChangeStatusConfirmation(BuildContext context, String newStatus) {
-    final current = controller.selectedTask.value;
-    if (current == null || current.normalizedStatus == newStatus) return;
-
-    Get.dialog(
-      AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: AppText('Move to $newStatus?', fontSize: 15, fontWeight: FontWeight.bold),
-        content: AppText(
-          'Are you sure you want to transition this task from "${current.normalizedStatus}" to "$newStatus"?',
-          fontSize: 12,
-          color: AppColors.textColorSecondary,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const AppText('Cancel', color: AppColors.textColorSecondary),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Get.back();
-              controller.updateTaskStatus(newStatus, 'Manually changed status to $newStatus');
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primaryColor,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            child: const AppText('Confirm', color: Colors.white, fontWeight: FontWeight.bold),
-          ),
-        ],
-      ),
-    );
-  }
 
   void _showManualStatusChangeDialog(BuildContext context, TaskModel task) {
     final options = ['Pending', 'In Progress', 'Testing', 'Completed'];

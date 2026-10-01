@@ -1023,7 +1023,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             _buildFieldLabel('Due Date', true),
-                            const SizedBox(height: 6),
+                            SizedBox(height: 6),
                             GestureDetector(
                               onTap: () => _pickDate(isStartDate: false),
                               child: Container(

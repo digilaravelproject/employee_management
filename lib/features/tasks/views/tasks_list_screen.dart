@@ -122,80 +122,12 @@ class TasksListScreen extends StatelessWidget {
           );
         }),
         actions: [
-          // Role Switcher Pill
-          Obx(() {
-            final role = appController.userRole.value;
-            return Container(
-              margin: const EdgeInsets.symmetric(vertical: 10),
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              decoration: BoxDecoration(
-                color: AppColors.slate100,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppColors.slate200),
-              ),
-              child: PopupMenuButton<String>(
-                tooltip: 'Switch Role View',
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      role == 'admin'
-                          ? Icons.admin_panel_settings_rounded
-                          : role == 'manager'
-                              ? Icons.manage_accounts_rounded
-                              : Icons.person_rounded,
-                      size: 14,
-                      color: AppColors.primaryColor,
-                    ),
-                    const SizedBox(width: 4),
-                    AppText(
-                      role.capitalizeFirst ?? role,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primaryColor,
-                    ),
-                    const Icon(Icons.arrow_drop_down, size: 16, color: AppColors.textColorSecondary),
-                  ],
-                ),
-                onSelected: (val) {
-                  appController.setRole(val);
-                },
-                itemBuilder: (context) => [
-                  const PopupMenuItem(
-                    value: 'admin',
-                    child: Row(
-                      children: [
-                        Icon(Icons.admin_panel_settings_rounded, size: 16, color: Colors.purple),
-                        SizedBox(width: 8),
-                        AppText('Admin View (Create / Edit / Delete)', fontSize: 12),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'manager',
-                    child: Row(
-                      children: [
-                        Icon(Icons.manage_accounts_rounded, size: 16, color: Colors.blue),
-                        SizedBox(width: 8),
-                        AppText('Manager View (Time Tracking & Review)', fontSize: 12),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'employee',
-                    child: Row(
-                      children: [
-                        Icon(Icons.person_rounded, size: 16, color: Colors.teal),
-                        SizedBox(width: 8),
-                        AppText('Employee View (Live Timer & Tasks)', fontSize: 12),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }),
-          const SizedBox(width: 12),
+          IconButton(
+            tooltip: 'Refresh',
+            icon: const Icon(Icons.refresh_rounded, color: AppColors.textColorSecondary, size: 20),
+            onPressed: () => controller.fetchTasks(isRefresh: true),
+          ),
+          const SizedBox(width: 8),
         ],
       ),
       body: Column(
@@ -452,6 +384,7 @@ class TasksListScreen extends StatelessWidget {
                   final task = tList[index];
                   final prioColor = _getPriorityColor(task.priority);
                   final isAdmin = appController.userRole.value.toLowerCase() == 'admin';
+                  final isEmployee = appController.userRole.value.toLowerCase() == 'employee';
 
                   return GestureDetector(
                     onTap: () {
@@ -710,71 +643,109 @@ class TasksListScreen extends StatelessWidget {
                                 ),
                                 const Spacer(),
 
-                                // Quick Start / Pause buttons on card
-                                if (task.normalizedStatus == TaskModel.statusToDo)
-                                  GestureDetector(
-                                    onTap: () => controller.startTaskTimer(task.id),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                // Timing controls: Only Employee can Start/Pause/Resume task timers
+                                if (isEmployee) ...[
+                                  if (task.normalizedStatus == TaskModel.statusToDo)
+                                    GestureDetector(
+                                      onTap: () => controller.startTaskTimer(task.id),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.primaryColor,
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: const Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(Icons.play_arrow_rounded, color: Colors.white, size: 14),
+                                            SizedBox(width: 2),
+                                            AppText('Start', fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
+                                          ],
+                                        ),
+                                      ),
+                                    )
+                                  else if (task.normalizedStatus == TaskModel.statusInProgress)
+                                    GestureDetector(
+                                      onTap: () {
+                                        if (task.isTimerRunning) {
+                                          controller.pauseTaskTimer(task.id);
+                                        } else {
+                                          controller.startTaskTimer(task.id);
+                                        }
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: task.isTimerRunning ? const Color(0xFFF59E0B) : AppColors.primaryColor,
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              task.isTimerRunning ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                                              color: Colors.white,
+                                              size: 14,
+                                            ),
+                                            const SizedBox(width: 2),
+                                            AppText(
+                                              task.isTimerRunning ? 'Pause' : 'Resume',
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.white,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    )
+                                  else if (task.normalizedStatus == TaskModel.statusTesting)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                       decoration: BoxDecoration(
-                                        color: AppColors.primaryColor,
+                                        color: const Color(0xFF6366F1).withValues(alpha: 0.15),
                                         borderRadius: BorderRadius.circular(6),
                                       ),
-                                      child: const Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(Icons.play_arrow_rounded, color: Colors.white, size: 14),
-                                          SizedBox(width: 2),
-                                          AppText('Start', fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
-                                        ],
-                                      ),
-                                    ),
-                                  )
-                                else if (task.normalizedStatus == TaskModel.statusInProgress)
-                                  GestureDetector(
-                                    onTap: () {
-                                      if (task.isTimerRunning) {
-                                        controller.pauseTaskTimer(task.id);
-                                      } else {
-                                        controller.startTaskTimer(task.id);
-                                      }
-                                    },
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      child: const AppText('Under Review', fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF6366F1)),
+                                    )
+                                  else if (task.normalizedStatus == TaskModel.statusCompleted)
+                                    const Icon(Icons.check_circle_rounded, size: 18, color: AppColors.successColor),
+                                ] else ...[
+                                  // For Admin / Manager: Static status pill (Admin/Manager only views status)
+                                  if (task.normalizedStatus == TaskModel.statusCompleted)
+                                    const Icon(Icons.check_circle_rounded, size: 18, color: AppColors.successColor)
+                                  else if (task.normalizedStatus == TaskModel.statusTesting)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                       decoration: BoxDecoration(
-                                        color: task.isTimerRunning ? const Color(0xFFF59E0B) : AppColors.primaryColor,
+                                        color: const Color(0xFF6366F1).withValues(alpha: 0.15),
                                         borderRadius: BorderRadius.circular(6),
                                       ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(
-                                            task.isTimerRunning ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                                            color: Colors.white,
-                                            size: 14,
-                                          ),
-                                          const SizedBox(width: 2),
-                                          AppText(
-                                            task.isTimerRunning ? 'Pause' : 'Resume',
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.white,
-                                          ),
-                                        ],
+                                      child: const AppText('Under Review', fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF6366F1)),
+                                    )
+                                  else if (task.isTimerRunning)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.primaryLight,
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: const AppText('Running', fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.primaryColor),
+                                    )
+                                  else
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.slate100,
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: AppText(
+                                        task.normalizedStatus,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: _getStatusTextColor(task.normalizedStatus),
                                       ),
                                     ),
-                                  )
-                                else if (task.normalizedStatus == TaskModel.statusTesting)
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF6366F1).withValues(alpha: 0.15),
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: const AppText('Under Review', fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF6366F1)),
-                                  )
-                                else if (task.normalizedStatus == TaskModel.statusCompleted)
-                                  const Icon(Icons.check_circle_rounded, size: 18, color: AppColors.successColor),
+                                ],
                               ],
                             ),
                           ),
