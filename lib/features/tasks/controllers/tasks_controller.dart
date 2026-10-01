@@ -1,14 +1,38 @@
 import 'dart:async';
+import 'dart:convert';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
+import '../../../core/constants/app_constants.dart';
+import '../../../core/controllers/app_controller.dart';
+import '../../../core/services/network/api_client.dart';
+import '../../../core/services/storage/shared_prefs.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/logger.dart';
+import '../../employee/management/models/employee_model.dart';
 import '../../projects/controllers/projects_controller.dart';
 import '../../projects/models/project_model.dart';
 import '../../role_permissions/models/role_permission_models.dart';
-import '../../../core/controllers/app_controller.dart';
+import '../models/create_task_model.dart';
 import '../models/task_model.dart';
+import '../repositories/task_repository.dart';
+import '../repositories/task_repository_interface.dart';
 
 class TasksController extends GetxController {
+  final TaskRepositoryInterface repository;
+
+  TasksController({TaskRepositoryInterface? repository})
+      : repository = repository ??
+            (Get.isRegistered<TaskRepositoryInterface>()
+                ? Get.find<TaskRepositoryInterface>()
+                : TaskRepository(
+                    apiClient: Get.isRegistered<ApiClient>()
+                        ? Get.find<ApiClient>()
+                        : Get.put(ApiClient(), permanent: true),
+                  ));
+
   final RxList<TaskModel> tasks = <TaskModel>[].obs;
   final RxString searchQuery = ''.obs;
   final RxString selectedFilter = 'All'.obs; // All, To Do, In Progress, Testing, Completed, My Tasks, Team Tracking
@@ -26,14 +50,53 @@ class TasksController extends GetxController {
   // Task Creation & Edit Form State
   final titleController = TextEditingController();
   final descriptionController = TextEditingController();
+  final customCategoryController = TextEditingController();
+  final RxString selectedCategory = 'UI/UX Design'.obs;
+  final RxBool isCustomCategory = false.obs;
   final RxString selectedPriority = 'Medium'.obs;
-  final RxString selectedStatus = TaskModel.statusToDo.obs;
-  final Rx<DateTime> selectedDeadline = DateTime.now().add(const Duration(days: 7)).obs;
-  final RxList<AppUser> tempAssignees = <AppUser>[].obs;
-  final RxList<String> tempAttachments = <String>[].obs;
+  final RxString selectedStatus = 'Pending'.obs;
+  final Rx<DateTime> startDate = DateTime.now().obs;
+  final Rx<DateTime> dueDate = DateTime.now().add(const Duration(days: 14)).obs;
+  final Rx<DateTime> selectedDeadline = DateTime.now().add(const Duration(days: 14)).obs;
+  final RxInt estimatedHours = 5.obs;
+  final RxInt estimatedMinutes = 30.obs;
+
+  String get formattedEstimatedHours {
+    final hStr = estimatedHours.value.toString().padLeft(2, '0');
+    final mStr = estimatedMinutes.value.toString().padLeft(2, '0');
+    return '${hStr}h ${mStr}m';
+  }
+
+  // Selected project for API submission
+  final Rxn<Project> selectedProject = Rxn<Project>();
   final RxString selectedProjectName = 'None'.obs;
   final RxString selectedModuleName = 'General'.obs;
   final RxString selectedSubModuleName = 'Default'.obs;
+
+  // Selected employees from API
+  final RxList<EmployeeModel> selectedEmployees = <EmployeeModel>[].obs;
+  final RxList<AppUser> tempAssignees = <AppUser>[].obs; // For backwards compatibility
+
+  // Attached files
+  final RxList<PlatformFile> attachedRealFiles = <PlatformFile>[].obs;
+  final RxList<String> tempAttachments = <String>[].obs; // For backwards compatibility
+
+  // Live Employee List from API
+  final RxList<EmployeeModel> employeesList = <EmployeeModel>[].obs;
+  final RxBool isLoadingEmployees = false.obs;
+  final RxString employeeSearchQuery = ''.obs;
+
+  // API Submission loading state
+  final RxBool isCreatingTask = false.obs;
+  final RxBool isUpdatingTask = false.obs;
+  final RxBool isDeletingTask = false.obs;
+  final RxBool isAddingSubTask = false.obs;
+
+  // Live Tasks API state
+  final RxBool isLoadingTasks = false.obs;
+  final RxBool isLoadingTaskDetails = false.obs;
+  final RxInt totalTasksCount = 0.obs;
+  final RxString tasksErrorMessage = ''.obs;
 
   @override
   void onInit() {
@@ -42,6 +105,8 @@ class TasksController extends GetxController {
     }
     super.onInit();
     _initializeDummyTasks();
+    fetchEmployees();
+    fetchTasks();
 
     // 1-second interval ticker for running timers
     _timerTicker = Timer.periodic(const Duration(seconds: 1), (_) {
@@ -419,19 +484,47 @@ class TasksController extends GetxController {
     final isEmployee = appController?.userRole.value.toLowerCase() == 'employee';
 
     if (isEmployee) {
+      String myEmail = '';
+      String myName = '';
+      try {
+        final userDataString = SharedPrefs.getString(AppConstants.userData);
+        if (userDataString != null && userDataString.isNotEmpty) {
+          final u = jsonDecode(userDataString);
+          myEmail = (u['email'] ?? '').toString().toLowerCase().trim();
+          myName = (u['name'] ?? '').toString().toLowerCase().trim();
+        }
+      } catch (_) {}
+
       final projController = Get.find<ProjectsController>();
-      final myUser = projController.allEmployees[1]; // Sarah Johnson
+      final myUser = projController.allEmployees.length > 1 ? projController.allEmployees[1] : null;
 
       if (employeeTaskScope.value == 'My Tasks') {
         // Scope strictly to tasks assigned to current employee
-        results = results.where((t) => t.assignees.any((a) => a.name == myUser.name || a.email == myUser.email)).toList();
+        final assigned = results.where((t) {
+          if (myEmail.isNotEmpty || myName.isNotEmpty) {
+            return t.assignees.any((a) =>
+                (myEmail.isNotEmpty && a.email.toLowerCase().trim() == myEmail) ||
+                (myName.isNotEmpty && a.name.toLowerCase().trim() == myName));
+          }
+          if (myUser != null) {
+            return t.assignees.any((a) => a.name == myUser.name || a.email == myUser.email);
+          }
+          return true;
+        }).toList();
+
+        if (assigned.isNotEmpty) {
+          results = assigned;
+        }
       } else {
         // 'All Project Tasks / Project History': All tasks belonging to projects where this employee is a member!
-        // This ensures when an employee joins a project, they see all past and present work of that project!
         results = results.where((t) {
-          if (t.project == null) return false;
+          if (t.project == null) return true;
           final proj = projController.projects.firstWhereOrNull((p) => p.id == t.project!.id || p.name == t.project!.name);
-          return proj?.teamMembers.any((m) => m.name == myUser.name || m.email == myUser.email) ?? false;
+          if (proj == null) return true;
+          return proj.teamMembers.any((m) =>
+              (myEmail.isNotEmpty && m.email.toLowerCase().trim() == myEmail) ||
+              (myName.isNotEmpty && m.name.toLowerCase().trim() == myName) ||
+              (myUser != null && (m.name == myUser.name || m.email == myUser.email)));
         }).toList();
       }
     }
@@ -500,6 +593,7 @@ class TasksController extends GetxController {
 
   void selectTask(TaskModel task) {
     selectedTask.value = task;
+    fetchTaskDetails(task.id);
   }
 
   // ── Employee Live Timer Operations ──
@@ -1055,6 +1149,28 @@ class TasksController extends GetxController {
     selectedTask.value = updated;
     _syncTaskStatusWithProject(updated);
 
+    // Sync status change with backend API
+    repository.updateAdminTask(
+      current.id,
+      UpdateTaskRequestModel(status: newStatus),
+    ).then((res) {
+      if (res.status && res.data != null) {
+        final idx = tasks.indexWhere((t) => t.id == current.id);
+        if (idx != -1) tasks[idx] = res.data!;
+        if (selectedTask.value?.id == current.id) selectedTask.value = res.data!;
+      } else if (!res.status) {
+        Get.snackbar(
+          'Status Update Error',
+          res.message.isNotEmpty ? res.message : 'Failed to update status on server',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: AppColors.errorColor,
+          colorText: Colors.white,
+        );
+      }
+    }).catchError((err) {
+      Logger.e('TasksController => Error syncing task status to API: $err');
+    });
+
     Get.snackbar(
       'Status Updated',
       'Task status successfully changed to $newStatus',
@@ -1110,185 +1226,758 @@ class TasksController extends GetxController {
     selectedTask.value = updated;
   }
 
+  Future<bool> addSubTaskApi({
+    required dynamic taskId,
+    required String title,
+    dynamic assignedTo,
+    String? dueDate,
+  }) async {
+    if (title.trim().isEmpty) {
+      Get.snackbar(
+        'Validation Error',
+        'Subtask title is required!',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: AppColors.errorColor,
+        colorText: Colors.white,
+      );
+      return false;
+    }
+
+    isAddingSubTask.value = true;
+    try {
+      final request = AddSubTaskRequestModel(
+        title: title.trim(),
+        assignedTo: assignedTo,
+        dueDate: dueDate,
+      );
+
+      final response = await repository.addSubTask(taskId, request);
+
+      if (response.status && response.data != null) {
+        final newSub = response.data!;
+        final current = selectedTask.value;
+        if (current != null && current.id == taskId.toString()) {
+          final updatedSubTasks = List<SubTask>.from(current.subTasks)..add(newSub);
+          final updated = current.copyWith(subTasks: updatedSubTasks);
+          selectedTask.value = updated;
+
+          final idx = tasks.indexWhere((t) => t.id == current.id);
+          if (idx != -1) {
+            tasks[idx] = updated;
+          }
+        }
+
+        Get.back(); // Dismiss dialog
+        Get.snackbar(
+          'Success',
+          response.message.isNotEmpty ? response.message : 'Subtask added successfully',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: const Color(0xFF10B981),
+          colorText: Colors.white,
+        );
+        return true;
+      } else {
+        Get.snackbar(
+          'Error',
+          response.message.isNotEmpty ? response.message : 'Failed to add subtask',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: AppColors.errorColor,
+          colorText: Colors.white,
+        );
+        return false;
+      }
+    } catch (e) {
+      Logger.e('TasksController => addSubTaskApi error: $e');
+      Get.snackbar(
+        'Error',
+        'An unexpected error occurred: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: AppColors.errorColor,
+        colorText: Colors.white,
+      );
+      return false;
+    } finally {
+      isAddingSubTask.value = false;
+    }
+  }
+
   void addSubTask(String title) {
     final current = selectedTask.value;
-    if (current == null || title.trim().isEmpty) return;
+    if (current == null) return;
+    addSubTaskApi(taskId: current.id, title: title);
+  }
 
-    final newSubTask = SubTask(
-      id: 'subtask_${DateTime.now().millisecondsSinceEpoch}',
-      title: title.trim(),
-      isCompleted: false,
-    );
 
-    final updatedSubTasks = List<SubTask>.from(current.subTasks)..add(newSubTask);
-    final updated = current.copyWith(subTasks: updatedSubTasks);
-
-    final idx = tasks.indexWhere((t) => t.id == current.id);
-    if (idx != -1) {
-      tasks[idx] = updated;
+  // ── Employee and File Management for Task Creation ──
+  Future<void> fetchEmployees() async {
+    if (Get.isRegistered<ProjectsController>()) {
+      final pCtrl = Get.find<ProjectsController>();
+      if (pCtrl.employeesList.isNotEmpty) {
+        employeesList.assignAll(pCtrl.employeesList);
+        return;
+      }
     }
-    selectedTask.value = updated;
+
+    try {
+      isLoadingEmployees.value = true;
+      final response = await repository.getEmployees();
+      if (response.status && response.data.isNotEmpty) {
+        employeesList.assignAll(response.data);
+      }
+    } catch (e) {
+      Logger.e('TasksController => Error fetching employees: $e');
+    } finally {
+      isLoadingEmployees.value = false;
+    }
+  }
+
+  // ── Live Tasks Fetching API ──
+  Future<void> fetchTasks({bool isRefresh = false}) async {
+    if (!isRefresh && tasks.isEmpty) {
+      isLoadingTasks.value = true;
+    }
+    tasksErrorMessage.value = '';
+    try {
+      final response = await repository.getAdminTasks(
+        status: 'all',
+        priority: 'all',
+        perPage: 20,
+      );
+
+      if (response.status) {
+        tasks.assignAll(response.tasks);
+        totalTasksCount.value = response.total;
+        Logger.d('TasksController => Loaded ${response.tasks.length} tasks from API, total: ${response.total}');
+      } else {
+        tasksErrorMessage.value = response.message;
+        Logger.w('TasksController => Failed to load tasks from API: ${response.message}');
+      }
+    } catch (e) {
+      tasksErrorMessage.value = e.toString();
+      Logger.e('TasksController => Error fetching tasks: $e');
+    } finally {
+      isLoadingTasks.value = false;
+    }
+  }
+
+  // ── Live Task Details API ──
+  Future<TaskModel?> fetchTaskDetails(dynamic taskId) async {
+    try {
+      isLoadingTaskDetails.value = true;
+      final response = await repository.getAdminTaskDetails(taskId);
+      if (response.status && response.data != null) {
+        selectedTask.value = response.data;
+        final idx = tasks.indexWhere((t) => t.id == response.data!.id);
+        if (idx != -1) {
+          tasks[idx] = response.data!;
+        }
+        Logger.d('TasksController => Loaded task details for ID $taskId');
+        return response.data;
+      } else {
+        Logger.w('TasksController => Failed to load task details: ${response.message}');
+      }
+    } catch (e) {
+      Logger.e('TasksController => Error fetching task details: $e');
+    } finally {
+      isLoadingTaskDetails.value = false;
+    }
+    return null;
+  }
+
+  List<EmployeeModel> get filteredEmployeesList {
+    if (employeeSearchQuery.value.trim().isEmpty) {
+      return employeesList;
+    }
+    final q = employeeSearchQuery.value.toLowerCase().trim();
+    return employeesList.where((emp) {
+      return emp.name.toLowerCase().contains(q) ||
+          emp.email.toLowerCase().contains(q) ||
+          emp.employeeId.toLowerCase().contains(q) ||
+          emp.designation.toLowerCase().contains(q) ||
+          emp.department.toLowerCase().contains(q) ||
+          emp.role.toLowerCase().contains(q);
+    }).toList();
+  }
+
+  bool isEmployeeSelected(EmployeeModel emp) {
+    // Explicitly read length to ensure GetX Obx observes changes to the lists
+    selectedEmployees.length;
+
+    final empIdStr = emp.id.toString().trim();
+    final empCode = emp.employeeId.trim().toLowerCase();
+    final empEmail = emp.email.trim().toLowerCase();
+
+    return selectedEmployees.any((e) {
+      final eIdStr = e.id.toString().trim();
+      final eCode = e.employeeId.trim().toLowerCase();
+      final eEmail = e.email.trim().toLowerCase();
+
+      // 1. Primary: Match by unique primary database ID (e.g. 15 vs 14)
+      if (empIdStr.isNotEmpty && empIdStr != '0' && eIdStr.isNotEmpty && eIdStr != '0') {
+        return empIdStr == eIdStr;
+      }
+
+      // 2. Secondary: Match by unique Employee Code (e.g. "EMP-2026-015" vs "EMP-2026-014")
+      if (empCode.isNotEmpty && eCode.isNotEmpty) {
+        return empCode == eCode;
+      }
+
+      // 3. Fallback: Match by unique Email address
+      if (empEmail.isNotEmpty && eEmail.isNotEmpty) {
+        return empEmail == eEmail;
+      }
+
+      // 4. Object reference equality
+      return identical(emp, e);
+    });
+  }
+
+  void toggleEmployeeSelection(EmployeeModel emp) {
+    final empIdStr = emp.id.toString().trim();
+    final empCode = emp.employeeId.trim().toLowerCase();
+    final empEmail = emp.email.trim().toLowerCase();
+
+    final existingIdx = selectedEmployees.indexWhere((e) {
+      final eIdStr = e.id.toString().trim();
+      final eCode = e.employeeId.trim().toLowerCase();
+      final eEmail = e.email.trim().toLowerCase();
+
+      // 1. Primary: Match by unique primary database ID (e.g. 15 vs 14)
+      if (empIdStr.isNotEmpty && empIdStr != '0' && eIdStr.isNotEmpty && eIdStr != '0') {
+        return empIdStr == eIdStr;
+      }
+
+      // 2. Secondary: Match by unique Employee Code (e.g. "EMP-2026-015" vs "EMP-2026-014")
+      if (empCode.isNotEmpty && eCode.isNotEmpty) {
+        return empCode == eCode;
+      }
+
+      // 3. Fallback: Match by unique Email address
+      if (empEmail.isNotEmpty && eEmail.isNotEmpty) {
+        return empEmail == eEmail;
+      }
+
+      return identical(emp, e);
+    });
+
+    if (existingIdx != -1) {
+      // Unselect only this specific employee
+      selectedEmployees.removeAt(existingIdx);
+      if (existingIdx < tempAssignees.length) {
+        tempAssignees.removeAt(existingIdx);
+      }
+    } else {
+      // Add employee to multiple selection
+      selectedEmployees.add(emp);
+      tempAssignees.add(AppUser(
+        name: emp.name,
+        email: emp.email,
+        avatarUrl: emp.profilePic != null && emp.profilePic!.isNotEmpty
+            ? (emp.profilePic!.startsWith('http') ? emp.profilePic! : '${AppConstants.baseUrl}/storage/${emp.profilePic}')
+            : 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150',
+      ));
+    }
+
+    selectedEmployees.refresh();
+    tempAssignees.refresh();
+  }
+
+  Future<void> pickRealFiles() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        allowMultiple: true,
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'doc', 'docx', 'png', 'jpg', 'jpeg', 'webp', 'zip', 'txt', 'csv', 'xlsx'],
+      );
+
+      if (result != null && result.files.isNotEmpty) {
+        for (final file in result.files) {
+          if (!attachedRealFiles.any((f) => f.name == file.name && f.size == file.size)) {
+            attachedRealFiles.add(file);
+            tempAttachments.add(file.name);
+          }
+        }
+      }
+    } catch (e) {
+      Logger.e('TasksController => Error picking files: $e');
+      Get.snackbar(
+        'Error',
+        'Could not access files: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: AppColors.errorColor,
+        colorText: Colors.white,
+      );
+    }
+  }
+
+  void removeAttachedFile(int index) {
+    if (index >= 0 && index < attachedRealFiles.length) {
+      final f = attachedRealFiles.removeAt(index);
+      tempAttachments.remove(f.name);
+    }
   }
 
   // ── Admin Task CRUD Lifecycle ──
   void clearCreationForm() {
     titleController.clear();
     descriptionController.clear();
+    customCategoryController.clear();
+    selectedCategory.value = 'UI/UX Design';
+    isCustomCategory.value = false;
     selectedPriority.value = 'Medium';
-    selectedStatus.value = TaskModel.statusToDo;
-    selectedDeadline.value = DateTime.now().add(const Duration(days: 7));
-    tempAssignees.clear();
-    tempAttachments.clear();
+    selectedStatus.value = 'Pending';
+    startDate.value = DateTime.now();
+    dueDate.value = DateTime.now().add(const Duration(days: 14));
+    selectedDeadline.value = DateTime.now().add(const Duration(days: 14));
+    estimatedHours.value = 5;
+    estimatedMinutes.value = 30;
+    selectedProject.value = null;
     selectedProjectName.value = 'None';
     selectedModuleName.value = 'General';
     selectedSubModuleName.value = 'Default';
+    selectedEmployees.clear();
+    tempAssignees.clear();
+    attachedRealFiles.clear();
+    tempAttachments.clear();
+    employeeSearchQuery.value = '';
   }
 
   void populateTaskForm(TaskModel task) {
     titleController.text = task.title;
     descriptionController.text = task.description;
     selectedPriority.value = task.priority;
-    selectedStatus.value = task.normalizedStatus;
-    selectedDeadline.value = task.deadline;
+    selectedStatus.value = mapTaskStatusToApi(task.status);
+    selectedDeadline.value = (task.dueDate != null && task.dueDate!.isNotEmpty)
+        ? (DateTime.tryParse(task.dueDate!) ?? task.deadline)
+        : task.deadline;
+    dueDate.value = selectedDeadline.value;
+    startDate.value = (task.startDate != null && task.startDate!.isNotEmpty)
+        ? (DateTime.tryParse(task.startDate!) ?? DateTime.now())
+        : DateTime.now();
+
+    if (task.category != null && task.category!.isNotEmpty) {
+      selectedCategory.value = task.category!;
+    }
+
+    if (task.estimatedHours != null && task.estimatedHours!.isNotEmpty) {
+      final regHours = RegExp(r'(\d+)\s*h', caseSensitive: false);
+      final regMins = RegExp(r'(\d+)\s*m', caseSensitive: false);
+      final hMatch = regHours.firstMatch(task.estimatedHours!);
+      final mMatch = regMins.firstMatch(task.estimatedHours!);
+      if (hMatch != null) {
+        estimatedHours.value = int.tryParse(hMatch.group(1)!) ?? 0;
+      }
+      if (mMatch != null) {
+        estimatedMinutes.value = int.tryParse(mMatch.group(1)!) ?? 0;
+      }
+    }
+
     tempAssignees.assignAll(task.assignees);
     tempAttachments.assignAll(task.attachments);
     selectedProjectName.value = task.project?.name ?? 'None';
     selectedModuleName.value = task.module;
     selectedSubModuleName.value = task.subModule;
+    if (task.project != null) {
+      selectedProject.value = task.project;
+    }
+
+    selectedEmployees.clear();
+    for (final a in task.assignees) {
+      final aEmpId = a.employeeId ?? '';
+      final match = employeesList.firstWhereOrNull((e) =>
+          (aEmpId.isNotEmpty && e.id.toString() == aEmpId) ||
+          e.email.toLowerCase() == a.email.toLowerCase());
+      if (match != null) {
+        if (!selectedEmployees.any((se) => se.id.toString() == match.id.toString())) {
+          selectedEmployees.add(match);
+        }
+      } else {
+        selectedEmployees.add(
+          EmployeeModel.fromJson({
+            'id': aEmpId.isNotEmpty ? aEmpId : 'emp_${a.name.hashCode}',
+            'employee_id': aEmpId,
+            'name': a.name,
+            'email': a.email,
+            'designation': a.designation ?? 'Team Member',
+            'avatar': a.avatarUrl,
+          }),
+        );
+      }
+    }
+  }
+
+  Future<bool> createTaskApi() async {
+    final title = titleController.text.trim();
+    if (title.isEmpty) {
+      Get.snackbar(
+        'Validation Error',
+        'Task Title is required!',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: AppColors.errorColor,
+        colorText: Colors.white,
+      );
+      return false;
+    }
+
+    if (title.length < 3) {
+      Get.snackbar(
+        'Validation Error',
+        'Task Title must be at least 3 characters!',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: AppColors.errorColor,
+        colorText: Colors.white,
+      );
+      return false;
+    }
+
+    final desc = descriptionController.text.trim();
+    if (desc.isEmpty) {
+      Get.snackbar(
+        'Validation Error',
+        'Task Description is required!',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: AppColors.errorColor,
+        colorText: Colors.white,
+      );
+      return false;
+    }
+
+    if (selectedProject.value == null) {
+      Get.snackbar(
+        'Validation Error',
+        'Please select a Project for this task!',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: AppColors.errorColor,
+        colorText: Colors.white,
+      );
+      return false;
+    }
+
+    final category = isCustomCategory.value
+        ? customCategoryController.text.trim()
+        : selectedCategory.value.trim();
+    if (category.isEmpty) {
+      Get.snackbar(
+        'Validation Error',
+        'Category is required!',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: AppColors.errorColor,
+        colorText: Colors.white,
+      );
+      return false;
+    }
+
+    if (dueDate.value.isBefore(startDate.value)) {
+      Get.snackbar(
+        'Validation Error',
+        'Due Date cannot be earlier than Start Date!',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: AppColors.errorColor,
+        colorText: Colors.white,
+      );
+      return false;
+    }
+
+    if (estimatedHours.value == 0 && estimatedMinutes.value == 0) {
+      Get.snackbar(
+        'Validation Error',
+        'Estimated Hours must be greater than 0!',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: AppColors.errorColor,
+        colorText: Colors.white,
+      );
+      return false;
+    }
+
+    if (selectedEmployees.isEmpty && tempAssignees.isEmpty) {
+      Get.snackbar(
+        'Validation Error',
+        'Please assign at least one employee to this task!',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: AppColors.errorColor,
+        colorText: Colors.white,
+      );
+      return false;
+    }
+
+    isCreatingTask.value = true;
+
+    try {
+      final sDateStr = DateFormat('yyyy-MM-dd').format(startDate.value);
+      final dDateStr = DateFormat('yyyy-MM-dd').format(dueDate.value);
+
+      // Collect employee IDs
+      List<String> empIds = selectedEmployees
+          .map((e) => e.id.toString())
+          .where((id) => id.isNotEmpty)
+          .toList();
+
+      // Fallback if user selected through legacy list
+      if (empIds.isEmpty && tempAssignees.isNotEmpty) {
+        if (employeesList.isNotEmpty) {
+          for (final a in tempAssignees) {
+            final match = employeesList.firstWhereOrNull((e) => e.name == a.name || e.email == a.email);
+            if (match != null && !empIds.contains(match.id)) {
+              empIds.add(match.id);
+            }
+          }
+        }
+      }
+
+      // Collect file paths
+      final filePaths = attachedRealFiles
+          .map((f) => f.path)
+          .whereType<String>()
+          .where((p) => p.isNotEmpty)
+          .toList();
+
+      // Retrieve user_id from stored user_data if available
+      String? currentUserId = '1';
+      final userDataStr = SharedPrefs.getString(AppConstants.userData);
+      if (userDataStr != null && userDataStr.isNotEmpty) {
+        try {
+          final uMap = jsonDecode(userDataStr);
+          if (uMap is Map && uMap['id'] != null) {
+            currentUserId = uMap['id'].toString();
+          }
+        } catch (_) {}
+      }
+
+      final request = CreateTaskRequestModel(
+        taskName: title,
+        description: desc,
+        category: category,
+        priority: selectedPriority.value,
+        status: selectedStatus.value,
+        startDate: sDateStr,
+        dueDate: dDateStr,
+        estimatedHours: formattedEstimatedHours,
+        projectId: selectedProject.value!.id.toString(),
+        userId: currentUserId,
+        employeeIds: empIds,
+        filePaths: filePaths,
+      );
+
+      final response = await repository.createTask(request);
+
+      if (response.status && response.data != null) {
+        final newTask = response.data!.toTaskModel();
+        tasks.insert(0, newTask);
+        _syncTaskStatusWithProject(newTask);
+        clearCreationForm();
+        fetchTasks(isRefresh: true);
+        Get.back();
+        Get.snackbar(
+          'Success',
+          response.message.isNotEmpty ? response.message : 'Task created successfully!',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: const Color(0xFF10B981),
+          colorText: Colors.white,
+        );
+        return true;
+      } else {
+        Get.snackbar(
+          'Error',
+          response.message.isNotEmpty ? response.message : 'Failed to create task.',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: AppColors.errorColor,
+          colorText: Colors.white,
+        );
+        return false;
+      }
+    } catch (e) {
+      Logger.e('TasksController => createTaskApi error: $e');
+      Get.snackbar(
+        'Error',
+        'An unexpected error occurred: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: AppColors.errorColor,
+        colorText: Colors.white,
+      );
+      return false;
+    } finally {
+      isCreatingTask.value = false;
+    }
   }
 
   void saveTask() {
-    if (titleController.text.trim().isEmpty) {
+    createTaskApi();
+  }
+
+  Future<bool> updateExistingTask(String taskId) async {
+    final title = titleController.text.trim();
+    if (title.isEmpty) {
       Get.snackbar(
         'Validation Error',
         'Task Title is required!',
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.redAccent,
+        backgroundColor: AppColors.errorColor,
         colorText: Colors.white,
       );
-      return;
+      return false;
     }
 
-    final projController = Get.find<ProjectsController>();
-    final currentUser = projController.allEmployees[0];
-
-    var pName = selectedProjectName.value;
-    var targetProject = projController.projects.firstWhereOrNull((p) => p.name == pName);
-
-    final newTask = TaskModel(
-      id: 'task_${DateTime.now().millisecondsSinceEpoch}',
-      title: titleController.text.trim(),
-      description: descriptionController.text.trim(),
-      assignees: List<AppUser>.from(tempAssignees),
-      project: targetProject,
-      priority: selectedPriority.value,
-      deadline: selectedDeadline.value,
-      status: selectedStatus.value,
-      subTasks: [],
-      comments: [],
-      module: selectedModuleName.value,
-      subModule: selectedSubModuleName.value,
-      statusUpdates: [
-        TaskStatusUpdate(
-          id: 'status_init_${DateTime.now().millisecondsSinceEpoch}',
-          status: selectedStatus.value,
-          title: selectedStatus.value,
-          description: 'Task allocated by ${currentUser.name} in [${selectedModuleName.value}].',
-          timestamp: DateTime.now(),
-          user: currentUser,
-        )
-      ],
-      attachments: List<String>.from(tempAttachments),
-    );
-
-    tasks.add(newTask);
-    _syncTaskStatusWithProject(newTask);
-    clearCreationForm();
-    Get.back();
-    Get.snackbar(
-      'Task Created',
-      'New task allocated successfully!',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: const Color(0xFF10B981),
-      colorText: Colors.white,
-    );
-  }
-
-  void updateExistingTask(String taskId) {
-    final idx = tasks.indexWhere((t) => t.id == taskId);
-    if (idx == -1) return;
-
-    if (titleController.text.trim().isEmpty) {
+    if (dueDate.value.isBefore(startDate.value)) {
       Get.snackbar(
         'Validation Error',
-        'Task Title is required!',
+        'Due Date cannot be earlier than Start Date!',
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.redAccent,
+        backgroundColor: AppColors.errorColor,
         colorText: Colors.white,
       );
-      return;
+      return false;
     }
 
-    final projController = Get.find<ProjectsController>();
-    final currentUser = projController.allEmployees[0];
-    var pName = selectedProjectName.value;
-    var targetProject = projController.projects.firstWhereOrNull((p) => p.name == pName);
+    // Collect employee IDs (convert to int if possible)
+    List<dynamic> empIds = selectedEmployees
+        .map((e) => int.tryParse(e.id.toString()) ?? e.id.toString())
+        .toList();
 
-    final oldTask = tasks[idx];
-    final updated = oldTask.copyWith(
-      title: titleController.text.trim(),
-      description: descriptionController.text.trim(),
-      assignees: List<AppUser>.from(tempAssignees),
-      project: targetProject,
-      priority: selectedPriority.value,
-      deadline: selectedDeadline.value,
-      status: selectedStatus.value,
-      module: selectedModuleName.value,
-      subModule: selectedSubModuleName.value,
-      attachments: List<String>.from(tempAttachments),
-      statusUpdates: [
-        ...oldTask.statusUpdates,
-        TaskStatusUpdate(
-          id: 'status_edit_${DateTime.now().millisecondsSinceEpoch}',
-          status: selectedStatus.value,
-          title: 'Task Edited',
-          description: 'Task details modified by admin ${currentUser.name}.',
-          timestamp: DateTime.now(),
-          user: currentUser,
-        ),
-      ],
-    );
-
-    tasks[idx] = updated;
-    if (selectedTask.value?.id == taskId) {
-      selectedTask.value = updated;
+    // Fallback if user selected through legacy list
+    if (empIds.isEmpty && tempAssignees.isNotEmpty) {
+      for (final a in tempAssignees) {
+        final aId = a.employeeId;
+        if (aId != null && aId.isNotEmpty) {
+          empIds.add(int.tryParse(aId) ?? aId);
+        } else if (employeesList.isNotEmpty) {
+          final match = employeesList.firstWhereOrNull((e) => e.name == a.name || e.email == a.email);
+          if (match != null) {
+            empIds.add(int.tryParse(match.id.toString()) ?? match.id);
+          }
+        }
+      }
     }
-    _syncTaskStatusWithProject(updated);
-    clearCreationForm();
-    Get.back();
-    Get.snackbar(
-      'Task Updated',
-      'Task details successfully updated!',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: const Color(0xFF10B981),
-      colorText: Colors.white,
-    );
+
+    isUpdatingTask.value = true;
+
+    try {
+      final sDateStr = DateFormat('yyyy-MM-dd').format(startDate.value);
+      final dDateStr = DateFormat('yyyy-MM-dd').format(dueDate.value);
+      final category = isCustomCategory.value
+          ? customCategoryController.text.trim()
+          : selectedCategory.value.trim();
+
+      final request = UpdateTaskRequestModel(
+        taskName: title,
+        description: descriptionController.text.trim().isNotEmpty
+            ? descriptionController.text.trim()
+            : null,
+        category: category.isNotEmpty ? category : null,
+        priority: selectedPriority.value,
+        status: selectedStatus.value,
+        startDate: sDateStr,
+        dueDate: dDateStr,
+        estimatedHours: formattedEstimatedHours,
+        projectId: selectedProject.value?.id,
+        employeeIds: empIds.isNotEmpty ? empIds : null,
+      );
+
+      final response = await repository.updateAdminTask(taskId, request);
+
+      if (response.status && response.data != null) {
+        final updatedTask = response.data!;
+        final idx = tasks.indexWhere((t) => t.id == taskId);
+        if (idx != -1) {
+          tasks[idx] = updatedTask;
+        } else {
+          tasks.insert(0, updatedTask);
+        }
+
+        if (selectedTask.value?.id == taskId) {
+          selectedTask.value = updatedTask;
+        }
+
+        _syncTaskStatusWithProject(updatedTask);
+        clearCreationForm();
+        fetchTasks(isRefresh: true);
+        Get.back();
+        Get.snackbar(
+          'Success',
+          response.message.isNotEmpty ? response.message : 'Task updated successfully',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: const Color(0xFF10B981),
+          colorText: Colors.white,
+        );
+        return true;
+      } else {
+        Get.snackbar(
+          'Error',
+          response.message.isNotEmpty ? response.message : 'Failed to update task',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: AppColors.errorColor,
+          colorText: Colors.white,
+        );
+        return false;
+      }
+    } catch (e) {
+      Logger.e('TasksController => updateExistingTask error: $e');
+      Get.snackbar(
+        'Error',
+        'An unexpected error occurred: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: AppColors.errorColor,
+        colorText: Colors.white,
+      );
+      return false;
+    } finally {
+      isUpdatingTask.value = false;
+    }
   }
 
-  void deleteTask(String id) {
-    tasks.removeWhere((t) => t.id == id);
-    if (selectedTask.value?.id == id) {
-      selectedTask.value = null;
+  Future<bool> deleteTask(String id, {bool fromDetail = false}) async {
+    isDeletingTask.value = true;
+    try {
+      final response = await repository.deleteAdminTask(id);
+
+      if (response.status) {
+        tasks.removeWhere((t) => t.id == id);
+        if (selectedTask.value?.id == id) {
+          selectedTask.value = null;
+        }
+
+        // Dismiss confirmation dialog
+        Get.back();
+
+        // If invoked from the task details screen, pop back to task list
+        if (fromDetail) {
+          Get.back();
+        }
+
+        Get.snackbar(
+          'Task Deleted',
+          response.message.isNotEmpty ? response.message : 'Task deleted successfully',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: const Color(0xFF10B981),
+          colorText: Colors.white,
+        );
+
+        fetchTasks(isRefresh: true);
+        return true;
+      } else {
+        Get.back();
+        Get.snackbar(
+          'Error',
+          response.message.isNotEmpty ? response.message : 'Failed to delete task',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: AppColors.errorColor,
+          colorText: Colors.white,
+        );
+        return false;
+      }
+    } catch (e) {
+      Logger.e('TasksController => deleteTask error: $e');
+      Get.back();
+      Get.snackbar(
+        'Error',
+        'An unexpected error occurred: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: AppColors.errorColor,
+        colorText: Colors.white,
+      );
+      return false;
+    } finally {
+      isDeletingTask.value = false;
     }
-    Get.back(); // Dismiss Dialog
-    Get.back(); // Pop details screen
-    Get.snackbar(
-      'Task Deleted',
-      'Task has been removed from the platform.',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.redAccent,
-      colorText: Colors.white,
-    );
   }
 
   void toggleAssigneeSelection(AppUser emp) {

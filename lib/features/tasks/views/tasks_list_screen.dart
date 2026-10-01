@@ -6,6 +6,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_text.dart';
 import '../controllers/tasks_controller.dart';
 import '../models/task_model.dart';
+import '../models/create_task_model.dart';
 import 'create_task_screen.dart';
 import 'task_details_screen.dart';
 
@@ -394,41 +395,60 @@ class TasksListScreen extends StatelessWidget {
                 return _buildTeamTrackingView(context, controller);
               }
 
+              if (controller.isLoadingTasks.value && controller.tasks.isEmpty) {
+                return const Center(
+                  child: CircularProgressIndicator(color: AppColors.primaryColor),
+                );
+              }
+
               final tList = controller.filteredTasks;
               if (tList.isEmpty) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                return RefreshIndicator(
+                  color: AppColors.primaryColor,
+                  onRefresh: () => controller.fetchTasks(isRefresh: true),
+                  child: ListView(
+                    physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: const BoxDecoration(
-                          color: AppColors.primaryLight,
-                          shape: BoxShape.circle,
+                      SizedBox(height: MediaQuery.of(context).size.height * 0.2),
+                      Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: const BoxDecoration(
+                                color: AppColors.primaryLight,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Iconsax.task_square, size: 36, color: AppColors.primaryColor),
+                            ),
+                            const SizedBox(height: 12),
+                            const AppText('No Tasks Found', fontSize: 14, fontWeight: FontWeight.bold),
+                            const SizedBox(height: 4),
+                            AppText(
+                              isEmployee
+                                  ? 'No tasks assigned to you under this status.'
+                                  : 'Tasks for this filter will appear here.',
+                              fontSize: 11,
+                              color: AppColors.textColorHint,
+                            ),
+                          ],
                         ),
-                        child: const Icon(Iconsax.task_square, size: 36, color: AppColors.primaryColor),
-                      ),
-                      const SizedBox(height: 12),
-                      const AppText('No Tasks Found', fontSize: 14, fontWeight: FontWeight.bold),
-                      const SizedBox(height: 4),
-                      AppText(
-                        isEmployee
-                            ? 'No tasks assigned to you under this status.'
-                            : 'Tasks for this filter will appear here.',
-                        fontSize: 11,
-                        color: AppColors.textColorHint,
                       ),
                     ],
                   ),
                 );
               }
 
-              return ListView.separated(
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.all(16),
-                itemCount: tList.length,
-                separatorBuilder: (context, idx) => const SizedBox(height: 12),
-                itemBuilder: (context, index) {
+              return RefreshIndicator(
+                color: AppColors.primaryColor,
+                onRefresh: () => controller.fetchTasks(isRefresh: true),
+                child: ListView.separated(
+                  physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                  padding: const EdgeInsets.all(16),
+                  itemCount: tList.length,
+                  separatorBuilder: (context, idx) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
                   final task = tList[index];
                   final prioColor = _getPriorityColor(task.priority);
                   final isAdmin = appController.userRole.value.toLowerCase() == 'admin';
@@ -436,7 +456,7 @@ class TasksListScreen extends StatelessWidget {
                   return GestureDetector(
                     onTap: () {
                       controller.selectTask(task);
-                      Get.to(() => const TaskDetailsScreen());
+                      Get.to(() => TaskDetailsScreen(taskId: task.id));
                     },
                     child: Container(
                       padding: const EdgeInsets.all(16),
@@ -758,6 +778,50 @@ class TasksListScreen extends StatelessWidget {
                               ],
                             ),
                           ),
+                          // Assignee Chips Strip for Multiple Assignees
+                          if (task.assignees.length > 1) ...[
+                            const SizedBox(height: 10),
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 6,
+                              children: task.assignees.map((assignee) {
+                                return Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.slate100,
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(color: AppColors.slate200),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      CircleAvatar(
+                                        radius: 8,
+                                        backgroundColor: AppColors.slate200,
+                                        backgroundImage: NetworkImage(assignee.avatarUrl),
+                                      ),
+                                      const SizedBox(width: 5),
+                                      AppText(
+                                        assignee.name,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.textColorPrimary,
+                                      ),
+                                      if (assignee.designation != null && assignee.designation!.isNotEmpty) ...[
+                                        const SizedBox(width: 4),
+                                        AppText(
+                                          '• ${assignee.designation}',
+                                          fontSize: 9,
+                                          color: AppColors.textColorSecondary,
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          ],
+
                           const SizedBox(height: 12),
                           const Divider(height: 1, color: AppColors.slate200),
                           const SizedBox(height: 10),
@@ -766,21 +830,60 @@ class TasksListScreen extends StatelessWidget {
                           Row(
                             children: [
                               if (task.assignees.isNotEmpty) ...[
-                                CircleAvatar(
-                                  radius: 11,
-                                  backgroundImage: NetworkImage(task.assignees.first.avatarUrl),
-                                ),
-                                const SizedBox(width: 6),
-                                Expanded(
-                                  child: AppText(
-                                    task.assignees.first.name,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.textColorPrimary,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
+                                if (task.assignees.length == 1) ...[
+                                  CircleAvatar(
+                                    radius: 11,
+                                    backgroundColor: AppColors.slate200,
+                                    backgroundImage: NetworkImage(task.assignees.first.avatarUrl),
                                   ),
-                                ),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: AppText(
+                                      task.assignees.first.name,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.textColorPrimary,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ] else ...[
+                                  // Overlapping Avatar Stack for Multiple Assignees
+                                  SizedBox(
+                                    width: 22.0 + ((task.assignees.length.clamp(1, 4) - 1) * 14.0),
+                                    height: 22,
+                                    child: Stack(
+                                      children: [
+                                        for (int i = 0; i < task.assignees.take(4).length; i++)
+                                          Positioned(
+                                            left: i * 14.0,
+                                            child: Container(
+                                              decoration: BoxDecoration(
+                                                shape: BoxShape.circle,
+                                                border: Border.all(color: Colors.white, width: 1.5),
+                                              ),
+                                              child: CircleAvatar(
+                                                radius: 10,
+                                                backgroundColor: AppColors.slate200,
+                                                backgroundImage: NetworkImage(task.assignees[i].avatarUrl),
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: AppText(
+                                      task.assignees.map((a) => a.name).join(', '),
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.textColorPrimary,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
                               ] else ...[
                                 const Expanded(
                                   child: AppText(
@@ -790,6 +893,7 @@ class TasksListScreen extends StatelessWidget {
                                   ),
                                 ),
                               ],
+                              const SizedBox(width: 6),
                               const Icon(Iconsax.calendar_1, size: 12, color: AppColors.textColorHint),
                               const SizedBox(width: 4),
                               AppText(
@@ -814,14 +918,16 @@ class TasksListScreen extends StatelessWidget {
                               ),
                             ],
                           ),
+
                         ],
                       ),
                     ),
                   );
                 },
-              );
-            }),
-          ),
+              ),
+            );
+          }),
+        ),
         ],
       ),
 
@@ -905,6 +1011,7 @@ class TasksListScreen extends StatelessWidget {
       }
 
       // Admin metrics
+      final total = controller.totalTasksCount.value > 0 ? controller.totalTasksCount.value : all.length;
       final inProgCount = all.where((t) => t.normalizedStatus == TaskModel.statusInProgress).length;
       final testingCount = all.where((t) => t.normalizedStatus == TaskModel.statusTesting).length;
       final doneCount = all.where((t) => t.normalizedStatus == TaskModel.statusCompleted).length;
@@ -914,7 +1021,7 @@ class TasksListScreen extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         child: Row(
           children: [
-            _buildKpiCard('Total Tasks', '${all.length}', Iconsax.task_square, AppColors.primaryColor),
+            _buildKpiCard('Total Tasks', '$total', Iconsax.task_square, AppColors.primaryColor),
             const SizedBox(width: 8),
             _buildKpiCard('In Progress', '$inProgCount', Iconsax.timer_1, Colors.amber.shade700),
             const SizedBox(width: 8),
@@ -985,7 +1092,7 @@ class TasksListScreen extends StatelessWidget {
               separatorBuilder: (_, index) => const SizedBox(height: 8),
               itemBuilder: (context, idx) {
                 final task = activeRunning[idx];
-                final assignee = task.assignees.isNotEmpty ? task.assignees.first.name : 'Unknown';
+                final assignee = task.assignees.isNotEmpty ? task.assignees.map((a) => a.name).join(', ') : 'Unknown';
 
                 return Container(
                   padding: const EdgeInsets.all(12),
@@ -1073,7 +1180,7 @@ class TasksListScreen extends StatelessWidget {
               separatorBuilder: (_, index) => const SizedBox(height: 10),
               itemBuilder: (context, idx) {
                 final task = testingList[idx];
-                final assignee = task.assignees.isNotEmpty ? task.assignees.first.name : 'Employee';
+                final assignee = task.assignees.isNotEmpty ? task.assignees.map((a) => a.name).join(', ') : 'Employee';
 
                 return Container(
                   padding: const EdgeInsets.all(14),
@@ -1215,14 +1322,23 @@ class TasksListScreen extends StatelessWidget {
             onPressed: () => Get.back(),
             child: const AppText('Cancel', color: AppColors.textColorSecondary, fontWeight: FontWeight.w600),
           ),
-          ElevatedButton(
-            onPressed: () => controller.deleteTask(id),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.errorColor,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            child: const AppText('Delete', color: Colors.white, fontWeight: FontWeight.bold),
-          ),
+          Obx(() {
+            final isDeleting = controller.isDeletingTask.value;
+            return ElevatedButton(
+              onPressed: isDeleting ? null : () => controller.deleteTask(id, fromDetail: false),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.errorColor,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: isDeleting
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const AppText('Delete', color: Colors.white, fontWeight: FontWeight.bold),
+            );
+          }),
         ],
       ),
     );
@@ -1230,12 +1346,12 @@ class TasksListScreen extends StatelessWidget {
 
   void _showStatusUpdateDialog(BuildContext context, TasksController controller, TaskModel task) {
     final statusOptions = [
-      TaskModel.statusToDo,
-      TaskModel.statusInProgress,
-      TaskModel.statusTesting,
-      TaskModel.statusCompleted,
+      'Pending',
+      'In Progress',
+      'Testing',
+      'Completed',
     ];
-    final selected = task.normalizedStatus.obs;
+    final selected = mapTaskStatusToApi(task.status).obs;
     final logTextController = TextEditingController();
 
     Get.dialog(

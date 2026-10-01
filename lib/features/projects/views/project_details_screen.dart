@@ -27,7 +27,9 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
   @override
   void initState() {
     super.initState();
-    final controller = Get.find<ProjectsController>();
+    final controller = Get.isRegistered<ProjectsController>()
+        ? Get.find<ProjectsController>()
+        : Get.put(ProjectsController());
     final id = widget.projectId ?? controller.selectedProject.value?.id;
     if (id != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -38,7 +40,9 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.find<ProjectsController>();
+    final controller = Get.isRegistered<ProjectsController>()
+        ? Get.find<ProjectsController>()
+        : Get.put(ProjectsController());
 
     return Scaffold(
       backgroundColor: AppColors.slate50,
@@ -656,14 +660,51 @@ class _JiraBoardTab extends StatelessWidget {
             }).toList();
 
             if (tList.isEmpty) {
+              final rawData = controller.projectDetailsRaw.value;
+              final tasksData = rawData?.tasksData;
+              final summary = tasksData?.summary;
+
               return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Iconsax.task_square, size: 40, color: AppColors.textColorHint.withValues(alpha: 0.4)),
-                    const SizedBox(height: 10),
-                    const AppText('No tasks in this status filter', fontSize: 13, color: AppColors.textColorHint),
-                  ],
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryColor.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Iconsax.task_square, size: 36, color: AppColors.primaryColor),
+                      ),
+                      const SizedBox(height: 14),
+                      AppText(
+                        tasksData != null && tasksData.message.isNotEmpty
+                            ? tasksData.message
+                            : 'No tasks found for this status filter',
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textColorSecondary,
+                        textAlign: TextAlign.center,
+                      ),
+                      if (summary != null) ...[
+                        const SizedBox(height: 16),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          alignment: WrapAlignment.center,
+                          children: [
+                            _buildTaskSummaryChip('Total', summary.total, AppColors.slate700),
+                            _buildTaskSummaryChip('To Do', summary.toDo, AppColors.slate500),
+                            _buildTaskSummaryChip('In Progress', summary.inProgress, AppColors.primaryColor),
+                            _buildTaskSummaryChip('Testing', summary.testing, const Color(0xFF6366F1)),
+                            _buildTaskSummaryChip('Completed', summary.completed, AppColors.successColor),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
               );
             }
@@ -950,6 +991,37 @@ class _JiraBoardTab extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildTaskSummaryChip(String label, int count, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 6),
+          AppText(
+            '$label: $count',
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: color,
+          ),
+        ],
       ),
     );
   }
@@ -1790,17 +1862,23 @@ class _TeamTab extends StatelessWidget {
                               ],
                             ),
                           ),
-                          GestureDetector(
-                            onTap: () => controller.removeMember(emp),
-                            child: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: AppColors.errorColorAccent,
-                                borderRadius: BorderRadius.circular(10),
+                          Obx(() {
+                            final appController = Get.isRegistered<AppController>() ? Get.find<AppController>() : null;
+                            final isEmployee = appController?.userRole.value.toLowerCase() == 'employee';
+                            if (isEmployee) return const SizedBox.shrink();
+
+                            return GestureDetector(
+                              onTap: () => controller.removeMember(emp),
+                              child: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: AppColors.errorColorAccent,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(Icons.close_rounded, color: AppColors.errorColor, size: 14),
                               ),
-                              child: const Icon(Icons.close_rounded, color: AppColors.errorColor, size: 14),
-                            ),
-                          ),
+                            );
+                          }),
                         ],
                       ),
                     );
@@ -1808,28 +1886,34 @@ class _TeamTab extends StatelessWidget {
                 ),
         ),
 
-        // "+ Add Member" Button
-        Container(
-          color: Colors.white,
-          padding: const EdgeInsets.all(14),
-          child: SafeArea(
-            top: false,
-            child: SizedBox(
-              width: double.infinity,
-              height: 46,
-              child: ElevatedButton.icon(
-                onPressed: () => _showAddMemberSheet(context, controller, project),
-                icon: const Icon(Iconsax.user_add, size: 16, color: Colors.white),
-                label: const AppText('Add Team Member to Project', fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryColor,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  elevation: 0,
+        // "+ Add Member" Button (hidden for employees)
+        Obx(() {
+          final appController = Get.isRegistered<AppController>() ? Get.find<AppController>() : null;
+          final isEmployee = appController?.userRole.value.toLowerCase() == 'employee';
+          if (isEmployee) return const SizedBox.shrink();
+
+          return Container(
+            color: Colors.white,
+            padding: const EdgeInsets.all(14),
+            child: SafeArea(
+              top: false,
+              child: SizedBox(
+                width: double.infinity,
+                height: 46,
+                child: ElevatedButton.icon(
+                  onPressed: () => _showAddMemberSheet(context, controller, project),
+                  icon: const Icon(Iconsax.user_add, size: 16, color: Colors.white),
+                  label: const AppText('Add Team Member to Project', fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryColor,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    elevation: 0,
+                  ),
                 ),
               ),
             ),
-          ),
-        ),
+          );
+        }),
       ],
     );
   }
@@ -1957,15 +2041,37 @@ class _OverviewTab extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 16),
-                Row(
-                  children: [
-                    _buildStatusStep('Not Started', true, project.status.toLowerCase() == 'not started'),
-                    Expanded(child: Container(height: 2, color: project.status.toLowerCase() != 'not started' ? AppColors.successColor : AppColors.slate200)),
-                    _buildStatusStep('In Progress', project.status.toLowerCase() == 'in progress' || project.status.toLowerCase() == 'completed', project.status.toLowerCase() == 'in progress'),
-                    Expanded(child: Container(height: 2, color: project.status.toLowerCase() == 'completed' ? AppColors.successColor : AppColors.slate200)),
-                    _buildStatusStep('Completed', project.status.toLowerCase() == 'completed', project.status.toLowerCase() == 'completed'),
-                  ],
-                ),
+                if (rawData?.overview?.statusTrack != null && rawData!.overview!.statusTrack.isNotEmpty)
+                  Row(
+                    children: [
+                      for (int i = 0; i < rawData.overview!.statusTrack.length; i++) ...[
+                        _buildStatusStep(
+                          rawData.overview!.statusTrack[i].status,
+                          rawData.overview!.statusTrack[i].isCompleted,
+                          rawData.overview!.statusTrack[i].isCurrent,
+                        ),
+                        if (i < rawData.overview!.statusTrack.length - 1)
+                          Expanded(
+                            child: Container(
+                              height: 2,
+                              color: rawData.overview!.statusTrack[i].isCompleted
+                                  ? AppColors.successColor
+                                  : AppColors.slate200,
+                            ),
+                          ),
+                      ],
+                    ],
+                  )
+                else
+                  Row(
+                    children: [
+                      _buildStatusStep('Not Started', true, project.status.toLowerCase() == 'not started'),
+                      Expanded(child: Container(height: 2, color: project.status.toLowerCase() != 'not started' ? AppColors.successColor : AppColors.slate200)),
+                      _buildStatusStep('In Progress', project.status.toLowerCase() == 'in progress' || project.status.toLowerCase() == 'completed', project.status.toLowerCase() == 'in progress'),
+                      Expanded(child: Container(height: 2, color: project.status.toLowerCase() == 'completed' ? AppColors.successColor : AppColors.slate200)),
+                      _buildStatusStep('Completed', project.status.toLowerCase() == 'completed', project.status.toLowerCase() == 'completed'),
+                    ],
+                  ),
               ],
             ),
           ),
@@ -2007,6 +2113,21 @@ class _OverviewTab extends StatelessWidget {
                 if (rawData != null && rawData.startDate.isNotEmpty) ...[
                   const Divider(height: 16, color: AppColors.slate100),
                   _buildInfoRow('Progress', '${rawData.progress}%'),
+                ],
+                if (rawData?.createdBy != null) ...[
+                  const Divider(height: 16, color: AppColors.slate100),
+                  _buildInfoRow(
+                    'Created By',
+                    '${rawData!.createdBy!.name} (${rawData.createdBy!.role})\n${rawData.createdBy!.email}',
+                  ),
+                ],
+                if (rawData != null && rawData.createdAt.isNotEmpty) ...[
+                  const Divider(height: 16, color: AppColors.slate100),
+                  _buildInfoRow('Created At', rawData.createdAt.split('T').first),
+                ],
+                if (rawData != null && rawData.updatedAt.isNotEmpty) ...[
+                  const Divider(height: 16, color: AppColors.slate100),
+                  _buildInfoRow('Last Updated', rawData.updatedAt.split('T').first),
                 ],
               ],
             ),

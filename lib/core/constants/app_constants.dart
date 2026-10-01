@@ -88,6 +88,11 @@ class AppConstants {
   static const String adminProjectsUrl = '/api/admin/projects';
   static const String adminSearchProjectsUrl = '/api/admin/projects/search';
   static String adminProjectDetailsUrl(dynamic id) => '$adminProjectsUrl/$id';
+  static const String assignedProjectsUrl = '/api/admin/projects/assigned';
+  static String assignedProjectDetailsUrl(dynamic id) => '$assignedProjectsUrl/$id';
+  static const String adminTasksUrl = '/api/admin/tasks';
+  static String adminTaskDetailUrl(dynamic id) => '$adminTasksUrl/$id';
+  static String adminTaskSubtasksUrl(dynamic id) => '$adminTasksUrl/$id/subtasks';
   static const String userLoginUrl = '/api/user_login';
   static const String otpVerifyUrl = '/api/otp_verify';
   static const String documentTemplatesEndpoint = '/api/v1/document-templates/';

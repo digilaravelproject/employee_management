@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:intl/intl.dart';
 import '../../../core/controllers/app_controller.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_text.dart';
 import '../controllers/tasks_controller.dart';
 import '../models/task_model.dart';
+import '../models/create_task_model.dart';
 import '../../role_permissions/models/role_permission_models.dart';
 import '../../projects/controllers/projects_controller.dart';
 import 'create_task_screen.dart';
 
 class TaskDetailsScreen extends StatefulWidget {
-  const TaskDetailsScreen({super.key});
+  final String? taskId;
+  const TaskDetailsScreen({super.key, this.taskId});
 
   @override
   State<TaskDetailsScreen> createState() => _TaskDetailsScreenState();
@@ -22,6 +25,15 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   final appController = Get.find<AppController>();
   final RxInt selectedTabIdx = 0.obs;
   final commentInputController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    final targetId = widget.taskId ?? controller.selectedTask.value?.id;
+    if (targetId != null && targetId.isNotEmpty) {
+      controller.fetchTaskDetails(targetId);
+    }
+  }
 
   Color _getPriorityColor(String prio) {
     switch (prio.toLowerCase()) {
@@ -219,6 +231,11 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
         // Observe live ticker for ticking timers
         controller.liveTicker.value;
         final task = controller.selectedTask.value;
+        if (task == null && controller.isLoadingTaskDetails.value) {
+          return const Center(
+            child: CircularProgressIndicator(color: AppColors.primaryColor),
+          );
+        }
         if (task == null) {
           return const Center(
             child: AppText('No Task Selected', fontSize: 14, fontWeight: FontWeight.bold),
@@ -232,16 +249,25 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
 
         return Column(
           children: [
+            if (controller.isLoadingTaskDetails.value)
+              const LinearProgressIndicator(
+                minHeight: 2.5,
+                backgroundColor: Colors.transparent,
+                color: AppColors.primaryColor,
+              ),
             Expanded(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // 1. Interactive Workflow Pipeline Stepper
-                    _buildWorkflowStepper(task),
-                    const SizedBox(height: 14),
+              child: RefreshIndicator(
+                color: AppColors.primaryColor,
+                onRefresh: () => controller.fetchTaskDetails(task.id),
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // 1. Interactive Workflow Pipeline Stepper
+                      _buildWorkflowStepper(task),
+                      const SizedBox(height: 14),
 
                     // Blocker / Query Alert Banner (if any)
                     if (task.hasActiveQuery) ...[
@@ -393,6 +419,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                 ),
               ),
             ),
+          ),
 
             // If comments tab is active, show the bottom comment input bar
             Obx(() {
@@ -1271,34 +1298,97 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
 
   Widget _buildAssigneeRow(TaskModel task) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Icon(Iconsax.user, size: 16, color: AppColors.textColorHint),
+        const Padding(
+          padding: EdgeInsets.only(top: 3.0),
+          child: Icon(Iconsax.user, size: 16, color: AppColors.textColorHint),
+        ),
         const SizedBox(width: 12),
         const SizedBox(
           width: 80,
-          child: AppText('Assigned To', fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textColorSecondary),
+          child: Padding(
+            padding: EdgeInsets.only(top: 2.0),
+            child: AppText('Assigned To', fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textColorSecondary),
+          ),
         ),
         Expanded(
           child: task.assignees.isNotEmpty
-              ? Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 12,
-                      backgroundImage: NetworkImage(task.assignees.first.avatarUrl),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: AppText(
-                        task.assignees.first.name,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textColorPrimary,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                )
+              ? (task.assignees.length == 1
+                  ? Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 12,
+                          backgroundColor: AppColors.slate200,
+                          backgroundImage: NetworkImage(task.assignees.first.avatarUrl),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              AppText(
+                                task.assignees.first.name,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textColorPrimary,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              if (task.assignees.first.designation != null && task.assignees.first.designation!.isNotEmpty)
+                                AppText(
+                                  task.assignees.first.designation!,
+                                  fontSize: 10,
+                                  color: AppColors.textColorHint,
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    )
+                  : Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      children: task.assignees.map((assignee) {
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppColors.slate100,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: AppColors.slate200),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              CircleAvatar(
+                                radius: 10,
+                                backgroundColor: AppColors.slate200,
+                                backgroundImage: NetworkImage(assignee.avatarUrl),
+                              ),
+                              const SizedBox(width: 6),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  AppText(
+                                    assignee.name,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.textColorPrimary,
+                                  ),
+                                  if (assignee.designation != null && assignee.designation!.isNotEmpty)
+                                    AppText(
+                                      assignee.designation!,
+                                      fontSize: 9,
+                                      color: AppColors.textColorHint,
+                                    ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ))
               : const AppText('Unassigned', fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textColorHint),
         ),
       ],
@@ -1306,8 +1396,8 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   }
 
   Widget _buildCreatorRow(TaskModel task) {
-    const creatorName = 'John Smith';
-    const creatorAvatar = 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150';
+    final creatorName = task.creator?.name ?? 'Administrator';
+    final creatorAvatar = task.creator?.avatarUrl ?? 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150';
 
     return Row(
       children: [
@@ -1320,8 +1410,9 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
         Expanded(
           child: Row(
             children: [
-              const CircleAvatar(
+              CircleAvatar(
                 radius: 12,
+                backgroundColor: AppColors.slate200,
                 backgroundImage: NetworkImage(creatorAvatar),
               ),
               const SizedBox(width: 8),
@@ -1329,12 +1420,12 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const AppText(creatorName, fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textColorPrimary),
+                    AppText(creatorName, fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textColorPrimary),
                     const SizedBox(height: 1),
                     AppText(
                       task.statusUpdates.isNotEmpty
                           ? _formatDateTime(task.statusUpdates.first.timestamp)
-                          : '10 Apr 2024, 10:30 AM',
+                          : (task.startDate != null ? task.startDate! : '10 Apr 2024, 10:30 AM'),
                       fontSize: 9,
                       color: AppColors.textColorHint,
                       fontWeight: FontWeight.w500,
@@ -1348,6 +1439,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
       ],
     );
   }
+
 
   // ── Sub Tabs Bar ──
   Widget _buildSubTabs(TaskModel task) {
@@ -1513,6 +1605,22 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                               decoration: sub.isCompleted ? TextDecoration.lineThrough : null,
                             ),
                           ),
+                          if (sub.assignedUser != null) ...[
+                            CircleAvatar(
+                              radius: 10,
+                              backgroundColor: AppColors.primaryColor.withValues(alpha: 0.1),
+                              backgroundImage: sub.assignedUser!.avatarUrl.isNotEmpty && sub.assignedUser!.avatarUrl.startsWith('http')
+                                  ? NetworkImage(sub.assignedUser!.avatarUrl)
+                                  : null,
+                              child: sub.assignedUser!.avatarUrl.isEmpty || !sub.assignedUser!.avatarUrl.startsWith('http')
+                                  ? Text(
+                                      sub.assignedUser!.name.isNotEmpty ? sub.assignedUser!.name[0].toUpperCase() : '?',
+                                      style: const TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: AppColors.primaryColor),
+                                    )
+                                  : null,
+                            ),
+                            const SizedBox(width: 6),
+                          ],
                           if (sub.date != null)
                             AppText(
                               _formatDate(sub.date!),
@@ -2193,9 +2301,45 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
     );
   }
 
+  String _formatFileSize(int bytes) {
+    if (bytes <= 0) return 'File';
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+  }
+
+  void _openFilePreview(String url, String filename) {
+    if (url.isEmpty) return;
+    Get.to(() => Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        title: AppText(filename, color: Colors.white, fontSize: 14),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
+          onPressed: () => Get.back(),
+        ),
+      ),
+      body: Center(
+        child: InteractiveViewer(
+          child: Image.network(
+            url,
+            fit: BoxFit.contain,
+            errorBuilder: (context, error, stackTrace) => const Center(
+              child: AppText('Failed to load image preview', color: Colors.white),
+            ),
+
+          ),
+        ),
+      ),
+    ));
+  }
+
   // ── Tab 4: Files ──
   Widget _buildFilesTab(TaskModel task) {
-    if (task.attachments.isEmpty) {
+    final totalCount = task.attachmentDetails.isNotEmpty ? task.attachmentDetails.length : task.attachments.length;
+
+    if (totalCount == 0) {
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.all(24),
@@ -2233,76 +2377,121 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
             children: [
               const Icon(Iconsax.folder_open, size: 16, color: AppColors.primaryColor),
               const SizedBox(width: 8),
-              AppText('${task.attachments.length} Attachments', fontSize: 13, fontWeight: FontWeight.bold),
+              AppText('$totalCount Attachments', fontSize: 13, fontWeight: FontWeight.bold),
             ],
           ),
           const SizedBox(height: 14),
           ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: task.attachments.length,
+            itemCount: totalCount,
             separatorBuilder: (context, idx) => const SizedBox(height: 10),
             itemBuilder: (context, index) {
-              final filename = task.attachments[index];
-              final ext = filename.split('.').last.toUpperCase();
+              String filename = '';
+              String sizeStr = 'File';
+              String? fileUrl;
 
-              return Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.slate50,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.borderColor),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: ext == 'PDF' ? AppColors.errorColor.withValues(alpha: 0.1) : AppColors.primaryLight,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(
-                        ext == 'PDF' ? Iconsax.document_text : Iconsax.image,
-                        color: ext == 'PDF' ? AppColors.errorColor : AppColors.primaryColor,
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          AppText(
-                            filename,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textColorPrimary,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+              if (task.attachmentDetails.length > index) {
+                final detail = task.attachmentDetails[index];
+                filename = detail.fileName;
+                sizeStr = _formatFileSize(detail.fileSize);
+                fileUrl = detail.fileUrl;
+              } else if (task.attachments.length > index) {
+                filename = task.attachments[index];
+              }
+
+              final ext = filename.split('.').last.toUpperCase();
+              final isImg = ['JPG', 'JPEG', 'PNG', 'WEBP', 'GIF'].contains(ext);
+
+              return GestureDetector(
+                onTap: () {
+                  if (fileUrl != null && fileUrl.isNotEmpty && isImg) {
+                    _openFilePreview(fileUrl, filename);
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.slate50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.borderColor),
+                  ),
+                  child: Row(
+                    children: [
+                      if (isImg && fileUrl != null && fileUrl.isNotEmpty) ...[
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.network(
+                            fileUrl,
+                            width: 38,
+                            height: 38,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: AppColors.primaryLight,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(Iconsax.image, color: AppColors.primaryColor, size: 20),
+                            ),
+
                           ),
-                          const SizedBox(height: 2),
-                          AppText(
-                            '$ext File • 2.4 MB',
-                            fontSize: 10,
-                            color: AppColors.textColorHint,
-                            fontWeight: FontWeight.w500,
+                        ),
+                      ] else ...[
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: ext == 'PDF' ? AppColors.errorColor.withValues(alpha: 0.1) : AppColors.primaryLight,
+                            borderRadius: BorderRadius.circular(8),
                           ),
-                        ],
+                          child: Icon(
+                            ext == 'PDF' ? Iconsax.document_text : Iconsax.document,
+                            color: ext == 'PDF' ? AppColors.errorColor : AppColors.primaryColor,
+                            size: 20,
+                          ),
+                        ),
+                      ],
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            AppText(
+                              filename,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textColorPrimary,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            AppText(
+                              '$ext File • $sizeStr',
+                              fontSize: 10,
+                              color: AppColors.textColorHint,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Iconsax.document_download, color: AppColors.textColorSecondary, size: 18),
-                      onPressed: () {
-                        Get.snackbar(
-                          'Downloading File',
-                          'Initiated download for $filename...',
-                          snackPosition: SnackPosition.BOTTOM,
-                          backgroundColor: AppColors.successColor,
-                          colorText: Colors.white,
-                        );
-                      },
-                    ),
-                  ],
+                      IconButton(
+                        icon: Icon(isImg ? Iconsax.eye : Iconsax.document_download, color: AppColors.textColorSecondary, size: 18),
+                        onPressed: () {
+                          if (fileUrl != null && fileUrl.isNotEmpty && isImg) {
+                            _openFilePreview(fileUrl, filename);
+                          } else {
+                            Get.snackbar(
+                              'File Attachment',
+                              filename,
+                              snackPosition: SnackPosition.BOTTOM,
+                              backgroundColor: AppColors.primaryColor,
+                              colorText: Colors.white,
+                            );
+                          }
+                        },
+                      ),
+                    ],
+                  ),
                 ),
               );
             },
@@ -2311,6 +2500,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
       ),
     );
   }
+
 
   Widget _buildCommentInputBar() {
     return Container(
@@ -2517,8 +2707,8 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   }
 
   void _showManualStatusChangeDialog(BuildContext context, TaskModel task) {
-    final options = [TaskModel.statusToDo, TaskModel.statusInProgress, TaskModel.statusTesting, TaskModel.statusCompleted];
-    final selected = task.normalizedStatus.obs;
+    final options = ['Pending', 'In Progress', 'Testing', 'Completed'];
+    final selected = mapTaskStatusToApi(task.status).obs;
 
     Get.dialog(
       AlertDialog(
@@ -2565,21 +2755,154 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   }
 
   void _showAddSubTaskDialog(BuildContext context) {
+    final task = controller.selectedTask.value;
+    if (task == null) return;
+
     final subTaskTextController = TextEditingController();
+    final selectedDueDate = (task.deadline.isAfter(DateTime.now())
+            ? task.deadline
+            : DateTime.now().add(const Duration(days: 3)))
+        .obs;
+
+    final availableAssignees = task.assignees;
+    final selectedAssigneeId = (availableAssignees.isNotEmpty
+            ? (availableAssignees.first.employeeId ?? '')
+            : '')
+        .obs;
 
     Get.dialog(
       AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const AppText('Add Sub Task', fontSize: 15, fontWeight: FontWeight.bold),
-        content: TextField(
-          controller: subTaskTextController,
-          style: const TextStyle(fontSize: 12),
-          decoration: InputDecoration(
-            hintText: 'e.g. Design responsive dashboard views',
-            hintStyle: const TextStyle(color: AppColors.textColorHint, fontSize: 12),
-            filled: true,
-            fillColor: AppColors.slate50,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+        title: const Row(
+          children: [
+            Icon(Iconsax.task_square, color: AppColors.primaryColor, size: 20),
+            SizedBox(width: 8),
+            AppText('Add Sub Task', fontSize: 16, fontWeight: FontWeight.bold),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const AppText('Subtask Title *', fontSize: 12, fontWeight: FontWeight.bold),
+              const SizedBox(height: 6),
+              TextField(
+                controller: subTaskTextController,
+                style: const TextStyle(fontSize: 13),
+                decoration: InputDecoration(
+                  hintText: 'e.g. Design Figma Mockup Components',
+                  hintStyle: const TextStyle(color: AppColors.textColorHint, fontSize: 12),
+                  filled: true,
+                  fillColor: AppColors.slate50,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppColors.slate200),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppColors.slate200),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              if (availableAssignees.isNotEmpty) ...[
+                const AppText('Assign To', fontSize: 12, fontWeight: FontWeight.bold),
+                const SizedBox(height: 6),
+                Obx(() => Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: AppColors.slate50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.slate200),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: selectedAssigneeId.value.isNotEmpty &&
+                                  availableAssignees.any((a) => a.employeeId == selectedAssigneeId.value)
+                              ? selectedAssigneeId.value
+                              : availableAssignees.first.employeeId,
+                          isExpanded: true,
+                          icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 20, color: AppColors.textColorSecondary),
+                          items: availableAssignees.map((emp) {
+                            return DropdownMenuItem<String>(
+                              value: emp.employeeId ?? '',
+                              child: Row(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 12,
+                                    backgroundColor: AppColors.primaryColor.withValues(alpha: 0.1),
+                                    backgroundImage: emp.avatarUrl.isNotEmpty && emp.avatarUrl.startsWith('http')
+                                        ? NetworkImage(emp.avatarUrl)
+                                        : null,
+                                    child: emp.avatarUrl.isEmpty || !emp.avatarUrl.startsWith('http')
+                                        ? Text(
+                                            emp.name.isNotEmpty ? emp.name[0].toUpperCase() : '?',
+                                            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.primaryColor),
+                                          )
+                                        : null,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      emp.name,
+                                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (val) {
+                            if (val != null) selectedAssigneeId.value = val;
+                          },
+                        ),
+                      ),
+                    )),
+                const SizedBox(height: 14),
+              ],
+
+              const AppText('Due Date', fontSize: 12, fontWeight: FontWeight.bold),
+              const SizedBox(height: 6),
+              Obx(() => GestureDetector(
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: selectedDueDate.value,
+                        firstDate: DateTime.now().subtract(const Duration(days: 30)),
+                        lastDate: DateTime.now().add(const Duration(days: 365)),
+                      );
+                      if (picked != null) {
+                        selectedDueDate.value = picked;
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: AppColors.slate50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.slate200),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Iconsax.calendar_1, size: 16, color: AppColors.primaryColor),
+                          const SizedBox(width: 10),
+                          AppText(
+                            DateFormat('dd MMM yyyy').format(selectedDueDate.value),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textColorPrimary,
+                          ),
+                          const Spacer(),
+                          const Icon(Icons.arrow_drop_down, color: AppColors.textColorSecondary),
+                        ],
+                      ),
+                    ),
+                  )),
+            ],
           ),
         ),
         actions: [
@@ -2587,17 +2910,44 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
             onPressed: () => Get.back(),
             child: const AppText('Cancel', color: AppColors.textColorSecondary, fontWeight: FontWeight.w600),
           ),
-          ElevatedButton(
-            onPressed: () {
-              controller.addSubTask(subTaskTextController.text);
-              Get.back();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primaryColor,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            child: const AppText('Add', color: Colors.white, fontWeight: FontWeight.bold),
-          ),
+          Obx(() {
+            final isAdding = controller.isAddingSubTask.value;
+            return ElevatedButton(
+              onPressed: isAdding
+                  ? null
+                  : () {
+                      final title = subTaskTextController.text.trim();
+                      if (title.isEmpty) {
+                        Get.snackbar(
+                          'Validation Error',
+                          'Please enter a subtask title',
+                          snackPosition: SnackPosition.BOTTOM,
+                          backgroundColor: AppColors.errorColor,
+                          colorText: Colors.white,
+                        );
+                        return;
+                      }
+                      controller.addSubTaskApi(
+                        taskId: task.id,
+                        title: title,
+                        assignedTo: selectedAssigneeId.value.isNotEmpty ? selectedAssigneeId.value : null,
+                        dueDate: DateFormat('yyyy-MM-dd').format(selectedDueDate.value),
+                      );
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryColor,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              ),
+              child: isAdding
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const AppText('Add Subtask', color: Colors.white, fontWeight: FontWeight.bold),
+            );
+          }),
         ],
       ),
     );
@@ -2614,14 +2964,23 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
             onPressed: () => Get.back(),
             child: const AppText('Cancel', color: AppColors.textColorSecondary, fontWeight: FontWeight.w600),
           ),
-          ElevatedButton(
-            onPressed: () => controller.deleteTask(id),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.errorColor,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            child: const AppText('Delete', color: Colors.white, fontWeight: FontWeight.bold),
-          ),
+          Obx(() {
+            final isDeleting = controller.isDeletingTask.value;
+            return ElevatedButton(
+              onPressed: isDeleting ? null : () => controller.deleteTask(id, fromDetail: true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.errorColor,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: isDeleting
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const AppText('Delete', color: Colors.white, fontWeight: FontWeight.bold),
+            );
+          }),
         ],
       ),
     );

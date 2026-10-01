@@ -3,8 +3,10 @@ import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_text.dart';
+import '../../../core/controllers/app_controller.dart';
 import '../../role_permissions/views/role_list_screen.dart';
 import '../../projects/views/project_list_screen.dart';
+import '../../projects/views/employee_assigned_projects_screen.dart';
 import '../../tasks/views/tasks_list_screen.dart';
 import '../../assets/views/assets_list_screen.dart';
 import '../../holidays/views/holiday_calendar_screen.dart';
@@ -702,7 +704,13 @@ class _ModuleCard extends StatelessWidget {
             } else if (item.label == 'Employee') {
               Get.to(() => const EmployeeListScreen());
             } else if (item.label == 'Projects') {
-              Get.to(() => const ProjectListScreen());
+              final appController = Get.isRegistered<AppController>() ? Get.find<AppController>() : null;
+              final isEmployee = appController?.userRole.value.toLowerCase() == 'employee';
+              if (isEmployee) {
+                Get.to(() => const EmployeeAssignedProjectsScreen());
+              } else {
+                Get.to(() => const ProjectListScreen());
+              }
             } else if (item.label == 'Tasks') {
               Get.to(() => const TasksListScreen());
             } else if (item.label == 'Assets') {

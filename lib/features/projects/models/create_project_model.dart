@@ -129,6 +129,134 @@ class CreateProjectResponseModel {
   }
 }
 
+class ProjectCreatedBy {
+  final int id;
+  final String name;
+  final String email;
+  final String role;
+
+  ProjectCreatedBy({
+    required this.id,
+    required this.name,
+    required this.email,
+    required this.role,
+  });
+
+  factory ProjectCreatedBy.fromJson(Map<String, dynamic> json) {
+    return ProjectCreatedBy(
+      id: _parseInt(json['id']),
+      name: json['name']?.toString() ?? '',
+      email: json['email']?.toString() ?? '',
+      role: json['role']?.toString() ?? '',
+    );
+  }
+}
+
+class ProjectStatusTrackItem {
+  final String status;
+  final bool isCurrent;
+  final bool isCompleted;
+
+  ProjectStatusTrackItem({
+    required this.status,
+    required this.isCurrent,
+    required this.isCompleted,
+  });
+
+  factory ProjectStatusTrackItem.fromJson(Map<String, dynamic> json) {
+    return ProjectStatusTrackItem(
+      status: json['status']?.toString() ?? '',
+      isCurrent: json['is_current'] == true,
+      isCompleted: json['is_completed'] == true,
+    );
+  }
+}
+
+class ProjectOverviewData {
+  final String description;
+  final String startDate;
+  final String endDate;
+  final String status;
+  final num progress;
+  final List<ProjectStatusTrackItem> statusTrack;
+
+  ProjectOverviewData({
+    required this.description,
+    required this.startDate,
+    required this.endDate,
+    required this.status,
+    required this.progress,
+    required this.statusTrack,
+  });
+
+  factory ProjectOverviewData.fromJson(Map<String, dynamic> json) {
+    return ProjectOverviewData(
+      description: json['description']?.toString() ?? '',
+      startDate: json['start_date']?.toString() ?? '',
+      endDate: json['end_date']?.toString() ?? '',
+      status: json['status']?.toString() ?? '',
+      progress: _parseNum(json['progress']),
+      statusTrack: json['status_track'] is List
+          ? (json['status_track'] as List)
+              .whereType<Map>()
+              .map((e) => ProjectStatusTrackItem.fromJson(Map<String, dynamic>.from(e)))
+              .toList()
+          : [],
+    );
+  }
+}
+
+class ProjectTasksSummary {
+  final int total;
+  final int completed;
+  final int inProgress;
+  final int testing;
+  final int toDo;
+
+  ProjectTasksSummary({
+    required this.total,
+    required this.completed,
+    required this.inProgress,
+    required this.testing,
+    required this.toDo,
+  });
+
+  factory ProjectTasksSummary.fromJson(Map<String, dynamic> json) {
+    return ProjectTasksSummary(
+      total: _parseInt(json['total']),
+      completed: _parseInt(json['completed']),
+      inProgress: _parseInt(json['in_progress']),
+      testing: _parseInt(json['testing']),
+      toDo: _parseInt(json['to_do']),
+    );
+  }
+}
+
+class ProjectTasksData {
+  final bool isStatic;
+  final String message;
+  final ProjectTasksSummary? summary;
+  final List<dynamic> items;
+
+  ProjectTasksData({
+    required this.isStatic,
+    required this.message,
+    this.summary,
+    required this.items,
+  });
+
+  factory ProjectTasksData.fromJson(Map<String, dynamic> json) {
+    return ProjectTasksData(
+      isStatic: json['is_static'] == true,
+      message: json['message']?.toString() ?? '',
+      summary: json['summary'] is Map
+          ? ProjectTasksSummary.fromJson(Map<String, dynamic>.from(json['summary']))
+          : null,
+      items: json['items'] is List ? (json['items'] as List) : [],
+    );
+  }
+}
+
 class ProjectApiData {
   final int id;
   final String name;
@@ -143,6 +271,11 @@ class ProjectApiData {
   final List<ProjectTeamMember> team;
   final List<ProjectFileItemModel> files;
   final List<ProjectTimelineItemModel> timeline;
+  final ProjectCreatedBy? createdBy;
+  final ProjectOverviewData? overview;
+  final ProjectTasksData? tasksData;
+  final String createdAt;
+  final String updatedAt;
 
   ProjectApiData({
     required this.id,
@@ -158,6 +291,11 @@ class ProjectApiData {
     required this.team,
     required this.files,
     required this.timeline,
+    this.createdBy,
+    this.overview,
+    this.tasksData,
+    this.createdAt = '',
+    this.updatedAt = '',
   });
 
   factory ProjectApiData.fromJson(Map<String, dynamic> json) {
@@ -190,6 +328,17 @@ class ProjectApiData {
               .map((e) => ProjectTimelineItemModel.fromJson(Map<String, dynamic>.from(e)))
               .toList()
           : [],
+      createdBy: json['created_by'] is Map
+          ? ProjectCreatedBy.fromJson(Map<String, dynamic>.from(json['created_by']))
+          : null,
+      overview: json['overview'] is Map
+          ? ProjectOverviewData.fromJson(Map<String, dynamic>.from(json['overview']))
+          : null,
+      tasksData: json['tasks'] is Map
+          ? ProjectTasksData.fromJson(Map<String, dynamic>.from(json['tasks']))
+          : null,
+      createdAt: json['created_at']?.toString() ?? '',
+      updatedAt: json['updated_at']?.toString() ?? '',
     );
   }
 

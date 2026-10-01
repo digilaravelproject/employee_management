@@ -1,4 +1,6 @@
+import 'package:get/get.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/controllers/app_controller.dart';
 import '../../../core/services/network/api_client.dart';
 import '../../../core/utils/logger.dart';
 import '../../employee/management/models/employee_model.dart';
@@ -192,8 +194,13 @@ class ProjectRepository implements ProjectRepositoryInterface {
   @override
   Future<ProjectDetailsResponseModel> getProjectDetails(dynamic id) async {
     try {
-      final endpoint = AppConstants.adminProjectDetailsUrl(id);
-      Logger.d('ProjectRepository => GET $endpoint');
+      final appController = Get.isRegistered<AppController>() ? Get.find<AppController>() : null;
+      final isEmployee = appController?.userRole.value.toLowerCase() == 'employee';
+      final endpoint = isEmployee
+          ? AppConstants.assignedProjectDetailsUrl(id)
+          : AppConstants.adminProjectDetailsUrl(id);
+
+      Logger.d('ProjectRepository => GET $endpoint (isEmployee: $isEmployee)');
 
       final response = await apiClient.get(
         endpoint,

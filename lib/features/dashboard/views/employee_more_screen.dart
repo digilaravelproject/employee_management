@@ -4,7 +4,7 @@ import 'package:iconsax/iconsax.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_text.dart';
 import '../../tasks/views/tasks_list_screen.dart';
-import '../../projects/views/project_list_screen.dart';
+import '../../projects/views/employee_assigned_projects_screen.dart';
 import '../../chat/views/chat_list_screen.dart';
 import '../../company_profile/views/company_profile_view_screen.dart';
 
@@ -57,7 +57,7 @@ class EmployeeMoreScreen extends StatelessWidget {
               subtitle: 'View assigned projects',
               iconColor: Colors.purple,
               onTap: () {
-                Get.to(() => const ProjectListScreen());
+                Get.to(() => const EmployeeAssignedProjectsScreen());
               },
             ),
             _MoreMenuItem(
