@@ -93,6 +93,11 @@ class AppConstants {
   static const String adminTasksUrl = '/api/admin/tasks';
   static String adminTaskDetailUrl(dynamic id) => '$adminTasksUrl/$id';
   static String adminTaskSubtasksUrl(dynamic id) => '$adminTasksUrl/$id/subtasks';
+  static String adminTaskStartUrl(dynamic id) => '$adminTasksUrl/$id/start';
+  static String adminTaskPauseUrl(dynamic id) => '$adminTasksUrl/$id/pause';
+  static String adminTaskStopUrl(dynamic id) => '$adminTasksUrl/$id/stop';
+  static String adminTaskCommentsUrl(dynamic id) => '$adminTasksUrl/$id/comments';
+  static String adminTaskSubmitForTestingUrl(dynamic id) => '$adminTasksUrl/$id/submit-for-testing';
   static const String userLoginUrl = '/api/user_login';
   static const String otpVerifyUrl = '/api/otp_verify';
   static const String documentTemplatesEndpoint = '/api/v1/document-templates/';

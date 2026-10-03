@@ -53,6 +53,11 @@ class TaskComment {
   final String text;
   final DateTime timestamp;
   final String userRole; // e.g. Manager, UI/UX Designer
+  final String? attachmentPath;
+  final String? attachmentName;
+  final String? attachmentUrl;
+  final int? taskId;
+  final int? userId;
 
   const TaskComment({
     required this.id,
@@ -60,7 +65,65 @@ class TaskComment {
     required this.text,
     required this.timestamp,
     this.userRole = 'Employee',
+    this.attachmentPath,
+    this.attachmentName,
+    this.attachmentUrl,
+    this.taskId,
+    this.userId,
   });
+
+  factory TaskComment.fromJson(Map<String, dynamic> json) {
+    AppUser commentUser = const AppUser(name: 'User', email: '', avatarUrl: '');
+    if (json['user'] is Map<String, dynamic>) {
+      final u = json['user'] as Map<String, dynamic>;
+      commentUser = AppUser(
+        name: u['name']?.toString() ?? '',
+        email: u['email']?.toString() ?? '',
+        avatarUrl: TaskModel._formatAvatar(u['avatar']?.toString()),
+        designation: u['designation']?.toString() ?? u['role']?.toString(),
+        employeeId: u['id']?.toString(),
+      );
+    }
+    final role = commentUser.designation ?? (json['user'] is Map ? (json['user']['role']?.toString()) : null) ?? 'Employee';
+    return TaskComment(
+      id: json['id']?.toString() ?? '',
+      user: commentUser,
+      text: json['comment']?.toString() ?? json['text']?.toString() ?? '',
+      timestamp: DateTime.tryParse(json['created_at']?.toString() ?? '') ?? DateTime.now(),
+      userRole: role,
+      attachmentPath: json['attachment_path']?.toString(),
+      attachmentName: json['attachment_name']?.toString(),
+      attachmentUrl: json['attachment_url']?.toString(),
+      taskId: int.tryParse(json['task_id']?.toString() ?? ''),
+      userId: int.tryParse(json['user_id']?.toString() ?? ''),
+    );
+  }
+
+  TaskComment copyWith({
+    String? id,
+    AppUser? user,
+    String? text,
+    DateTime? timestamp,
+    String? userRole,
+    String? attachmentPath,
+    String? attachmentName,
+    String? attachmentUrl,
+    int? taskId,
+    int? userId,
+  }) {
+    return TaskComment(
+      id: id ?? this.id,
+      user: user ?? this.user,
+      text: text ?? this.text,
+      timestamp: timestamp ?? this.timestamp,
+      userRole: userRole ?? this.userRole,
+      attachmentPath: attachmentPath ?? this.attachmentPath,
+      attachmentName: attachmentName ?? this.attachmentName,
+      attachmentUrl: attachmentUrl ?? this.attachmentUrl,
+      taskId: taskId ?? this.taskId,
+      userId: userId ?? this.userId,
+    );
+  }
 }
 
 class TaskStatusUpdate {
@@ -206,6 +269,9 @@ class TaskModel {
   final int? createdBy;
   final String? formattedLoggedTime;
   final AppUser? creator;
+  final DateTime? testingSubmittedAt;
+  final String? testingRemarks;
+  final AppUser? testingSubmittedBy;
 
   const TaskModel({
     required this.id,
@@ -238,26 +304,43 @@ class TaskModel {
     this.createdBy,
     this.formattedLoggedTime,
     this.creator,
+    this.testingSubmittedAt,
+    this.testingRemarks,
+    this.testingSubmittedBy,
   });
 
   String get normalizedStatus {
-    switch (status.toLowerCase()) {
-      case 'pending':
-      case 'to do':
-      case 'todo':
-        return statusToDo;
-      case 'in progress':
-      case 'inprogress':
-        return statusInProgress;
-      case 'review':
-      case 'testing':
-        return statusTesting;
-      case 'completed':
-      case 'done':
-        return statusCompleted;
-      default:
-        return status;
+    final s = status.toLowerCase().trim().replaceAll('_', ' ');
+    if (s == 'pending' ||
+        s == 'to do' ||
+        s == 'todo' ||
+        s == 'not started' ||
+        s == 'open' ||
+        s == 'created' ||
+        s == 'ready to start') {
+      return statusToDo;
     }
+    if (s == 'in progress' ||
+        s == 'inprogress' ||
+        s == 'ongoing' ||
+        s == 'working') {
+      return statusInProgress;
+    }
+    if (s == 'testing' ||
+        s == 'review' ||
+        s == 'in review' ||
+        s == 'submitted for testing' ||
+        s == 'submitted for review' ||
+        s == 'qa') {
+      return statusTesting;
+    }
+    if (s == 'completed' ||
+        s == 'done' ||
+        s == 'finished' ||
+        s == 'closed') {
+      return statusCompleted;
+    }
+    return statusToDo;
   }
 
   int get activeTotalSeconds {
@@ -397,23 +480,7 @@ class TaskModel {
     if (json['comments'] is List) {
       for (final c in json['comments']) {
         if (c is Map<String, dynamic>) {
-          AppUser commentUser = const AppUser(name: 'User', email: '', avatarUrl: '');
-          if (c['user'] is Map<String, dynamic>) {
-            final u = c['user'] as Map<String, dynamic>;
-            commentUser = AppUser(
-              name: u['name']?.toString() ?? '',
-              email: u['email']?.toString() ?? '',
-              avatarUrl: _formatAvatar(u['avatar']?.toString()),
-              designation: u['designation']?.toString() ?? u['role']?.toString(),
-            );
-          }
-          commentsList.add(TaskComment(
-            id: c['id']?.toString() ?? '',
-            user: commentUser,
-            text: c['text']?.toString() ?? c['comment']?.toString() ?? '',
-            timestamp: DateTime.tryParse(c['created_at']?.toString() ?? '') ?? DateTime.now(),
-            userRole: commentUser.designation ?? 'Team Member',
-          ));
+          commentsList.add(TaskComment.fromJson(c));
         }
       }
     }
@@ -533,6 +600,20 @@ class TaskModel {
       createdBy: int.tryParse(json['created_by']?.toString() ?? ''),
       formattedLoggedTime: json['formatted_logged_time']?.toString(),
       creator: taskCreator,
+      testingSubmittedAt: json['testing_submitted_at'] != null
+          ? DateTime.tryParse(json['testing_submitted_at'].toString())
+          : null,
+      testingRemarks: json['testing_remarks']?.toString(),
+      testingSubmittedBy: json['testing_submitted_by'] is Map<String, dynamic>
+          ? AppUser(
+              employeeId: (json['testing_submitted_by'] as Map<String, dynamic>)['id']?.toString(),
+              name: (json['testing_submitted_by'] as Map<String, dynamic>)['name']?.toString() ?? '',
+              email: (json['testing_submitted_by'] as Map<String, dynamic>)['email']?.toString() ?? '',
+              avatarUrl: TaskModel._formatAvatar((json['testing_submitted_by'] as Map<String, dynamic>)['avatar']?.toString()),
+              designation: (json['testing_submitted_by'] as Map<String, dynamic>)['designation']?.toString() ??
+                  (json['testing_submitted_by'] as Map<String, dynamic>)['role']?.toString(),
+            )
+          : null,
     );
   }
 
@@ -567,6 +648,9 @@ class TaskModel {
     int? createdBy,
     String? formattedLoggedTime,
     AppUser? creator,
+    DateTime? testingSubmittedAt,
+    String? testingRemarks,
+    AppUser? testingSubmittedBy,
   }) {
     return TaskModel(
       id: id ?? this.id,
@@ -599,6 +683,9 @@ class TaskModel {
       createdBy: createdBy ?? this.createdBy,
       formattedLoggedTime: formattedLoggedTime ?? this.formattedLoggedTime,
       creator: creator ?? this.creator,
+      testingSubmittedAt: testingSubmittedAt ?? this.testingSubmittedAt,
+      testingRemarks: testingRemarks ?? this.testingRemarks,
+      testingSubmittedBy: testingSubmittedBy ?? this.testingSubmittedBy,
     );
   }
 }
@@ -680,5 +767,58 @@ class TaskDetailResponseModel {
     );
   }
 }
+
+class TaskCommentResponseModel {
+  final bool status;
+  final String message;
+  final TaskComment? data;
+
+  const TaskCommentResponseModel({
+    required this.status,
+    required this.message,
+    this.data,
+  });
+
+  factory TaskCommentResponseModel.fromJson(Map<String, dynamic> json, {String? fallbackMessage}) {
+    TaskComment? comment;
+    if (json['data'] is Map<String, dynamic>) {
+      comment = TaskComment.fromJson(json['data'] as Map<String, dynamic>);
+    }
+    return TaskCommentResponseModel(
+      status: json['status'] == true || json['status'] == 'true' || json['status'] == 1,
+      message: parseApiErrorMessage(json, fallbackMessage),
+      data: comment,
+    );
+  }
+}
+
+class TaskCommentsListResponseModel {
+  final bool status;
+  final String message;
+  final List<TaskComment> data;
+
+  const TaskCommentsListResponseModel({
+    required this.status,
+    required this.message,
+    this.data = const [],
+  });
+
+  factory TaskCommentsListResponseModel.fromJson(Map<String, dynamic> json, {String? fallbackMessage}) {
+    final list = <TaskComment>[];
+    if (json['data'] is List) {
+      for (final item in json['data']) {
+        if (item is Map<String, dynamic>) {
+          list.add(TaskComment.fromJson(item));
+        }
+      }
+    }
+    return TaskCommentsListResponseModel(
+      status: json['status'] == true || json['status'] == 'true' || json['status'] == 1,
+      message: parseApiErrorMessage(json, fallbackMessage),
+      data: list,
+    );
+  }
+}
+
 
 

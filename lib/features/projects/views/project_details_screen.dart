@@ -1943,27 +1943,35 @@ class _TeamTab extends StatelessWidget {
             const AppText('New member will get complete access to past tasks and project work history.', fontSize: 11, color: AppColors.textColorHint),
             const SizedBox(height: 14),
             Expanded(
-              child: ListView.builder(
-                itemCount: controller.allEmployees.length,
-                itemBuilder: (context, idx) {
-                  final emp = controller.allEmployees[idx];
-                  final isAssigned = p.teamMembers.contains(emp);
-                  return ListTile(
-                    leading: CircleAvatar(backgroundImage: NetworkImage(emp.avatarUrl)),
-                    title: AppText(emp.name, fontSize: 13, fontWeight: FontWeight.bold),
-                    subtitle: AppText(emp.email, fontSize: 10, color: AppColors.textColorHint),
-                    trailing: isAssigned
-                        ? const Icon(Icons.check_circle, color: AppColors.primaryColor)
-                        : IconButton(
-                            icon: const Icon(Icons.add_circle_outline, color: AppColors.primaryColor),
-                            onPressed: () {
-                              controller.assignMembersToProject([emp]);
-                              Get.back();
-                            },
-                          ),
+              child: Obx(() {
+                final list = controller.allEmployees;
+                if (list.isEmpty) {
+                  return const Center(
+                    child: AppText('No employees available to assign', fontSize: 12, color: AppColors.textColorSecondary),
                   );
-                },
-              ),
+                }
+                return ListView.builder(
+                  itemCount: list.length,
+                  itemBuilder: (context, idx) {
+                    final emp = list[idx];
+                    final isAssigned = p.teamMembers.contains(emp);
+                    return ListTile(
+                      leading: CircleAvatar(backgroundImage: NetworkImage(emp.avatarUrl)),
+                      title: AppText(emp.name, fontSize: 13, fontWeight: FontWeight.bold),
+                      subtitle: AppText(emp.email, fontSize: 10, color: AppColors.textColorHint),
+                      trailing: isAssigned
+                          ? const Icon(Icons.check_circle, color: AppColors.primaryColor)
+                          : IconButton(
+                              icon: const Icon(Icons.add_circle_outline, color: AppColors.primaryColor),
+                              onPressed: () {
+                                controller.assignMembersToProject([emp]);
+                                Get.back();
+                              },
+                            ),
+                    );
+                  },
+                );
+              }),
             ),
           ],
         ),

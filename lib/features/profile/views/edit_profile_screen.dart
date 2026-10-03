@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/app_validators.dart';
 import '../../../core/widgets/app_input_field.dart';
 import '../../../core/widgets/app_text.dart';
 import '../../auth/domain/models/user_model.dart';
@@ -156,9 +157,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       const SizedBox(height: 14),
                       AppInputField(
                         label: 'Phone Number',
-                        hint: 'Enter phone number',
+                        hint: 'Enter 10-digit phone number',
                         controller: controller.phoneController,
                         keyboardType: TextInputType.phone,
+                        validator: (val) => AppValidators.validateMobile(val, customMessage: 'Enter a valid 10-digit phone number'),
                       ),
                     ],
                   ),

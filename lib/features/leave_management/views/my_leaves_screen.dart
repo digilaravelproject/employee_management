@@ -41,14 +41,14 @@ class MyLeavesScreen extends StatelessWidget {
                       const AppText('Leaves', fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
                     ],
                   ),
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(Iconsax.calendar_tick, color: Colors.white, size: 20),
-                  ),
+                  // Container(
+                  //   padding: const EdgeInsets.all(8),
+                  //   decoration: BoxDecoration(
+                  //     color: Colors.white.withValues(alpha: 0.1),
+                  //     borderRadius: BorderRadius.circular(8),
+                  //   ),
+                  //   child: const Icon(Iconsax.calendar_tick, color: Colors.white, size: 20),
+                  // ),
                 ],
               ),
             ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/app_validators.dart';
 import '../../../core/widgets/app_text.dart';
 import '../../../core/widgets/app_input_field.dart';
 import '../../../core/widgets/custom_bottom_sheet_dropdown.dart';
@@ -288,12 +289,7 @@ class _CompanyProfileEditScreenState extends State<CompanyProfileEditScreen> {
                         isRequired: true,
                         hint: 'e.g. info@technova.com',
                         keyboardType: TextInputType.emailAddress,
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Email field is required';
-                          }
-                          return null;
-                        },
+                        validator: AppValidators.validateEmail,
                       ),
                       const SizedBox(height: 16),
 
@@ -302,14 +298,9 @@ class _CompanyProfileEditScreenState extends State<CompanyProfileEditScreen> {
                         controller: phoneController,
                         label: 'Phone',
                         isRequired: true,
-                        hint: 'e.g. +91 98765 43210',
+                        hint: 'e.g. 9876543210',
                         keyboardType: TextInputType.phone,
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Phone field is required';
-                          }
-                          return null;
-                        },
+                        validator: (value) => AppValidators.validateMobile(value, customMessage: 'Enter a valid 10-digit phone number'),
                       ),
                       const SizedBox(height: 16),
 

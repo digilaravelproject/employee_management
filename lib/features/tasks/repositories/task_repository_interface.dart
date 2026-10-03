@@ -15,6 +15,21 @@ abstract class TaskRepositoryInterface {
   Future<TaskDetailResponseModel> updateAdminTask(dynamic taskId, UpdateTaskRequestModel request);
   Future<DeleteTaskResponseModel> deleteAdminTask(dynamic taskId);
   Future<SubTaskResponseModel> addSubTask(dynamic taskId, AddSubTaskRequestModel request);
+  Future<TaskDetailResponseModel> startAdminTask(dynamic taskId, {String? note});
+  Future<TaskDetailResponseModel> pauseAdminTask(dynamic taskId, {String? note});
+  Future<TaskDetailResponseModel> stopAdminTask(dynamic taskId, {String? note});
+  Future<TaskCommentResponseModel> addTaskComment({
+    required dynamic taskId,
+    required String comment,
+    String? userId,
+    String? filePath,
+  });
+  Future<TaskDetailResponseModel> submitTaskForTesting(
+    dynamic taskId, {
+    String? remarks,
+    String? filePath,
+  });
+  Future<TaskCommentsListResponseModel> getTaskComments(dynamic taskId);
 }
 
 

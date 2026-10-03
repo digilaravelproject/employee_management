@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../core/services/network/response_model.dart';
 import '../../../core/utils/custom_snackbar.dart';
+import '../../../core/utils/app_validators.dart';
 import '../domain/models/user_model.dart';
 import '../../../routes/route_helper.dart';
 import '../domain/services/auth_service.dart';
@@ -144,13 +145,13 @@ class AuthController extends GetxController {
         return;
       }
       
-      if (phone.isEmpty || phone.length != 10) {
+      if (!AppValidators.isValidMobile(phone)) {
         CustomSnackbar.showError('Please enter a valid 10-digit mobile number');
         isLoading.value = false;
         return;
       }
       
-      if (email.isEmpty || !GetUtils.isEmail(email)) {
+      if (!AppValidators.isValidEmail(email)) {
         CustomSnackbar.showError('Please enter a valid email address');
         isLoading.value = false;
         return;
@@ -197,14 +198,7 @@ class AuthController extends GetxController {
       isLoading.value = true;
       final email = emailController.text.trim();
       
-      // Validate email
-      if (email.isEmpty) {
-        CustomSnackbar.showError('Please enter your email');
-        isLoading.value = false;
-        return;
-      }
-      
-      if (!GetUtils.isEmail(email)) {
+      if (!AppValidators.isValidEmail(email)) {
         CustomSnackbar.showError('Please enter a valid email address');
         isLoading.value = false;
         return;
@@ -442,13 +436,11 @@ class AuthController extends GetxController {
   }
 
   String? validateEmail(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Please enter your email';
-    }
-    if (!GetUtils.isEmail(value)) {
-      return 'Please enter a valid email address';
-    }
-    return null;
+    return AppValidators.validateEmail(value, customMessage: 'Please enter a valid email address');
+  }
+
+  String? validateMobile(String? value) {
+    return AppValidators.validateMobile(value, customMessage: 'Please enter a valid 10-digit mobile number');
   }
 
   String? validatePassword(String? value) {

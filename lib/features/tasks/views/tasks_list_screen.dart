@@ -665,38 +665,65 @@ class TasksListScreen extends StatelessWidget {
                                       ),
                                     )
                                   else if (task.normalizedStatus == TaskModel.statusInProgress)
-                                    GestureDetector(
-                                      onTap: () {
-                                        if (task.isTimerRunning) {
-                                          controller.pauseTaskTimer(task.id);
-                                        } else {
-                                          controller.startTaskTimer(task.id);
-                                        }
-                                      },
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: task.isTimerRunning ? const Color(0xFFF59E0B) : AppColors.primaryColor,
-                                          borderRadius: BorderRadius.circular(6),
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Icon(
-                                              task.isTimerRunning ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                                              color: Colors.white,
-                                              size: 14,
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        GestureDetector(
+                                          onTap: () {
+                                            if (task.isTimerRunning) {
+                                              controller.pauseTaskTimer(task.id);
+                                            } else {
+                                              controller.startTaskTimer(task.id);
+                                            }
+                                          },
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                            decoration: BoxDecoration(
+                                              color: task.isTimerRunning ? const Color(0xFFF59E0B) : AppColors.primaryColor,
+                                              borderRadius: BorderRadius.circular(6),
                                             ),
-                                            const SizedBox(width: 2),
-                                            AppText(
-                                              task.isTimerRunning ? 'Pause' : 'Resume',
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.white,
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(
+                                                  task.isTimerRunning ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                                                  color: Colors.white,
+                                                  size: 14,
+                                                ),
+                                                const SizedBox(width: 2),
+                                                AppText(
+                                                  task.isTimerRunning ? 'Pause' : 'Resume',
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.white,
+                                                ),
+                                              ],
                                             ),
-                                          ],
+                                          ),
                                         ),
-                                      ),
+                                        if (task.isTimerRunning) ...[
+                                          const SizedBox(width: 4),
+                                          GestureDetector(
+                                            onTap: () => controller.stopTaskTimer(task.id, note: 'Stopped task timer'),
+                                            child: Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                                              decoration: BoxDecoration(
+                                                color: AppColors.errorColor.withValues(alpha: 0.1),
+                                                borderRadius: BorderRadius.circular(6),
+                                                border: Border.all(color: AppColors.errorColor.withValues(alpha: 0.3)),
+                                              ),
+                                              child: const Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(Icons.stop_rounded, color: AppColors.errorColor, size: 14),
+                                                  SizedBox(width: 1),
+                                                  AppText('Stop', fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.errorColor),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ],
                                     )
                                   else if (task.normalizedStatus == TaskModel.statusTesting)
                                     Container(

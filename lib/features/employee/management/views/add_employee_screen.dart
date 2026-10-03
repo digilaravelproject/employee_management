@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/custom_snackbar.dart';
+import '../../../../core/utils/app_validators.dart';
 import '../../../../core/widgets/app_text.dart';
 import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/app_input_field.dart';
@@ -255,8 +256,235 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
     super.dispose();
   }
 
+  bool _validateStep(int step) {
+    if (step == 0) {
+      if (nameController.text.trim().isEmpty) {
+        CustomSnackbar.showError('Please enter employee full name');
+        return false;
+      }
+      if (empIdController.text.trim().isEmpty) {
+        CustomSnackbar.showError('Please enter employee ID');
+        return false;
+      }
+      if (selectedGender.trim().isEmpty) {
+        CustomSnackbar.showError('Please select gender');
+        return false;
+      }
+      if (selectedMaritalStatus.trim().isEmpty) {
+        CustomSnackbar.showError('Please select marital status');
+        return false;
+      }
+      if (selectedBloodGroup.trim().isEmpty) {
+        CustomSnackbar.showError('Please select blood group');
+        return false;
+      }
+      // Auto-fill account holder name with employee name if empty
+      if (accountHolderNameController.text.trim().isEmpty) {
+        accountHolderNameController.text = nameController.text.trim();
+      }
+      return true;
+    } else if (step == 1) {
+      final mobile = mobileController.text.trim();
+      if (mobile.isEmpty) {
+        CustomSnackbar.showError('Please enter primary mobile number');
+        return false;
+      }
+      if (!AppValidators.isValidMobile(mobile)) {
+        CustomSnackbar.showError('Please enter a valid 10-digit primary mobile number');
+        return false;
+      }
+
+      final altMobile = altMobileController.text.trim();
+      if (altMobile.isEmpty) {
+        CustomSnackbar.showError('Please enter alternate mobile number');
+        return false;
+      }
+      if (!AppValidators.isValidMobile(altMobile)) {
+        CustomSnackbar.showError('Please enter a valid 10-digit alternate mobile number');
+        return false;
+      }
+
+      final email = emailController.text.trim();
+      if (email.isEmpty) {
+        CustomSnackbar.showError('Please enter email address');
+        return false;
+      }
+      if (!AppValidators.isValidEmail(email)) {
+        CustomSnackbar.showError('Please enter a valid email address');
+        return false;
+      }
+
+      final emergencyContact = emergencyContactController.text.trim();
+      if (emergencyContact.isEmpty) {
+        CustomSnackbar.showError('Please enter emergency contact phone number');
+        return false;
+      }
+      if (!AppValidators.isValidMobile(emergencyContact)) {
+        CustomSnackbar.showError('Please enter a valid 10-digit emergency contact phone number');
+        return false;
+      }
+
+      if (addressController.text.trim().isEmpty) {
+        CustomSnackbar.showError('Please enter street address');
+        return false;
+      }
+      if (cityController.text.trim().isEmpty) {
+        CustomSnackbar.showError('Please enter city');
+        return false;
+      }
+      final pincode = pincodeController.text.trim();
+      if (pincode.isEmpty) {
+        CustomSnackbar.showError('Please enter pincode');
+        return false;
+      }
+      if (!AppValidators.isValidPincode(pincode)) {
+        CustomSnackbar.showError('Please enter a valid 6-digit pincode');
+        return false;
+      }
+      if (stateController.text.trim().isEmpty) {
+        CustomSnackbar.showError('Please enter state');
+        return false;
+      }
+      if (countryController.text.trim().isEmpty) {
+        CustomSnackbar.showError('Please enter country');
+        return false;
+      }
+      return true;
+    } else if (step == 2) {
+      if (selectedWorkMode.trim().isEmpty) {
+        CustomSnackbar.showError('Please select work mode');
+        return false;
+      }
+      if (selectedEmployeeType.trim().isEmpty) {
+        CustomSnackbar.showError('Please select employee type');
+        return false;
+      }
+      if (selectedDepartment.trim().isEmpty) {
+        CustomSnackbar.showError('Please select department');
+        return false;
+      }
+      if (selectedDesignation.trim().isEmpty) {
+        CustomSnackbar.showError('Please select designation');
+        return false;
+      }
+      if (selectedRole.trim().isEmpty) {
+        CustomSnackbar.showError('Please select role');
+        return false;
+      }
+      if (selectedTeam.trim().isEmpty) {
+        CustomSnackbar.showError('Please select team / unit');
+        return false;
+      }
+      if (selectedShift.trim().isEmpty) {
+        CustomSnackbar.showError('Please select assigned shift');
+        return false;
+      }
+      if (selectedReportingManager.trim().isEmpty || selectedReportingManager.trim().toLowerCase() == 'none') {
+        CustomSnackbar.showError('Please select reporting manager');
+        return false;
+      }
+      if (selectedEmploymentStatus.trim().isEmpty) {
+        CustomSnackbar.showError('Please select employment status');
+        return false;
+      }
+      if (selectedProbationPeriod.trim().isEmpty) {
+        CustomSnackbar.showError('Please select probation period');
+        return false;
+      }
+      if (selectedNoticePeriod.trim().isEmpty) {
+        CustomSnackbar.showError('Please select notice period');
+        return false;
+      }
+      return true;
+    } else if (step == 3) {
+      if (selectedSalaryType.trim().isEmpty) {
+        CustomSnackbar.showError('Please select salary type');
+        return false;
+      }
+      final salStr = salaryController.text.trim();
+      if (salStr.isEmpty) {
+        CustomSnackbar.showError('Please enter salary');
+        return false;
+      }
+      final salVal = double.tryParse(salStr);
+      if (salVal == null || salVal <= 0) {
+        CustomSnackbar.showError('Please enter a valid base salary amount');
+        return false;
+      }
+      if (hasSalesTarget) {
+        final targetStr = targetAmountController.text.trim();
+        if (targetStr.isEmpty) {
+          CustomSnackbar.showError('Please enter sales target amount');
+          return false;
+        }
+        final targetVal = double.tryParse(targetStr);
+        if (targetVal == null || targetVal < 0) {
+          CustomSnackbar.showError('Please enter a valid sales target amount');
+          return false;
+        }
+        if (selectedTargetPeriod.trim().isEmpty) {
+          CustomSnackbar.showError('Please select target period');
+          return false;
+        }
+        final incStr = incentivePercentController.text.trim();
+        if (incStr.isEmpty) {
+          CustomSnackbar.showError('Please enter incentive commission percentage');
+          return false;
+        }
+        final incVal = double.tryParse(incStr);
+        if (incVal == null || incVal < 0) {
+          CustomSnackbar.showError('Please enter a valid incentive commission percentage');
+          return false;
+        }
+      }
+      return true;
+    } else if (step == 4) {
+      if (accountHolderNameController.text.trim().isEmpty) {
+        CustomSnackbar.showError('Please enter account holder name');
+        return false;
+      }
+      if (bankNameController.text.trim().isEmpty) {
+        CustomSnackbar.showError('Please enter bank name');
+        return false;
+      }
+      final accNum = accountNumberController.text.trim();
+      if (accNum.isEmpty) {
+        CustomSnackbar.showError('Please enter account number');
+        return false;
+      }
+      if (accNum.length < 6 || !RegExp(r'^[0-9]+$').hasMatch(accNum)) {
+        CustomSnackbar.showError('Please enter a valid bank account number');
+        return false;
+      }
+      final ifsc = ifscCodeController.text.trim().toUpperCase();
+      if (ifsc.isEmpty) {
+        CustomSnackbar.showError('Please enter IFSC code');
+        return false;
+      }
+      if (!AppValidators.isValidIfsc(ifsc)) {
+        CustomSnackbar.showError('Please enter a valid 11-character IFSC code (e.g. HDFC0001234)');
+        return false;
+      }
+      if (branchNameController.text.trim().isEmpty) {
+        CustomSnackbar.showError('Please enter branch name');
+        return false;
+      }
+      if (_skillsList.isEmpty) {
+        CustomSnackbar.showError('Please add at least one professional skill');
+        return false;
+      }
+      return true;
+    }
+    return true;
+  }
+
   void _goToStep(int step) {
     if (step < 0 || step >= _totalSteps) return;
+    if (step > _currentStep) {
+      for (int i = _currentStep; i < step; i++) {
+        if (!_validateStep(i)) return;
+      }
+    }
     setState(() {
       _currentStep = step;
     });
@@ -268,40 +496,8 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
   }
 
   void _handleNext() {
-    // Validate Step 1
-    if (_currentStep == 0) {
-      if (nameController.text.trim().isEmpty) {
-        CustomSnackbar.showError('Please enter employee full name');
-        return;
-      }
-      if (empIdController.text.trim().isEmpty) {
-        CustomSnackbar.showError('Please enter employee ID');
-        return;
-      }
-      // Auto-fill account holder name with employee name if empty
-      if (accountHolderNameController.text.trim().isEmpty) {
-        accountHolderNameController.text = nameController.text.trim();
-      }
-    }
-
-    // Validate Step 2
-    if (_currentStep == 1) {
-      if (mobileController.text.trim().isEmpty) {
-        CustomSnackbar.showError('Please enter mobile number');
-        return;
-      }
-      if (addressController.text.trim().isEmpty) {
-        CustomSnackbar.showError('Please enter street address');
-        return;
-      }
-      if (cityController.text.trim().isEmpty) {
-        CustomSnackbar.showError('Please enter city');
-        return;
-      }
-      if (pincodeController.text.trim().isEmpty) {
-        CustomSnackbar.showError('Please enter pincode');
-        return;
-      }
+    if (!_validateStep(_currentStep)) {
+      return;
     }
 
     // Move next or Submit
@@ -416,6 +612,12 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
   }
 
   Future<void> _saveEmployee() async {
+    for (int step = 0; step < _totalSteps; step++) {
+      if (!_validateStep(step)) {
+        _goToStep(step);
+        return;
+      }
+    }
     final name = nameController.text.trim();
     final empId = empIdController.text.trim();
     final mobile = mobileController.text.trim();
@@ -1013,7 +1215,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
               const SizedBox(height: 16),
 
               // Date of Birth
-              _buildFieldTitle('Date of Birth', isRequired: false),
+              _buildFieldTitle('Date of Birth', isRequired: true),
               const SizedBox(height: 6),
               GestureDetector(
                 onTap: () async {
@@ -1130,36 +1332,40 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
                 hint: '10-digit mobile number',
                 keyboardType: TextInputType.phone,
                 prefixIcon: const Icon(Iconsax.call, color: AppColors.textColorSecondary, size: 18),
+                validator: (val) => AppValidators.validateMobile(val, customMessage: 'Enter a valid 10-digit primary mobile number'),
               ),
               const SizedBox(height: 16),
 
-              _buildFieldTitle('Alternate Mobile Number'),
+              _buildFieldTitle('Alternate Mobile Number', isRequired: true),
               const SizedBox(height: 6),
               AppInputField(
                 controller: altMobileController,
-                hint: 'Secondary contact number',
+                hint: '10-digit secondary contact number',
                 keyboardType: TextInputType.phone,
                 prefixIcon: const Icon(Iconsax.call_calling, color: AppColors.textColorSecondary, size: 18),
+                validator: (val) => AppValidators.validateMobile(val, customMessage: 'Enter a valid 10-digit alternate mobile number'),
               ),
               const SizedBox(height: 16),
 
-              _buildFieldTitle('Email Address'),
+              _buildFieldTitle('Email Address', isRequired: true),
               const SizedBox(height: 6),
               AppInputField(
                 controller: emailController,
                 hint: 'name@example.com',
                 keyboardType: TextInputType.emailAddress,
                 prefixIcon: const Icon(Iconsax.sms, color: AppColors.textColorSecondary, size: 18),
+                validator: AppValidators.validateEmail,
               ),
               const SizedBox(height: 16),
 
-              _buildFieldTitle('Emergency Contact Phone'),
+              _buildFieldTitle('Emergency Contact Phone', isRequired: true),
               const SizedBox(height: 6),
               AppInputField(
                 controller: emergencyContactController,
-                hint: 'Guardian / Spouse / Next of kin number',
+                hint: '10-digit emergency contact number',
                 keyboardType: TextInputType.phone,
                 prefixIcon: const Icon(Iconsax.security_user, color: AppColors.textColorSecondary, size: 18),
+                validator: (val) => AppValidators.validateMobile(val, customMessage: 'Enter a valid 10-digit emergency contact phone number'),
               ),
             ],
           ),
@@ -1207,6 +1413,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
                           hint: 'e.g. 560038',
                           keyboardType: TextInputType.number,
                           prefixIcon: const Icon(Iconsax.location_tick, color: AppColors.textColorSecondary, size: 18),
+                          validator: AppValidators.validatePincode,
                         ),
                       ],
                     ),
@@ -1802,7 +2009,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
                 const SizedBox(height: 16),
 
                 // Incentive %
-                _buildFieldTitle('Incentive Commission (%)', isRequired: false),
+                _buildFieldTitle('Incentive Commission (%)', isRequired: true),
                 const SizedBox(height: 6),
                 AppInputField(
                   controller: incentivePercentController,
@@ -2183,7 +2390,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
     );
   }
 
-  Widget _buildFieldTitle(String title, {bool isRequired = false}) {
+  Widget _buildFieldTitle(String title, {bool isRequired = true}) {
     return RichText(
       text: TextSpan(
         text: title,

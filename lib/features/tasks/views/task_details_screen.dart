@@ -1,9 +1,11 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:intl/intl.dart';
 import '../../../core/controllers/app_controller.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/logger.dart';
 import '../../../core/widgets/app_text.dart';
 import '../controllers/tasks_controller.dart';
 import '../models/task_model.dart';
@@ -32,6 +34,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
     final targetId = widget.taskId ?? controller.selectedTask.value?.id;
     if (targetId != null && targetId.isNotEmpty) {
       controller.fetchTaskDetails(targetId);
+      controller.fetchTaskComments(targetId);
     }
   }
 
@@ -49,36 +52,62 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   }
 
   Color _getStatusBgColor(String status) {
-    switch (status.toLowerCase()) {
+    switch (status.toLowerCase().replaceAll('_', ' ')) {
       case 'completed':
       case 'done':
+      case 'finished':
+      case 'closed':
         return AppColors.successColor.withValues(alpha: 0.1);
       case 'in progress':
       case 'inprogress':
+      case 'ongoing':
+      case 'working':
         return AppColors.primaryColor.withValues(alpha: 0.1);
       case 'testing':
       case 'review':
+      case 'in review':
+      case 'submitted for testing':
+      case 'submitted for review':
+      case 'qa':
         return const Color(0xFF6366F1).withValues(alpha: 0.1); // Indigo
       case 'to do':
+      case 'todo':
       case 'pending':
+      case 'not started':
+      case 'open':
+      case 'created':
+      case 'ready to start':
       default:
         return AppColors.slate100;
     }
   }
 
   Color _getStatusTextColor(String status) {
-    switch (status.toLowerCase()) {
+    switch (status.toLowerCase().replaceAll('_', ' ')) {
       case 'completed':
       case 'done':
+      case 'finished':
+      case 'closed':
         return AppColors.successColor;
       case 'in progress':
       case 'inprogress':
+      case 'ongoing':
+      case 'working':
         return AppColors.primaryColor;
       case 'testing':
       case 'review':
+      case 'in review':
+      case 'submitted for testing':
+      case 'submitted for review':
+      case 'qa':
         return const Color(0xFF6366F1);
       case 'to do':
+      case 'todo':
       case 'pending':
+      case 'not started':
+      case 'open':
+      case 'created':
+      case 'ready to start':
       default:
         return AppColors.slate500;
     }
@@ -593,34 +622,34 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
               ),
             ),
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: InkWell(
-              onTap: () => _showQueryOrBlockerDialog(context, task),
-              borderRadius: BorderRadius.circular(10),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFFBEB),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0xFFFDE68A)),
-                ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Iconsax.message_question, size: 16, color: Color(0xFFD97706)),
-                    SizedBox(width: 6),
-                    AppText(
-                      'Ask Question / Blocker',
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFFB45309),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
+          // const SizedBox(width: 10),
+          // Expanded(
+          //   child: InkWell(
+          //     onTap: () => _showQueryOrBlockerDialog(context, task),
+          //     borderRadius: BorderRadius.circular(10),
+          //     child: Container(
+          //       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+          //       decoration: BoxDecoration(
+          //         color: const Color(0xFFFFFBEB),
+          //         borderRadius: BorderRadius.circular(10),
+          //         border: Border.all(color: const Color(0xFFFDE68A)),
+          //       ),
+          //       child: const Row(
+          //         mainAxisAlignment: MainAxisAlignment.center,
+          //         children: [
+          //           Icon(Iconsax.message_question, size: 16, color: Color(0xFFD97706)),
+          //           SizedBox(width: 6),
+          //           AppText(
+          //             'Ask Question / Blocker',
+          //             fontSize: 11.5,
+          //             fontWeight: FontWeight.bold,
+          //             color: Color(0xFFB45309),
+          //           ),
+          //         ],
+          //       ),
+          //     ),
+          //   ),
+          // ),
         ],
       ),
     );
@@ -633,6 +662,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
     final isInProgress = task.normalizedStatus == TaskModel.statusInProgress;
     final isTesting = task.normalizedStatus == TaskModel.statusTesting;
     final isCompleted = task.normalizedStatus == TaskModel.statusCompleted;
+    final isReadyToStart = (isToDo || (!isInProgress && !isTesting && !isCompleted)) && !isRunning;
 
     return Container(
       width: double.infinity,
@@ -653,139 +683,197 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                   ? const Color(0xFF6366F1)
                   : isCompleted
                       ? AppColors.successColor
-                      : AppColors.borderColor,
+                      : (isReadyToStart ? AppColors.primaryColor.withValues(alpha: 0.35) : AppColors.borderColor),
           width: isRunning || isTesting || isCompleted ? 1.5 : 1,
         ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: isRunning
-                      ? AppColors.primaryColor
-                      : isTesting
-                          ? const Color(0xFF6366F1)
-                          : isCompleted
-                              ? AppColors.successColor
-                              : AppColors.slate200,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  isRunning
-                      ? Icons.timer_outlined
-                      : isTesting
-                          ? Iconsax.verify
-                          : isCompleted
-                              ? Iconsax.tick_circle
-                              : Icons.play_arrow_rounded,
-                  size: 18,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    AppText(
+          InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: isReadyToStart ? () => _showStartTaskDialog(context, task.id) : null,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: isRunning
+                          ? AppColors.primaryColor
+                          : isTesting
+                              ? const Color(0xFF6366F1)
+                              : isCompleted
+                                  ? AppColors.successColor
+                                  : AppColors.primaryColor,
+                      shape: BoxShape.circle,
+                      boxShadow: isReadyToStart
+                          ? [
+                              BoxShadow(
+                                color: AppColors.primaryColor.withValues(alpha: 0.25),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              )
+                            ]
+                          : null,
+                    ),
+                    child: Icon(
                       isRunning
-                          ? 'Timer Running'
-                          : isInProgress
-                              ? 'Timer Paused'
-                              : isTesting
-                                  ? 'Task in Testing'
-                                  : isCompleted
-                                      ? 'Task Completed'
-                                      : 'Ready to Start',
+                          ? Icons.timer_outlined
+                          : isTesting
+                              ? Iconsax.verify
+                              : isCompleted
+                                  ? Iconsax.tick_circle
+                                  : Icons.play_arrow_rounded,
+                      size: 18,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        AppText(
+                          isRunning
+                              ? 'Timer Running'
+                              : isInProgress
+                                  ? 'Timer Paused'
+                                  : isTesting
+                                      ? 'Task in Testing'
+                                      : isCompleted
+                                          ? 'Task Completed'
+                                          : 'Ready to Start',
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textColorPrimary,
+                        ),
+                        AppText(
+                          isRunning
+                              ? 'Live tracking active session'
+                              : isInProgress
+                                  ? 'Paused • Ready to resume or submit'
+                                  : isTesting
+                                      ? 'Awaiting QA / Manager approval'
+                                      : isCompleted
+                                          ? 'Great job! Work has been verified'
+                                          : 'Tap below to commence task',
+                          fontSize: 11,
+                          color: isReadyToStart ? AppColors.primaryColor : AppColors.textColorSecondary,
+                          fontWeight: isReadyToStart ? FontWeight.w600 : FontWeight.normal,
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Live Digital Timer readout
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: isRunning ? AppColors.primaryColor.withValues(alpha: 0.4) : AppColors.slate200),
+                    ),
+                    child: AppText(
+                      task.formattedActiveTime,
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.textColorPrimary,
+                      color: isRunning ? AppColors.primaryColor : AppColors.textColorPrimary,
                     ),
-                    AppText(
-                      isRunning
-                          ? 'Live tracking active session'
-                          : isInProgress
-                              ? 'Paused • Ready to resume or submit'
-                              : isTesting
-                                  ? 'Awaiting QA / Manager approval'
-                                  : isCompleted
-                                      ? 'Great job! Work has been verified'
-                                      : 'Tap below to commence task',
-                      fontSize: 11,
-                      color: AppColors.textColorSecondary,
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              // Live Digital Timer readout
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.slate200),
-                ),
-                child: AppText(
-                  task.formattedActiveTime,
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: isRunning ? AppColors.primaryColor : AppColors.textColorPrimary,
-                ),
-              ),
-            ],
+            ),
           ),
           const SizedBox(height: 16),
 
           // Action Buttons based on status
-          if (isToDo) ...[
+          if (isReadyToStart || isToDo) ...[
             SizedBox(
               width: double.infinity,
               height: 48,
-              child: ElevatedButton.icon(
-                onPressed: () => controller.startTaskTimer(task.id),
-                icon: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 22),
-                label: const AppText('Start Task & Timer', fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white, height: 1.1),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryColor,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  elevation: 0,
-                ),
-              ),
+              child: Obx(() {
+                final isStarting = controller.isStartingTimer.value;
+                return ElevatedButton.icon(
+                  onPressed: isStarting ? null : () => _showStartTaskDialog(context, task.id),
+                  icon: isStarting
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 22),
+                  label: AppText(
+                    isStarting ? 'Starting Timer...' : 'Start Task & Timer',
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    height: 1.1,
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryColor,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    elevation: 0,
+                  ),
+                );
+              }),
             ),
           ] else if (isInProgress) ...[
+            // ── 1. Timer Operations: Pause/Resume & Stop (Clear 50/50 balance) ──
             Row(
               children: [
+                // Pause / Resume Button
                 Expanded(
                   child: SizedBox(
                     height: 46,
                     child: ElevatedButton.icon(
                       onPressed: () {
                         if (isRunning) {
-                          controller.pauseTaskTimer(task.id);
+                          _showPauseTaskDialog(context, task.id);
                         } else {
                           controller.startTaskTimer(task.id);
                         }
                       },
-                      icon: Icon(
-                        isRunning ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                        color: Colors.white,
-                        size: 18,
-                      ),
-                      label: AppText(
-                        isRunning ? 'Pause Timer' : 'Resume Timer',
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        height: 1.1,
-                      ),
+                      icon: Obx(() {
+                        final isPausing = controller.isPausingTimer.value;
+                        final isStarting = controller.isStartingTimer.value;
+                        if (isRunning && isPausing) {
+                          return const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          );
+                        }
+                        if (!isRunning && isStarting) {
+                          return const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          );
+                        }
+                        return Icon(
+                          isRunning ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                          color: Colors.white,
+                          size: 18,
+                        );
+                      }),
+                      label: Obx(() {
+                        final isPausing = controller.isPausingTimer.value;
+                        if (isRunning && isPausing) {
+                          return const AppText('Pausing...', fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white, height: 1.1);
+                        }
+                        return AppText(
+                          isRunning ? 'Pause Timer' : 'Resume Timer',
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          height: 1.1,
+                        );
+                      }),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: isRunning ? const Color(0xFFF59E0B) : AppColors.primaryColor,
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+                        backgroundColor: isRunning ? const Color(0xFFF59E0B) : const Color(0xFF10B981),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         elevation: 0,
                       ),
@@ -793,23 +881,96 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                   ),
                 ),
                 const SizedBox(width: 10),
+                // Stop Timer Button
                 Expanded(
                   child: SizedBox(
                     height: 46,
+                    child: Obx(() {
+                      final isStopping = controller.isStoppingTimer.value;
+                      return ElevatedButton.icon(
+                        onPressed: isStopping ? null : () => _showStopTaskDialog(context, task.id),
+                        icon: isStopping
+                            ? const SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              )
+                            : const Icon(Icons.stop_rounded, color: Colors.white, size: 18),
+                        label: AppText(
+                          isStopping ? 'Stopping...' : 'Stop Timer',
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          height: 1.1,
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFEF4444),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          elevation: 0,
+                        ),
+                      );
+                    }),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 12),
+
+            // ── 2. Next Stage Workflow Action (Separated & Prominent) ──
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF5F3FF),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFDDD6FE)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF7C3AED).withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Iconsax.verify, color: Color(0xFF7C3AED), size: 18),
+                  ),
+                  const SizedBox(width: 10),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        AppText(
+                          'Ready for Verification?',
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF5B21B6),
+                        ),
+                        AppText(
+                          'Submit work to QA / Manager review',
+                          fontSize: 10,
+                          color: Color(0xFF7C3AED),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(
+                    height: 38,
                     child: ElevatedButton.icon(
                       onPressed: () => _showSubmitTestingDialog(context, task.id),
-                      icon: const Icon(Iconsax.verify, color: Colors.white, size: 16),
-                      label: const AppText('Send to Testing', fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white, height: 1.1),
+                      icon: const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 14),
+                      label: const AppText('Send to Testing', fontSize: 11.5, fontWeight: FontWeight.bold, color: Colors.white, height: 1.1),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF6366F1), // Indigo
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        backgroundColor: const Color(0xFF7C3AED),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         elevation: 0,
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ] else if (isTesting) ...[
             Container(
@@ -823,12 +984,18 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                 children: [
                   const Icon(Iconsax.verify, color: Color(0xFF6366F1), size: 20),
                   const SizedBox(width: 10),
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        AppText('In Testing / Review', fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF4338CA)),
-                        AppText('Submitted for manager QA review. Waiting for approval.', fontSize: 10, color: AppColors.textColorSecondary),
+                        const AppText('In Testing / Review', fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF4338CA)),
+                        AppText(
+                          task.testingRemarks != null && task.testingRemarks!.trim().isNotEmpty
+                              ? 'Remarks: ${task.testingRemarks}'
+                              : 'Submitted for manager QA review. Waiting for approval.',
+                          fontSize: 10,
+                          color: AppColors.textColorSecondary,
+                        ),
                       ],
                     ),
                   ),
@@ -1369,11 +1536,12 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Obx(() {
         final currentIdx = selectedTabIdx.value;
+        final commentsCount = controller.selectedTask.value?.comments.length ?? task.comments.length;
         final tabs = [
           'Overview',
           'Time Logs (${task.timeLogs.length})',
           'Handover & Q&A (${task.handovers.length})',
-          'Comments (${task.comments.length})',
+          'Comments ($commentsCount)',
           'Updates (${task.statusUpdates.length})',
           'Files (${task.attachments.length})',
         ];
@@ -1387,7 +1555,12 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
             final label = tabs[idx];
 
             return GestureDetector(
-              onTap: () => selectedTabIdx.value = idx,
+              onTap: () {
+                selectedTabIdx.value = idx;
+                if (idx == 3) {
+                  controller.fetchTaskComments(task.id);
+                }
+              },
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 180),
                 margin: const EdgeInsets.only(right: 8),
@@ -1979,103 +2152,159 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
 
   // ── Tab 3: Comments ──
   Widget _buildCommentsTab(TaskModel task) {
-    if (task.comments.isEmpty) {
+    return Obx(() {
+      final comments = controller.selectedTask.value?.comments ?? task.comments;
+      final isLoading = controller.isLoadingComments.value;
+
+      if (isLoading && comments.isEmpty) {
+        return Container(
+          width: double.infinity,
+          height: 140,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppColors.borderColor),
+          ),
+          child: const Center(
+            child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primaryColor),
+          ),
+        );
+      }
+
+      if (comments.isEmpty) {
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppColors.borderColor),
+          ),
+          child: const Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Iconsax.message_text, size: 30, color: AppColors.textColorHint),
+                SizedBox(height: 10),
+                AppText('No Comments Yet', fontSize: 13, fontWeight: FontWeight.bold),
+                SizedBox(height: 4),
+                AppText('Start the conversation by adding a comment below.', fontSize: 10, color: AppColors.textColorHint),
+              ],
+            ),
+          ),
+        );
+      }
+
       return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: AppColors.borderColor),
         ),
-        child: const Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Iconsax.message_text, size: 30, color: AppColors.textColorHint),
-              SizedBox(height: 10),
-              AppText('No Comments Yet', fontSize: 13, fontWeight: FontWeight.bold),
-              SizedBox(height: 4),
-              AppText('Start the conversation by adding a comment below.', fontSize: 10, color: AppColors.textColorHint),
-            ],
-          ),
-        ),
-      );
-    }
+        child: ListView.separated(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: comments.length,
+          separatorBuilder: (context, idx) => const SizedBox(height: 14),
+          itemBuilder: (context, index) {
+            final comment = comments[index];
+            final isManager = comment.userRole.toLowerCase() == 'manager' || comment.userRole.toLowerCase() == 'admin';
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.borderColor),
-      ),
-      child: ListView.separated(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: task.comments.length,
-        separatorBuilder: (context, idx) => const SizedBox(height: 14),
-        itemBuilder: (context, index) {
-          final comment = task.comments[index];
-          final isManager = comment.userRole.toLowerCase() == 'manager';
-
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              CircleAvatar(
-                radius: 14,
-                backgroundImage: NetworkImage(comment.user.avatarUrl),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        AppText(
-                          comment.user.name,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textColorPrimary,
-                        ),
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: isManager ? AppColors.primaryLight : AppColors.slate100,
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: AppText(
-                            comment.userRole,
-                            fontSize: 9,
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CircleAvatar(
+                  radius: 14,
+                  backgroundColor: AppColors.primaryLight,
+                  backgroundImage: comment.user.avatarUrl.isNotEmpty ? NetworkImage(comment.user.avatarUrl) : null,
+                  onBackgroundImageError: (_, __) {},
+                  child: comment.user.avatarUrl.isEmpty
+                      ? Text(
+                          comment.user.name.isNotEmpty ? comment.user.name[0].toUpperCase() : 'U',
+                          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.primaryColor),
+                        )
+                      : null,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          AppText(
+                            comment.user.name,
+                            fontSize: 12,
                             fontWeight: FontWeight.bold,
-                            color: isManager ? AppColors.primaryColor : AppColors.textColorHint,
+                            color: AppColors.textColorPrimary,
                           ),
-                        ),
-                        const Spacer(),
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: isManager ? AppColors.primaryLight : AppColors.slate100,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: AppText(
+                              comment.userRole,
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                              color: isManager ? AppColors.primaryColor : AppColors.textColorHint,
+                            ),
+                          ),
+                          const Spacer(),
+                          AppText(
+                            _formatDateTime(comment.timestamp),
+                            fontSize: 9,
+                            color: AppColors.textColorHint,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      if (comment.text.isNotEmpty)
                         AppText(
-                          _formatDateTime(comment.timestamp),
-                          fontSize: 9,
-                          color: AppColors.textColorHint,
-                          fontWeight: FontWeight.w500,
+                          comment.text,
+                          fontSize: 11,
+                          color: AppColors.textColorSecondary,
+                        ),
+                      if (comment.attachmentUrl != null && comment.attachmentUrl!.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: AppColors.slate50,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: AppColors.slate200),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Iconsax.document, size: 14, color: AppColors.primaryColor),
+                              const SizedBox(width: 6),
+                              Flexible(
+                                child: AppText(
+                                  comment.attachmentName ?? 'Attached File',
+                                  fontSize: 11,
+                                  color: AppColors.primaryColor,
+                                  fontWeight: FontWeight.w600,
+                                  maxLines: 1,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
-                    ),
-                    const SizedBox(height: 4),
-                    AppText(
-                      comment.text,
-                      fontSize: 11,
-                      color: AppColors.textColorSecondary,
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          );
-        },
-      ),
-    );
+              ],
+            );
+          },
+        ),
+      );
+    });
   }
 
   // ── Tab 3: Updates / Audit Timeline ──
@@ -2432,50 +2661,132 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
       padding: EdgeInsets.only(
         left: 16,
         right: 16,
-        top: 10,
+        top: 8,
         bottom: MediaQuery.of(context).viewInsets.bottom + 10,
       ),
       child: SafeArea(
-        child: Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: Container(
-                height: 44,
+            // Preview attached file if present
+            Obx(() {
+              final attached = controller.commentAttachedFile.value;
+              if (attached == null) return const SizedBox.shrink();
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppColors.slate100,
-                  borderRadius: BorderRadius.circular(20),
+                  color: AppColors.primaryLight,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.primaryColor.withOpacity(0.3)),
                 ),
-                child: TextField(
-                  controller: commentInputController,
-                  style: const TextStyle(fontSize: 12),
-                  decoration: const InputDecoration(
-                    hintText: 'Add a comment...',
-                    hintStyle: TextStyle(color: AppColors.textColorHint, fontSize: 12),
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Iconsax.document_upload, size: 14, color: AppColors.primaryColor),
+                    const SizedBox(width: 6),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 200),
+                      child: AppText(
+                        attached.name,
+                        fontSize: 11,
+                        color: AppColors.primaryColor,
+                        fontWeight: FontWeight.w600,
+                        maxLines: 1,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    InkWell(
+                      onTap: () => controller.commentAttachedFile.value = null,
+                      child: const Icon(Icons.close_rounded, size: 16, color: AppColors.primaryColor),
+                    ),
+                  ],
+                ),
+              );
+            }),
+            Row(
+              children: [
+                // Attach file button
+                Container(
+                  height: 40,
+                  width: 40,
+                  decoration: BoxDecoration(
+                    color: AppColors.slate100,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Iconsax.attach_circle, color: AppColors.textColorSecondary, size: 18),
+                    onPressed: () async {
+                      try {
+                        final result = await FilePicker.platform.pickFiles();
+                        if (result != null && result.files.isNotEmpty) {
+                          controller.commentAttachedFile.value = result.files.first;
+                        }
+                      } catch (e) {
+                        Logger.e('Error picking comment attachment: $e');
+                      }
+                    },
                   ),
                 ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              height: 40,
-              width: 40,
-              decoration: const BoxDecoration(
-                color: AppColors.primaryColor,
-                shape: BoxShape.circle,
-              ),
-              child: IconButton(
-                icon: const Icon(Icons.send_rounded, color: Colors.white, size: 16),
-                onPressed: () {
-                  final text = commentInputController.text;
-                  if (text.trim().isNotEmpty) {
-                    controller.addComment(text);
-                    commentInputController.clear();
-                    FocusScope.of(context).unfocus();
-                  }
-                },
-              ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Container(
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: AppColors.slate100,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: TextField(
+                      controller: commentInputController,
+                      style: const TextStyle(fontSize: 12),
+                      decoration: const InputDecoration(
+                        hintText: 'Add a comment...',
+                        hintStyle: TextStyle(color: AppColors.textColorHint, fontSize: 12),
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Obx(() {
+                  final isAdding = controller.isAddingComment.value;
+                  return Container(
+                    height: 40,
+                    width: 40,
+                    decoration: const BoxDecoration(
+                      color: AppColors.primaryColor,
+                      shape: BoxShape.circle,
+                    ),
+                    child: IconButton(
+                      icon: isAdding
+                          ? const SizedBox(
+                              height: 16,
+                              width: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            )
+                          : const Icon(Icons.send_rounded, color: Colors.white, size: 16),
+                      onPressed: isAdding
+                          ? null
+                          : () async {
+                              final text = commentInputController.text;
+                              final file = controller.commentAttachedFile.value;
+                              if (text.trim().isNotEmpty || file != null) {
+                                final ok = await controller.addComment(
+                                  text,
+                                  filePath: file?.path,
+                                );
+                                if (ok) {
+                                  commentInputController.clear();
+                                  FocusScope.of(context).unfocus();
+                                }
+                              }
+                            },
+                    ),
+                  );
+                }),
+              ],
             ),
           ],
         ),
@@ -2484,8 +2795,237 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   }
 
   // ── Dialogs & Prompts ──
+  void _showStartTaskDialog(BuildContext context, String taskId) {
+    final noteController = TextEditingController(text: 'Starting work on task');
+
+    Get.dialog(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.play_circle_fill_rounded, color: AppColors.primaryColor, size: 22),
+            SizedBox(width: 8),
+            AppText('Start Task Timer', fontSize: 16, fontWeight: FontWeight.bold),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const AppText(
+              'Add an optional note about what you are starting to work on:',
+              fontSize: 12,
+              color: AppColors.textColorSecondary,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: noteController,
+              maxLines: 2,
+              style: const TextStyle(fontSize: 13),
+              decoration: InputDecoration(
+                hintText: 'e.g. Starting work on wireframe designs...',
+                hintStyle: const TextStyle(color: AppColors.textColorHint, fontSize: 12),
+                filled: true,
+                fillColor: AppColors.slate50,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const AppText('Cancel', color: AppColors.textColorSecondary),
+          ),
+          Obx(() {
+            final isStarting = controller.isStartingTimer.value;
+            return ElevatedButton(
+              onPressed: isStarting
+                  ? null
+                  : () async {
+                      final success = await controller.startTaskTimer(
+                        taskId,
+                        note: noteController.text.trim().isNotEmpty
+                            ? noteController.text.trim()
+                            : 'Starting work on task',
+                      );
+                      if (success) {
+                        Get.back();
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryColor,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: isStarting
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const AppText('Start Timer', color: Colors.white, fontWeight: FontWeight.bold),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  void _showPauseTaskDialog(BuildContext context, String taskId) {
+    final noteController = TextEditingController(text: 'Taking a short break');
+
+    Get.dialog(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.pause_circle_filled_rounded, color: Color(0xFFF59E0B), size: 22),
+            SizedBox(width: 8),
+            AppText('Pause Task Timer', fontSize: 16, fontWeight: FontWeight.bold),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const AppText(
+              'Add an optional note or reason for pausing (e.g. Taking a short lunch break):',
+              fontSize: 12,
+              color: AppColors.textColorSecondary,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: noteController,
+              maxLines: 2,
+              style: const TextStyle(fontSize: 13),
+              decoration: InputDecoration(
+                hintText: 'e.g. Taking a short lunch break...',
+                hintStyle: const TextStyle(color: AppColors.textColorHint, fontSize: 12),
+                filled: true,
+                fillColor: AppColors.slate50,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const AppText('Cancel', color: AppColors.textColorSecondary),
+          ),
+          Obx(() {
+            final isPausing = controller.isPausingTimer.value;
+            return ElevatedButton(
+              onPressed: isPausing
+                  ? null
+                  : () async {
+                      final success = await controller.pauseTaskTimer(
+                        taskId,
+                        note: noteController.text.trim().isNotEmpty
+                            ? noteController.text.trim()
+                            : 'Paused work on task',
+                      );
+                      if (success) {
+                        Get.back();
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFF59E0B),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: isPausing
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const AppText('Pause Timer', color: Colors.white, fontWeight: FontWeight.bold),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  void _showStopTaskDialog(BuildContext context, String taskId) {
+    final noteController = TextEditingController(text: 'Completed initial design iteration');
+
+    Get.dialog(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.stop_circle_rounded, color: AppColors.errorColor, size: 22),
+            SizedBox(width: 8),
+            AppText('Stop Task Timer', fontSize: 16, fontWeight: FontWeight.bold),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const AppText(
+              'Add an optional stop note for this work session (e.g. Completed initial design iteration):',
+              fontSize: 12,
+              color: AppColors.textColorSecondary,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: noteController,
+              maxLines: 2,
+              style: const TextStyle(fontSize: 13),
+              decoration: InputDecoration(
+                hintText: 'e.g. Completed initial design iteration...',
+                hintStyle: const TextStyle(color: AppColors.textColorHint, fontSize: 12),
+                filled: true,
+                fillColor: AppColors.slate50,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const AppText('Cancel', color: AppColors.textColorSecondary),
+          ),
+          Obx(() {
+            final isStopping = controller.isStoppingTimer.value;
+            return ElevatedButton(
+              onPressed: isStopping
+                  ? null
+                  : () async {
+                      final success = await controller.stopTaskTimer(
+                        taskId,
+                        note: noteController.text.trim().isNotEmpty
+                            ? noteController.text.trim()
+                            : 'Stopped work on task',
+                      );
+                      if (success) {
+                        Get.back();
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.errorColor,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: isStopping
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const AppText('Stop Timer', color: Colors.white, fontWeight: FontWeight.bold),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
   void _showSubmitTestingDialog(BuildContext context, String taskId) {
     final noteController = TextEditingController();
+    final attachedFile = Rx<PlatformFile?>(null);
 
     Get.dialog(
       AlertDialog(
@@ -2497,46 +3037,130 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
             AppText('Submit for Testing', fontSize: 15, fontWeight: FontWeight.bold),
           ],
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const AppText(
-              'This will pause any running timer, record your work session, and move the task status to Testing for review.',
-              fontSize: 12,
-              color: AppColors.textColorSecondary,
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: noteController,
-              maxLines: 2,
-              style: const TextStyle(fontSize: 12),
-              decoration: InputDecoration(
-                hintText: 'Testing note / changes summary (optional)...',
-                hintStyle: const TextStyle(color: AppColors.textColorHint, fontSize: 11),
-                filled: true,
-                fillColor: AppColors.slate50,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const AppText(
+                'This will pause any running timer and submit the task to QA / Manager review.',
+                fontSize: 12,
+                color: AppColors.textColorSecondary,
               ),
-            ),
-          ],
+              const SizedBox(height: 12),
+              TextField(
+                controller: noteController,
+                maxLines: 3,
+                style: const TextStyle(fontSize: 12),
+                decoration: InputDecoration(
+                  hintText: 'Enter remarks (e.g. Completed UI designs and documentation. Ready for QA test)...',
+                  hintStyle: const TextStyle(color: AppColors.textColorHint, fontSize: 11),
+                  filled: true,
+                  fillColor: AppColors.slate50,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // File attachment preview if selected
+              Obx(() {
+                final file = attachedFile.value;
+                if (file == null) return const SizedBox.shrink();
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEEF2FF),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFF6366F1).withValues(alpha: 0.2)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Iconsax.document_upload, size: 16, color: Color(0xFF6366F1)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: AppText(
+                          file.name,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF4338CA),
+                          maxLines: 1,
+                        ),
+                      ),
+                      InkWell(
+                        onTap: () => attachedFile.value = null,
+                        child: const Icon(Icons.close_rounded, size: 16, color: Color(0xFF6366F1)),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+
+              // Attach File Button
+              InkWell(
+                onTap: () async {
+                  try {
+                    final result = await FilePicker.platform.pickFiles();
+                    if (result != null && result.files.isNotEmpty) {
+                      attachedFile.value = result.files.first;
+                    }
+                  } catch (e) {
+                    Logger.e('Error picking testing file: $e');
+                  }
+                },
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.slate100,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Iconsax.attach_circle, size: 16, color: AppColors.textColorSecondary),
+                      SizedBox(width: 6),
+                      AppText('Attach verification file / screenshot (optional)', fontSize: 11, color: AppColors.textColorSecondary),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Get.back(),
             child: const AppText('Cancel', color: AppColors.textColorSecondary, fontWeight: FontWeight.w600),
           ),
-          ElevatedButton(
-            onPressed: () {
-              Get.back();
-              controller.moveToTesting(taskId, note: noteController.text);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF6366F1),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            child: const AppText('Submit', color: Colors.white, fontWeight: FontWeight.bold),
-          ),
+          Obx(() {
+            final isSubmitting = controller.isSubmittingForTesting.value;
+            return ElevatedButton(
+              onPressed: isSubmitting
+                  ? null
+                  : () async {
+                      final success = await controller.submitTaskForTesting(
+                        taskId,
+                        remarks: noteController.text.trim().isNotEmpty ? noteController.text.trim() : null,
+                        filePath: attachedFile.value?.path,
+                      );
+                      if (success) {
+                        Get.back();
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF6366F1),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: isSubmitting
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const AppText('Submit', color: Colors.white, fontWeight: FontWeight.bold),
+            );
+          }),
         ],
       ),
     );
@@ -2881,7 +3505,18 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
         .firstWhereOrNull((p) => p.name == task.project?.name)
         ?.teamMembers ?? projController.allEmployees;
     final candidates = projectMembers.where((m) => !task.assignees.any((a) => a.email == m.email)).toList();
-    final targetCandidates = candidates.isNotEmpty ? candidates : projController.allEmployees;
+    final targetCandidates = candidates.isNotEmpty
+        ? candidates
+        : (projController.allEmployees.isNotEmpty
+            ? projController.allEmployees
+            : (controller.employeesList.isNotEmpty
+                ? controller.employeesList.map((e) => AppUser(name: e.name, email: e.email, avatarUrl: e.profilePic ?? '', designation: e.designation)).toList()
+                : <AppUser>[]));
+
+    if (targetCandidates.isEmpty) {
+      Get.snackbar('Notice', 'No employees available to select.', snackPosition: SnackPosition.BOTTOM);
+      return;
+    }
 
     final selectedMember = Rx<AppUser>(targetCandidates.first);
     final reasonController = TextEditingController();
@@ -3010,7 +3645,17 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   // ── Ask Question / Blocker Dialog ──
   void _showQueryOrBlockerDialog(BuildContext context, TaskModel task) {
     final projController = Get.find<ProjectsController>();
-    final allEmployees = projController.allEmployees;
+    final allEmployees = projController.allEmployees.isNotEmpty
+        ? projController.allEmployees
+        : (controller.employeesList.isNotEmpty
+            ? controller.employeesList.map((e) => AppUser(name: e.name, email: e.email, avatarUrl: e.profilePic ?? '', designation: e.designation)).toList()
+            : <AppUser>[]);
+
+    if (allEmployees.isEmpty) {
+      Get.snackbar('Notice', 'No employees available to select.', snackPosition: SnackPosition.BOTTOM);
+      return;
+    }
+
     final selectedMember = Rx<AppUser>(allEmployees.first);
     final isBlocker = false.obs;
     final noteController = TextEditingController();

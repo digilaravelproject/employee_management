@@ -36,7 +36,7 @@ class TeamLeaveCalendarScreen extends StatelessWidget {
           color: AppColors.textColorPrimary,
         ),
         centerTitle: false,
-        actions: [
+       /* actions: [
           // Jump to Today button
           IconButton(
             tooltip: 'Go to Today',
@@ -61,7 +61,7 @@ class TeamLeaveCalendarScreen extends StatelessWidget {
             onPressed: () => controller.fetchLeavesForMonth(isRefresh: true),
           ),
           const SizedBox(width: 6),
-        ],
+        ],*/
       ),
       body: Obx(() {
         return RefreshIndicator(

@@ -91,6 +91,25 @@ class TasksController extends GetxController {
   final RxBool isUpdatingTask = false.obs;
   final RxBool isDeletingTask = false.obs;
   final RxBool isAddingSubTask = false.obs;
+  final RxBool isAddingComment = false.obs;
+  final Rxn<PlatformFile> commentAttachedFile = Rxn<PlatformFile>();
+
+  // Helper getter for currently logged-in user
+  AppUser get currentLoggedInUser {
+    try {
+      final userDataString = SharedPrefs.getString(AppConstants.userData);
+      if (userDataString != null && userDataString.isNotEmpty) {
+        final u = jsonDecode(userDataString);
+        return AppUser(
+          name: u['name']?.toString() ?? 'User',
+          email: u['email']?.toString() ?? '',
+          avatarUrl: u['avatar']?.toString() ?? '',
+          designation: u['role']?.toString() ?? 'Employee',
+        );
+      }
+    } catch (_) {}
+    return const AppUser(name: 'User', email: '', avatarUrl: '');
+  }
 
   // Live Tasks API state
   final RxBool isLoadingTasks = false.obs;
@@ -104,7 +123,6 @@ class TasksController extends GetxController {
       Get.put(ProjectsController());
     }
     super.onInit();
-    _initializeDummyTasks();
     fetchEmployees();
     fetchTasks();
 
@@ -121,358 +139,6 @@ class TasksController extends GetxController {
   void onClose() {
     _timerTicker?.cancel();
     super.onClose();
-  }
-
-  void _initializeDummyTasks() {
-    final projController = Get.find<ProjectsController>();
-    final emps = projController.allEmployees;
-    final projs = projController.projects;
-
-    final websiteRedesign = projs.isNotEmpty ? projs[0] : null;
-
-    // Task 1: UI/UX Design (Sarah Johnson - In Progress with tracked time)
-    final t1SubTasks = [
-      SubTask(id: 'st1', title: 'Create wireframes', isCompleted: true, date: DateTime(2024, 4, 12)),
-      SubTask(id: 'st2', title: 'Design login screen', isCompleted: true, date: DateTime(2024, 4, 14)),
-      SubTask(id: 'st3', title: 'Design dashboard', isCompleted: false, date: DateTime(2024, 5, 15)),
-      SubTask(id: 'st4', title: 'User testing', isCompleted: false),
-    ];
-
-    final t1Comments = [
-      TaskComment(
-        id: 'c1',
-        user: emps[0], // John Smith (Manager)
-        text: 'Please make sure to follow the new design system and brand guidelines.',
-        timestamp: DateTime(2024, 4, 10, 10, 30),
-        userRole: 'Manager',
-      ),
-      TaskComment(
-        id: 'c2',
-        user: emps[1], // Sarah Johnson
-        text: 'Sure, I\'ll share the initial wireframes by tomorrow.',
-        timestamp: DateTime(2024, 4, 11, 11, 20),
-        userRole: 'UI/UX Designer',
-      ),
-    ];
-
-    final t1Timeline = [
-      TaskStatusUpdate(
-        id: 'u1',
-        status: TaskModel.statusToDo,
-        title: 'Task Created',
-        description: 'Task allocated to Sarah Johnson.',
-        timestamp: DateTime(2024, 4, 10, 10, 30),
-        user: emps[0],
-      ),
-      TaskStatusUpdate(
-        id: 'u2',
-        status: TaskModel.statusInProgress,
-        title: 'Work Started',
-        description: 'Timer started. Wireframe research underway.',
-        timestamp: DateTime(2024, 4, 11, 9, 15),
-        user: emps[1],
-      ),
-    ];
-
-    final t1TimeLogs = [
-      TaskTimeLog(
-        id: 'tl_1',
-        user: emps[1],
-        startTime: DateTime.now().subtract(const Duration(hours: 4)),
-        endTime: DateTime.now().subtract(const Duration(hours: 2)),
-        durationSeconds: 7200,
-        note: 'Completed first pass of wireframes and navigation architecture.',
-        module: 'UI/UX & Design System',
-        subModule: 'Wireframes & Architecture',
-        taskTitle: 'UI/UX Design',
-      ),
-      TaskTimeLog(
-        id: 'tl_2',
-        user: emps[1],
-        startTime: DateTime.now().subtract(const Duration(hours: 1)),
-        endTime: DateTime.now().subtract(const Duration(minutes: 15)),
-        durationSeconds: 2700,
-        note: 'Design iterations for login screen tokens.',
-        module: 'UI/UX & Design System',
-        subModule: 'Design Tokens & Theme',
-        taskTitle: 'UI/UX Design',
-      ),
-    ];
-
-    // Task 6: Handed-over task with query / blocker (Jira pass/query flow example)
-    final t6Handovers = [
-      TaskHandoverEvent(
-        id: 'ho_1',
-        fromUser: emps[1], // Sarah Johnson passed to Michael Brown
-        toUser: emps[2],   // Michael Brown
-        type: 'Handover',
-        reason: 'Requires backend token validation support before UI review.',
-        timestamp: DateTime(2024, 4, 16, 14, 20),
-        isResolved: true,
-        resolutionNote: 'Backend endpoints provided and tested.',
-      ),
-      TaskHandoverEvent(
-        id: 'ho_2',
-        fromUser: emps[2], // Michael Brown asked question to John Smith (Manager)
-        toUser: emps[0],   // John Smith (Manager)
-        type: 'Query',
-        reason: 'Do we need multi-tenant JWT refresh or standard cookie session?',
-        timestamp: DateTime.now().subtract(const Duration(hours: 2)),
-        isResolved: false,
-      ),
-    ];
-
-    tasks.addAll([
-      TaskModel(
-        id: 'task_1',
-        title: 'UI/UX Design',
-        description: 'Redesign the login and dashboard screens to improve user experience and align with the new brand guidelines.',
-        assignees: [emps[1]], // Sarah Johnson
-        project: websiteRedesign,
-        priority: 'Medium',
-        deadline: DateTime(2024, 5, 15),
-        status: TaskModel.statusInProgress,
-        subTasks: t1SubTasks,
-        comments: t1Comments,
-        statusUpdates: t1Timeline,
-        attachments: ['Wireframes_v1.pdf', 'Design_System_v2.fig'],
-        module: 'UI/UX & Design System',
-        subModule: 'Wireframes & Architecture',
-        totalTrackedSeconds: 9900, // 2h 45m
-        isTimerRunning: false,
-        timeLogs: t1TimeLogs,
-      ),
-      TaskModel(
-        id: 'task_2',
-        title: 'API Integration & Auth Client',
-        description: 'Integrate payment gateway with backend APIs and verify secure callbacks.',
-        assignees: [emps[2]], // Michael Brown
-        project: websiteRedesign,
-        priority: 'High',
-        deadline: DateTime(2024, 5, 20),
-        status: TaskModel.statusInProgress,
-        subTasks: [],
-        comments: [],
-        statusUpdates: [
-          TaskStatusUpdate(
-            id: 'api_u1',
-            status: TaskModel.statusToDo,
-            title: 'Created',
-            description: 'Task is created and assigned.',
-            timestamp: DateTime(2024, 5, 12, 10, 00),
-            user: emps[0],
-          )
-        ],
-        attachments: [],
-        module: 'Backend & APIs',
-        subModule: 'OAuth & Session Management',
-        totalTrackedSeconds: 14400, // 4 hours
-        isTimerRunning: false,
-        timeLogs: [
-          TaskTimeLog(
-            id: 'tl_mb1',
-            user: emps[2], // Michael Brown
-            startTime: DateTime.now().subtract(const Duration(days: 2, hours: 4)),
-            endTime: DateTime.now().subtract(const Duration(days: 2)),
-            durationSeconds: 14400,
-            note: 'Implemented JWT token refresh interceptor in Dio client.',
-            module: 'Backend & APIs',
-            subModule: 'OAuth & Session Management',
-            taskTitle: 'API Integration & Auth Client',
-          ),
-        ],
-      ),
-      TaskModel(
-        id: 'task_3',
-        title: 'Database Optimization & Indexing',
-        description: 'Optimize database queries and indexes to improve query response times under high payload.',
-        assignees: [emps[3]], // David Wilson
-        project: websiteRedesign,
-        priority: 'Low',
-        deadline: DateTime(2024, 5, 25),
-        status: TaskModel.statusTesting, // Ready for Manager/QA review!
-        subTasks: [],
-        comments: [],
-        statusUpdates: [
-          TaskStatusUpdate(
-            id: 'db_u1',
-            status: TaskModel.statusToDo,
-            title: 'Created',
-            description: 'Task created.',
-            timestamp: DateTime(2024, 5, 13, 11, 00),
-            user: emps[0],
-          ),
-          TaskStatusUpdate(
-            id: 'db_u2',
-            status: TaskModel.statusInProgress,
-            title: 'Indexing & Tuning',
-            description: 'Query optimization applied to PostgreSQL.',
-            timestamp: DateTime(2024, 5, 14, 15, 00),
-            user: emps[3],
-          ),
-          TaskStatusUpdate(
-            id: 'db_u3',
-            status: TaskModel.statusTesting,
-            title: 'Submitted for Testing',
-            description: 'Staging benchmark run completed. Please verify performance metrics.',
-            timestamp: DateTime(2024, 5, 15, 11, 30),
-            user: emps[3],
-          ),
-        ],
-        attachments: ['QueryBenchmarkReport.pdf'],
-        module: 'Backend & APIs',
-        subModule: 'Database Schemas',
-        totalTrackedSeconds: 12600, // 3h 30m
-        isTimerRunning: false,
-        timeLogs: [
-          TaskTimeLog(
-            id: 'tl_db1',
-            user: emps[3],
-            startTime: DateTime.now().subtract(const Duration(days: 1)),
-            endTime: DateTime.now().subtract(const Duration(days: 1)).add(const Duration(hours: 3, minutes: 30)),
-            durationSeconds: 12600,
-            note: 'Index execution plan analysis and index creation on tasks table.',
-            module: 'Backend & APIs',
-            subModule: 'Database Schemas',
-            taskTitle: 'Database Optimization & Indexing',
-          )
-        ],
-      ),
-      TaskModel(
-        id: 'task_4',
-        title: 'Regression Bug Fixing',
-        description: 'Fix reported crash issues and API failures in the responsive web viewport.',
-        assignees: [emps[4]], // Emily Davis
-        project: websiteRedesign,
-        priority: 'High',
-        deadline: DateTime(2024, 5, 10),
-        status: TaskModel.statusCompleted,
-        subTasks: [
-          SubTask(id: 'st_bug1', title: 'Fix auth crash', isCompleted: true, date: DateTime(2024, 5, 8)),
-          SubTask(id: 'st_bug2', title: 'Fix notification latency', isCompleted: true, date: DateTime(2024, 5, 9)),
-        ],
-        comments: [],
-        statusUpdates: [
-          TaskStatusUpdate(
-            id: 'bug_u1',
-            status: TaskModel.statusCompleted,
-            title: 'Completed & Verified',
-            description: 'All release candidate bugs verified and patched.',
-            timestamp: DateTime(2024, 5, 9, 16, 30),
-            user: emps[4],
-          )
-        ],
-        attachments: ['CrashLog_v1.txt'],
-        module: 'QA & Testing',
-        subModule: 'Regression Testing',
-        totalTrackedSeconds: 18000, // 5h
-        isTimerRunning: false,
-        timeLogs: [
-          TaskTimeLog(
-            id: 'tl_bg1',
-            user: emps[4],
-            startTime: DateTime(2024, 5, 8, 10),
-            endTime: DateTime(2024, 5, 8, 15),
-            durationSeconds: 18000,
-            note: 'Resolved crash on logout and socket timeout across Safari and Chrome.',
-            module: 'QA & Testing',
-            subModule: 'Regression Testing',
-            taskTitle: 'Regression Bug Fixing',
-          )
-        ],
-      ),
-      TaskModel(
-        id: 'task_5',
-        title: 'User Testing & Panel Interviews',
-        description: 'Perform exhaustive user testing sessions on new beta features with 10 test user profiles.',
-        assignees: [emps[0]], // John Smith
-        project: websiteRedesign,
-        priority: 'Medium',
-        deadline: DateTime(2024, 5, 18),
-        status: TaskModel.statusInProgress,
-        subTasks: [],
-        comments: [],
-        statusUpdates: [
-          TaskStatusUpdate(
-            id: 'test_u1',
-            status: TaskModel.statusInProgress,
-            title: 'In Progress',
-            description: 'User testing panel set up and ready.',
-            timestamp: DateTime(2024, 5, 14, 14, 00),
-            user: emps[0],
-          )
-        ],
-        attachments: [],
-        module: 'UI/UX & Design System',
-        subModule: 'Interactive Prototypes',
-        totalTrackedSeconds: 7200, // 2h
-        isTimerRunning: false,
-        timeLogs: [
-          TaskTimeLog(
-            id: 'tl_ut1',
-            user: emps[0],
-            startTime: DateTime.now().subtract(const Duration(hours: 3)),
-            endTime: DateTime.now().subtract(const Duration(hours: 1)),
-            durationSeconds: 7200,
-            note: 'Cohort 1 feedback interviews and usability evaluation.',
-            module: 'UI/UX & Design System',
-            subModule: 'Interactive Prototypes',
-            taskTitle: 'User Testing & Panel Interviews',
-          )
-        ],
-      ),
-      TaskModel(
-        id: 'task_6',
-        title: 'Stripe Payment Gateway Integration',
-        description: 'Setup Stripe checkout sessions and webhook signatures verification. Blocker query active.',
-        assignees: [emps[2]], // Michael Brown
-        project: websiteRedesign,
-        priority: 'High',
-        deadline: DateTime(2024, 5, 22),
-        status: TaskModel.statusInProgress,
-        subTasks: [],
-        comments: [],
-        statusUpdates: [
-          TaskStatusUpdate(
-            id: 'st_u1',
-            status: TaskModel.statusInProgress,
-            title: 'Task Handed Over & Query Raised',
-            description: 'Handed over from Sarah Johnson to Michael Brown. Query asked to Manager John Smith.',
-            timestamp: DateTime.now().subtract(const Duration(hours: 2)),
-            user: emps[2],
-          )
-        ],
-        attachments: ['StripeDoc_v2.pdf'],
-        module: 'Backend & APIs',
-        subModule: 'Payment Integrations',
-        handovers: t6Handovers,
-        hasActiveQuery: true,
-        activeQueryNote: 'Do we need multi-tenant JWT refresh or standard cookie session?',
-        queryToUser: emps[0],
-        totalTrackedSeconds: 10800, // 3h
-        isTimerRunning: false,
-        timeLogs: [
-          TaskTimeLog(
-            id: 'tl_st1',
-            user: emps[2],
-            startTime: DateTime.now().subtract(const Duration(hours: 5)),
-            endTime: DateTime.now().subtract(const Duration(hours: 2)),
-            durationSeconds: 10800,
-            note: 'Configured webhook secret validation and event handling in Node.js server.',
-            module: 'Backend & APIs',
-            subModule: 'Payment Integrations',
-            taskTitle: 'Stripe Payment Gateway Integration',
-          )
-        ],
-      ),
-    ]);
-
-    // Initial synchronization of tasks with their corresponding project
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      for (final t in tasks) {
-        _syncTaskStatusWithProject(t);
-      }
-    });
   }
 
   // Filtered task list feed (with employee scope switcher: My Tasks vs All Project Tasks/History)
@@ -495,9 +161,6 @@ class TasksController extends GetxController {
         }
       } catch (_) {}
 
-      final projController = Get.find<ProjectsController>();
-      final myUser = projController.allEmployees.length > 1 ? projController.allEmployees[1] : null;
-
       if (employeeTaskScope.value == 'My Tasks') {
         // Scope strictly to tasks assigned to current employee
         final assigned = results.where((t) {
@@ -506,26 +169,23 @@ class TasksController extends GetxController {
                 (myEmail.isNotEmpty && a.email.toLowerCase().trim() == myEmail) ||
                 (myName.isNotEmpty && a.name.toLowerCase().trim() == myName));
           }
-          if (myUser != null) {
-            return t.assignees.any((a) => a.name == myUser.name || a.email == myUser.email);
-          }
           return true;
         }).toList();
 
-        if (assigned.isNotEmpty) {
-          results = assigned;
-        }
+        results = assigned;
       } else {
         // 'All Project Tasks / Project History': All tasks belonging to projects where this employee is a member!
-        results = results.where((t) {
-          if (t.project == null) return true;
-          final proj = projController.projects.firstWhereOrNull((p) => p.id == t.project!.id || p.name == t.project!.name);
-          if (proj == null) return true;
-          return proj.teamMembers.any((m) =>
-              (myEmail.isNotEmpty && m.email.toLowerCase().trim() == myEmail) ||
-              (myName.isNotEmpty && m.name.toLowerCase().trim() == myName) ||
-              (myUser != null && (m.name == myUser.name || m.email == myUser.email)));
-        }).toList();
+        final projController = Get.isRegistered<ProjectsController>() ? Get.find<ProjectsController>() : null;
+        if (projController != null) {
+          results = results.where((t) {
+            if (t.project == null) return true;
+            final proj = projController.projects.firstWhereOrNull((p) => p.id == t.project!.id || p.name == t.project!.name);
+            if (proj == null) return true;
+            return proj.teamMembers.any((m) =>
+                (myEmail.isNotEmpty && m.email.toLowerCase().trim() == myEmail) ||
+                (myName.isNotEmpty && m.name.toLowerCase().trim() == myName));
+          }).toList();
+        }
       }
     }
 
@@ -596,179 +256,360 @@ class TasksController extends GetxController {
     fetchTaskDetails(task.id);
   }
 
+  final RxBool isStartingTimer = false.obs;
+
   // ── Employee Live Timer Operations ──
-  void startTaskTimer(String taskId) {
-    final idx = tasks.indexWhere((t) => t.id == taskId);
-    if (idx == -1) return;
+  Future<bool> startTaskTimer(String taskId, {String? note}) async {
+    isStartingTimer.value = true;
+    try {
+      final response = await repository.startAdminTask(taskId, note: note);
+      if (response.status && response.data != null) {
+        final serverTask = response.data!;
 
-    final current = tasks[idx];
+        // Find existing task
+        final idx = tasks.indexWhere((t) => t.id == taskId || t.id == serverTask.id);
 
-    // Check if any other task is running and pause it
-    for (int i = 0; i < tasks.length; i++) {
-      if (tasks[i].id != taskId && tasks[i].isTimerRunning) {
-        pauseTaskTimer(tasks[i].id, showSnackbar: false);
+        // Check if any other task is running locally and pause it
+        for (int i = 0; i < tasks.length; i++) {
+          if ((tasks[i].id != taskId && tasks[i].id != serverTask.id) && tasks[i].isTimerRunning) {
+            tasks[i] = tasks[i].copyWith(isTimerRunning: false, timerStartedAt: null);
+          }
+        }
+
+        final existingTask = idx != -1 ? tasks[idx] : selectedTask.value;
+        final mergedTask = serverTask.copyWith(
+          subTasks: serverTask.subTasks.isNotEmpty ? serverTask.subTasks : existingTask?.subTasks,
+          comments: serverTask.comments.isNotEmpty ? serverTask.comments : existingTask?.comments,
+          attachments: serverTask.attachments.isNotEmpty ? serverTask.attachments : existingTask?.attachments,
+          timeLogs: serverTask.timeLogs.isNotEmpty ? serverTask.timeLogs : existingTask?.timeLogs,
+        );
+
+        if (idx != -1) {
+          tasks[idx] = mergedTask;
+        } else {
+          tasks.insert(0, mergedTask);
+        }
+
+        if (selectedTask.value?.id == taskId || selectedTask.value?.id == serverTask.id) {
+          selectedTask.value = mergedTask;
+        }
+
+        _syncTaskStatusWithProject(mergedTask);
+
+        Get.snackbar(
+          'Timer Started',
+          response.message.isNotEmpty ? response.message : 'Task timer started successfully',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: const Color(0xFF10B981),
+          colorText: Colors.white,
+          duration: const Duration(seconds: 2),
+        );
+        return true;
+      } else {
+        Get.snackbar(
+          'Failed',
+          response.message.isNotEmpty ? response.message : 'Could not start task timer',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: AppColors.errorColor,
+          colorText: Colors.white,
+        );
+        return false;
       }
+    } catch (e) {
+      Logger.e('TasksController => Error in startTaskTimer: $e');
+      Get.snackbar(
+        'Error',
+        'Something went wrong while starting timer: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: AppColors.errorColor,
+        colorText: Colors.white,
+      );
+      return false;
+    } finally {
+      isStartingTimer.value = false;
     }
-
-    final projController = Get.find<ProjectsController>();
-    final currentUser = current.assignees.isNotEmpty ? current.assignees.first : projController.allEmployees[1];
-
-    final newStatus = current.normalizedStatus == TaskModel.statusToDo
-        ? TaskModel.statusInProgress
-        : current.status;
-
-    final newUpdate = TaskStatusUpdate(
-      id: 'timer_start_${DateTime.now().millisecondsSinceEpoch}',
-      status: newStatus,
-      title: 'Timer Started',
-      description: 'Work commenced on task by ${currentUser.name}.',
-      timestamp: DateTime.now(),
-      user: currentUser,
-    );
-
-    final updated = current.copyWith(
-      isTimerRunning: true,
-      timerStartedAt: DateTime.now(),
-      status: newStatus,
-      statusUpdates: List<TaskStatusUpdate>.from(current.statusUpdates)..add(newUpdate),
-    );
-
-    tasks[idx] = updated;
-    if (selectedTask.value?.id == taskId) {
-      selectedTask.value = updated;
-    }
-    _syncTaskStatusWithProject(updated);
-
-    Get.snackbar(
-      'Timer Started',
-      'Timer started for "${current.title}". Status is now In Progress.',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: const Color(0xFF10B981),
-      colorText: Colors.white,
-      duration: const Duration(seconds: 2),
-    );
   }
 
-  void pauseTaskTimer(String taskId, {bool showSnackbar = true}) {
-    final idx = tasks.indexWhere((t) => t.id == taskId);
-    if (idx == -1) return;
+  final RxBool isPausingTimer = false.obs;
 
-    final current = tasks[idx];
-    if (!current.isTimerRunning || current.timerStartedAt == null) return;
+  Future<bool> pauseTaskTimer(String taskId, {String? note, bool showSnackbar = true}) async {
+    isPausingTimer.value = true;
+    try {
+      final response = await repository.pauseAdminTask(taskId, note: note);
+      if (response.status && response.data != null) {
+        final serverTask = response.data!;
 
-    final elapsed = DateTime.now().difference(current.timerStartedAt!).inSeconds;
-    final projController = Get.find<ProjectsController>();
-    final currentUser = current.assignees.isNotEmpty ? current.assignees.first : projController.allEmployees[1];
+        final idx = tasks.indexWhere((t) => t.id == taskId || t.id == serverTask.id);
+        final existingTask = idx != -1 ? tasks[idx] : selectedTask.value;
 
-    final newLog = TaskTimeLog(
-      id: 'log_${DateTime.now().millisecondsSinceEpoch}',
-      user: currentUser,
-      startTime: current.timerStartedAt!,
-      endTime: DateTime.now(),
-      durationSeconds: elapsed,
-      note: 'Work session logged.',
-      module: current.module,
-      subModule: current.subModule,
-      taskTitle: current.title,
-    );
+        final mergedTask = serverTask.copyWith(
+          isTimerRunning: false,
+          timerStartedAt: null,
+          subTasks: serverTask.subTasks.isNotEmpty ? serverTask.subTasks : existingTask?.subTasks,
+          comments: serverTask.comments.isNotEmpty ? serverTask.comments : existingTask?.comments,
+          attachments: serverTask.attachments.isNotEmpty ? serverTask.attachments : existingTask?.attachments,
+          timeLogs: serverTask.timeLogs.isNotEmpty ? serverTask.timeLogs : existingTask?.timeLogs,
+        );
 
-    final newUpdate = TaskStatusUpdate(
-      id: 'timer_pause_${DateTime.now().millisecondsSinceEpoch}',
-      status: current.status,
-      title: 'Timer Paused',
-      description: 'Session ended: ${newLog.formattedDuration} logged for [${current.module} > ${current.subModule}].',
-      timestamp: DateTime.now(),
-      user: currentUser,
-    );
+        if (idx != -1) {
+          tasks[idx] = mergedTask;
+        }
 
-    final updated = current.copyWith(
-      isTimerRunning: false,
-      timerStartedAt: null,
-      totalTrackedSeconds: current.totalTrackedSeconds + elapsed,
-      timeLogs: List<TaskTimeLog>.from(current.timeLogs)..add(newLog),
-      statusUpdates: List<TaskStatusUpdate>.from(current.statusUpdates)..add(newUpdate),
-    );
+        if (selectedTask.value?.id == taskId || selectedTask.value?.id == serverTask.id) {
+          selectedTask.value = mergedTask;
+        }
 
-    tasks[idx] = updated;
-    if (selectedTask.value?.id == taskId) {
-      selectedTask.value = updated;
+        _syncTaskStatusWithProject(mergedTask);
+
+        if (showSnackbar) {
+          Get.snackbar(
+            'Timer Paused',
+            response.message.isNotEmpty ? response.message : 'Task timer paused successfully',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: const Color(0xFF3B82F6),
+            colorText: Colors.white,
+            duration: const Duration(seconds: 2),
+          );
+        }
+        return true;
+      } else {
+        if (showSnackbar) {
+          Get.snackbar(
+            'Failed',
+            response.message.isNotEmpty ? response.message : 'Failed to pause timer',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: AppColors.errorColor,
+            colorText: Colors.white,
+          );
+        }
+        return false;
+      }
+    } catch (e) {
+      Logger.e('TasksController => Error in pauseTaskTimer: $e');
+      if (showSnackbar) {
+        Get.snackbar(
+          'Error',
+          'Something went wrong while pausing timer: $e',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: AppColors.errorColor,
+          colorText: Colors.white,
+        );
+      }
+      return false;
+    } finally {
+      isPausingTimer.value = false;
     }
+  }
 
-    if (showSnackbar) {
-      Get.snackbar(
-        'Timer Paused',
-        'Logged ${newLog.formattedDuration} for "${current.title}".',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: const Color(0xFF3B82F6),
-        colorText: Colors.white,
-        duration: const Duration(seconds: 2),
+  final RxBool isStoppingTimer = false.obs;
+
+  Future<bool> stopTaskTimer(String taskId, {String? note, bool showSnackbar = true}) async {
+    isStoppingTimer.value = true;
+    try {
+      final response = await repository.stopAdminTask(taskId, note: note);
+      if (response.status && response.data != null) {
+        final serverTask = response.data!;
+
+        final idx = tasks.indexWhere((t) => t.id == taskId || t.id == serverTask.id);
+        final existingTask = idx != -1 ? tasks[idx] : selectedTask.value;
+
+        final mergedTask = serverTask.copyWith(
+          isTimerRunning: false,
+          timerStartedAt: null,
+          subTasks: serverTask.subTasks.isNotEmpty ? serverTask.subTasks : existingTask?.subTasks,
+          comments: serverTask.comments.isNotEmpty ? serverTask.comments : existingTask?.comments,
+          attachments: serverTask.attachments.isNotEmpty ? serverTask.attachments : existingTask?.attachments,
+          timeLogs: serverTask.timeLogs.isNotEmpty ? serverTask.timeLogs : existingTask?.timeLogs,
+        );
+
+        if (idx != -1) {
+          tasks[idx] = mergedTask;
+        }
+
+        if (selectedTask.value?.id == taskId || selectedTask.value?.id == serverTask.id) {
+          selectedTask.value = mergedTask;
+        }
+
+        _syncTaskStatusWithProject(mergedTask);
+
+        if (showSnackbar) {
+          Get.snackbar(
+            'Timer Stopped',
+            response.message.isNotEmpty ? response.message : 'Task timer stopped successfully',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: const Color(0xFFEF4444),
+            colorText: Colors.white,
+            duration: const Duration(seconds: 2),
+          );
+        }
+        return true;
+      } else {
+        if (showSnackbar) {
+          Get.snackbar(
+            'Failed',
+            response.message.isNotEmpty ? response.message : 'Failed to stop timer',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: AppColors.errorColor,
+            colorText: Colors.white,
+          );
+        }
+        return false;
+      }
+    } catch (e) {
+      Logger.e('TasksController => Error in stopTaskTimer: $e');
+      if (showSnackbar) {
+        Get.snackbar(
+          'Error',
+          'Something went wrong while stopping timer: $e',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: AppColors.errorColor,
+          colorText: Colors.white,
+        );
+      }
+      return false;
+    } finally {
+      isStoppingTimer.value = false;
+    }
+  }
+
+  final RxBool isSubmittingForTesting = false.obs;
+
+  Future<bool> submitTaskForTesting(
+    String taskId, {
+    String? remarks,
+    String? filePath,
+    bool showSnackbar = true,
+  }) async {
+    isSubmittingForTesting.value = true;
+    try {
+      final response = await repository.submitTaskForTesting(
+        taskId,
+        remarks: remarks,
+        filePath: filePath,
       );
+
+      if (response.status && response.data != null) {
+        final serverTask = response.data!;
+
+        final idx = tasks.indexWhere((t) => t.id == taskId || t.id == serverTask.id);
+        final existingTask = idx != -1 ? tasks[idx] : selectedTask.value;
+
+        final mergedTask = serverTask.copyWith(
+          isTimerRunning: false,
+          timerStartedAt: null,
+          subTasks: serverTask.subTasks.isNotEmpty ? serverTask.subTasks : existingTask?.subTasks,
+          comments: serverTask.comments.isNotEmpty ? serverTask.comments : existingTask?.comments,
+          attachments: serverTask.attachments.isNotEmpty ? serverTask.attachments : existingTask?.attachments,
+          attachmentDetails: serverTask.attachmentDetails.isNotEmpty ? serverTask.attachmentDetails : existingTask?.attachmentDetails,
+          timeLogs: serverTask.timeLogs.isNotEmpty ? serverTask.timeLogs : existingTask?.timeLogs,
+        );
+
+        if (idx != -1) {
+          tasks[idx] = mergedTask;
+        }
+
+        if (selectedTask.value?.id == taskId || selectedTask.value?.id == serverTask.id) {
+          selectedTask.value = mergedTask;
+        }
+
+        _syncTaskStatusWithProject(mergedTask);
+
+        if (showSnackbar) {
+          Get.snackbar(
+            'Submitted For Testing',
+            response.message.isNotEmpty ? response.message : 'Task submitted for testing successfully',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: const Color(0xFF6366F1),
+            colorText: Colors.white,
+            duration: const Duration(seconds: 2),
+          );
+        }
+        return true;
+      } else {
+        if (showSnackbar) {
+          Get.snackbar(
+            'Failed',
+            response.message.isNotEmpty ? response.message : 'Could not submit task for testing',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: AppColors.errorColor,
+            colorText: Colors.white,
+          );
+        }
+        return false;
+      }
+    } catch (e) {
+      Logger.e('TasksController => Error in submitTaskForTesting: $e');
+      if (showSnackbar) {
+        Get.snackbar(
+          'Error',
+          'Something went wrong while submitting task for testing: $e',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: AppColors.errorColor,
+          colorText: Colors.white,
+        );
+      }
+      return false;
+    } finally {
+      isSubmittingForTesting.value = false;
     }
   }
 
   // ── Status Pipeline Transitions ──
-  void moveToTesting(String taskId, {String? note}) {
-    final idx = tasks.indexWhere((t) => t.id == taskId);
-    if (idx == -1) return;
+  Future<void> moveToTesting(String taskId, {String? note, String? filePath}) async {
+    final success = await submitTaskForTesting(taskId, remarks: note, filePath: filePath);
+    if (!success) {
+      // Local fallback in case network error occurs
+      final idx = tasks.indexWhere((t) => t.id == taskId);
+      if (idx == -1) return;
 
-    final current = tasks[idx];
+      final current = tasks[idx];
 
-    // If timer is running, pause & log it first
-    int addedSeconds = 0;
-    List<TaskTimeLog> updatedLogs = List<TaskTimeLog>.from(current.timeLogs);
-    if (current.isTimerRunning && current.timerStartedAt != null) {
-      addedSeconds = DateTime.now().difference(current.timerStartedAt!).inSeconds;
-      final projController = Get.find<ProjectsController>();
-      final currentUser = current.assignees.isNotEmpty ? current.assignees.first : projController.allEmployees[1];
-      updatedLogs.add(TaskTimeLog(
-        id: 'log_${DateTime.now().millisecondsSinceEpoch}',
+      int addedSeconds = 0;
+      List<TaskTimeLog> updatedLogs = List<TaskTimeLog>.from(current.timeLogs);
+      if (current.isTimerRunning && current.timerStartedAt != null) {
+        addedSeconds = DateTime.now().difference(current.timerStartedAt!).inSeconds;
+        final currentUser = current.assignees.isNotEmpty ? current.assignees.first : currentLoggedInUser;
+        updatedLogs.add(TaskTimeLog(
+          id: 'log_${DateTime.now().millisecondsSinceEpoch}',
+          user: currentUser,
+          startTime: current.timerStartedAt!,
+          endTime: DateTime.now(),
+          durationSeconds: addedSeconds,
+          note: note ?? 'Completed work before testing.',
+          module: current.module,
+          subModule: current.subModule,
+          taskTitle: current.title,
+        ));
+      }
+
+      final currentUser = current.assignees.isNotEmpty ? current.assignees.first : currentLoggedInUser;
+
+      final newUpdate = TaskStatusUpdate(
+        id: 'move_test_${DateTime.now().millisecondsSinceEpoch}',
+        status: TaskModel.statusTesting,
+        title: 'Submitted for Testing',
+        description: note != null && note.trim().isNotEmpty
+            ? note.trim()
+            : 'Development finished. Awaiting QA testing / Manager review.',
+        timestamp: DateTime.now(),
         user: currentUser,
-        startTime: current.timerStartedAt!,
-        endTime: DateTime.now(),
-        durationSeconds: addedSeconds,
-        note: note ?? 'Completed work before testing.',
-        module: current.module,
-        subModule: current.subModule,
-        taskTitle: current.title,
-      ));
+      );
+
+      final updated = current.copyWith(
+        status: TaskModel.statusTesting,
+        isTimerRunning: false,
+        timerStartedAt: null,
+        totalTrackedSeconds: current.totalTrackedSeconds + addedSeconds,
+        timeLogs: updatedLogs,
+        statusUpdates: List<TaskStatusUpdate>.from(current.statusUpdates)..add(newUpdate),
+      );
+
+      tasks[idx] = updated;
+      if (selectedTask.value?.id == taskId) {
+        selectedTask.value = updated;
+      }
+      _syncTaskStatusWithProject(updated);
     }
-
-    final projController = Get.find<ProjectsController>();
-    final currentUser = current.assignees.isNotEmpty ? current.assignees.first : projController.allEmployees[1];
-
-    final newUpdate = TaskStatusUpdate(
-      id: 'move_test_${DateTime.now().millisecondsSinceEpoch}',
-      status: TaskModel.statusTesting,
-      title: 'Submitted for Testing',
-      description: note != null && note.trim().isNotEmpty
-          ? note.trim()
-          : 'Development finished. Awaiting QA testing / Manager review.',
-      timestamp: DateTime.now(),
-      user: currentUser,
-    );
-
-    final updated = current.copyWith(
-      status: TaskModel.statusTesting,
-      isTimerRunning: false,
-      timerStartedAt: null,
-      totalTrackedSeconds: current.totalTrackedSeconds + addedSeconds,
-      timeLogs: updatedLogs,
-      statusUpdates: List<TaskStatusUpdate>.from(current.statusUpdates)..add(newUpdate),
-    );
-
-    tasks[idx] = updated;
-    if (selectedTask.value?.id == taskId) {
-      selectedTask.value = updated;
-    }
-    _syncTaskStatusWithProject(updated);
-
-    Get.snackbar(
-      'Sent to Testing',
-      'Task is now in Testing phase for verification.',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: const Color(0xFF6366F1), // Indigo
-      colorText: Colors.white,
-    );
   }
 
   void approveAndCompleteTask(String taskId, {String? managerNote}) {
@@ -776,8 +617,7 @@ class TasksController extends GetxController {
     if (idx == -1) return;
 
     final current = tasks[idx];
-    final projController = Get.find<ProjectsController>();
-    final currentUser = projController.allEmployees[0]; // John Smith (Manager)
+    final currentUser = currentLoggedInUser;
 
     // Stop timer if running
     int addedSeconds = 0;
@@ -837,8 +677,7 @@ class TasksController extends GetxController {
     if (idx == -1) return;
 
     final current = tasks[idx];
-    final projController = Get.find<ProjectsController>();
-    final currentUser = projController.allEmployees[0];
+    final currentUser = currentLoggedInUser;
 
     final newUpdate = TaskStatusUpdate(
       id: 'back_prog_${DateTime.now().millisecondsSinceEpoch}',
@@ -884,8 +723,7 @@ class TasksController extends GetxController {
     if (idx == -1) return;
 
     final current = tasks[idx];
-    final projController = Get.find<ProjectsController>();
-    final currentUser = current.assignees.isNotEmpty ? current.assignees.first : projController.allEmployees[1];
+    final currentUser = current.assignees.isNotEmpty ? current.assignees.first : currentLoggedInUser;
 
     final handoverEvent = TaskHandoverEvent(
       id: 'handover_${DateTime.now().millisecondsSinceEpoch}',
@@ -962,8 +800,7 @@ class TasksController extends GetxController {
     if (idx == -1) return;
 
     final current = tasks[idx];
-    final projController = Get.find<ProjectsController>();
-    final currentUser = projController.allEmployees[0];
+    final currentUser = currentLoggedInUser;
 
     final updatedHandovers = current.handovers.map((h) {
       if (!h.isResolved) {
@@ -1120,8 +957,7 @@ class TasksController extends GetxController {
       return;
     }
 
-    final projController = Get.find<ProjectsController>();
-    final currentUser = projController.allEmployees[0];
+    final currentUser = currentLoggedInUser;
 
     String logDescription = 'Status updated to $newStatus';
     if (comment.trim().isNotEmpty) {
@@ -1180,30 +1016,85 @@ class TasksController extends GetxController {
     );
   }
 
-  // ── Comments & Sub-tasks ──
-  void addComment(String commentText) {
+  // ── Comments API ──
+  Future<bool> addComment(String commentText, {String? filePath}) async {
     final current = selectedTask.value;
-    if (current == null || commentText.trim().isEmpty) return;
-
-    final projController = Get.find<ProjectsController>();
-    final currentUser = projController.allEmployees[0];
-
-    final newComment = TaskComment(
-      id: 'comment_${DateTime.now().millisecondsSinceEpoch}',
-      user: currentUser,
-      text: commentText.trim(),
-      timestamp: DateTime.now(),
-      userRole: 'Manager',
-    );
-
-    final updatedComments = List<TaskComment>.from(current.comments)..add(newComment);
-    final updated = current.copyWith(comments: updatedComments);
-
-    final idx = tasks.indexWhere((t) => t.id == current.id);
-    if (idx != -1) {
-      tasks[idx] = updated;
+    if (current == null) return false;
+    final trimmed = commentText.trim();
+    if (trimmed.isEmpty && (filePath == null || filePath.isEmpty)) {
+      return false;
     }
-    selectedTask.value = updated;
+
+    try {
+      isAddingComment.value = true;
+
+      // Extract current user ID
+      String? currentUserId;
+      final userDataStr = SharedPrefs.getString(AppConstants.userData);
+      if (userDataStr != null && userDataStr.isNotEmpty) {
+        try {
+          final uMap = jsonDecode(userDataStr);
+          if (uMap is Map && uMap['id'] != null) {
+            currentUserId = uMap['id'].toString();
+          }
+        } catch (_) {}
+      }
+
+      final response = await repository.addTaskComment(
+        taskId: current.id,
+        comment: trimmed,
+        userId: currentUserId ?? '20',
+        filePath: filePath,
+      );
+
+      if (response.status && response.data != null) {
+        final newComment = response.data!;
+        final updatedComments = List<TaskComment>.from(current.comments)..add(newComment);
+        final updated = current.copyWith(comments: updatedComments);
+
+        final idx = tasks.indexWhere((t) => t.id == current.id);
+        if (idx != -1) {
+          tasks[idx] = updated;
+        }
+        selectedTask.value = updated;
+        commentAttachedFile.value = null;
+
+        // Refresh full comments list from server
+        fetchTaskComments(current.id);
+
+        Get.snackbar(
+          'Success',
+          response.message.isNotEmpty ? response.message : 'Comment added successfully',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: const Color(0xFF10B981),
+          colorText: Colors.white,
+          duration: const Duration(seconds: 2),
+        );
+        return true;
+      } else {
+        Get.snackbar(
+          'Error',
+          response.message.isNotEmpty ? response.message : 'Failed to add comment',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: const Color(0xFFEF4444),
+          colorText: Colors.white,
+          duration: const Duration(seconds: 3),
+        );
+        return false;
+      }
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Failed to add comment: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: const Color(0xFFEF4444),
+        colorText: Colors.white,
+        duration: const Duration(seconds: 3),
+      );
+      return false;
+    } finally {
+      isAddingComment.value = false;
+    }
   }
 
   void toggleSubTask(String subTaskId) {
@@ -1372,6 +1263,8 @@ class TasksController extends GetxController {
           tasks[idx] = response.data!;
         }
         Logger.d('TasksController => Loaded task details for ID $taskId');
+        // Also fetch live comments from GET /api/admin/tasks/{id}/comments
+        fetchTaskComments(taskId);
         return response.data;
       } else {
         Logger.w('TasksController => Failed to load task details: ${response.message}');
@@ -1382,6 +1275,36 @@ class TasksController extends GetxController {
       isLoadingTaskDetails.value = false;
     }
     return null;
+  }
+
+  final RxBool isLoadingComments = false.obs;
+
+  Future<List<TaskComment>> fetchTaskComments(dynamic taskId) async {
+    isLoadingComments.value = true;
+    try {
+      final response = await repository.getTaskComments(taskId);
+      if (response.status) {
+        final comments = response.data;
+        final current = selectedTask.value;
+        if (current != null && (current.id == taskId.toString() || current.id == taskId)) {
+          final updated = current.copyWith(comments: comments);
+          selectedTask.value = updated;
+
+          final idx = tasks.indexWhere((t) => t.id == current.id);
+          if (idx != -1) {
+            tasks[idx] = updated;
+          }
+        }
+        return comments;
+      } else {
+        Logger.w('TasksController => Failed to load task comments: ${response.message}');
+      }
+    } catch (e) {
+      Logger.e('TasksController => Error fetching task comments: $e');
+    } finally {
+      isLoadingComments.value = false;
+    }
+    return [];
   }
 
   List<EmployeeModel> get filteredEmployeesList {

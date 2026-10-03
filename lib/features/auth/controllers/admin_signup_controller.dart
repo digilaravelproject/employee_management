@@ -5,6 +5,7 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../core/services/storage/shared_prefs.dart';
 import '../../../../core/services/storage/token_manger.dart';
 import '../../../../core/utils/custom_snackbar.dart';
+import '../../../../core/utils/app_validators.dart';
 import '../../../../core/utils/logger.dart';
 import '../../../../routes/route_helper.dart';
 import '../../../../core/controllers/app_controller.dart';
@@ -140,25 +141,11 @@ class AdminSignupController extends GetxController {
   }
 
   String? validateMobileNumber(String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return 'Please enter mobile number';
-    }
-    final cleanNumber = value.trim();
-    if (cleanNumber.length != 10 || !RegExp(r'^[0-9]+$').hasMatch(cleanNumber)) {
-      return 'Enter a valid 10-digit mobile number';
-    }
-    return null;
+    return AppValidators.validateMobile(value, customMessage: 'Enter a valid 10-digit mobile number');
   }
 
   String? validateEmail(String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return 'Please enter your email address';
-    }
-    final email = value.trim();
-    if (!GetUtils.isEmail(email)) {
-      return 'Please enter a valid email address';
-    }
-    return null;
+    return AppValidators.validateEmail(value, customMessage: 'Please enter a valid email address');
   }
 
   String? validatePassword(String? value) {
@@ -265,14 +252,7 @@ class AdminSignupController extends GetxController {
   }
 
   String? validateLoginEmail(String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return 'Please enter your email address';
-    }
-    final email = value.trim();
-    if (!GetUtils.isEmail(email)) {
-      return 'Please enter a valid email address';
-    }
-    return null;
+    return AppValidators.validateEmail(value, customMessage: 'Please enter a valid email address');
   }
 
   String? validateLoginPassword(String? value) {
@@ -357,14 +337,7 @@ class AdminSignupController extends GetxController {
 
   // ── Forgot Password Methods & Validators ─────────────
   String? validateForgotEmail(String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return 'Please enter your email address';
-    }
-    final email = value.trim();
-    if (!GetUtils.isEmail(email)) {
-      return 'Please enter a valid email address';
-    }
-    return null;
+    return AppValidators.validateEmail(value, customMessage: 'Please enter a valid email address');
   }
 
   Future<void> forgotPassword() async {
@@ -445,14 +418,7 @@ class AdminSignupController extends GetxController {
   }
 
   String? validateResetEmail(String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return 'Please enter your email address';
-    }
-    final email = value.trim();
-    if (!GetUtils.isEmail(email)) {
-      return 'Please enter a valid email address';
-    }
-    return null;
+    return AppValidators.validateEmail(value, customMessage: 'Please enter a valid email address');
   }
 
   String? validateResetOtp(String? value) {

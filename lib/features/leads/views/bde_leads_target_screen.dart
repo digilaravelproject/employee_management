@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/app_validators.dart';
 import '../../../core/widgets/app_text.dart';
 import '../controllers/bde_leads_controller.dart';
 import '../models/lead_model.dart';
@@ -1766,6 +1768,12 @@ class BdeLeadsTargetScreen extends StatelessWidget {
                     child: TextField(
                       controller: phoneCtrl,
                       keyboardType: TextInputType.phone,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        LengthLimitingTextInputFormatter(10),
+                      ],
+                      maxLength: 10,
+                      buildCounter: (context, {required currentLength, required isFocused, required maxLength}) => null,
                       decoration: InputDecoration(
                         labelText: 'Phone Number',
                         filled: true,
@@ -1814,6 +1822,12 @@ class BdeLeadsTargetScreen extends StatelessWidget {
                   onPressed: () {
                     if (companyCtrl.text.trim().isEmpty || nameCtrl.text.trim().isEmpty) {
                       Get.snackbar('Missing Details', 'Please enter Company and Contact Person name.');
+                      return;
+                    }
+
+                    final phoneInput = phoneCtrl.text.trim();
+                    if (phoneInput.isNotEmpty && !AppValidators.isValidMobile(phoneInput)) {
+                      Get.snackbar('Invalid Phone', 'Please enter a valid 10-digit phone number.');
                       return;
                     }
 

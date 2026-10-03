@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:dio/dio.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/services/network/api_client.dart';
 import '../../../core/utils/logger.dart';
@@ -266,6 +268,280 @@ class TaskRepository implements TaskRepositoryInterface {
       );
     }
   }
+
+  @override
+  Future<TaskDetailResponseModel> startAdminTask(dynamic taskId, {String? note}) async {
+    try {
+      final url = AppConstants.adminTaskStartUrl(taskId);
+      final body = <String, dynamic>{
+        'note': (note != null && note.trim().isNotEmpty) ? note.trim() : 'Starting work on task',
+      };
+      Logger.d('TaskRepository => POST $url with body: $body');
+
+      final response = await apiClient.post(
+        url,
+        data: body,
+        handleError: false,
+        showToaster: false,
+      );
+
+      Logger.d('TaskRepository => Status: ${response.statusCode}, isSuccess: ${response.isSuccess}');
+
+      if (response.json != null) {
+        return TaskDetailResponseModel.fromJson(response.json!, fallbackMessage: response.message);
+      } else if (response.body is Map<String, dynamic>) {
+        return TaskDetailResponseModel.fromJson(response.body as Map<String, dynamic>, fallbackMessage: response.message);
+      }
+
+      return TaskDetailResponseModel(
+        status: response.isSuccess,
+        message: response.message.isNotEmpty
+            ? response.message
+            : (response.isSuccess ? 'Task timer started successfully' : 'Failed to start timer'),
+      );
+    } catch (e, stack) {
+      Logger.e('TaskRepository => Error starting task timer: $e');
+      Logger.e('TaskRepository => StackTrace: $stack');
+      return TaskDetailResponseModel(
+        status: false,
+        message: 'Something went wrong while starting timer: $e',
+      );
+    }
+  }
+
+  @override
+  Future<TaskDetailResponseModel> pauseAdminTask(dynamic taskId, {String? note}) async {
+    try {
+      final url = AppConstants.adminTaskPauseUrl(taskId);
+      final body = <String, dynamic>{
+        'note': (note != null && note.trim().isNotEmpty) ? note.trim() : 'Paused work on task',
+      };
+      Logger.d('TaskRepository => POST $url with body: $body');
+
+      final response = await apiClient.post(
+        url,
+        data: body,
+        handleError: false,
+        showToaster: false,
+      );
+
+      Logger.d('TaskRepository => Status: ${response.statusCode}, isSuccess: ${response.isSuccess}');
+
+      if (response.json != null) {
+        return TaskDetailResponseModel.fromJson(response.json!, fallbackMessage: response.message);
+      } else if (response.body is Map<String, dynamic>) {
+        return TaskDetailResponseModel.fromJson(response.body as Map<String, dynamic>, fallbackMessage: response.message);
+      }
+
+      return TaskDetailResponseModel(
+        status: response.isSuccess,
+        message: response.message.isNotEmpty
+            ? response.message
+            : (response.isSuccess ? 'Task timer paused successfully' : 'Failed to pause timer'),
+      );
+    } catch (e, stack) {
+      Logger.e('TaskRepository => Error pausing task timer: $e');
+      Logger.e('TaskRepository => StackTrace: $stack');
+      return TaskDetailResponseModel(
+        status: false,
+        message: 'Something went wrong while pausing timer: $e',
+      );
+    }
+  }
+
+  @override
+  Future<TaskDetailResponseModel> stopAdminTask(dynamic taskId, {String? note}) async {
+    try {
+      final url = AppConstants.adminTaskStopUrl(taskId);
+      final body = <String, dynamic>{
+        'note': (note != null && note.trim().isNotEmpty) ? note.trim() : 'Stopped work on task',
+      };
+      Logger.d('TaskRepository => POST $url with body: $body');
+
+      final response = await apiClient.post(
+        url,
+        data: body,
+        handleError: false,
+        showToaster: false,
+      );
+
+      Logger.d('TaskRepository => Status: ${response.statusCode}, isSuccess: ${response.isSuccess}');
+
+      if (response.json != null) {
+        return TaskDetailResponseModel.fromJson(response.json!, fallbackMessage: response.message);
+      } else if (response.body is Map<String, dynamic>) {
+        return TaskDetailResponseModel.fromJson(response.body as Map<String, dynamic>, fallbackMessage: response.message);
+      }
+
+      return TaskDetailResponseModel(
+        status: response.isSuccess,
+        message: response.message.isNotEmpty
+            ? response.message
+            : (response.isSuccess ? 'Task timer stopped successfully' : 'Failed to stop timer'),
+      );
+    } catch (e, stack) {
+      Logger.e('TaskRepository => Error stopping task timer: $e');
+      Logger.e('TaskRepository => StackTrace: $stack');
+      return TaskDetailResponseModel(
+        status: false,
+        message: 'Something went wrong while stopping timer: $e',
+      );
+    }
+  }
+
+  @override
+  Future<TaskCommentResponseModel> addTaskComment({
+    required dynamic taskId,
+    required String comment,
+    String? userId,
+    String? filePath,
+  }) async {
+    try {
+      final url = AppConstants.adminTaskCommentsUrl(taskId);
+      Logger.d('TaskRepository => POST $url (multipart comment)');
+
+      final Map<String, dynamic> formMap = {
+        'comment': comment.trim(),
+      };
+      if (userId != null && userId.trim().isNotEmpty) {
+        formMap['user_id'] = userId.trim();
+      }
+
+      if (filePath != null && filePath.trim().isNotEmpty) {
+        final file = File(filePath);
+        if (await file.exists()) {
+          final fileName = filePath.split(RegExp(r'[\\/]')).last;
+          formMap['file'] = await MultipartFile.fromFile(filePath, filename: fileName);
+        }
+      }
+
+      final formData = FormData.fromMap(formMap);
+
+      final response = await apiClient.post(
+        url,
+        data: formData,
+        handleError: false,
+        showToaster: false,
+      );
+
+      Logger.d('TaskRepository => Comment POST Status: ${response.statusCode}, isSuccess: ${response.isSuccess}');
+
+      if (response.json != null) {
+        return TaskCommentResponseModel.fromJson(response.json!, fallbackMessage: response.message);
+      } else if (response.body is Map<String, dynamic>) {
+        return TaskCommentResponseModel.fromJson(response.body as Map<String, dynamic>, fallbackMessage: response.message);
+      }
+
+      return TaskCommentResponseModel(
+        status: response.isSuccess,
+        message: response.message.isNotEmpty
+            ? response.message
+            : (response.isSuccess ? 'Comment added successfully' : 'Failed to add comment'),
+      );
+    } catch (e, stack) {
+      Logger.e('TaskRepository => Error adding comment: $e');
+      Logger.e('TaskRepository => StackTrace: $stack');
+      return TaskCommentResponseModel(
+        status: false,
+        message: 'Something went wrong while adding comment: $e',
+      );
+    }
+  }
+
+  @override
+  Future<TaskDetailResponseModel> submitTaskForTesting(
+    dynamic taskId, {
+    String? remarks,
+    String? filePath,
+  }) async {
+    try {
+      final url = AppConstants.adminTaskSubmitForTestingUrl(taskId);
+      Logger.d('TaskRepository => POST $url (submit for testing)');
+
+      final Map<String, dynamic> formMap = {};
+      if (remarks != null && remarks.trim().isNotEmpty) {
+        formMap['remarks'] = remarks.trim();
+      }
+
+      if (filePath != null && filePath.trim().isNotEmpty) {
+        final file = File(filePath);
+        if (await file.exists()) {
+          final fileName = filePath.split(RegExp(r'[\\/]')).last;
+          formMap['file'] = await MultipartFile.fromFile(filePath, filename: fileName);
+        }
+      }
+
+      final formData = FormData.fromMap(formMap);
+
+      final response = await apiClient.post(
+        url,
+        data: formData,
+        handleError: false,
+        showToaster: false,
+      );
+
+      Logger.d('TaskRepository => SubmitForTesting POST Status: ${response.statusCode}, isSuccess: ${response.isSuccess}');
+
+      if (response.json != null) {
+        return TaskDetailResponseModel.fromJson(response.json!, fallbackMessage: response.message);
+      } else if (response.body is Map<String, dynamic>) {
+        return TaskDetailResponseModel.fromJson(response.body as Map<String, dynamic>, fallbackMessage: response.message);
+      }
+
+      return TaskDetailResponseModel(
+        status: response.isSuccess,
+        message: response.message.isNotEmpty
+            ? response.message
+            : (response.isSuccess ? 'Task submitted for testing successfully' : 'Failed to submit task for testing'),
+      );
+    } catch (e, stack) {
+      Logger.e('TaskRepository => Error submitting task for testing: $e');
+      Logger.e('TaskRepository => StackTrace: $stack');
+      return TaskDetailResponseModel(
+        status: false,
+        message: 'Something went wrong while submitting task for testing: $e',
+      );
+    }
+  }
+
+  @override
+  Future<TaskCommentsListResponseModel> getTaskComments(dynamic taskId) async {
+    try {
+      final url = AppConstants.adminTaskCommentsUrl(taskId);
+      Logger.d('TaskRepository => GET $url (get task comments)');
+
+      final response = await apiClient.get(
+        url,
+        handleError: false,
+        showToaster: false,
+      );
+
+      Logger.d('TaskRepository => Comments GET Status: ${response.statusCode}, isSuccess: ${response.isSuccess}');
+
+      if (response.json != null) {
+        return TaskCommentsListResponseModel.fromJson(response.json!, fallbackMessage: response.message);
+      } else if (response.body is Map<String, dynamic>) {
+        return TaskCommentsListResponseModel.fromJson(response.body as Map<String, dynamic>, fallbackMessage: response.message);
+      }
+
+      return TaskCommentsListResponseModel(
+        status: response.isSuccess,
+        message: response.message.isNotEmpty
+            ? response.message
+            : (response.isSuccess ? 'Comments retrieved successfully' : 'Failed to retrieve comments'),
+        data: const [],
+      );
+    } catch (e, stack) {
+      Logger.e('TaskRepository => Error getting task comments: $e');
+      Logger.e('TaskRepository => StackTrace: $stack');
+      return TaskCommentsListResponseModel(
+        status: false,
+        message: 'Something went wrong while retrieving comments: $e',
+        data: const [],
+      );
+    }
+  }
 }
+
 
 

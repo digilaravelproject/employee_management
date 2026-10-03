@@ -516,14 +516,14 @@ String parseApiErrorMessage(Map<String, dynamic>? json, [String? fallback]) {
 /// Helper to ensure task status matches backend expectations:
 /// 'Pending', 'In Progress', 'Testing', 'Completed'
 String mapTaskStatusToApi(String status) {
-  final lower = status.toLowerCase().trim();
-  if (lower == 'to do' || lower == 'todo' || lower == 'pending') {
+  final lower = status.toLowerCase().trim().replaceAll('_', ' ');
+  if (lower == 'to do' || lower == 'todo' || lower == 'pending' || lower == 'ready to start' || lower == 'not started') {
     return 'Pending';
-  } else if (lower == 'in progress' || lower == 'inprogress') {
+  } else if (lower == 'in progress' || lower == 'inprogress' || lower == 'ongoing' || lower == 'working') {
     return 'In Progress';
-  } else if (lower == 'testing' || lower == 'review') {
+  } else if (lower == 'testing' || lower == 'review' || lower == 'in review' || lower == 'submitted for testing' || lower == 'submitted for review') {
     return 'Testing';
-  } else if (lower == 'completed' || lower == 'done') {
+  } else if (lower == 'completed' || lower == 'done' || lower == 'finished') {
     return 'Completed';
   }
   return status;

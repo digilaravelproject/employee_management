@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import '../../../core/services/network/api_client.dart';
 import '../../../core/utils/custom_snackbar.dart';
+import '../../../core/utils/app_validators.dart';
 import '../../../core/utils/logger.dart';
 import '../domain/usecases/apply_leave_usecase.dart';
 import '../domain/usecases/get_leave_types_usecase.dart';
@@ -253,6 +254,12 @@ class ApplyLeaveController extends GetxController {
 
     if (leaveModel.requiresAttachment && selectedAttachment.value == null) {
       CustomSnackbar.showError('${leaveModel.name} requires supporting document/attachment.');
+      return;
+    }
+
+    final contactNum = contactController.text.trim();
+    if (contactNum.isNotEmpty && !AppValidators.isValidMobile(contactNum)) {
+      CustomSnackbar.showError('Please enter a valid 10-digit contact number.');
       return;
     }
 

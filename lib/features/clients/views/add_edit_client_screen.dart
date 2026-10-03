@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/app_validators.dart';
 import '../../../core/widgets/app_text.dart';
 import '../../../core/widgets/app_input_field.dart';
 import '../../../core/widgets/custom_bottom_sheet_dropdown.dart';
@@ -104,16 +105,7 @@ class _AddEditClientScreenState extends State<AddEditClientScreen> {
                             hint: 'e.g. info@client.com',
                             isRequired: true,
                             keyboardType: TextInputType.emailAddress,
-                            validator: (val) {
-                              if (val == null || val.trim().isEmpty) {
-                                return 'Please enter email address';
-                              }
-                              final reg = RegExp(r'^[^@]+@[^@]+\.[^@]+$');
-                              if (!reg.hasMatch(val.trim())) {
-                                return 'Please enter a valid email';
-                              }
-                              return null;
-                            },
+                            validator: AppValidators.validateEmail,
                           ),
                           const SizedBox(height: 14),
 
@@ -121,10 +113,10 @@ class _AddEditClientScreenState extends State<AddEditClientScreen> {
                           AppInputField(
                             controller: controller.mobileController,
                             label: 'Mobile Number *',
-                            hint: 'e.g. 98765 43210',
+                            hint: 'e.g. 9876543210',
                             isRequired: true,
                             keyboardType: TextInputType.phone,
-                            validator: (val) => val == null || val.trim().isEmpty ? 'Please enter mobile number' : null,
+                            validator: (val) => AppValidators.validateMobile(val, customMessage: 'Enter a valid 10-digit mobile number'),
                           ),
                           const SizedBox(height: 14),
 

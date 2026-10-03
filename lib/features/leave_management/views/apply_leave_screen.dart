@@ -1,8 +1,10 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/app_validators.dart';
 import '../../../core/widgets/app_text.dart';
 import '../../../core/widgets/custom_bottom_sheet_dropdown.dart';
 import '../bindings/apply_leave_binding.dart';
@@ -279,9 +281,10 @@ class ApplyLeaveScreen extends StatelessWidget {
                         const SizedBox(height: 12),
                         _buildTextField(
                           Iconsax.call,
-                          'Enter contact number',
+                          'Enter 10-digit contact number',
                           controller: controller.contactController,
                           keyboardType: TextInputType.phone,
+                          validator: AppValidators.validateOptionalMobile,
                         ),
                         
                         const SizedBox(height: 20),
@@ -601,10 +604,24 @@ class ApplyLeaveScreen extends StatelessWidget {
     String hint, {
     TextEditingController? controller,
     TextInputType? keyboardType,
+    String? Function(String?)? validator,
   }) {
+    final isPhone = keyboardType == TextInputType.phone;
     return TextFormField(
       controller: controller,
       keyboardType: keyboardType,
+      validator: validator,
+      autovalidateMode: keyboardType == TextInputType.emailAddress
+          ? AutovalidateMode.onUserInteraction
+          : AutovalidateMode.disabled,
+      inputFormatters: isPhone
+          ? [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(10),
+            ]
+          : null,
+      maxLength: isPhone ? 10 : null,
+      buildCounter: (context, {required currentLength, required isFocused, required maxLength}) => null,
       decoration: InputDecoration(
         hintText: hint,
         hintStyle: const TextStyle(color: AppColors.textColorHint, fontSize: 13),

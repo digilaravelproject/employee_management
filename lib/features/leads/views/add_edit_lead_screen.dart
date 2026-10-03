@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/app_validators.dart';
 import '../../../core/widgets/app_text.dart';
 import '../../../core/widgets/app_input_field.dart';
 import '../../../core/widgets/custom_bottom_sheet_dropdown.dart';
@@ -155,24 +156,16 @@ class _AddEditLeadScreenState extends State<AddEditLeadScreen> {
             label: 'Email',
             hint: 'e.g. rohan.mehta@mehta.com',
             keyboardType: TextInputType.emailAddress,
-            validator: (val) {
-              if (val != null && val.trim().isNotEmpty) {
-                final regex = RegExp(r'^[^@]+@[^@]+\.[^@]+$');
-                if (!regex.hasMatch(val.trim())) {
-                  return 'Please enter a valid email address';
-                }
-              }
-              return null;
-            },
+            validator: AppValidators.validateOptionalEmail,
           ),
           const SizedBox(height: 14),
           AppInputField(
             controller: controller.mobileController,
             label: 'Mobile Number *',
-            hint: 'e.g. +91 98765 43210',
+            hint: 'e.g. 9876543210',
             keyboardType: TextInputType.phone,
             isRequired: true,
-            validator: (val) => val == null || val.trim().isEmpty ? 'Please enter mobile number' : null,
+            validator: (val) => AppValidators.validateMobile(val, customMessage: 'Enter a valid 10-digit mobile number'),
           ),
           const SizedBox(height: 14),
           AppInputField(

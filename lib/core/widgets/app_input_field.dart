@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../theme/app_colors.dart';
+import '../utils/app_validators.dart';
 import 'app_text.dart';
 
 class AppInputField extends StatefulWidget {
@@ -28,6 +30,9 @@ class AppInputField extends StatefulWidget {
   final bool autoFocus;
   final TextInputAction? textInputAction;
   final void Function(String)? onFieldSubmitted;
+  final List<TextInputFormatter>? inputFormatters;
+  final int? maxLength;
+  final AutovalidateMode? autovalidateMode;
 
   const AppInputField({
     super.key,
@@ -56,6 +61,9 @@ class AppInputField extends StatefulWidget {
     this.autoFocus = false,
     this.textInputAction,
     this.onFieldSubmitted,
+    this.inputFormatters,
+    this.maxLength,
+    this.autovalidateMode,
   });
 
   @override
@@ -72,17 +80,51 @@ class _AppInputFieldState extends State<AppInputField> {
   }
 
   @override
+  void didUpdateWidget(covariant AppInputField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller?.removeListener(_onTextChanged);
+      widget.controller?.addListener(_onTextChanged);
+    }
+  }
+
+  @override
   void dispose() {
     widget.controller?.removeListener(_onTextChanged);
     super.dispose();
   }
 
   void _onTextChanged() {
-    if (_errorText != null && widget.validator != null) {
-      final result = widget.validator!(widget.controller?.text);
-      if (result != _errorText) {
+    _validateRealTime(widget.controller?.text);
+  }
+
+  void _validateRealTime(String? text) {
+    final value = text ?? '';
+    if (widget.keyboardType == TextInputType.emailAddress) {
+      if (value.trim().isEmpty) {
+        if (_errorText != null) {
+          setState(() {
+            _errorText = null;
+          });
+        }
+      } else {
+        String? err;
+        if (widget.validator != null) {
+          err = widget.validator!(value);
+        } else {
+          err = AppValidators.isValidEmail(value) ? null : 'Please enter a valid email address';
+        }
+        if (err != _errorText) {
+          setState(() {
+            _errorText = err;
+          });
+        }
+      }
+    } else if (widget.validator != null && _errorText != null) {
+      final err = widget.validator!(value);
+      if (err != _errorText) {
         setState(() {
-          _errorText = result;
+          _errorText = err;
         });
       }
     }
@@ -109,17 +151,42 @@ class _AppInputFieldState extends State<AppInputField> {
           textInputAction: widget.textInputAction,
           onFieldSubmitted: widget.onFieldSubmitted,
           obscureText: widget.obscureText ?? (widget.isPassword || widget.obscure),
+          autovalidateMode: widget.autovalidateMode ??
+              (widget.keyboardType == TextInputType.emailAddress
+                  ? AutovalidateMode.onUserInteraction
+                  : AutovalidateMode.disabled),
+          inputFormatters: widget.inputFormatters ??
+              (widget.keyboardType == TextInputType.phone
+                  ? [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(10),
+                    ]
+                  : null),
+          maxLength: widget.maxLength ??
+              (widget.keyboardType == TextInputType.phone ? 10 : null),
+          buildCounter: (context, {required currentLength, required isFocused, required maxLength}) => null,
           validator: (val) {
+            String? result;
             if (widget.validator != null) {
-              final result = widget.validator!(val);
-              setState(() {
-                _errorText = result;
-              });
-              return result;
+              result = widget.validator!(val);
+            } else if (widget.keyboardType == TextInputType.emailAddress && val != null && val.trim().isNotEmpty) {
+              result = AppValidators.isValidEmail(val) ? null : 'Please enter a valid email address';
             }
-            return null;
+            if (result != _errorText) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted && result != _errorText) {
+                  setState(() {
+                    _errorText = result;
+                  });
+                }
+              });
+            }
+            return result;
           },
-          onChanged: widget.onChanged,
+          onChanged: (val) {
+            _validateRealTime(val);
+            widget.onChanged?.call(val);
+          },
           enabled: widget.enabled,
           readOnly: widget.readOnly,
           onTap: widget.onTap,

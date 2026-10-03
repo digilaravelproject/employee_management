@@ -9,6 +9,7 @@ import '../../../core/controllers/app_controller.dart';
 import '../../../core/services/network/api_client.dart';
 import '../../../core/services/storage/shared_prefs.dart';
 import '../../../core/utils/custom_snackbar.dart';
+import '../../../core/utils/app_validators.dart';
 import '../../../core/utils/logger.dart';
 import '../../auth/domain/models/user_model.dart';
 import '../../auth/controllers/auth_controller.dart';
@@ -403,6 +404,12 @@ class ProfileController extends GetxController {
   }
 
   Future<bool> updateProfile() async {
+    final phone = phoneController.text.trim();
+    if (phone.isNotEmpty && !AppValidators.isValidMobile(phone)) {
+      CustomSnackbar.showError('Please enter a valid 10-digit phone number');
+      return false;
+    }
+
     try {
       isUpdating.value = true;
       final bool isAdmin = isUserAdmin;
