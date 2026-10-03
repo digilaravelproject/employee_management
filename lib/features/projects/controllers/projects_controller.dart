@@ -34,6 +34,7 @@ class ProjectsController extends GetxController {
   final RxBool isCreatingProject = false.obs;
   final RxBool isUpdatingProject = false.obs;
   final RxBool isDeletingProject = false.obs;
+  final RxSet<String> removingMemberIds = <String>{}.obs;
   final RxDouble progressValue = 0.0.obs;
   final RxList<PlatformFile> attachedRealFiles = <PlatformFile>[].obs;
   // Reactive projects list
@@ -47,10 +48,12 @@ class ProjectsController extends GetxController {
   List<AppUser> get allEmployees {
     if (employeesList.isNotEmpty) {
       return employeesList.map((e) => AppUser(
+        id: int.tryParse(e.id),
         name: e.name,
         email: e.email,
         avatarUrl: e.profilePic ?? '',
         designation: e.designation,
+        employeeId: e.employeeId,
       )).toList();
     }
     return const [];
@@ -875,19 +878,151 @@ class ProjectsController extends GetxController {
     }
   }
 
-  // Remove member from project details/edit screen
-  void removeMember(AppUser emp) {
-    final current = selectedProject.value;
-    if (current == null) return;
+  // Remove member from project via DELETE /api/admin/projects/:projectId/employees/:employeeId
+  Future<bool> removeMemberFromProject(AppUser emp, {Project? project}) async {
+    final current = project ?? selectedProject.value;
+    if (current == null) return false;
 
-    final updatedMembers = List<AppUser>.from(current.teamMembers)..remove(emp);
-    final updated = current.copyWith(teamMembers: updatedMembers);
-
-    final idx = projects.indexWhere((p) => p.id == current.id);
-    if (idx != -1) {
-      projects[idx] = updated;
+    // Resolve employee numeric ID
+    int? resolvedEmployeeId = emp.id;
+    if (resolvedEmployeeId == null || resolvedEmployeeId == 0) {
+      // 1. Try from projectDetailsRaw team list
+      final rawMatch = projectDetailsRaw.value?.team.firstWhereOrNull(
+        (t) => (t.id != 0 &&
+            (t.email.toLowerCase() == emp.email.toLowerCase() ||
+                (emp.employeeId != null && emp.employeeId!.isNotEmpty && t.employeeId == emp.employeeId) ||
+                t.name == emp.name)),
+      );
+      if (rawMatch != null && rawMatch.id != 0) {
+        resolvedEmployeeId = rawMatch.id;
+      }
     }
-    selectedProject.value = updated;
+
+    if (resolvedEmployeeId == null || resolvedEmployeeId == 0) {
+      // 2. Try parsing numeric employeeId string
+      resolvedEmployeeId = int.tryParse(emp.employeeId ?? '');
+    }
+
+    if (resolvedEmployeeId == null || resolvedEmployeeId == 0) {
+      // 3. Try from live employeesList
+      final empMatch = employeesList.firstWhereOrNull(
+        (e) =>
+            (emp.email.isNotEmpty && e.email.toLowerCase() == emp.email.toLowerCase()) ||
+            (emp.employeeId != null && emp.employeeId!.isNotEmpty && e.employeeId == emp.employeeId),
+      );
+      if (empMatch != null) {
+        resolvedEmployeeId = int.tryParse(empMatch.id);
+      }
+    }
+
+    if (resolvedEmployeeId == null || resolvedEmployeeId == 0) {
+      Get.snackbar(
+        'Error',
+        'Could not find valid employee ID to remove.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.redAccent,
+        colorText: Colors.white,
+      );
+      return false;
+    }
+
+    final empKey = emp.id?.toString() ?? emp.employeeId ?? emp.email;
+    removingMemberIds.add(empKey);
+
+    try {
+      Logger.d('ProjectsController => Removing employee $resolvedEmployeeId from project ${current.id}');
+      final response = await repository.removeEmployeeFromProject(
+        projectId: current.id,
+        employeeId: resolvedEmployeeId,
+      );
+
+      if (response.status) {
+        final updatedMembers = List<AppUser>.from(current.teamMembers)
+          ..removeWhere((m) =>
+              m == emp ||
+              m.id == resolvedEmployeeId ||
+              (m.email.isNotEmpty && m.email.toLowerCase() == emp.email.toLowerCase()));
+
+        final currentCount = current.membersCount ?? current.teamMembers.length;
+        final newCount = currentCount > 0 ? currentCount - 1 : 0;
+
+        final updated = current.copyWith(
+          teamMembers: updatedMembers,
+          membersCount: newCount,
+        );
+
+        final idx = projects.indexWhere((p) => p.id.toString() == current.id.toString());
+        if (idx != -1) {
+          projects[idx] = updated;
+        }
+        selectedProject.value = updated;
+
+        // Also update projectDetailsRaw if present
+        if (projectDetailsRaw.value != null) {
+          final rawTeam = List<ProjectTeamMember>.from(projectDetailsRaw.value!.team)
+            ..removeWhere((t) =>
+                t.id == resolvedEmployeeId ||
+                (emp.email.isNotEmpty && t.email.toLowerCase() == emp.email.toLowerCase()));
+          projectDetailsRaw.value = ProjectApiData(
+            id: projectDetailsRaw.value!.id,
+            name: projectDetailsRaw.value!.name,
+            description: projectDetailsRaw.value!.description,
+            category: projectDetailsRaw.value!.category,
+            startDate: projectDetailsRaw.value!.startDate,
+            endDate: projectDetailsRaw.value!.endDate,
+            status: projectDetailsRaw.value!.status,
+            progress: projectDetailsRaw.value!.progress,
+            membersCount: newCount,
+            filesCount: projectDetailsRaw.value!.filesCount,
+            team: rawTeam,
+            files: projectDetailsRaw.value!.files,
+            timeline: projectDetailsRaw.value!.timeline,
+            createdBy: projectDetailsRaw.value!.createdBy,
+            overview: projectDetailsRaw.value!.overview,
+            tasksData: projectDetailsRaw.value!.tasksData,
+            createdAt: projectDetailsRaw.value!.createdAt,
+            updatedAt: projectDetailsRaw.value!.updatedAt,
+          );
+        }
+
+        Get.snackbar(
+          'Member Removed',
+          response.message.isNotEmpty
+              ? response.message
+              : '${emp.name} has been removed from the project.',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: const Color(0xFF10B981),
+          colorText: Colors.white,
+        );
+        return true;
+      } else {
+        Get.snackbar(
+          'Failed',
+          response.message.isNotEmpty ? response.message : 'Failed to remove member.',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.redAccent,
+          colorText: Colors.white,
+        );
+        return false;
+      }
+    } catch (e) {
+      Logger.e('ProjectsController => removeEmployee error: $e');
+      Get.snackbar(
+        'Error',
+        'Could not remove employee: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.redAccent,
+        colorText: Colors.white,
+      );
+      return false;
+    } finally {
+      removingMemberIds.remove(empKey);
+    }
+  }
+
+  // Remove member convenience method
+  void removeMember(AppUser emp) {
+    removeMemberFromProject(emp);
   }
 
   // Add multiple members to active project - newly added members get access to all past tasks and project history!

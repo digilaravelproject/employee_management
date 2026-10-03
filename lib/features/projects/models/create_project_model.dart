@@ -357,6 +357,7 @@ class ProjectApiData {
             .replaceFirst('https://localhost:8000', AppConstants.baseUrl);
       }
       return AppUser(
+        id: t.id,
         name: t.name,
         email: t.email,
         avatarUrl: avatar.isNotEmpty
@@ -652,6 +653,26 @@ class DeleteProjectResponseModel {
       status: json['status'] == true ||
           json['status'] == 1 ||
           json['status']?.toString().toLowerCase() == 'true',
+      message: json['message']?.toString() ?? '',
+    );
+  }
+}
+
+class RemoveProjectEmployeeResponseModel {
+  final bool status;
+  final String message;
+
+  RemoveProjectEmployeeResponseModel({
+    required this.status,
+    required this.message,
+  });
+
+  factory RemoveProjectEmployeeResponseModel.fromJson(Map<String, dynamic> json) {
+    return RemoveProjectEmployeeResponseModel(
+      status: json['status'] == true ||
+          json['status'] == 1 ||
+          json['status']?.toString().toLowerCase() == 'true' ||
+          json['success'] == true,
       message: json['message']?.toString() ?? '',
     );
   }

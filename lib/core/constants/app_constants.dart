@@ -88,6 +88,8 @@ class AppConstants {
   static const String adminProjectsUrl = '/api/admin/projects';
   static const String adminSearchProjectsUrl = '/api/admin/projects/search';
   static String adminProjectDetailsUrl(dynamic id) => '$adminProjectsUrl/$id';
+  static String adminProjectEmployeeUrl(dynamic projectId, dynamic employeeId) =>
+      '$adminProjectsUrl/$projectId/employees/$employeeId';
   static const String assignedProjectsUrl = '/api/admin/projects/assigned';
   static String assignedProjectDetailsUrl(dynamic id) => '$assignedProjectsUrl/$id';
   static const String adminTasksUrl = '/api/admin/tasks';

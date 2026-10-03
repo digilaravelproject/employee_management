@@ -304,4 +304,43 @@ class ProjectRepository implements ProjectRepositoryInterface {
       );
     }
   }
+
+  @override
+  Future<RemoveProjectEmployeeResponseModel> removeEmployeeFromProject({
+    required dynamic projectId,
+    required dynamic employeeId,
+  }) async {
+    try {
+      final endpoint = AppConstants.adminProjectEmployeeUrl(projectId, employeeId);
+      Logger.d('ProjectRepository => DELETE $endpoint');
+
+      final response = await apiClient.delete(
+        endpoint,
+        handleError: false,
+        showToaster: false,
+      );
+
+      Logger.d('ProjectRepository => removeEmployee Status: ${response.statusCode}, isSuccess: ${response.isSuccess}');
+
+      if (response.json != null) {
+        return RemoveProjectEmployeeResponseModel.fromJson(response.json!);
+      } else if (response.body is Map<String, dynamic>) {
+        return RemoveProjectEmployeeResponseModel.fromJson(response.body as Map<String, dynamic>);
+      }
+
+      return RemoveProjectEmployeeResponseModel(
+        status: response.isSuccess,
+        message: response.message.isNotEmpty
+            ? response.message
+            : (response.isSuccess ? 'Employee removed from project successfully.' : 'Failed to remove employee from project.'),
+      );
+    } catch (e, stack) {
+      Logger.e('ProjectRepository => Error removing employee from project: $e');
+      Logger.e('ProjectRepository => StackTrace: $stack');
+      return RemoveProjectEmployeeResponseModel(
+        status: false,
+        message: 'Something went wrong while removing employee: $e',
+      );
+    }
+  }
 }

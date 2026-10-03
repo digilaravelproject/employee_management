@@ -172,6 +172,7 @@ class EmployeeAssignedProjectItem {
             .replaceFirst('https://localhost:8000', AppConstants.baseUrl);
       }
       return AppUser(
+        id: t.id,
         name: t.name,
         email: t.email,
         avatarUrl: avatar.isNotEmpty

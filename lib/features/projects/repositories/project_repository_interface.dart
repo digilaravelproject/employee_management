@@ -18,4 +18,8 @@ abstract class ProjectRepositoryInterface {
   Future<ProjectDetailsResponseModel> getProjectDetails(dynamic id);
   Future<ProjectDetailsResponseModel> updateProject(dynamic id, UpdateProjectRequestModel request);
   Future<DeleteProjectResponseModel> deleteProject(dynamic id);
+  Future<RemoveProjectEmployeeResponseModel> removeEmployeeFromProject({
+    required dynamic projectId,
+    required dynamic employeeId,
+  });
 }

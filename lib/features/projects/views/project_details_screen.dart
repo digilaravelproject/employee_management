@@ -1867,8 +1867,22 @@ class _TeamTab extends StatelessWidget {
                             final isEmployee = appController?.userRole.value.toLowerCase() == 'employee';
                             if (isEmployee) return const SizedBox.shrink();
 
+                            final empKey = emp.id?.toString() ?? emp.employeeId ?? emp.email;
+                            final isRemoving = controller.removingMemberIds.contains(empKey);
+
+                            if (isRemoving) {
+                              return const SizedBox(
+                                width: 32,
+                                height: 32,
+                                child: Padding(
+                                  padding: EdgeInsets.all(6),
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.errorColor),
+                                ),
+                              );
+                            }
+
                             return GestureDetector(
-                              onTap: () => controller.removeMember(emp),
+                              onTap: () => _confirmRemoveMember(context, controller, project, emp),
                               child: Container(
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
@@ -1915,6 +1929,77 @@ class _TeamTab extends StatelessWidget {
           );
         }),
       ],
+    );
+  }
+
+  void _confirmRemoveMember(BuildContext context, ProjectsController controller, Project project, AppUser emp) {
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 54,
+                height: 54,
+                decoration: const BoxDecoration(
+                  color: AppColors.errorColorAccent,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Iconsax.trash, color: AppColors.errorColor, size: 26),
+              ),
+              const SizedBox(height: 16),
+              const AppText(
+                'Remove Team Member',
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              AppText(
+                'Are you sure you want to remove "${emp.name}" from this project?',
+                fontSize: 13,
+                color: AppColors.textColorSecondary,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 22),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Get.back(),
+                      style: OutlinedButton.styleFrom(
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        side: const BorderSide(color: AppColors.slate300),
+                      ),
+                      child: const AppText('Cancel', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textColorPrimary),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Get.back();
+                        controller.removeMemberFromProject(emp, project: project);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.errorColor,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        elevation: 0,
+                      ),
+                      child: const AppText('Remove', fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

@@ -1,4 +1,5 @@
 class AppUser {
+  final int? id;
   final String name;
   final String email;
   final String avatarUrl;
@@ -7,6 +8,7 @@ class AppUser {
   final String? status;
 
   const AppUser({
+    this.id,
     required this.name,
     required this.email,
     required this.avatarUrl,
@@ -15,7 +17,28 @@ class AppUser {
     this.status,
   });
 
+  AppUser copyWith({
+    int? id,
+    String? name,
+    String? email,
+    String? avatarUrl,
+    String? designation,
+    String? employeeId,
+    String? status,
+  }) {
+    return AppUser(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      email: email ?? this.email,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
+      designation: designation ?? this.designation,
+      employeeId: employeeId ?? this.employeeId,
+      status: status ?? this.status,
+    );
+  }
+
   Map<String, dynamic> toJson() => {
+        if (id != null) 'id': id,
         'name': name,
         'email': email,
         'avatarUrl': avatarUrl,
@@ -25,13 +48,28 @@ class AppUser {
       };
 
   factory AppUser.fromJson(Map<String, dynamic> json) => AppUser(
+        id: json['id'] is int
+            ? json['id']
+            : int.tryParse(json['id']?.toString() ?? ''),
         name: json['name'] ?? '',
         email: json['email'] ?? '',
         avatarUrl: json['avatarUrl'] ?? '',
         designation: json['designation']?.toString(),
-        employeeId: json['employeeId']?.toString(),
+        employeeId: json['employeeId']?.toString() ?? json['employee_id']?.toString(),
         status: json['status']?.toString(),
       );
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is AppUser &&
+          runtimeType == other.runtimeType &&
+          ((id != null && other.id != null && id == other.id) ||
+              (email.isNotEmpty && email.toLowerCase() == other.email.toLowerCase()) ||
+              (employeeId != null && employeeId == other.employeeId));
+
+  @override
+  int get hashCode => (id != null ? id.hashCode : email.toLowerCase().hashCode);
 }
 
 class GranularPermissionItem {
