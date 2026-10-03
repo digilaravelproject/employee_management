@@ -12,6 +12,7 @@ import '../../features/tasks/controllers/tasks_controller.dart';
 import '../../features/notification/repositories/notification_repository.dart';
 import '../../features/notification/repositories/notification_repository_interface.dart';
 import '../../features/notification/controllers/notification_controller.dart';
+import '../../permission/permission_service.dart';
 
 class InitialBindings extends Bindings {
   @override
@@ -23,6 +24,7 @@ class InitialBindings extends Bindings {
     Get.lazyPut(() => NetworkInfo(Get.find<Connectivity>()), fenix: true);
     Get.lazyPut(() => LocalizationController(), fenix: true);
     Get.put(AppController(), permanent: true);
+    Get.lazyPut(() => PermissionService(), fenix: true);
     Get.lazyPut(() => DashboardController(), fenix: true);
     Get.lazyPut(() => AttendanceHistoryController(), fenix: true);
     Get.lazyPut(() => ProjectsController(), fenix: true);
