@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -80,10 +79,8 @@ class ProfileController extends GetxController {
 
   void loadUserFromStorage() {
     try {
-      final userDataString = SharedPrefs.getString(AppConstants.userData);
-      if (userDataString != null && userDataString.isNotEmpty) {
-        final Map<String, dynamic> json = jsonDecode(userDataString);
-        final user = UserModel.fromJson(json);
+      final user = SharedPrefs.getUserData();
+      if (user != null) {
         currentUser.value = user;
         _populateFields(user);
       } else {
@@ -162,7 +159,7 @@ class ProfileController extends GetxController {
         if (raw is Map<String, dynamic>) {
           final user = UserModel.fromJson(raw);
           currentUser.value = user;
-          await SharedPrefs.setString(AppConstants.userData, jsonEncode(user.toJson()));
+          await SharedPrefs.saveUserData(user);
           _populateFields(user);
           if (Get.isRegistered<AuthController>()) {
             Get.find<AuthController>().currentUser.value = user;
@@ -315,10 +312,7 @@ class ProfileController extends GetxController {
           if (rawData is Map<String, dynamic>) {
             final updatedUser = UserModel.fromJson(rawData);
             currentUser.value = updatedUser;
-            await SharedPrefs.setString(
-              AppConstants.userData,
-              jsonEncode(updatedUser.toJson()),
-            );
+            await SharedPrefs.saveUserData(updatedUser);
             _populateFields(updatedUser);
             if (Get.isRegistered<AuthController>()) {
               Get.find<AuthController>().currentUser.value = updatedUser;
@@ -490,10 +484,7 @@ class ProfileController extends GetxController {
           if (rawData is Map<String, dynamic>) {
             final updatedUser = UserModel.fromJson(rawData);
             currentUser.value = updatedUser;
-            await SharedPrefs.setString(
-              AppConstants.userData,
-              jsonEncode(updatedUser.toJson()),
-            );
+            await SharedPrefs.saveUserData(updatedUser);
             _populateFields(updatedUser);
             if (Get.isRegistered<AuthController>()) {
               Get.find<AuthController>().currentUser.value = updatedUser;
@@ -557,10 +548,7 @@ class ProfileController extends GetxController {
           json['documents'] = updatedDocs.map((d) => d.toJson()).toList();
           final updatedUser = UserModel.fromJson(json);
           currentUser.value = updatedUser;
-          await SharedPrefs.setString(
-            AppConstants.userData,
-            jsonEncode(updatedUser.toJson()),
-          );
+          await SharedPrefs.saveUserData(updatedUser);
         }
 
         CustomSnackbar.showSuccess(

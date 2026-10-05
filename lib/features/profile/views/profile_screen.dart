@@ -315,7 +315,201 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       'Date of Joining', dateOfJoining)),
                             ],
                           ),
+                          if (user?.workMode != null || user?.employeeType != null) ...[
+                            const SizedBox(height: 16),
+                            Row(
+                              children: [
+                                if (user?.workMode != null)
+                                  Expanded(
+                                      child: _buildDetailItem(
+                                          'Work Mode', user!.workMode!)),
+                                if (user?.employeeType != null)
+                                  Expanded(
+                                      child: _buildDetailItem(
+                                          'Employee Type', user!.employeeType!)),
+                              ],
+                            ),
+                          ],
+                          if (user?.team != null || user?.probationPeriod != null) ...[
+                            const SizedBox(height: 16),
+                            Row(
+                              children: [
+                                if (user?.team != null)
+                                  Expanded(
+                                      child: _buildDetailItem('Team', user!.team!)),
+                                if (user?.probationPeriod != null)
+                                  Expanded(
+                                      child: _buildDetailItem(
+                                          'Probation Period', user!.probationPeriod!))
+                                else
+                                  const Expanded(child: SizedBox()),
+                              ],
+                            ),
+                          ],
                         ],
+                      ),
+                    ],
+
+                    // Assigned Shift Card
+                    if (user?.assignedShift != null) ...[
+                      const SizedBox(height: 16),
+                      _buildSectionCard(
+                        icon: Iconsax.clock,
+                        title: 'Assigned Shift',
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildDetailItem(
+                                  'Shift Name',
+                                  '${user!.assignedShift!.name ?? 'Shift'}${user.assignedShift!.shiftType != null ? ' (${user.assignedShift!.shiftType})' : ''}',
+                                ),
+                              ),
+                              Expanded(
+                                child: _buildDetailItem(
+                                  'Timing',
+                                  '${user.assignedShift!.startTime ?? '--'} - ${user.assignedShift!.endTime ?? '--'}',
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildDetailItem(
+                                  'Total Duration',
+                                  user.assignedShift!.totalDuration ?? '--',
+                                ),
+                              ),
+                              Expanded(
+                                child: _buildDetailItem(
+                                  'Break Duration',
+                                  user.assignedShift!.breakDuration ?? '--',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ],
+
+                    // Skills Card
+                    if ((user?.skillsList != null && user!.skillsList!.isNotEmpty) ||
+                        (user?.skills != null && user!.skills!.isNotEmpty)) ...[
+                      const SizedBox(height: 16),
+                      _buildSectionCard(
+                        icon: Iconsax.code,
+                        title: 'Skills',
+                        children: [
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: (user.skillsList ??
+                                    user.skills!.split(',').map((s) => s.trim()).toList())
+                                .map(
+                                  (skill) => Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primaryColor.withValues(alpha: 0.08),
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(
+                                          color: AppColors.primaryColor.withValues(alpha: 0.2)),
+                                    ),
+                                    child: AppText(
+                                      skill,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.primaryColor,
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                          ),
+                        ],
+                      ),
+                    ],
+
+                    // Sales Target Card
+                    if (user?.isSalesTargetEnabled == true) ...[
+                      const SizedBox(height: 16),
+                      _buildSectionCard(
+                        icon: Iconsax.chart_2,
+                        title: 'Sales Target & Commission',
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildDetailItem(
+                                  'Sales Target',
+                                  '₹${user!.salesTarget ?? '0.00'}',
+                                ),
+                              ),
+                              Expanded(
+                                child: _buildDetailItem(
+                                  'Metric / Period',
+                                  '${user.salesTargetMetricType ?? 'Revenue'} (${user.salesTargetPeriod ?? 'Monthly'})',
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (user.incentiveCommissionPercent != null) ...[
+                            const SizedBox(height: 16),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildDetailItem(
+                                    'Commission Incentive',
+                                    '${user.incentiveCommissionPercent}%',
+                                  ),
+                                ),
+                                const Expanded(child: SizedBox()),
+                              ],
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+
+                    // Assigned Roles Card
+                    if (user?.roles != null && user!.roles!.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      _buildSectionCard(
+                        icon: Iconsax.shield_security,
+                        title: 'Assigned Roles',
+                        children: user.roles!.map((role) {
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 8.0),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: AppText(
+                                    role.name ?? 'Role',
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.blue[800],
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                if (role.department != null)
+                                  Expanded(
+                                    child: AppText(
+                                      role.department!,
+                                      fontSize: 12,
+                                      color: AppColors.textColorSecondary,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
                       ),
                     ],
 
@@ -640,10 +834,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     Logger.e('Logout error: $e');
                                   } finally {
                                     await TokenManager.clearToken();
-                                    await SharedPrefs.remove(
-                                        AppConstants.userData);
-                                    await SharedPrefs.setBool(
-                                        AppConstants.isLoggedIn, false);
+                                    await SharedPrefs.clearUserData();
                                     if (Get.isRegistered<AuthController>()) {
                                       final authCtrl =
                                           Get.find<AuthController>();

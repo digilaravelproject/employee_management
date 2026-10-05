@@ -13,6 +13,7 @@ import '../domain/models/admin_signup_request_model.dart';
 import '../domain/models/admin_signup_response_model.dart';
 import '../domain/models/user_model.dart';
 import '../domain/usecases/admin_signup_usecase.dart';
+import 'auth_controller.dart';
 
 class AdminSignupController extends GetxController {
   final AdminSignupUseCase _adminSignupUseCase;
@@ -217,11 +218,13 @@ class AdminSignupController extends GetxController {
         // Save user info
         if (response.rawData != null) {
           final user = UserModel.fromJson(response.rawData!);
-          await SharedPrefs.setString(AppConstants.userData, jsonEncode(user.toJson()));
-          await SharedPrefs.setBool(AppConstants.isLoggedIn, true);
+          await SharedPrefs.saveUserData(user);
 
           if (Get.isRegistered<AppController>()) {
             Get.find<AppController>().setRole(user.role);
+          }
+          if (Get.isRegistered<AuthController>()) {
+            Get.find<AuthController>().currentUser.value = user;
           }
         }
 
@@ -307,12 +310,13 @@ class AdminSignupController extends GetxController {
         // Save user info
         if (response.rawData != null) {
           final user = UserModel.fromJson(response.rawData!);
-          await SharedPrefs.setString(
-              AppConstants.userData, jsonEncode(user.toJson()));
-          await SharedPrefs.setBool(AppConstants.isLoggedIn, true);
+          await SharedPrefs.saveUserData(user);
 
           if (Get.isRegistered<AppController>()) {
             Get.find<AppController>().setRole(user.role);
+          }
+          if (Get.isRegistered<AuthController>()) {
+            Get.find<AuthController>().currentUser.value = user;
           }
         }
 

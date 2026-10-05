@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import '../../../core/services/network/response_model.dart';
 import '../../../core/utils/custom_snackbar.dart';
 import '../../../core/utils/app_validators.dart';
+import '../../../core/services/storage/shared_prefs.dart';
 import '../domain/models/user_model.dart';
 import '../../../routes/route_helper.dart';
 import '../domain/services/auth_service.dart';
@@ -365,10 +366,11 @@ class AuthController extends GetxController {
         final body = response.body as Map<String, dynamic>;
         
         // Get user data
-        final userData = body['user'];
+        final userData = body['user'] ?? body['data'];
         if (userData != null) {
           currentUser.value = UserModel.fromJson(userData);
-          print('✅ User saved: ${currentUser.value}');
+          await SharedPrefs.saveUserData(currentUser.value);
+          print('✅ User saved to SharedPreferences: ${currentUser.value}');
         }
         
         otpController.clear();

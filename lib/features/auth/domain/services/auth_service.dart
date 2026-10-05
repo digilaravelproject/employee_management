@@ -37,11 +37,10 @@ class AuthService implements AuthServiceInterface {
         }
 
         // Save user
-        final userData = body['user'];
+        final userData = body['data'] ?? body['user'];
         if (userData != null) {
           final user = UserModel.fromJson(userData);
           await saveUserInfo(user);
-          await SharedPrefs.setBool(AppConstants.isLoggedIn, true);
         }
       } catch (e) {
         print('Error saving user data: $e');
@@ -106,7 +105,7 @@ class AuthService implements AuthServiceInterface {
 
   @override
   Future<void> saveUserInfo(UserModel user) async {
-    await SharedPrefs.setString(AppConstants.userData, user.toJsonString());
+    await SharedPrefs.saveUserData(user);
   }
 
   @override
@@ -116,9 +115,8 @@ class AuthService implements AuthServiceInterface {
 
   @override
   Future<void> clearUserInfo() async {
-    await SharedPrefs.remove(AppConstants.userData);
+    await SharedPrefs.clearUserData();
     await TokenManager.clearToken();
-    await SharedPrefs.setBool(AppConstants.isLoggedIn, false);
   }
 
   @override
@@ -133,10 +131,6 @@ class AuthService implements AuthServiceInterface {
 
   @override
   Future<UserModel?> getUserInfo() async {
-    final userJsonString = SharedPrefs.getString(AppConstants.userData);
-    if (userJsonString == null || userJsonString.isEmpty) {
-      return null;
-    }
-    return UserModel.fromJsonString(userJsonString);
+    return SharedPrefs.getUserData();
   }
 }

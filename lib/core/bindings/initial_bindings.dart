@@ -4,6 +4,7 @@ import '../controllers/app_controller.dart';
 import '../services/network/api_client.dart';
 import '../services/network/network_info.dart';
 import 'package:dio/dio.dart';
+import '../services/permission/permission_service.dart';
 import '../services/translations/localization_controller.dart';
 import '../../features/dashboard/controllers/dashboard_controller.dart';
 import '../../features/attendance/controllers/attendance_history_controller.dart';
@@ -12,7 +13,6 @@ import '../../features/tasks/controllers/tasks_controller.dart';
 import '../../features/notification/repositories/notification_repository.dart';
 import '../../features/notification/repositories/notification_repository_interface.dart';
 import '../../features/notification/controllers/notification_controller.dart';
-import '../../permission/permission_service.dart';
 
 class InitialBindings extends Bindings {
   @override

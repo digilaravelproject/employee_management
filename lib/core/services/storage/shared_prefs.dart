@@ -1,4 +1,7 @@
+import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../constants/app_constants.dart';
+import '../../../features/auth/domain/models/user_model.dart';
 
 /// A simplified wrapper for SharedPreferences
 class SharedPrefs {
@@ -72,5 +75,58 @@ class SharedPrefs {
   /// Clear all preferences
   static Future<bool> clear() async {
     return await _prefs?.clear() ?? false;
+  }
+
+  // ── Authentication & User Storage Helpers ──
+
+  /// Save complete user data into SharedPreferences
+  /// Accepts [UserModel], [Map<String, dynamic>], or a JSON string.
+  static Future<bool> saveUserData(dynamic data) async {
+    if (data == null) return false;
+    try {
+      String jsonString;
+      if (data is String) {
+        jsonString = data;
+      } else if (data is UserModel) {
+        jsonString = jsonEncode(data.toJson());
+      } else if (data is Map<String, dynamic>) {
+        jsonString = jsonEncode(data);
+      } else {
+        jsonString = jsonEncode(data);
+      }
+
+      final success = await setString(AppConstants.userData, jsonString);
+      await setBool(AppConstants.isLoggedIn, true);
+      return success;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Get parsed UserModel from SharedPreferences
+  static UserModel? getUserData() {
+    final str = getString(AppConstants.userData);
+    if (str == null || str.isEmpty) return null;
+    return UserModel.fromJsonString(str);
+  }
+
+  /// Get raw user data Map from SharedPreferences
+  static Map<String, dynamic>? getUserDataMap() {
+    final str = getString(AppConstants.userData);
+    if (str == null || str.isEmpty) return null;
+    try {
+      final decoded = jsonDecode(str);
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  /// Clear all auth & user data from SharedPreferences
+  static Future<void> clearUserData() async {
+    await remove(AppConstants.userData);
+    await remove(AppConstants.token);
+    await setBool(AppConstants.isLoggedIn, false);
   }
 }

@@ -1,7 +1,7 @@
 import 'package:get/get.dart';
-import '../core/constants/app_constants.dart';
-import '../core/services/network/api_client.dart';
-import '../core/utils/logger.dart';
+import '../../constants/app_constants.dart';
+import '../../utils/logger.dart';
+import '../network/api_client.dart';
 import 'permission_model.dart';
 
 /// Simple RBAC Permission Service
@@ -58,7 +58,7 @@ class PermissionService extends GetxService {
       }
       return false;
     } catch (e) {
-      Logger.e('PermissionService error: $e');
+      Logger.e;
       return false;
     } finally {
       isLoading.value = false;
@@ -71,10 +71,10 @@ class PermissionService extends GetxService {
     final newMods = <String, bool>{};
 
     final modulesModelList = moduleList
-        .where((m) => m is Map)
+        .whereType<Map>()
         .map(
           (m) => PermissionModuleModel.fromJson(
-            Map<String, dynamic>.from(m as Map),
+            Map<String, dynamic>.from(m),
           ),
         )
         .toList();
