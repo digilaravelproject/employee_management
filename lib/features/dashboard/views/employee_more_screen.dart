@@ -18,6 +18,9 @@ import '../../followup/views/followup_dashboard_screen.dart';
 import '../../performance/views/performance_dashboard_screen.dart';
 import '../../leads/views/bde_leads_target_screen.dart';
 
+import '../../../core/services/permission/permission_service.dart';
+import '../../../core/services/permission/permission_constant.dart';
+
 class EmployeeMoreScreen extends StatelessWidget {
   const EmployeeMoreScreen({super.key});
 
@@ -31,135 +34,195 @@ class EmployeeMoreScreen extends StatelessWidget {
         elevation: 0,
         backgroundColor: Colors.white,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const AppText(
-              'My Work',
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-            ),
-            const SizedBox(height: 16),
-            _MoreMenuItem(
-              icon: Iconsax.task_square,
-              title: 'My Tasks',
-              subtitle: 'View and update your daily tasks',
-              iconColor: AppColors.primaryColor,
-              onTap: () {
-                Get.to(() => const TasksListScreen());
-              },
-            ),
-            _MoreMenuItem(
-              icon: Iconsax.folder_open,
-              title: 'Projects',
-              subtitle: 'View assigned projects',
-              iconColor: Colors.purple,
-              onTap: () {
-                Get.to(() => const EmployeeAssignedProjectsScreen());
-              },
-            ),
-            _MoreMenuItem(
-              icon: Iconsax.edit_2,
-              title: 'Daily Update',
-              subtitle: 'Submit your end of day status',
-              iconColor: Colors.orange,
-              onTap: () {
-                Get.to(() => const EmployeeProjectsForUpdateScreen());
-              },
-            ),
-            _MoreMenuItem(
-              icon: Iconsax.chart,
-              title: 'Performance',
-              subtitle: 'View your performance metrics',
-              iconColor: Colors.deepPurple,
-              onTap: () {
-                Get.to(() => const PerformanceDashboardScreen(isEmployeeOnly: true));
-              },
-            ),
-            _MoreMenuItem(
-              icon: Iconsax.call,
-              title: 'Followups',
-              subtitle: 'Check your pending followups',
-              iconColor: Colors.deepOrange,
-              onTap: () {
-                Get.to(() => const FollowupDashboardScreen(isEmployeeOnly: true));
-              },
-            ),
-            _MoreMenuItem(
-              icon: Iconsax.briefcase,
-              title: 'My Leads & Targets',
-              subtitle: 'Track monthly sales target, closed deals & leads',
-              iconColor: AppColors.primaryColor,
-              onTap: () {
-                Get.to(() => const BdeLeadsTargetScreen());
-              },
-            ),
+      body: Obx(() {
+        final p = PermissionService.to;
+        final isAdmin = p.isAdmin.value;
 
-            const SizedBox(height: 24),
-            const AppText(
-              'Finance & Communication',
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-            ),
-            const SizedBox(height: 16),
-            _MoreMenuItem(
-              icon: Iconsax.wallet_money,
-              title: 'Salary / Payroll',
-              subtitle: 'View payslips and salary details',
-              iconColor: Colors.green,
-              onTap: () {
-                Get.to(() => const EmployeeMySalaryScreen(), binding: SalaryHistoryBinding());
-              },
-            ),
-            _MoreMenuItem(
-              icon: Iconsax.message,
-              title: 'Chat',
-              subtitle: 'Communicate with team and HR',
-              iconColor: Colors.teal,
-              onTap: () {
-                Get.to(() => const ChatListScreen());
-              },
-            ),
+        // 1. My Work items
+        final workItems = <Widget>[];
+        if (isAdmin ||
+            p.isAllowed(PermissionConstant.viewTasks,
+                moduleSlug: PermissionConstant.moduleTasksProjects)) {
+          workItems.add(_MoreMenuItem(
+            icon: Iconsax.task_square,
+            title: 'My Tasks',
+            subtitle: 'View and update your daily tasks',
+            iconColor: AppColors.primaryColor,
+            onTap: () => Get.to(() => const TasksListScreen()),
+          ));
+        }
+        if (isAdmin ||
+            p.isAllowed(PermissionConstant.viewProjects,
+                moduleSlug: PermissionConstant.moduleTasksProjects)) {
+          workItems.add(_MoreMenuItem(
+            icon: Iconsax.folder_open,
+            title: 'Projects',
+            subtitle: 'View assigned projects',
+            iconColor: Colors.purple,
+            onTap: () => Get.to(() => const EmployeeAssignedProjectsScreen()),
+          ));
+        }
+        if (isAdmin ||
+            p.isAllowed(PermissionConstant.dailyTaskUpdate,
+                moduleSlug: PermissionConstant.moduleTasksProjects)) {
+          workItems.add(_MoreMenuItem(
+            icon: Iconsax.edit_2,
+            title: 'Daily Update',
+            subtitle: 'Submit your end of day status',
+            iconColor: Colors.orange,
+            onTap: () => Get.to(() => const EmployeeProjectsForUpdateScreen()),
+          ));
+        }
+        if (isAdmin ||
+            p.isAllowed(PermissionConstant.viewTasks,
+                moduleSlug: PermissionConstant.moduleTasksProjects) ||
+            p.isAllowed(PermissionConstant.dailyTaskUpdate,
+                moduleSlug: PermissionConstant.moduleTasksProjects)) {
+          workItems.add(_MoreMenuItem(
+            icon: Iconsax.chart,
+            title: 'Performance',
+            subtitle: 'View your performance metrics',
+            iconColor: Colors.deepPurple,
+            onTap: () => Get.to(
+                () => const PerformanceDashboardScreen(isEmployeeOnly: true)),
+          ));
+        }
+        if (isAdmin ||
+            p.isAllowed(PermissionConstant.viewMeetings,
+                moduleSlug: PermissionConstant.moduleMeetingsFollowUps)) {
+          workItems.add(_MoreMenuItem(
+            icon: Iconsax.call,
+            title: 'Followups',
+            subtitle: 'Check your pending followups',
+            iconColor: Colors.deepOrange,
+            onTap: () => Get.to(
+                () => const FollowupDashboardScreen(isEmployeeOnly: true)),
+          ));
+        }
+        if (isAdmin ||
+            p.isAllowed(PermissionConstant.viewLeads,
+                moduleSlug: PermissionConstant.moduleClientsLeadsCrm)) {
+          workItems.add(_MoreMenuItem(
+            icon: Iconsax.briefcase,
+            title: 'My Leads & Targets',
+            subtitle: 'Track monthly sales target, closed deals & leads',
+            iconColor: AppColors.primaryColor,
+            onTap: () => Get.to(() => const BdeLeadsTargetScreen()),
+          ));
+        }
 
-            const SizedBox(height: 24),
-            const AppText(
-              'Company & Resources',
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
+        // 2. Finance & Communication
+        final financeItems = <Widget>[];
+        if (isAdmin ||
+            p.isAllowed(PermissionConstant.viewMySalary,
+                moduleSlug: PermissionConstant.modulePayrollSalary) ||
+            p.isAllowed(PermissionConstant.downloadPayslip,
+                moduleSlug: PermissionConstant.modulePayrollSalary)) {
+          financeItems.add(_MoreMenuItem(
+            icon: Iconsax.wallet_money,
+            title: 'Salary / Payroll',
+            subtitle: 'View payslips and salary details',
+            iconColor: Colors.green,
+            onTap: () => Get.to(() => const EmployeeMySalaryScreen(),
+                binding: SalaryHistoryBinding()),
+          ));
+        }
+        financeItems.add(_MoreMenuItem(
+          icon: Iconsax.message,
+          title: 'Chat',
+          subtitle: 'Communicate with team and HR',
+          iconColor: Colors.teal,
+          onTap: () => Get.to(() => const ChatListScreen()),
+        ));
+
+        // 3. Company & Resources
+        final companyItems = <Widget>[];
+        if (isAdmin ||
+            p.isAllowed(PermissionConstant.readCompliancePolicies,
+                moduleSlug: PermissionConstant.moduleCompanyProfilePolicies)) {
+          companyItems.add(_MoreMenuItem(
+            icon: Iconsax.document_text,
+            title: 'Policies',
+            subtitle: 'View company rules and guidelines',
+            iconColor: AppColors.primaryColor,
+            onTap: () => Get.to(() => const ComplianceDashboardScreen()),
+          ));
+        }
+        if (isAdmin ||
+            p.isAllowed(PermissionConstant.viewAssets,
+                moduleSlug: PermissionConstant.moduleAssetsManagement)) {
+          companyItems.add(_MoreMenuItem(
+            icon: Iconsax.monitor,
+            title: 'My Assets',
+            subtitle: 'Assets assigned to you',
+            iconColor: Colors.pink,
+            onTap: () => Get.to(() => const EmployeeMyAssetsScreen()),
+          ));
+        }
+        if (isAdmin ||
+            p.isAllowed(PermissionConstant.viewCompanyProfile,
+                moduleSlug: PermissionConstant.moduleCompanyProfilePolicies)) {
+          companyItems.add(_MoreMenuItem(
+            icon: Iconsax.building,
+            title: 'Company Profile',
+            subtitle: 'About the organization',
+            iconColor: AppColors.slate500,
+            onTap: () => Get.to(() => const CompanyProfileViewScreen()),
+          ));
+        }
+
+        final hasAnyItems = workItems.isNotEmpty ||
+            financeItems.isNotEmpty ||
+            companyItems.isNotEmpty;
+
+        if (!hasAnyItems) {
+          return const Center(
+            child: AppText(
+              'No additional features permitted for your role.',
+              color: AppColors.textColorSecondary,
+              fontSize: 14,
             ),
-            const SizedBox(height: 16),
-            _MoreMenuItem(
-              icon: Iconsax.document_text,
-              title: 'Policies',
-              subtitle: 'View company rules and guidelines',
-              iconColor: AppColors.primaryColor,
-              onTap: () {
-                Get.to(() => const ComplianceDashboardScreen());
-              },
-            ),
-            _MoreMenuItem(
-              icon: Iconsax.monitor,
-              title: 'My Assets',
-              subtitle: 'Assets assigned to you',
-              iconColor: Colors.pink,
-              onTap: () {
-                Get.to(() => const EmployeeMyAssetsScreen());
-              },
-            ),
-            _MoreMenuItem(
-              icon: Iconsax.building,
-              title: 'Company Profile',
-              subtitle: 'About the organization',
-              iconColor: AppColors.slate500,
-              onTap: () {
-                Get.to(() => const CompanyProfileViewScreen());
-              },
-            ),
-          ],
-        ),
-      ),
+          );
+        }
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (workItems.isNotEmpty) ...[
+                const AppText(
+                  'My Work',
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+                const SizedBox(height: 16),
+                ...workItems,
+                const SizedBox(height: 24),
+              ],
+              if (financeItems.isNotEmpty) ...[
+                const AppText(
+                  'Finance & Communication',
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+                const SizedBox(height: 16),
+                ...financeItems,
+                const SizedBox(height: 24),
+              ],
+              if (companyItems.isNotEmpty) ...[
+                const AppText(
+                  'Company & Resources',
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+                const SizedBox(height: 16),
+                ...companyItems,
+              ],
+            ],
+          ),
+        );
+      }),
     );
   }
 }

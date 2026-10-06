@@ -121,28 +121,41 @@ class RoleListScreen extends StatelessWidget {
 
               final rolesList = controller.filteredRoles;
               if (rolesList.isEmpty) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Iconsax.shield_search, size: 60, color: AppColors.textColorHint.withValues(alpha: 0.3)),
-                      const SizedBox(height: 16),
-                      const AppText('No Roles Found', fontSize: 16, fontWeight: FontWeight.bold),
-                      const SizedBox(height: 4),
-                      const AppText('Try searching for another keyword', fontSize: 12, color: AppColors.textColorHint),
-                    ],
+                return RefreshIndicator(
+                  color: AppColors.primaryColor,
+                  onRefresh: () => controller.fetchRolesFromApi(),
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    child: Container(
+                      height: MediaQuery.of(context).size.height * 0.6,
+                      alignment: Alignment.center,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Iconsax.shield_search, size: 60, color: AppColors.textColorHint.withValues(alpha: 0.3)),
+                          const SizedBox(height: 16),
+                          const AppText('No Roles Found', fontSize: 16, fontWeight: FontWeight.bold),
+                          const SizedBox(height: 4),
+                          const AppText('Try searching for another keyword', fontSize: 12, color: AppColors.textColorHint),
+                        ],
+                      ),
+                    ),
                   ),
                 );
               }
 
-              return ListView.builder(
-                padding: const EdgeInsets.all(16),
-                physics: const BouncingScrollPhysics(),
-                itemCount: rolesList.length,
-                itemBuilder: (context, index) {
-                  final role = rolesList[index];
-                  return _RoleCard(role: role);
-                },
+              return RefreshIndicator(
+                color: AppColors.primaryColor,
+                onRefresh: () => controller.fetchRolesFromApi(),
+                child: ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                  itemCount: rolesList.length,
+                  itemBuilder: (context, index) {
+                    final role = rolesList[index];
+                    return _RoleCard(role: role);
+                  },
+                ),
               );
             }),
           ),

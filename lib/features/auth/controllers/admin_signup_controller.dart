@@ -8,7 +8,6 @@ import '../../../../core/utils/custom_snackbar.dart';
 import '../../../../core/utils/app_validators.dart';
 import '../../../../core/utils/logger.dart';
 import '../../../../routes/route_helper.dart';
-import '../../../../core/controllers/app_controller.dart';
 import '../domain/models/admin_signup_request_model.dart';
 import '../domain/models/admin_signup_response_model.dart';
 import '../domain/models/user_model.dart';
@@ -224,17 +223,10 @@ class AdminSignupController extends GetxController {
           final roleId = user.primaryRoleId ?? SharedPrefs.getRoleId();
           if (roleId != null) {
             await SharedPrefs.setRoleId(roleId);
-            if (Get.isRegistered<AppController>()) {
-              Get.find<AppController>().setRole('employee');
-            }
-            PermissionService.to.setAdminMode(false);
             await PermissionService.to.fetchPermissions(roleId: roleId);
           } else {
             await SharedPrefs.setRoleId(null);
-            if (Get.isRegistered<AppController>()) {
-              Get.find<AppController>().setRole(user.role.isNotEmpty ? user.role : 'admin');
-            }
-            PermissionService.to.setAdminMode(true);
+            await PermissionService.to.fetchPermissions();
           }
 
           if (Get.isRegistered<AuthController>()) {
@@ -329,17 +321,10 @@ class AdminSignupController extends GetxController {
           final roleId = user.primaryRoleId ?? SharedPrefs.getRoleId();
           if (roleId != null) {
             await SharedPrefs.setRoleId(roleId);
-            if (Get.isRegistered<AppController>()) {
-              Get.find<AppController>().setRole('employee');
-            }
-            PermissionService.to.setAdminMode(false);
             await PermissionService.to.fetchPermissions(roleId: roleId);
           } else {
             await SharedPrefs.setRoleId(null);
-            if (Get.isRegistered<AppController>()) {
-              Get.find<AppController>().setRole(user.role.isNotEmpty ? user.role : 'admin');
-            }
-            PermissionService.to.setAdminMode(true);
+            await PermissionService.to.fetchPermissions();
           }
 
           if (Get.isRegistered<AuthController>()) {

@@ -50,7 +50,10 @@ class AppConstants {
   static const String adminDocumentsUrl = '/api/admin/documents';
   static String adminDeleteDocumentUrl(dynamic id) => '$adminDocumentsUrl/$id';
   static const String adminDashboardUrl = '/api/admin/dashboard';
+  static const String adminUpcomingBirthdaysUrl = '/api/admin/birthdays/upcoming';
   static const String adminEmployeesUrl = 'https://yellowgreen-stork-427223.hostingersite.com/public/api/admin/employees';
+  static const String adminEmployeeSearchUrl = '/api/admin/employees/search';
+  static const String adminAllUsersUrl = '/api/admin/employees/all-users';
   static String adminEmployeeUrl(dynamic id) => '$adminEmployeesUrl/$id';
   static const String adminLeaveRequestsUrl = '/api/admin/leave-requests';
   static const String adminEmployeeLeavesUrl = '/api/admin/employees/leaves';
@@ -100,6 +103,7 @@ class AppConstants {
   static String adminTaskStopUrl(dynamic id) => '$adminTasksUrl/$id/stop';
   static String adminTaskCommentsUrl(dynamic id) => '$adminTasksUrl/$id/comments';
   static String adminTaskSubmitForTestingUrl(dynamic id) => '$adminTasksUrl/$id/submit-for-testing';
+  static String adminTaskHandoverUrl(dynamic id) => '$adminTasksUrl/$id/handover';
   static const String userLoginUrl = '/api/user_login';
   static const String otpVerifyUrl = '/api/otp_verify';
   static const String documentTemplatesEndpoint = '/api/v1/document-templates/';

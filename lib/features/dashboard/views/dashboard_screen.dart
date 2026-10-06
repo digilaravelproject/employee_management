@@ -13,6 +13,9 @@ import '../../profile/views/profile_screen.dart';
 import 'all_modules_screen.dart';
 import 'employee_more_screen.dart';
 
+import '../../../core/services/permission/permission_service.dart';
+import '../../../core/services/permission/permission_constant.dart';
+
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
 
@@ -132,13 +135,30 @@ class DashboardScreen extends StatelessWidget {
         }
       },
       child: Obx(() {
-        final isAdmin = appController.userRole.value == 'admin';
+        final p = PermissionService.to;
+        final isAdmin = appController.userRole.value == 'admin' || p.isAdmin.value;
+        final isAllowedAttendance = isAdmin ||
+            p.isAllowed(PermissionConstant.viewAttendanceScreen,
+                moduleSlug: PermissionConstant.moduleAttendanceRegularization) ||
+            p.isAllowed(PermissionConstant.viewAttendanceHistory,
+                moduleSlug: PermissionConstant.moduleAttendanceRegularization);
+        final isAllowedProfile = isAdmin ||
+            p.isAllowed(PermissionConstant.viewProfileDetails,
+                moduleSlug: PermissionConstant.moduleProfileDocuments);
 
         Widget buildCurrentScreen() {
           switch (controller.currentIndex.value) {
             case 0:
               return const HomeScreen();
             case 1:
+              if (!isAllowedAttendance) {
+                return const Scaffold(
+                  body: Center(
+                    child: AppText('Access Denied: Attendance not permitted',
+                        color: AppColors.textColorSecondary),
+                  ),
+                );
+              }
               return isAdmin
                   ? const AttendanceScreen()
                   : const AttendanceHistoryScreen(showBackButton: false);
@@ -147,6 +167,14 @@ class DashboardScreen extends StatelessWidget {
                   ? const AllModulesScreen()
                   : const EmployeeMoreScreen();
             case 3:
+              if (!isAllowedProfile) {
+                return const Scaffold(
+                  body: Center(
+                    child: AppText('Access Denied: Profile not permitted',
+                        color: AppColors.textColorSecondary),
+                  ),
+                );
+              }
               return const ProfileScreen();
             default:
               return const HomeScreen();
@@ -154,9 +182,14 @@ class DashboardScreen extends StatelessWidget {
         }
 
         return Scaffold(
-          extendBody: false, // Content does not flow behind the floating bar
+          extendBody: false,
           body: buildCurrentScreen(),
-          bottomNavigationBar: _CustomBottomNavBar(controller: controller, isAdmin: isAdmin),
+          bottomNavigationBar: _CustomBottomNavBar(
+            controller: controller,
+            isAdmin: isAdmin,
+            isAllowedAttendance: isAllowedAttendance,
+            isAllowedProfile: isAllowedProfile,
+          ),
         );
       }),
     );
@@ -166,7 +199,15 @@ class DashboardScreen extends StatelessWidget {
 class _CustomBottomNavBar extends StatelessWidget {
   final DashboardController controller;
   final bool isAdmin;
-  const _CustomBottomNavBar({required this.controller, required this.isAdmin});
+  final bool isAllowedAttendance;
+  final bool isAllowedProfile;
+
+  const _CustomBottomNavBar({
+    required this.controller,
+    required this.isAdmin,
+    required this.isAllowedAttendance,
+    required this.isAllowedProfile,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -196,13 +237,14 @@ class _CustomBottomNavBar extends StatelessWidget {
               isSelected: controller.currentIndex.value == 0,
               onTap: () => controller.changeIndex(0),
             ),
-            _NavItem(
-              icon: Iconsax.calendar_tick,
-              activeIcon: Iconsax.calendar_tick5,
-              label: 'Attendance',
-              isSelected: controller.currentIndex.value == 1,
-              onTap: () => controller.changeIndex(1),
-            ),
+            if (isAllowedAttendance)
+              _NavItem(
+                icon: Iconsax.calendar_tick,
+                activeIcon: Iconsax.calendar_tick5,
+                label: 'Attendance',
+                isSelected: controller.currentIndex.value == 1,
+                onTap: () => controller.changeIndex(1),
+              ),
             _NavItem(
               icon: isAdmin ? Iconsax.element_4 : Iconsax.category,
               activeIcon: isAdmin ? Iconsax.element_4 : Iconsax.category5,
@@ -210,13 +252,14 @@ class _CustomBottomNavBar extends StatelessWidget {
               isSelected: controller.currentIndex.value == 2,
               onTap: () => controller.changeIndex(2),
             ),
-            _NavItem(
-              icon: Iconsax.user,
-              activeIcon: Iconsax.user,
-              label: 'Profile',
-              isSelected: controller.currentIndex.value == 3,
-              onTap: () => controller.changeIndex(3),
-            ),
+            if (isAllowedProfile)
+              _NavItem(
+                icon: Iconsax.user,
+                activeIcon: Iconsax.user,
+                label: 'Profile',
+                isSelected: controller.currentIndex.value == 3,
+                onTap: () => controller.changeIndex(3),
+              ),
           ],
         ),
       ),

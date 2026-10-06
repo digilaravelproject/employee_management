@@ -1070,9 +1070,11 @@ class TasksListScreen extends StatelessWidget {
     final testingList = controller.testingTasks;
     final activeRunning = controller.activeRunningTasks;
 
-    return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.all(16),
+    return RefreshIndicator(
+      onRefresh: () => controller.fetchTasks(isRefresh: true),
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+        padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1309,24 +1311,31 @@ class TasksListScreen extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   void _showDeleteConfirm(BuildContext context, TasksController controller, String id) {
-    Get.dialog(
-      AlertDialog(
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const AppText('Delete Task', fontSize: 15, fontWeight: FontWeight.bold),
         content: const AppText('Are you sure you want to delete this task permanently?', fontSize: 13),
         actions: [
           TextButton(
-            onPressed: () => Get.back(),
+            onPressed: () => Navigator.of(dialogContext).pop(),
             child: const AppText('Cancel', color: AppColors.textColorSecondary, fontWeight: FontWeight.w600),
           ),
           Obx(() {
             final isDeleting = controller.isDeletingTask.value;
             return ElevatedButton(
-              onPressed: isDeleting ? null : () => controller.deleteTask(id, fromDetail: false),
+              onPressed: isDeleting
+                  ? null
+                  : () {
+                      Navigator.of(dialogContext).pop();
+                      controller.deleteTask(id, fromDetail: false);
+                    },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.errorColor,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -1355,8 +1364,9 @@ class TasksListScreen extends StatelessWidget {
     final selected = mapTaskStatusToApi(task.status).obs;
     final logTextController = TextEditingController();
 
-    Get.dialog(
-      AlertDialog(
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const AppText('Update Task Status', fontSize: 15, fontWeight: FontWeight.bold),
         content: Column(
@@ -1401,13 +1411,13 @@ class TasksListScreen extends StatelessWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Get.back(),
+            onPressed: () => Navigator.of(dialogContext).pop(),
             child: const AppText('Cancel', color: AppColors.textColorSecondary, fontWeight: FontWeight.w600),
           ),
           ElevatedButton(
             onPressed: () {
+              Navigator.of(dialogContext).pop();
               controller.updateTaskStatus(selected.value, logTextController.text);
-              Get.back();
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primaryColor,

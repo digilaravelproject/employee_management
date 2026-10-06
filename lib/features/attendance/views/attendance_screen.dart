@@ -9,15 +9,29 @@ import '../../../core/widgets/app_text.dart';
 import '../controllers/attendance_controller.dart';
 import '../models/admin_attendance_model.dart';
 
-class AttendanceScreen extends StatelessWidget {
+class AttendanceScreen extends StatefulWidget {
   const AttendanceScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final controller = Get.isRegistered<AttendanceController>()
+  State<AttendanceScreen> createState() => _AttendanceScreenState();
+}
+
+class _AttendanceScreenState extends State<AttendanceScreen> {
+  late final AttendanceController controller;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = Get.isRegistered<AttendanceController>()
         ? Get.find<AttendanceController>()
         : Get.put(AttendanceController());
 
+    // Ensure the screen defaults to today / current month on entry
+    controller.selectToday();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       body: SafeArea(
@@ -495,11 +509,10 @@ class _AttendanceTabs extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      final summary = controller.attendanceData.value?.summary;
-      final total = summary?.totalEmployees ?? 0;
-      final present = summary?.present ?? 0;
-      final absent = summary?.absent ?? 0;
-      final onLeave = summary?.onLeave ?? 0;
+      final total = controller.allEmployeesCount;
+      final present = controller.presentEmployeesCount;
+      final absent = controller.absentEmployeesCount;
+      final onLeave = controller.leaveEmployeesCount;
 
       final tabs = [
         'All ($total)',
@@ -602,7 +615,7 @@ class _EmployeeList extends StatelessWidget {
         );
       }
 
-      if (controller.errorMessage.value.isNotEmpty) {
+      if (controller.errorMessage.value.isNotEmpty && controller.displayedEmployees.isEmpty) {
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 30),
           child: Center(
@@ -622,7 +635,7 @@ class _EmployeeList extends StatelessWidget {
         );
       }
 
-      final employees = controller.attendanceData.value?.employees ?? [];
+      final employees = controller.displayedEmployees;
 
       if (employees.isEmpty) {
         return Padding(
@@ -657,7 +670,9 @@ class _EmployeeList extends StatelessWidget {
         );
       }
 
-      final totalEmployees = controller.attendanceData.value?.summary?.totalEmployees ?? employees.length;
+      final totalEmployees = controller.allEmployeesCount > 0
+          ? controller.allEmployeesCount
+          : (controller.attendanceData.value?.summary?.totalEmployees ?? employees.length);
 
       return Column(
         children: [
@@ -850,6 +865,30 @@ class _EmployeeCard extends StatelessWidget {
               ],
             ),
           ),
+          if (item.isLate) ...[
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF7ED),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFFDBA74)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Iconsax.timer_1, size: 14, color: Color(0xFFEA580C)),
+                  const SizedBox(width: 6),
+                  AppText(
+                    'Late Check-in${item.lateBy != null && item.lateBy != '--' ? ' • ${item.lateBy}' : ''}',
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFFEA580C),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );

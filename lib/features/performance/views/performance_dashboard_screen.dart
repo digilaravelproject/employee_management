@@ -66,9 +66,13 @@ class _MyOverviewTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.all(20),
+    final controller = Get.find<PerformanceController>();
+    return RefreshIndicator(
+      color: AppColors.primaryColor,
+      onRefresh: controller.refreshData,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+        padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -133,8 +137,9 @@ class _MyOverviewTab extends StatelessWidget {
           const SizedBox(height: 24),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 }
 
 // ── OVERALL PERFORMANCE CARD (Circular ring + Grid) ──────────────────────────
@@ -742,36 +747,49 @@ class _TeamOverviewTab extends StatelessWidget {
           child: Obx(() {
             final list = controller.filteredEmployees;
             if (list.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: const BoxDecoration(
-                        color: AppColors.slate100,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Iconsax.search_status, color: AppColors.textColorHint, size: 36),
+              return RefreshIndicator(
+                color: AppColors.primaryColor,
+                onRefresh: controller.refreshData,
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  child: Container(
+                    height: MediaQuery.of(context).size.height * 0.45,
+                    alignment: Alignment.center,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: const BoxDecoration(
+                            color: AppColors.slate100,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Iconsax.search_status, color: AppColors.textColorHint, size: 36),
+                        ),
+                        const SizedBox(height: 12),
+                        const AppText('No Employees Found', fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textColorPrimary),
+                        const SizedBox(height: 4),
+                        const AppText('Try searching another name or division.', fontSize: 11, color: AppColors.textColorSecondary),
+                      ],
                     ),
-                    const SizedBox(height: 12),
-                    const AppText('No Employees Found', fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textColorPrimary),
-                    const SizedBox(height: 4),
-                    const AppText('Try searching another name or division.', fontSize: 11, color: AppColors.textColorSecondary),
-                  ],
+                  ),
                 ),
               );
             }
 
-            return ListView.separated(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              itemCount: list.length,
-              physics: const BouncingScrollPhysics(),
-              separatorBuilder: (context, index) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                final emp = list[index];
-                return _EmployeePerformanceCard(emp: emp);
-              },
+            return RefreshIndicator(
+              color: AppColors.primaryColor,
+              onRefresh: controller.refreshData,
+              child: ListView.separated(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                itemCount: list.length,
+                physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                separatorBuilder: (context, index) => const SizedBox(height: 12),
+                itemBuilder: (context, index) {
+                  final emp = list[index];
+                  return _EmployeePerformanceCard(emp: emp);
+                },
+              ),
             );
           }),
         ),

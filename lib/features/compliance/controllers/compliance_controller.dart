@@ -215,7 +215,12 @@ class ComplianceController extends GetxController {
     );
   }
 
-  // --- Load Mock Data ---
+  // --- Refresh / Load Mock Data ---
+  Future<void> refreshData() async {
+    await Future.delayed(const Duration(milliseconds: 500));
+    _loadMockData();
+  }
+
   void _loadMockData() {
     // Standard mock policies
     final basePolicies = [

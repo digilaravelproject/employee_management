@@ -58,8 +58,14 @@ class EmployeeMyAssetsScreen extends StatelessWidget {
         centerTitle: false,
       ),
       body: SafeArea(
-        child: ListView.separated(
-          padding: const EdgeInsets.all(16),
+        child: RefreshIndicator(
+          color: AppColors.primaryColor,
+          onRefresh: () async {
+            await Future.delayed(const Duration(milliseconds: 500));
+          },
+          child: ListView.separated(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(16),
           itemCount: assets.length,
           separatorBuilder: (context, index) => const SizedBox(height: 16),
           itemBuilder: (context, index) {
@@ -155,6 +161,7 @@ class EmployeeMyAssetsScreen extends StatelessWidget {
           },
         ),
       ),
-    );
+    ),
+  );
   }
 }

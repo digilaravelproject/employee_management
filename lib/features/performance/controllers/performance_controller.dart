@@ -28,6 +28,11 @@ class PerformanceController extends GetxController {
     _loadMockData();
   }
 
+  Future<void> refreshData() async {
+    await Future.delayed(const Duration(milliseconds: 500));
+    _loadMockData();
+  }
+
   void _loadMockData() {
     // Populate mock employees
     employees.assignAll([

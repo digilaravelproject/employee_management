@@ -24,9 +24,23 @@ class EmployeeRepository implements EmployeeRepositoryInterface {
         return CreateEmployeeResponseModel.fromJson(response.json!);
       }
 
+      Map<String, dynamic> errorsMap = {};
+      if (response.errors != null && response.errors!.isNotEmpty) {
+        for (var err in response.errors!) {
+          if (err.code != null) {
+            errorsMap[err.code!] = err.message;
+          }
+        }
+      } else if (response.json != null && response.json!['errors'] is Map) {
+        errorsMap = Map<String, dynamic>.from(response.json!['errors'] as Map);
+      } else if (response.body is Map && (response.body as Map)['errors'] is Map) {
+        errorsMap = Map<String, dynamic>.from((response.body as Map)['errors'] as Map);
+      }
+
       return CreateEmployeeResponseModel(
         status: false,
         message: response.message.isNotEmpty ? response.message : 'Failed to create employee',
+        errors: errorsMap.isNotEmpty ? errorsMap : null,
       );
     } catch (e) {
       Logger.e('EmployeeRepository => Failed to create employee: $e');
@@ -69,6 +83,43 @@ class EmployeeRepository implements EmployeeRepositoryInterface {
       return EmployeeListResponseModel(
         status: false,
         message: 'Something went wrong while fetching employees: ${e.toString()}',
+        data: [],
+      );
+    }
+  }
+
+  @override
+  Future<EmployeeListResponseModel> searchEmployees(String query) async {
+    try {
+      final url = '${AppConstants.adminEmployeeSearchUrl}?query=${Uri.encodeComponent(query)}';
+      Logger.d('EmployeeRepository => Calling searchEmployees at $url');
+      final response = await apiClient.get(
+        url,
+        handleError: false,
+        showToaster: false,
+      );
+
+      Logger.d('EmployeeRepository => searchEmployees status: ${response.statusCode}, isSuccess: ${response.isSuccess}');
+
+      if (response.json != null) {
+        return EmployeeListResponseModel.fromJson(response.json!);
+      } else if (response.body is Map<String, dynamic>) {
+        return EmployeeListResponseModel.fromJson(response.body as Map<String, dynamic>);
+      } else {
+        return EmployeeListResponseModel(
+          status: response.isSuccess,
+          message: response.message.isNotEmpty
+              ? response.message
+              : (response.isSuccess ? 'Employees retrieved successfully.' : 'Failed to search employees.'),
+          data: [],
+        );
+      }
+    } catch (e, stackTrace) {
+      Logger.e('EmployeeRepository => Exception in searchEmployees: $e');
+      Logger.e('EmployeeRepository => StackTrace: $stackTrace');
+      return EmployeeListResponseModel(
+        status: false,
+        message: 'Something went wrong while searching employees: ${e.toString()}',
         data: [],
       );
     }

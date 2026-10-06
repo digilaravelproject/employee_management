@@ -418,6 +418,7 @@ class TaskModel {
       for (final a in json['assignees']) {
         if (a is Map<String, dynamic>) {
           assigneesList.add(AppUser(
+            id: a['id'] is int ? a['id'] as int : int.tryParse(a['id']?.toString() ?? ''),
             name: a['name']?.toString() ?? '',
             email: a['email']?.toString() ?? '',
             avatarUrl: _formatAvatar(a['avatar']?.toString()),
@@ -434,6 +435,7 @@ class TaskModel {
     if (json['creator'] is Map<String, dynamic>) {
       final c = json['creator'] as Map<String, dynamic>;
       taskCreator = AppUser(
+        id: c['id'] is int ? c['id'] as int : int.tryParse(c['id']?.toString() ?? ''),
         name: c['name']?.toString() ?? '',
         email: c['email']?.toString() ?? '',
         avatarUrl: _formatAvatar(c['avatar']?.toString()),
@@ -758,12 +760,72 @@ class TaskDetailResponseModel {
   factory TaskDetailResponseModel.fromJson(Map<String, dynamic> json, {String? fallbackMessage}) {
     TaskModel? task;
     if (json['data'] is Map<String, dynamic>) {
-      task = TaskModel.fromJson(json['data'] as Map<String, dynamic>);
+      final dataMap = json['data'] as Map<String, dynamic>;
+      if (dataMap['task'] is Map<String, dynamic>) {
+        task = TaskModel.fromJson(dataMap['task'] as Map<String, dynamic>);
+      } else {
+        task = TaskModel.fromJson(dataMap);
+      }
     }
     return TaskDetailResponseModel(
-      status: json['status'] == true || json['status'] == 'true',
+      status: json['status'] == true || json['status'] == 'true' || json['status'] == 1,
       message: parseApiErrorMessage(json, fallbackMessage),
       data: task,
+    );
+  }
+}
+
+class TaskHandoverResponseModel {
+  final bool status;
+  final String message;
+  final TaskModel? task;
+  final TaskHandoverEvent? handover;
+
+  const TaskHandoverResponseModel({
+    required this.status,
+    required this.message,
+    this.task,
+    this.handover,
+  });
+
+  factory TaskHandoverResponseModel.fromJson(Map<String, dynamic> json, {String? fallbackMessage}) {
+    TaskModel? task;
+    TaskHandoverEvent? handover;
+
+    if (json['data'] is Map<String, dynamic>) {
+      final dataMap = json['data'] as Map<String, dynamic>;
+      if (dataMap['task'] is Map<String, dynamic>) {
+        task = TaskModel.fromJson(dataMap['task'] as Map<String, dynamic>);
+      }
+      if (dataMap['handover'] is Map<String, dynamic>) {
+        final h = dataMap['handover'] as Map<String, dynamic>;
+        AppUser? fromUser;
+        if (h['from_user'] is Map<String, dynamic>) {
+          fromUser = AppUser.fromJson(h['from_user'] as Map<String, dynamic>);
+        } else if (h['handed_over_by'] is Map<String, dynamic>) {
+          fromUser = AppUser.fromJson(h['handed_over_by'] as Map<String, dynamic>);
+        }
+        AppUser? toUser;
+        if (h['to_user'] is Map<String, dynamic>) {
+          toUser = AppUser.fromJson(h['to_user'] as Map<String, dynamic>);
+        }
+
+        handover = TaskHandoverEvent(
+          id: h['id']?.toString() ?? 'ho_${DateTime.now().millisecondsSinceEpoch}',
+          fromUser: fromUser ?? const AppUser(name: 'Employee', email: '', avatarUrl: ''),
+          toUser: toUser ?? const AppUser(name: 'Employee', email: '', avatarUrl: ''),
+          type: 'Handover',
+          reason: h['reason']?.toString() ?? '',
+          timestamp: DateTime.tryParse(h['created_at']?.toString() ?? '') ?? DateTime.now(),
+        );
+      }
+    }
+
+    return TaskHandoverResponseModel(
+      status: json['status'] == true || json['status'] == 'true' || json['status'] == 1,
+      message: parseApiErrorMessage(json, fallbackMessage),
+      task: task,
+      handover: handover,
     );
   }
 }

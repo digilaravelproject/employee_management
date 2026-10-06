@@ -51,11 +51,16 @@ class AppUser {
         id: json['id'] is int
             ? json['id']
             : int.tryParse(json['id']?.toString() ?? ''),
-        name: json['name'] ?? '',
-        email: json['email'] ?? '',
-        avatarUrl: json['avatarUrl'] ?? '',
-        designation: json['designation']?.toString(),
-        employeeId: json['employeeId']?.toString() ?? json['employee_id']?.toString(),
+        name: json['name']?.toString() ?? '',
+        email: json['email']?.toString() ?? '',
+        avatarUrl: json['avatarUrl']?.toString() ??
+            json['avatar']?.toString() ??
+            json['profile_pic']?.toString() ??
+            '',
+        designation: json['designation']?.toString() ?? json['role']?.toString(),
+        employeeId: json['employeeId']?.toString() ??
+            json['employee_id']?.toString() ??
+            json['id']?.toString(),
         status: json['status']?.toString(),
       );
 
@@ -78,6 +83,7 @@ class GranularPermissionItem {
   final String label;
   final String? description;
   bool isGranted;
+  final String? status;
 
   GranularPermissionItem({
     required this.key,
@@ -85,6 +91,7 @@ class GranularPermissionItem {
     required this.label,
     this.description,
     this.isGranted = false,
+    this.status,
   });
 
   GranularPermissionItem copyWith({
@@ -93,6 +100,7 @@ class GranularPermissionItem {
     String? label,
     String? description,
     bool? isGranted,
+    String? status,
   }) {
     return GranularPermissionItem(
       key: key ?? this.key,
@@ -100,24 +108,37 @@ class GranularPermissionItem {
       label: label ?? this.label,
       description: description ?? this.description,
       isGranted: isGranted ?? this.isGranted,
+      status: status ?? this.status,
     );
   }
 
   Map<String, dynamic> toJson() => {
         'key': key,
+        'slug': key,
         'id': id,
         'label': label,
+        'name': label,
         'description': description,
         'isGranted': isGranted,
+        'is_assigned': isGranted,
+        'status': status,
       };
 
   factory GranularPermissionItem.fromJson(Map<String, dynamic> json) =>
       GranularPermissionItem(
-        key: json['key'] ?? '',
-        id: json['id'],
-        label: json['label'] ?? '',
-        description: json['description'],
-        isGranted: json['isGranted'] ?? false,
+        key: json['slug']?.toString() ??
+            json['key']?.toString() ??
+            json['id']?.toString() ??
+            '',
+        id: json['id'] is int
+            ? json['id']
+            : int.tryParse(json['id']?.toString() ?? ''),
+        label: json['name']?.toString() ?? json['label']?.toString() ?? '',
+        description: json['description']?.toString(),
+        isGranted: json['is_assigned'] == true ||
+            json['isGranted'] == true ||
+            json['status']?.toString().toLowerCase() == 'allowed',
+        status: json['status']?.toString(),
       );
 }
 
@@ -127,12 +148,18 @@ class ModulePermissionGroup {
   final String moduleName;
   final String iconKey; // e.g. 'user', 'calendar', 'briefcase', etc.
   final List<GranularPermissionItem> permissions;
+  final int? totalPermissions;
+  final int? assignedCountApi;
+  final bool? allAssigned;
 
   ModulePermissionGroup({
     required this.moduleId,
     required this.moduleName,
     required this.iconKey,
     required this.permissions,
+    this.totalPermissions,
+    this.assignedCountApi,
+    this.allAssigned,
   });
 
   int get grantedCount => permissions.where((p) => p.isGranted).length;
@@ -144,6 +171,9 @@ class ModulePermissionGroup {
     String? moduleName,
     String? iconKey,
     List<GranularPermissionItem>? permissions,
+    int? totalPermissions,
+    int? assignedCountApi,
+    bool? allAssigned,
   }) {
     return ModulePermissionGroup(
       moduleId: moduleId ?? this.moduleId,
@@ -151,25 +181,49 @@ class ModulePermissionGroup {
       iconKey: iconKey ?? this.iconKey,
       permissions: permissions ??
           this.permissions.map((p) => p.copyWith()).toList(),
+      totalPermissions: totalPermissions ?? this.totalPermissions,
+      assignedCountApi: assignedCountApi ?? this.assignedCountApi,
+      allAssigned: allAssigned ?? this.allAssigned,
     );
   }
 
   Map<String, dynamic> toJson() => {
         'moduleId': moduleId,
+        'module_slug': moduleId,
         'moduleName': moduleName,
+        'module': moduleName,
         'iconKey': iconKey,
         'permissions': permissions.map((p) => p.toJson()).toList(),
+        if (totalPermissions != null) 'total_permissions': totalPermissions,
+        if (assignedCountApi != null)
+          'assigned_permissions_count': assignedCountApi,
+        if (allAssigned != null) 'all_assigned': allAssigned,
       };
 
   factory ModulePermissionGroup.fromJson(Map<String, dynamic> json) =>
       ModulePermissionGroup(
-        moduleId: json['moduleId'] ?? '',
-        moduleName: json['moduleName'] ?? '',
-        iconKey: json['iconKey'] ?? 'element',
+        moduleId: json['module_slug']?.toString() ??
+            json['moduleId']?.toString() ??
+            '',
+        moduleName: json['module']?.toString() ??
+            json['moduleName']?.toString() ??
+            '',
+        iconKey: json['iconKey']?.toString() ?? 'element',
         permissions: (json['permissions'] as List<dynamic>?)
-                ?.map((item) => GranularPermissionItem.fromJson(item))
+                ?.map((item) => GranularPermissionItem.fromJson(
+                    item is Map<String, dynamic>
+                        ? item
+                        : Map<String, dynamic>.from(item)))
                 .toList() ??
             [],
+        totalPermissions: json['total_permissions'] is int
+            ? json['total_permissions']
+            : int.tryParse(json['total_permissions']?.toString() ?? ''),
+        assignedCountApi: json['assigned_permissions_count'] is int
+            ? json['assigned_permissions_count']
+            : int.tryParse(
+                json['assigned_permissions_count']?.toString() ?? ''),
+        allAssigned: json['all_assigned'] == true,
       );
 }
 
@@ -251,7 +305,8 @@ class Role {
       isActive: isActive ?? this.isActive,
       permissionGroups: permissionGroups ??
           this.permissionGroups.map((g) => g.copyWith()).toList(),
-      grantedPermissionsApi: grantedPermissionsApi ?? this.grantedPermissionsApi,
+      grantedPermissionsApi:
+          grantedPermissionsApi ?? this.grantedPermissionsApi,
       totalPermissionsApi: totalPermissionsApi ?? this.totalPermissionsApi,
     );
   }
@@ -296,16 +351,38 @@ class Role {
         id: json['id']?.toString() ?? '',
         name: json['name']?.toString() ?? '',
         description: json['description']?.toString() ?? '',
-        departmentId: json['departmentId'],
-        departmentName: json['departmentName'],
-        designationId: json['designationId'],
-        designationName: json['designationName'],
-        isActive: json['status'] ?? json['isActive'] ?? true, // also handle "status" mapping from API
-        permissionGroups: (json['permissionGroups'] as List<dynamic>?)
-                ?.map((g) => ModulePermissionGroup.fromJson(g))
+        departmentId: json['departmentId']?.toString() ??
+            json['department_id']?.toString(),
+        departmentName: json['departmentName']?.toString() ??
+            json['department']?.toString(),
+        designationId: json['designationId']?.toString() ??
+            json['designation_id']?.toString(),
+        designationName: json['designationName']?.toString() ??
+            json['designation']?.toString(),
+        isActive: json['status'] == true ||
+            json['status'] == 1 ||
+            json['status']?.toString().toLowerCase() == 'true' ||
+            json['isActive'] == true,
+        permissionGroups: (json['modules'] as List<dynamic>?)
+                ?.map((g) => ModulePermissionGroup.fromJson(
+                    g is Map<String, dynamic>
+                        ? g
+                        : Map<String, dynamic>.from(g)))
+                .toList() ??
+            (json['permissionGroups'] as List<dynamic>?)
+                ?.map((g) => ModulePermissionGroup.fromJson(
+                    g is Map<String, dynamic>
+                        ? g
+                        : Map<String, dynamic>.from(g)))
                 .toList() ??
             [],
-        grantedPermissionsApi: json['granted_permissions'] != null ? int.tryParse(json['granted_permissions'].toString()) : null,
-        totalPermissionsApi: json['total_permissions'] != null ? int.tryParse(json['total_permissions'].toString()) : null,
+        grantedPermissionsApi: json['assigned_permissions_count'] != null
+            ? int.tryParse(json['assigned_permissions_count'].toString())
+            : (json['granted_permissions'] != null
+                ? int.tryParse(json['granted_permissions'].toString())
+                : null),
+        totalPermissionsApi: json['total_permissions'] != null
+            ? int.tryParse(json['total_permissions'].toString())
+            : null,
       );
 }

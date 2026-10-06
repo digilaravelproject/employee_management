@@ -33,6 +33,7 @@ class AppInputField extends StatefulWidget {
   final List<TextInputFormatter>? inputFormatters;
   final int? maxLength;
   final AutovalidateMode? autovalidateMode;
+  final FocusNode? focusNode;
 
   const AppInputField({
     super.key,
@@ -64,6 +65,7 @@ class AppInputField extends StatefulWidget {
     this.inputFormatters,
     this.maxLength,
     this.autovalidateMode,
+    this.focusNode,
   });
 
   @override
@@ -145,6 +147,7 @@ class _AppInputFieldState extends State<AppInputField> {
           const SizedBox(height: 6),
         ],
         TextFormField(
+          focusNode: widget.focusNode,
           autofocus: widget.autoFocus,
           controller: widget.controller,
           keyboardType: widget.keyboardType,

@@ -8,9 +8,15 @@ class RolePermissionsRepository {
 
   RolePermissionsRepository({required this.apiClient});
 
-  Future<ResponseModel> getPermissions() async {
+  Future<ResponseModel> getPermissions({dynamic roleId}) async {
     try {
-      final response = await apiClient.get(AppConstants.adminPermissionsUrl);
+      final query = roleId != null && roleId.toString().trim().isNotEmpty
+          ? {'role_id': roleId.toString().trim()}
+          : null;
+      final response = await apiClient.get(
+        AppConstants.adminPermissionsUrl,
+        queryParameters: query,
+      );
       return response;
     } catch (e) {
       Logger.e('RolePermissionsRepository => Failed to fetch permissions: $e');

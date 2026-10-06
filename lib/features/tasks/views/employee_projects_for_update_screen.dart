@@ -40,45 +40,52 @@ class EmployeeProjectsForUpdateScreen extends StatelessWidget {
 
           final list = projController.projects;
           if (list.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: const BoxDecoration(
-                        color: AppColors.primaryLight,
-                        shape: BoxShape.circle,
+            return RefreshIndicator(
+              color: AppColors.primaryColor,
+              onRefresh: () => projController.fetchProjects(isRefresh: true),
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Container(
+                  height: MediaQuery.of(context).size.height * 0.75,
+                  alignment: Alignment.center,
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: const BoxDecoration(
+                          color: AppColors.primaryLight,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Iconsax.folder_open, size: 36, color: AppColors.primaryColor),
                       ),
-                      child: const Icon(Iconsax.folder_open, size: 36, color: AppColors.primaryColor),
-                    ),
-                    const SizedBox(height: 14),
-                    const AppText(
-                      'No Projects Available',
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textColorPrimary,
-                    ),
-                    const SizedBox(height: 6),
-                    const AppText(
-                      'There are currently no active projects found.',
-                      fontSize: 12,
-                      color: AppColors.textColorSecondary,
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton.icon(
-                      onPressed: () => projController.fetchProjects(isRefresh: true),
-                      icon: const Icon(Icons.refresh, size: 16),
-                      label: const AppText('Refresh', color: Colors.white, fontSize: 13),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primaryColor,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      const SizedBox(height: 14),
+                      const AppText(
+                        'No Projects Available',
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textColorPrimary,
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 6),
+                      const AppText(
+                        'There are currently no active projects found.',
+                        fontSize: 12,
+                        color: AppColors.textColorSecondary,
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton.icon(
+                        onPressed: () => projController.fetchProjects(isRefresh: true),
+                        icon: const Icon(Icons.refresh, size: 16),
+                        label: const AppText('Refresh', color: Colors.white, fontSize: 13),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primaryColor,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             );

@@ -25,6 +25,9 @@ import '../models/admin_dashboard_model.dart';
 import '../models/employee_dashboard_model.dart';
 import '../../../core/services/permission/permission_service.dart';
 import '../../../core/services/permission/permission_constant.dart';
+import '../../../core/constants/app_constants.dart';
+import '../../../core/services/storage/shared_prefs.dart';
+import '../../profile/controllers/profile_controller.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -41,6 +44,16 @@ class HomeScreen extends StatelessWidget {
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () async {
+            // Also refresh profile so updated avatar immediately reflects on home screen
+            try {
+              if (Get.isRegistered<ProfileController>()) {
+                await Get.find<ProfileController>().fetchProfile();
+              } else {
+                final pc = Get.put(ProfileController());
+                await pc.fetchProfile();
+              }
+            } catch (_) {}
+
             if (appController.userRole.value == 'admin') {
               await dashboardController.fetchAdminDashboard();
             } else {
@@ -88,13 +101,13 @@ class HomeScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // ── EMPLOYEE SCREEN SECTION ──────────────────────────────────
-                      const AppText(
-                        'Employee Perspective',
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textColorPrimary,
-                      ),
-                      const SizedBox(height: 16),
+                      // const AppText(
+                      //   'Employee Perspective',
+                      //   fontSize: 16,
+                      //   fontWeight: FontWeight.w700,
+                      //   color: AppColors.textColorPrimary,
+                      // ),
+                      // const SizedBox(height: 16),
 
                       const EmployeeShiftAttendanceCard(),
                       const SizedBox(height: 24),
@@ -158,9 +171,33 @@ class _HomeHeader extends StatelessWidget {
               ? '${empData!.employee!.designation} • ${empData.employee!.department}'
               : (empData?.employee?.designation ?? empData?.employee?.department ?? 'ABC Solutions Pvt. Ltd.'));
 
-      final avatarUrl = isAdmin
-          ? 'https://i.pravatar.cc/150?u=manager'
-          : (empData?.employee?.avatar ?? '');
+      // Dynamically resolve avatar from ProfileController or local storage
+      final profileController = Get.isRegistered<ProfileController>()
+          ? Get.find<ProfileController>()
+          : null;
+      final storedUser = SharedPrefs.getUserData();
+      final profileAvatar = profileController?.currentUser.value?.avatar ?? storedUser?.avatar;
+
+      String rawAvatar = '';
+      if (profileAvatar != null && profileAvatar.trim().isNotEmpty) {
+        rawAvatar = profileAvatar.trim();
+      } else if (!isAdmin && empData?.employee?.avatar != null && empData!.employee!.avatar!.trim().isNotEmpty) {
+        rawAvatar = empData.employee!.avatar!.trim();
+      } else if (isAdmin) {
+        rawAvatar = storedUser?.avatar?.trim() ?? '';
+      }
+
+      String avatarUrl = '';
+      if (rawAvatar.isNotEmpty) {
+        if (rawAvatar.startsWith('http')) {
+          avatarUrl = rawAvatar
+              .replaceFirst('http://127.0.0.1:8000', AppConstants.baseUrl)
+              .replaceFirst('http://localhost:8000', AppConstants.baseUrl);
+        } else {
+          final clean = rawAvatar.startsWith('/') ? rawAvatar : '/$rawAvatar';
+          avatarUrl = '${AppConstants.baseUrl}$clean';
+        }
+      }
 
       final unreadCount = isAdmin
           ? (adminData?.unreadNotifications ?? notifController.unreadCount)
@@ -630,32 +667,72 @@ class _QuickActionsGrid extends StatelessWidget {
       },
     ];
 
-    return Wrap(
-      spacing: 12,
-      runSpacing: 16,
-      children: actions.map((item) {
-        return GestureDetector(
-          onTap: item['onTap'] as VoidCallback?,
-          child: SizedBox(
-            width: (MediaQuery.of(context).size.width - 64) / 3,
-            child: Column(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: (item['color'] as Color).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(16),
+    return Obx(() {
+      final p = PermissionService.to;
+      final isAdmin = p.isAdmin.value;
+
+      final filteredActions = actions.where((item) {
+        if (isAdmin) return true;
+        final label = item['label'] as String;
+        switch (label) {
+          case 'Department':
+            return p.isAllowed(PermissionConstant.viewDepartments,
+                moduleSlug: PermissionConstant.moduleDepartmentsDesignations);
+          case 'Role':
+            return p.isAllowed(PermissionConstant.viewRolesList,
+                moduleSlug: PermissionConstant.moduleRolesPermissionsRbac);
+          case 'Designation':
+            return p.isAllowed(PermissionConstant.viewDesignations,
+                moduleSlug: PermissionConstant.moduleDepartmentsDesignations);
+          case 'Shift':
+            return p.isAllowed(PermissionConstant.viewDepartments,
+                moduleSlug: PermissionConstant.moduleDepartmentsDesignations);
+          case 'Employee':
+            return p.isAllowed(PermissionConstant.viewEmployeeDirectory,
+                moduleSlug: PermissionConstant.moduleEmployeeManagement);
+          case 'Leave Management':
+            return p.isAllowed(PermissionConstant.viewLeaveDashboard,
+                    moduleSlug: PermissionConstant.moduleLeaveManagement) ||
+                p.isAllowed(PermissionConstant.allEmployeesRequests,
+                    moduleSlug: PermissionConstant.moduleLeaveManagement);
+          default:
+            return true;
+        }
+      }).toList();
+
+      if (filteredActions.isEmpty) return const SizedBox.shrink();
+
+      return Wrap(
+        spacing: 12,
+        runSpacing: 16,
+        children: filteredActions.map((item) {
+          return GestureDetector(
+            onTap: item['onTap'] as VoidCallback?,
+            child: SizedBox(
+              width: (MediaQuery.of(context).size.width - 64) / 3,
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: (item['color'] as Color).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Icon(item['icon'] as IconData,
+                        color: item['color'] as Color, size: 24),
                   ),
-                  child: Icon(item['icon'] as IconData, color: item['color'] as Color, size: 24),
-                ),
-                const SizedBox(height: 8),
-                AppText(item['label'] as String, fontSize: 10, textAlign: TextAlign.center, fontWeight: FontWeight.w600),
-              ],
+                  const SizedBox(height: 8),
+                  AppText(item['label'] as String,
+                      fontSize: 10,
+                      textAlign: TextAlign.center,
+                      fontWeight: FontWeight.w600),
+                ],
+              ),
             ),
-          ),
-        );
-      }).toList(),
-    );
+          );
+        }).toList(),
+      );
+    });
   }
 }
 
@@ -885,7 +962,12 @@ class EmployeeShiftAttendanceCard extends StatelessWidget {
                               status: checkInStatus,
                               icon: isCheckedIn ? Iconsax.tick_circle : Iconsax.clock,
                               color: checkInColor,
-                              onTap: isCheckedIn
+                              onTap: isCheckedIn ||
+                                      (!PermissionService.to.isAdmin.value &&
+                                          !PermissionService.to.isAllowed(
+                                              PermissionConstant.checkInCheckOut,
+                                              moduleSlug: PermissionConstant
+                                                  .moduleAttendanceRegularization))
                                   ? null
                                   : () => _showCheckInBottomSheet(
                                         context,
@@ -909,7 +991,13 @@ class EmployeeShiftAttendanceCard extends StatelessWidget {
                               status: checkOutStatus,
                               icon: isCheckedOut ? Iconsax.tick_circle : Iconsax.clock,
                               color: checkOutColor,
-                              onTap: (isCheckedIn && !isCheckedOut)
+                              onTap: (isCheckedIn &&
+                                      !isCheckedOut &&
+                                      (PermissionService.to.isAdmin.value ||
+                                          PermissionService.to.isAllowed(
+                                              PermissionConstant.checkInCheckOut,
+                                              moduleSlug: PermissionConstant
+                                                  .moduleAttendanceRegularization)))
                                   ? () => _showCheckOutBottomSheet(
                                         context,
                                         dashboardController,
@@ -923,55 +1011,60 @@ class EmployeeShiftAttendanceCard extends StatelessWidget {
                       ),
                     ),
 
-                    const SizedBox(height: 18),
+                    if (PermissionService.to.isAdmin.value ||
+                        PermissionService.to.isAllowed(
+                            PermissionConstant.checkInCheckOut,
+                            moduleSlug: PermissionConstant
+                                .moduleAttendanceRegularization)) ...[
+                      const SizedBox(height: 18),
+                      Builder(
+                        builder: (context) {
+                          final isCheckingIn = dashboardController.isCheckingIn.value;
+                          final isCheckingOut = dashboardController.isCheckingOut.value;
+                          final isLoading = isCheckingIn || isCheckingOut;
 
-                    Builder(
-                      builder: (context) {
-                        final isCheckingIn = dashboardController.isCheckingIn.value;
-                        final isCheckingOut = dashboardController.isCheckingOut.value;
-                        final isLoading = isCheckingIn || isCheckingOut;
-
-                        return AppButton(
-                          text: isCheckedOut
-                              ? 'Attendance Completed'
-                              : (isCheckedIn ? 'Clock Out' : 'Check In'),
-                          isLoading: isLoading,
-                          height: 50,
-                          borderRadius: 16,
-                          color: isCheckedOut
-                              ? AppColors.slate400
-                              : (isCheckedIn ? const Color(0xFFEF4444) : AppColors.primaryColor),
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          icon: isLoading
-                              ? null
-                              : Icon(
-                                  isCheckedIn ? Iconsax.logout : Iconsax.finger_scan,
-                                  color: Colors.white,
-                                  size: 22,
-                                ),
-                          onPressed: isLoading || isCheckedOut
-                              ? null
-                              : () {
-                                  if (!isCheckedIn) {
-                                    _showCheckInBottomSheet(
-                                      context,
-                                      dashboardController,
-                                      shiftName: shiftName,
-                                      shiftTiming: shiftTiming,
-                                    );
-                                  } else {
-                                    _showCheckOutBottomSheet(
-                                      context,
-                                      dashboardController,
-                                      shiftName: shiftName,
-                                      shiftTiming: shiftTiming,
-                                    );
-                                  }
-                                },
-                        );
-                      },
-                    ),
+                          return AppButton(
+                            text: isCheckedOut
+                                ? 'Attendance Completed'
+                                : (isCheckedIn ? 'Clock Out' : 'Check In'),
+                            isLoading: isLoading,
+                            height: 50,
+                            borderRadius: 16,
+                            color: isCheckedOut
+                                ? AppColors.slate400
+                                : (isCheckedIn ? const Color(0xFFEF4444) : AppColors.primaryColor),
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            icon: isLoading
+                                ? null
+                                : Icon(
+                                    isCheckedIn ? Iconsax.logout : Iconsax.finger_scan,
+                                    color: Colors.white,
+                                    size: 22,
+                                  ),
+                            onPressed: isLoading || isCheckedOut
+                                ? null
+                                : () {
+                                    if (!isCheckedIn) {
+                                      _showCheckInBottomSheet(
+                                        context,
+                                        dashboardController,
+                                        shiftName: shiftName,
+                                        shiftTiming: shiftTiming,
+                                      );
+                                    } else {
+                                      _showCheckOutBottomSheet(
+                                        context,
+                                        dashboardController,
+                                        shiftName: shiftName,
+                                        shiftTiming: shiftTiming,
+                                      );
+                                    }
+                                  },
+                          );
+                        },
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -1488,67 +1581,72 @@ class _TodayBirthdayCard extends StatelessWidget {
       final birthdays = dashboardController.employeeDashboardData.value?.todaysBirthdays ?? [];
 
       if (birthdays.isEmpty) {
-        return Container(
+        return GestureDetector(
+          onTap: () => Get.to(() => const UpcomingBirthdaysScreen()),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: AppColors.slate200),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Row(
+                      children: [
+                        AppText("Today's Birthday", fontSize: 14, fontWeight: FontWeight.w700),
+                        SizedBox(width: 6),
+                        AppText('🎂', fontSize: 14),
+                      ],
+                    ),
+                    TextButton(
+                      onPressed: () => Get.to(() => const UpcomingBirthdaysScreen()),
+                      child: const AppText('View all >', fontSize: 12, color: AppColors.primaryColor),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryColor.withValues(alpha: 0.08),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Iconsax.cake, color: AppColors.primaryColor, size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          AppText('No birthdays today', fontSize: 13, fontWeight: FontWeight.w600),
+                          AppText('Check upcoming birthdays for the team', fontSize: 11, color: AppColors.textColorSecondary),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+
+      final firstBday = birthdays.first;
+      return GestureDetector(
+        onTap: () => Get.to(() => const UpcomingBirthdaysScreen()),
+        child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: AppColors.slate200),
           ),
-          child: Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Row(
-                    children: [
-                      AppText("Today's Birthday", fontSize: 14, fontWeight: FontWeight.w700),
-                      SizedBox(width: 6),
-                      AppText('🎂', fontSize: 14),
-                    ],
-                  ),
-                  TextButton(
-                    onPressed: () => Get.to(() => const UpcomingBirthdaysScreen()),
-                    child: const AppText('View all >', fontSize: 12, color: AppColors.primaryColor),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryColor.withValues(alpha: 0.08),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Iconsax.cake, color: AppColors.primaryColor, size: 20),
-                  ),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        AppText('No birthdays today', fontSize: 13, fontWeight: FontWeight.w600),
-                        AppText('Check upcoming birthdays for the team', fontSize: 11, color: AppColors.textColorSecondary),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        );
-      }
-
-      final firstBday = birthdays.first;
-      return Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppColors.slate200),
-        ),
         child: Column(
           children: [
             Row(
@@ -1599,8 +1697,9 @@ class _TodayBirthdayCard extends StatelessWidget {
             ),
           ],
         ),
-      );
-    });
+      ),
+    );
+  });
   }
 }
 

@@ -17,8 +17,13 @@ class AttendanceHistoryController extends GetxController {
                   : ApiClient(),
             );
 
-  // Active selected month/year (default to September 2026 or current date)
-  final Rx<DateTime> selectedMonth = DateTime(2026, 9, 1).obs;
+  static DateTime get currentMonthDate {
+    final now = DateTime.now();
+    return DateTime(now.year, now.month, 1);
+  }
+
+  // Active selected month/year (Always defaults to current month)
+  final Rx<DateTime> selectedMonth = currentMonthDate.obs;
 
   // Selected daily record for bottom sheet & detail screen
   final Rxn<AttendanceRecord> selectedRecord = Rxn<AttendanceRecord>();
@@ -38,7 +43,16 @@ class AttendanceHistoryController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    resetToCurrentMonth(fetch: false);
     fetchAttendanceHistory(selectedMonth.value);
+  }
+
+  /// Resets selection to the current month and optionally fetches history
+  void resetToCurrentMonth({bool fetch = true}) {
+    selectedMonth.value = currentMonthDate;
+    if (fetch) {
+      fetchAttendanceHistory(selectedMonth.value);
+    }
   }
 
   // Fetch Attendance History from API for a specific month
@@ -130,6 +144,13 @@ class AttendanceHistoryController extends GetxController {
       return historyData.value!.summary!.weekend;
     }
     return attendanceRecords.where((r) => r.status == 'Weekend').length;
+  }
+
+  int get lateCount {
+    if (historyData.value?.summary != null && historyData.value!.summary!.late > 0) {
+      return historyData.value!.summary!.late;
+    }
+    return attendanceRecords.where((r) => r.hasLateIndication).length;
   }
 
   int get workingDaysCount {

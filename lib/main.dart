@@ -35,7 +35,7 @@ class MyApp extends StatelessWidget {
      // fallbackLocale: const Locale('en', 'US'),
       theme: lightTheme,
       themeMode: ThemeMode.light,
-      initialRoute: isLoggedIn ? RouteHelper.getDashboardRoute() : RouteHelper.getIntroRoute(),
+      initialRoute: RouteHelper.getSplashRoute(),
       getPages: RouteHelper.routes,
       defaultTransition: Transition.fadeIn,
     );

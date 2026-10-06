@@ -78,15 +78,42 @@ class EmployeeListScreen extends StatelessWidget {
                         hintText: 'Search by name, ID, mobile, dept...',
                         hintStyle: const TextStyle(color: AppColors.textColorHint, fontSize: 13),
                         prefixIcon: const Icon(Iconsax.search_normal, color: AppColors.textColorSecondary, size: 18),
-                        suffixIcon: Obx(() => controller.searchQuery.value.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(Icons.close, size: 16, color: AppColors.textColorHint),
-                                onPressed: () {
-                                  searchController.clear();
-                                  controller.filterEmployees('');
-                                },
-                              )
-                            : const SizedBox.shrink()),
+                        suffixIcon: Obx(() {
+                          if (controller.isSearching.value) {
+                            return Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const SizedBox(
+                                  width: 14,
+                                  height: 14,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: AppColors.primaryColor,
+                                  ),
+                                ),
+                                if (controller.searchQuery.value.isNotEmpty)
+                                  IconButton(
+                                    icon: const Icon(Icons.close, size: 16, color: AppColors.textColorHint),
+                                    onPressed: () {
+                                      searchController.clear();
+                                      controller.filterEmployees('');
+                                    },
+                                  )
+                                else
+                                  const SizedBox(width: 12),
+                              ],
+                            );
+                          }
+                          return controller.searchQuery.value.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.close, size: 16, color: AppColors.textColorHint),
+                                  onPressed: () {
+                                    searchController.clear();
+                                    controller.filterEmployees('');
+                                  },
+                                )
+                              : const SizedBox.shrink();
+                        }),
                         filled: false,
                         border: InputBorder.none,
                         contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),

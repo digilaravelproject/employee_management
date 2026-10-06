@@ -321,7 +321,25 @@ class _DocumentImageViewerScreenState extends State<DocumentImageViewerScreen>
   }
 
   Widget _buildDocumentImage(UserDocumentItem doc) {
-    if (doc.filePath != null && File(doc.filePath!).existsSync()) {
+    if (doc.url != null && doc.url!.isNotEmpty) {
+      return Image.network(
+        doc.url!,
+        fit: BoxFit.contain,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          final total = loadingProgress.expectedTotalBytes;
+          final loaded = loadingProgress.cumulativeBytesLoaded;
+          return Center(
+            child: CircularProgressIndicator(
+              value: total != null && total > 0 ? loaded / total : null,
+              color: Colors.white,
+              strokeWidth: 2.5,
+            ),
+          );
+        },
+        errorBuilder: (context, error, stackTrace) => _buildFallbackCard(doc),
+      );
+    } else if (doc.filePath != null && File(doc.filePath!).existsSync()) {
       return Image.file(
         File(doc.filePath!),
         fit: BoxFit.contain,

@@ -21,6 +21,7 @@ import '../features/auth/view/reset_password.dart';
 import '../features/profile/views/change_password_screen.dart';
 import '../features/intro/controllers/intro_controller.dart';
 import '../features/intro/views/intro_screen.dart';
+import '../features/splash/views/splash_screen.dart';
 import '../features/dashboard/views/dashboard_screen.dart';
 import '../features/employee/designation/views/designation_list_screen.dart';
 import '../features/employee/designation/views/add_designation_screen.dart';
@@ -124,6 +125,13 @@ class RouteHelper {
       });
 
   static final List<GetPage> routes = [
+    // ── Splash ─────────────────────────────────────────────────────────────
+    GetPage(
+      name: AppRoutes.splash,
+      page: () => const SplashScreen(),
+      transition: Transition.fadeIn,
+    ),
+
     // ── Intro ──────────────────────────────────────────────────────────────
     GetPage(
       name: AppRoutes.intro,

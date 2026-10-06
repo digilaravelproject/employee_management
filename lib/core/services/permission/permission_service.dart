@@ -4,6 +4,7 @@ import '../../constants/app_constants.dart';
 import '../../utils/logger.dart';
 import '../network/api_client.dart';
 import '../storage/shared_prefs.dart';
+import '../../controllers/app_controller.dart';
 import 'permission_model.dart';
 
 /// Simple RBAC Permission Service
@@ -36,6 +37,13 @@ class PermissionService extends GetxService {
   /// Stores full module models for UI rendering
   final RxList<PermissionModuleModel> moduleModels =
       <PermissionModuleModel>[].obs;
+
+  /// Stores full response model if available
+  final Rxn<PermissionResponseModel> permissionResponse =
+      Rxn<PermissionResponseModel>();
+
+  /// Stores current role model if role details returned in permissions endpoint
+  final Rxn<PermissionRoleModel> currentRole = Rxn<PermissionRoleModel>();
 
   @override
   void onInit() {
@@ -73,18 +81,30 @@ class PermissionService extends GetxService {
   /// Fetch permissions from API
   /// GET /api/admin/permissions?role_id=:role_id
   Future<bool> fetchPermissions({dynamic roleId}) async {
-    final effectiveRoleId = roleId ?? SharedPrefs.getRoleId();
+    final effectiveRoleId = roleId ??
+        SharedPrefs.getRoleId() ??
+        SharedPrefs.getUserData()?.primaryRoleId;
 
-    // If role_id is null or empty, user is Admin -> All permissions allowed
+    // Check if user is explicitly Admin
+    final userData = SharedPrefs.getUserData();
+    final userRoleStr = (userData?.role ?? '').toLowerCase().trim();
+    final isExplicitAdmin = userRoleStr == 'admin' ||
+        userRoleStr == 'superadmin' ||
+        userRoleStr == 'super_admin' ||
+        userRoleStr == 'administrator';
+
+    // If role_id is null or empty, user runs in Admin mode
     if (effectiveRoleId == null || effectiveRoleId.toString().trim().isEmpty) {
       setAdminMode(true);
+      if (Get.isRegistered<AppController>()) {
+        Get.find<AppController>().setRole('admin');
+      }
       permissions.clear();
       modules.clear();
       Logger.d('PermissionService => No role_id found. Running in unrestricted Admin mode.');
       return true;
     }
 
-    setAdminMode(false);
     isLoading.value = true;
 
     try {
@@ -105,6 +125,50 @@ class PermissionService extends GetxService {
           response.json ??
           (response.body is Map<String, dynamic> ? response.body : null);
       if (data != null && data['modules'] is List) {
+        if (data['role'] != null && data['role'] is Map) {
+          final roleModel = PermissionRoleModel.fromJson(
+              Map<String, dynamic>.from(data['role']));
+          currentRole.value = roleModel;
+
+          final rName = roleModel.name.toLowerCase().trim();
+          final isRoleAdmin = rName == 'admin' ||
+              rName == 'superadmin' ||
+              rName == 'super_admin' ||
+              rName == 'administrator' ||
+              isExplicitAdmin;
+
+          if (isRoleAdmin) {
+            setAdminMode(true);
+            if (Get.isRegistered<AppController>()) {
+              Get.find<AppController>().setRole('admin');
+            }
+          } else {
+            setAdminMode(false);
+            if (Get.isRegistered<AppController>()) {
+              Get.find<AppController>().setRole('employee');
+            }
+          }
+        } else {
+          if (isExplicitAdmin) {
+            setAdminMode(true);
+            if (Get.isRegistered<AppController>()) {
+              Get.find<AppController>().setRole('admin');
+            }
+          } else {
+            setAdminMode(false);
+            if (Get.isRegistered<AppController>()) {
+              Get.find<AppController>().setRole('employee');
+            }
+          }
+        }
+
+        try {
+          permissionResponse.value =
+              PermissionResponseModel.fromJson(Map<String, dynamic>.from(data));
+        } catch (e) {
+          Logger.e('PermissionService => Error parsing PermissionResponseModel: $e');
+        }
+
         final moduleList = data['modules'] as List;
         _parsePermissions(moduleList);
 
@@ -198,8 +262,11 @@ class PermissionService extends GetxService {
   bool isAllowed(String permissionSlug, {String? moduleSlug}) {
     if (isAdmin.value) return true;
     final permKey = permissionSlug.toLowerCase().trim();
-    if (permissions.containsKey(permKey)) {
-      return permissions[permKey] == true;
+    if (permKey.isNotEmpty) {
+      if (permissions.containsKey(permKey)) {
+        return permissions[permKey] == true;
+      }
+      return false;
     }
     if (moduleSlug != null && moduleSlug.isNotEmpty) {
       final modKey = moduleSlug.toLowerCase().trim();

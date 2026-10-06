@@ -7,7 +7,6 @@ import '../../../core/services/storage/shared_prefs.dart';
 import '../domain/models/user_model.dart';
 import '../../../routes/route_helper.dart';
 import '../domain/services/auth_service.dart';
-import '../../../core/controllers/app_controller.dart';
 import '../../../core/services/permission/permission_service.dart';
 
 class AuthController extends GetxController {
@@ -377,17 +376,10 @@ class AuthController extends GetxController {
           final roleId = currentUser.value?.primaryRoleId ?? SharedPrefs.getRoleId();
           if (roleId != null) {
             await SharedPrefs.setRoleId(roleId);
-            if (Get.isRegistered<AppController>()) {
-              Get.find<AppController>().setRole('employee');
-            }
-            PermissionService.to.setAdminMode(false);
             await PermissionService.to.fetchPermissions(roleId: roleId);
           } else {
             await SharedPrefs.setRoleId(null);
-            if (Get.isRegistered<AppController>()) {
-              Get.find<AppController>().setRole(currentUser.value?.role.isNotEmpty == true ? currentUser.value!.role : 'admin');
-            }
-            PermissionService.to.setAdminMode(true);
+            await PermissionService.to.fetchPermissions();
           }
         }
         

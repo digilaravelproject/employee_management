@@ -1,10 +1,12 @@
 import '../../employee/management/models/employee_model.dart';
+import '../../role_permissions/models/role_permission_models.dart';
 import '../models/create_task_model.dart';
 import '../models/task_model.dart';
 
 abstract class TaskRepositoryInterface {
   Future<CreateTaskResponseModel> createTask(CreateTaskRequestModel request);
   Future<EmployeeListResponseModel> getEmployees();
+  Future<List<AppUser>> getAllUsers();
   Future<TasksListResponseModel> getAdminTasks({
     String status = 'all',
     String priority = 'all',
@@ -30,6 +32,13 @@ abstract class TaskRepositoryInterface {
     String? filePath,
   });
   Future<TaskCommentsListResponseModel> getTaskComments(dynamic taskId);
+  Future<TaskHandoverResponseModel> handoverAdminTask(
+    dynamic taskId, {
+    required int fromUserId,
+    required int toUserId,
+    required String reason,
+    int? xUserId,
+  });
 }
 
 

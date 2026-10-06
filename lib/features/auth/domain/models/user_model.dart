@@ -645,6 +645,21 @@ class UserModel {
       if (rawJson!['role_ids'] is List && (rawJson!['role_ids'] as List).isNotEmpty) {
         return int.tryParse((rawJson!['role_ids'] as List).first.toString());
       }
+      if (rawJson!['role'] is Map && rawJson!['role']['id'] != null) {
+        return int.tryParse(rawJson!['role']['id'].toString());
+      }
+      if (rawJson!['role'] is int) {
+        return rawJson!['role'] as int;
+      }
+      if (rawJson!['user'] is Map) {
+        final u = rawJson!['user'] as Map;
+        if (u['role_id'] != null) {
+          return int.tryParse(u['role_id'].toString());
+        }
+        if (u['role'] is Map && u['role']['id'] != null) {
+          return int.tryParse(u['role']['id'].toString());
+        }
+      }
     }
     return null;
   }

@@ -138,51 +138,64 @@ class MyTargetsScreen extends StatelessWidget {
                     : controller.completedTargets;
 
                 if (list.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: const BoxDecoration(
-                            color: AppColors.slate100,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            controller.selectedTargetTab.value == 0 ? Iconsax.award : Iconsax.tick_circle,
-                            color: AppColors.textColorHint,
-                            size: 40,
-                          ),
+                  return RefreshIndicator(
+                    color: AppColors.primaryColor,
+                    onRefresh: controller.refreshData,
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      child: Container(
+                        height: MediaQuery.of(context).size.height * 0.5,
+                        alignment: Alignment.center,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(20),
+                              decoration: const BoxDecoration(
+                                color: AppColors.slate100,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                controller.selectedTargetTab.value == 0 ? Iconsax.award : Iconsax.tick_circle,
+                                color: AppColors.textColorHint,
+                                size: 40,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            AppText(
+                              controller.selectedTargetTab.value == 0 ? 'No Active Targets' : 'No Completed Targets Yet',
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textColorPrimary,
+                            ),
+                            const SizedBox(height: 4),
+                            AppText(
+                              controller.selectedTargetTab.value == 0
+                                  ? 'Hooray! You are all caught up.'
+                                  : 'Keep working hard to smash your goals!',
+                              fontSize: 11.5,
+                              color: AppColors.textColorSecondary,
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 16),
-                        AppText(
-                          controller.selectedTargetTab.value == 0 ? 'No Active Targets' : 'No Completed Targets Yet',
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textColorPrimary,
-                        ),
-                        const SizedBox(height: 4),
-                        AppText(
-                          controller.selectedTargetTab.value == 0
-                              ? 'Hooray! You are all caught up.'
-                              : 'Keep working hard to smash your goals!',
-                          fontSize: 11.5,
-                          color: AppColors.textColorSecondary,
-                        ),
-                      ],
+                      ),
                     ),
                   );
                 }
 
-                return ListView.separated(
-                  padding: const EdgeInsets.all(20),
-                  itemCount: list.length,
-                  physics: const BouncingScrollPhysics(),
-                  separatorBuilder: (context, index) => const SizedBox(height: 16),
-                  itemBuilder: (context, index) {
-                    final target = list[index];
-                    return _TargetDetailCard(target: target);
-                  },
+                return RefreshIndicator(
+                  color: AppColors.primaryColor,
+                  onRefresh: controller.refreshData,
+                  child: ListView.separated(
+                    padding: const EdgeInsets.all(20),
+                    itemCount: list.length,
+                    physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                    separatorBuilder: (context, index) => const SizedBox(height: 16),
+                    itemBuilder: (context, index) {
+                      final target = list[index];
+                      return _TargetDetailCard(target: target);
+                    },
+                  ),
                 );
               }),
             ),

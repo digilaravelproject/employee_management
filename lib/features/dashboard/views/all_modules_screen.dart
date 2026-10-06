@@ -679,6 +679,19 @@ class _ModulesGrid extends StatelessWidget {
         }
       }).toList();
 
+      if (filteredModules.isEmpty) {
+        return const Center(
+          child: Padding(
+            padding: EdgeInsets.symmetric(vertical: 32),
+            child: AppText(
+              'No modules permitted for your role.',
+              color: AppColors.textColorSecondary,
+              fontSize: 14,
+            ),
+          ),
+        );
+      }
+
       return GridView.builder(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),

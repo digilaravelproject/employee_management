@@ -113,6 +113,28 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
   final List<String> _maritalStatuses = ['Single', 'Married', 'Divorced', 'Widowed'];
   final List<String> _bloodGroups = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'];
 
+  // FocusNodes for automatic navigation & focus on errors
+  final FocusNode nameFocusNode = FocusNode();
+  final FocusNode empIdFocusNode = FocusNode();
+  final FocusNode mobileFocusNode = FocusNode();
+  final FocusNode altMobileFocusNode = FocusNode();
+  final FocusNode emailFocusNode = FocusNode();
+  final FocusNode emergencyContactFocusNode = FocusNode();
+  final FocusNode addressFocusNode = FocusNode();
+  final FocusNode cityFocusNode = FocusNode();
+  final FocusNode pincodeFocusNode = FocusNode();
+  final FocusNode stateFocusNode = FocusNode();
+  final FocusNode countryFocusNode = FocusNode();
+  final FocusNode salaryFocusNode = FocusNode();
+  final FocusNode targetAmountFocusNode = FocusNode();
+  final FocusNode incentivePercentFocusNode = FocusNode();
+  final FocusNode accountHolderNameFocusNode = FocusNode();
+  final FocusNode bankNameFocusNode = FocusNode();
+  final FocusNode accountNumberFocusNode = FocusNode();
+  final FocusNode ifscCodeFocusNode = FocusNode();
+  final FocusNode branchNameFocusNode = FocusNode();
+  final FocusNode skillInputFocusNode = FocusNode();
+
   @override
   void initState() {
     super.initState();
@@ -253,29 +275,62 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
     ifscCodeController.dispose();
     branchNameController.dispose();
     skillInputController.dispose();
+    nameFocusNode.dispose();
+    empIdFocusNode.dispose();
+    mobileFocusNode.dispose();
+    altMobileFocusNode.dispose();
+    emailFocusNode.dispose();
+    emergencyContactFocusNode.dispose();
+    addressFocusNode.dispose();
+    cityFocusNode.dispose();
+    pincodeFocusNode.dispose();
+    stateFocusNode.dispose();
+    countryFocusNode.dispose();
+    salaryFocusNode.dispose();
+    targetAmountFocusNode.dispose();
+    incentivePercentFocusNode.dispose();
+    accountHolderNameFocusNode.dispose();
+    bankNameFocusNode.dispose();
+    accountNumberFocusNode.dispose();
+    ifscCodeFocusNode.dispose();
+    branchNameFocusNode.dispose();
+    skillInputFocusNode.dispose();
     super.dispose();
   }
 
-  bool _validateStep(int step) {
+  bool _validateStep(int step, {bool autoNavigate = false}) {
     if (step == 0) {
       if (nameController.text.trim().isEmpty) {
         CustomSnackbar.showError('Please enter employee full name');
+        if (autoNavigate || _currentStep != 0) {
+          _goToStep(0, validateBefore: false, focusNodeToRequest: nameFocusNode);
+        } else {
+          nameFocusNode.requestFocus();
+        }
         return false;
       }
       if (empIdController.text.trim().isEmpty) {
         CustomSnackbar.showError('Please enter employee ID');
+        if (autoNavigate || _currentStep != 0) {
+          _goToStep(0, validateBefore: false, focusNodeToRequest: empIdFocusNode);
+        } else {
+          empIdFocusNode.requestFocus();
+        }
         return false;
       }
       if (selectedGender.trim().isEmpty) {
         CustomSnackbar.showError('Please select gender');
+        if (autoNavigate || _currentStep != 0) _goToStep(0, validateBefore: false);
         return false;
       }
       if (selectedMaritalStatus.trim().isEmpty) {
         CustomSnackbar.showError('Please select marital status');
+        if (autoNavigate || _currentStep != 0) _goToStep(0, validateBefore: false);
         return false;
       }
       if (selectedBloodGroup.trim().isEmpty) {
         CustomSnackbar.showError('Please select blood group');
+        if (autoNavigate || _currentStep != 0) _goToStep(0, validateBefore: false);
         return false;
       }
       // Auto-fill account holder name with employee name if empty
@@ -287,153 +342,266 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
       final mobile = mobileController.text.trim();
       if (mobile.isEmpty) {
         CustomSnackbar.showError('Please enter primary mobile number');
+        if (autoNavigate || _currentStep != 1) {
+          _goToStep(1, validateBefore: false, focusNodeToRequest: mobileFocusNode);
+        } else {
+          mobileFocusNode.requestFocus();
+        }
         return false;
       }
       if (!AppValidators.isValidMobile(mobile)) {
         CustomSnackbar.showError('Please enter a valid 10-digit primary mobile number');
+        if (autoNavigate || _currentStep != 1) {
+          _goToStep(1, validateBefore: false, focusNodeToRequest: mobileFocusNode);
+        } else {
+          mobileFocusNode.requestFocus();
+        }
         return false;
       }
 
       final altMobile = altMobileController.text.trim();
       if (altMobile.isEmpty) {
         CustomSnackbar.showError('Please enter alternate mobile number');
+        if (autoNavigate || _currentStep != 1) {
+          _goToStep(1, validateBefore: false, focusNodeToRequest: altMobileFocusNode);
+        } else {
+          altMobileFocusNode.requestFocus();
+        }
         return false;
       }
       if (!AppValidators.isValidMobile(altMobile)) {
         CustomSnackbar.showError('Please enter a valid 10-digit alternate mobile number');
+        if (autoNavigate || _currentStep != 1) {
+          _goToStep(1, validateBefore: false, focusNodeToRequest: altMobileFocusNode);
+        } else {
+          altMobileFocusNode.requestFocus();
+        }
         return false;
       }
 
       final email = emailController.text.trim();
       if (email.isEmpty) {
         CustomSnackbar.showError('Please enter email address');
+        if (autoNavigate || _currentStep != 1) {
+          _goToStep(1, validateBefore: false, focusNodeToRequest: emailFocusNode);
+        } else {
+          emailFocusNode.requestFocus();
+        }
         return false;
       }
       if (!AppValidators.isValidEmail(email)) {
         CustomSnackbar.showError('Please enter a valid email address');
+        if (autoNavigate || _currentStep != 1) {
+          _goToStep(1, validateBefore: false, focusNodeToRequest: emailFocusNode);
+        } else {
+          emailFocusNode.requestFocus();
+        }
         return false;
       }
 
       final emergencyContact = emergencyContactController.text.trim();
       if (emergencyContact.isEmpty) {
         CustomSnackbar.showError('Please enter emergency contact phone number');
+        if (autoNavigate || _currentStep != 1) {
+          _goToStep(1, validateBefore: false, focusNodeToRequest: emergencyContactFocusNode);
+        } else {
+          emergencyContactFocusNode.requestFocus();
+        }
         return false;
       }
       if (!AppValidators.isValidMobile(emergencyContact)) {
         CustomSnackbar.showError('Please enter a valid 10-digit emergency contact phone number');
+        if (autoNavigate || _currentStep != 1) {
+          _goToStep(1, validateBefore: false, focusNodeToRequest: emergencyContactFocusNode);
+        } else {
+          emergencyContactFocusNode.requestFocus();
+        }
         return false;
       }
 
       if (addressController.text.trim().isEmpty) {
         CustomSnackbar.showError('Please enter street address');
+        if (autoNavigate || _currentStep != 1) {
+          _goToStep(1, validateBefore: false, focusNodeToRequest: addressFocusNode);
+        } else {
+          addressFocusNode.requestFocus();
+        }
         return false;
       }
       if (cityController.text.trim().isEmpty) {
         CustomSnackbar.showError('Please enter city');
+        if (autoNavigate || _currentStep != 1) {
+          _goToStep(1, validateBefore: false, focusNodeToRequest: cityFocusNode);
+        } else {
+          cityFocusNode.requestFocus();
+        }
         return false;
       }
       final pincode = pincodeController.text.trim();
       if (pincode.isEmpty) {
         CustomSnackbar.showError('Please enter pincode');
+        if (autoNavigate || _currentStep != 1) {
+          _goToStep(1, validateBefore: false, focusNodeToRequest: pincodeFocusNode);
+        } else {
+          pincodeFocusNode.requestFocus();
+        }
         return false;
       }
       if (!AppValidators.isValidPincode(pincode)) {
         CustomSnackbar.showError('Please enter a valid 6-digit pincode');
+        if (autoNavigate || _currentStep != 1) {
+          _goToStep(1, validateBefore: false, focusNodeToRequest: pincodeFocusNode);
+        } else {
+          pincodeFocusNode.requestFocus();
+        }
         return false;
       }
       if (stateController.text.trim().isEmpty) {
         CustomSnackbar.showError('Please enter state');
+        if (autoNavigate || _currentStep != 1) {
+          _goToStep(1, validateBefore: false, focusNodeToRequest: stateFocusNode);
+        } else {
+          stateFocusNode.requestFocus();
+        }
         return false;
       }
       if (countryController.text.trim().isEmpty) {
         CustomSnackbar.showError('Please enter country');
+        if (autoNavigate || _currentStep != 1) {
+          _goToStep(1, validateBefore: false, focusNodeToRequest: countryFocusNode);
+        } else {
+          countryFocusNode.requestFocus();
+        }
         return false;
       }
       return true;
     } else if (step == 2) {
       if (selectedWorkMode.trim().isEmpty) {
         CustomSnackbar.showError('Please select work mode');
+        if (autoNavigate || _currentStep != 2) _goToStep(2, validateBefore: false);
         return false;
       }
       if (selectedEmployeeType.trim().isEmpty) {
         CustomSnackbar.showError('Please select employee type');
+        if (autoNavigate || _currentStep != 2) _goToStep(2, validateBefore: false);
         return false;
       }
       if (selectedDepartment.trim().isEmpty) {
         CustomSnackbar.showError('Please select department');
+        if (autoNavigate || _currentStep != 2) _goToStep(2, validateBefore: false);
         return false;
       }
       if (selectedDesignation.trim().isEmpty) {
         CustomSnackbar.showError('Please select designation');
+        if (autoNavigate || _currentStep != 2) _goToStep(2, validateBefore: false);
         return false;
       }
       if (selectedRole.trim().isEmpty) {
         CustomSnackbar.showError('Please select role');
+        if (autoNavigate || _currentStep != 2) _goToStep(2, validateBefore: false);
         return false;
       }
       if (selectedTeam.trim().isEmpty) {
         CustomSnackbar.showError('Please select team / unit');
+        if (autoNavigate || _currentStep != 2) _goToStep(2, validateBefore: false);
         return false;
       }
       if (selectedShift.trim().isEmpty) {
         CustomSnackbar.showError('Please select assigned shift');
+        if (autoNavigate || _currentStep != 2) _goToStep(2, validateBefore: false);
         return false;
       }
       if (selectedReportingManager.trim().isEmpty || selectedReportingManager.trim().toLowerCase() == 'none') {
         CustomSnackbar.showError('Please select reporting manager');
+        if (autoNavigate || _currentStep != 2) _goToStep(2, validateBefore: false);
         return false;
       }
       if (selectedEmploymentStatus.trim().isEmpty) {
         CustomSnackbar.showError('Please select employment status');
+        if (autoNavigate || _currentStep != 2) _goToStep(2, validateBefore: false);
         return false;
       }
       if (selectedProbationPeriod.trim().isEmpty) {
         CustomSnackbar.showError('Please select probation period');
+        if (autoNavigate || _currentStep != 2) _goToStep(2, validateBefore: false);
         return false;
       }
       if (selectedNoticePeriod.trim().isEmpty) {
         CustomSnackbar.showError('Please select notice period');
+        if (autoNavigate || _currentStep != 2) _goToStep(2, validateBefore: false);
         return false;
       }
       return true;
     } else if (step == 3) {
       if (selectedSalaryType.trim().isEmpty) {
         CustomSnackbar.showError('Please select salary type');
+        if (autoNavigate || _currentStep != 3) _goToStep(3, validateBefore: false);
         return false;
       }
       final salStr = salaryController.text.trim();
       if (salStr.isEmpty) {
         CustomSnackbar.showError('Please enter salary');
+        if (autoNavigate || _currentStep != 3) {
+          _goToStep(3, validateBefore: false, focusNodeToRequest: salaryFocusNode);
+        } else {
+          salaryFocusNode.requestFocus();
+        }
         return false;
       }
       final salVal = double.tryParse(salStr);
       if (salVal == null || salVal <= 0) {
         CustomSnackbar.showError('Please enter a valid base salary amount');
+        if (autoNavigate || _currentStep != 3) {
+          _goToStep(3, validateBefore: false, focusNodeToRequest: salaryFocusNode);
+        } else {
+          salaryFocusNode.requestFocus();
+        }
         return false;
       }
       if (hasSalesTarget) {
         final targetStr = targetAmountController.text.trim();
         if (targetStr.isEmpty) {
           CustomSnackbar.showError('Please enter sales target amount');
+          if (autoNavigate || _currentStep != 3) {
+            _goToStep(3, validateBefore: false, focusNodeToRequest: targetAmountFocusNode);
+          } else {
+            targetAmountFocusNode.requestFocus();
+          }
           return false;
         }
         final targetVal = double.tryParse(targetStr);
         if (targetVal == null || targetVal < 0) {
           CustomSnackbar.showError('Please enter a valid sales target amount');
+          if (autoNavigate || _currentStep != 3) {
+            _goToStep(3, validateBefore: false, focusNodeToRequest: targetAmountFocusNode);
+          } else {
+            targetAmountFocusNode.requestFocus();
+          }
           return false;
         }
         if (selectedTargetPeriod.trim().isEmpty) {
           CustomSnackbar.showError('Please select target period');
+          if (autoNavigate || _currentStep != 3) _goToStep(3, validateBefore: false);
           return false;
         }
         final incStr = incentivePercentController.text.trim();
         if (incStr.isEmpty) {
           CustomSnackbar.showError('Please enter incentive commission percentage');
+          if (autoNavigate || _currentStep != 3) {
+            _goToStep(3, validateBefore: false, focusNodeToRequest: incentivePercentFocusNode);
+          } else {
+            incentivePercentFocusNode.requestFocus();
+          }
           return false;
         }
         final incVal = double.tryParse(incStr);
         if (incVal == null || incVal < 0) {
           CustomSnackbar.showError('Please enter a valid incentive commission percentage');
+          if (autoNavigate || _currentStep != 3) {
+            _goToStep(3, validateBefore: false, focusNodeToRequest: incentivePercentFocusNode);
+          } else {
+            incentivePercentFocusNode.requestFocus();
+          }
           return false;
         }
       }
@@ -441,36 +609,76 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
     } else if (step == 4) {
       if (accountHolderNameController.text.trim().isEmpty) {
         CustomSnackbar.showError('Please enter account holder name');
+        if (autoNavigate || _currentStep != 4) {
+          _goToStep(4, validateBefore: false, focusNodeToRequest: accountHolderNameFocusNode);
+        } else {
+          accountHolderNameFocusNode.requestFocus();
+        }
         return false;
       }
       if (bankNameController.text.trim().isEmpty) {
         CustomSnackbar.showError('Please enter bank name');
+        if (autoNavigate || _currentStep != 4) {
+          _goToStep(4, validateBefore: false, focusNodeToRequest: bankNameFocusNode);
+        } else {
+          bankNameFocusNode.requestFocus();
+        }
         return false;
       }
       final accNum = accountNumberController.text.trim();
       if (accNum.isEmpty) {
         CustomSnackbar.showError('Please enter account number');
+        if (autoNavigate || _currentStep != 4) {
+          _goToStep(4, validateBefore: false, focusNodeToRequest: accountNumberFocusNode);
+        } else {
+          accountNumberFocusNode.requestFocus();
+        }
         return false;
       }
       if (accNum.length < 6 || !RegExp(r'^[0-9]+$').hasMatch(accNum)) {
         CustomSnackbar.showError('Please enter a valid bank account number');
+        if (autoNavigate || _currentStep != 4) {
+          _goToStep(4, validateBefore: false, focusNodeToRequest: accountNumberFocusNode);
+        } else {
+          accountNumberFocusNode.requestFocus();
+        }
         return false;
       }
       final ifsc = ifscCodeController.text.trim().toUpperCase();
       if (ifsc.isEmpty) {
         CustomSnackbar.showError('Please enter IFSC code');
+        if (autoNavigate || _currentStep != 4) {
+          _goToStep(4, validateBefore: false, focusNodeToRequest: ifscCodeFocusNode);
+        } else {
+          ifscCodeFocusNode.requestFocus();
+        }
         return false;
       }
       if (!AppValidators.isValidIfsc(ifsc)) {
         CustomSnackbar.showError('Please enter a valid 11-character IFSC code (e.g. HDFC0001234)');
+        if (autoNavigate || _currentStep != 4) {
+          _goToStep(4, validateBefore: false, focusNodeToRequest: ifscCodeFocusNode);
+        } else {
+          ifscCodeFocusNode.requestFocus();
+        }
         return false;
       }
       if (branchNameController.text.trim().isEmpty) {
         CustomSnackbar.showError('Please enter branch name');
+        if (autoNavigate || _currentStep != 4) {
+          _goToStep(4, validateBefore: false, focusNodeToRequest: branchNameFocusNode);
+        } else {
+          branchNameFocusNode.requestFocus();
+        }
         return false;
       }
       if (_skillsList.isEmpty) {
         CustomSnackbar.showError('Please add at least one professional skill');
+        if (autoNavigate || _currentStep != 4) {
+          _goToStep(4, validateBefore: false, focusNodeToRequest: skillInputFocusNode);
+        } else {
+          skillInputFocusNode.requestFocus();
+        }
         return false;
       }
       return true;
@@ -478,9 +686,9 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
     return true;
   }
 
-  void _goToStep(int step) {
+  void _goToStep(int step, {bool validateBefore = true, FocusNode? focusNodeToRequest, VoidCallback? onStepReached}) {
     if (step < 0 || step >= _totalSteps) return;
-    if (step > _currentStep) {
+    if (validateBefore && step > _currentStep) {
       for (int i = _currentStep; i < step; i++) {
         if (!_validateStep(i)) return;
       }
@@ -492,6 +700,127 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
       step,
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
+    );
+    if (focusNodeToRequest != null || onStepReached != null) {
+      Future.delayed(const Duration(milliseconds: 350), () {
+        if (!mounted) return;
+        focusNodeToRequest?.requestFocus();
+        onStepReached?.call();
+      });
+    }
+  }
+
+  void _handleErrorAndNavigateToField(String errorMessage, Map<String, dynamic>? errors) {
+    int targetStep = 0;
+    FocusNode? targetFocusNode;
+    VoidCallback? onStepReached;
+
+    final lowerMsg = errorMessage.toLowerCase();
+    final errorKeys = errors != null
+        ? errors.keys.map((k) => k.toLowerCase().trim()).toList()
+        : <String>[];
+
+    bool matches(List<String> patterns) {
+      for (final p in patterns) {
+        if (errorKeys.any((k) => k == p || k.contains(p))) return true;
+        if (lowerMsg.contains(p)) return true;
+      }
+      return false;
+    }
+
+    if (matches(['employee_id', 'employee id', 'employee-id', 'empid', 'emp_id', 'emp id'])) {
+      targetStep = 0;
+      targetFocusNode = empIdFocusNode;
+      onStepReached = () {
+        empIdFocusNode.requestFocus();
+        if (empIdController.text.isNotEmpty) {
+          empIdController.selection = TextSelection(
+            baseOffset: 0,
+            extentOffset: empIdController.text.length,
+          );
+        }
+      };
+    } else if (matches(['name', 'first_name', 'last_name', 'full name'])) {
+      targetStep = 0;
+      targetFocusNode = nameFocusNode;
+    } else if (matches(['gender', 'date_of_birth', 'dob', 'marital', 'blood', 'avatar', 'photo'])) {
+      targetStep = 0;
+    } else if (matches(['alternate_mobile', 'alternate_phone', 'alternate mobile', 'alt_mobile'])) {
+      targetStep = 1;
+      targetFocusNode = altMobileFocusNode;
+    } else if (matches(['mobile', 'phone'])) {
+      targetStep = 1;
+      targetFocusNode = mobileFocusNode;
+    } else if (matches(['email'])) {
+      targetStep = 1;
+      targetFocusNode = emailFocusNode;
+    } else if (matches(['emergency'])) {
+      targetStep = 1;
+      targetFocusNode = emergencyContactFocusNode;
+    } else if (matches(['postal', 'pincode', 'zip'])) {
+      targetStep = 1;
+      targetFocusNode = pincodeFocusNode;
+    } else if (matches(['city'])) {
+      targetStep = 1;
+      targetFocusNode = cityFocusNode;
+    } else if (matches(['state'])) {
+      targetStep = 1;
+      targetFocusNode = stateFocusNode;
+    } else if (matches(['country'])) {
+      targetStep = 1;
+      targetFocusNode = countryFocusNode;
+    } else if (matches(['address', 'street'])) {
+      targetStep = 1;
+      targetFocusNode = addressFocusNode;
+    } else if (matches([
+      'work_mode', 'work mode',
+      'employee_type', 'employee type',
+      'department',
+      'designation',
+      'role',
+      'team',
+      'shift',
+      'reporting_manager', 'reporting manager', 'manager',
+      'joining', 'date_of_joining',
+      'employment_status', 'status',
+      'probation',
+      'notice',
+    ])) {
+      targetStep = 2;
+    } else if (matches(['target', 'sales_target'])) {
+      targetStep = 3;
+      targetFocusNode = targetAmountFocusNode;
+    } else if (matches(['incentive', 'commission'])) {
+      targetStep = 3;
+      targetFocusNode = incentivePercentFocusNode;
+    } else if (matches(['salary', 'base_salary', 'ctc'])) {
+      targetStep = 3;
+      targetFocusNode = salaryFocusNode;
+    } else if (matches(['account_holder', 'account holder'])) {
+      targetStep = 4;
+      targetFocusNode = accountHolderNameFocusNode;
+    } else if (matches(['account_number', 'account number', 'account_no'])) {
+      targetStep = 4;
+      targetFocusNode = accountNumberFocusNode;
+    } else if (matches(['bank', 'bank_name', 'bank name'])) {
+      targetStep = 4;
+      targetFocusNode = bankNameFocusNode;
+    } else if (matches(['ifsc'])) {
+      targetStep = 4;
+      targetFocusNode = ifscCodeFocusNode;
+    } else if (matches(['branch'])) {
+      targetStep = 4;
+      targetFocusNode = branchNameFocusNode;
+    } else if (matches(['skill'])) {
+      targetStep = 4;
+      targetFocusNode = skillInputFocusNode;
+    }
+
+    _goToStep(
+      targetStep,
+      validateBefore: false,
+      focusNodeToRequest: targetFocusNode,
+      onStepReached: onStepReached,
     );
   }
 
@@ -613,8 +942,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
 
   Future<void> _saveEmployee() async {
     for (int step = 0; step < _totalSteps; step++) {
-      if (!_validateStep(step)) {
-        _goToStep(step);
+      if (!_validateStep(step, autoNavigate: true)) {
         return;
       }
     }
@@ -685,11 +1013,11 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
         );
         Get.back(result: true);
       } else {
-        CustomSnackbar.showError(
-          response.message.isNotEmpty
-              ? response.message
-              : 'Failed to create employee. Please try again.',
-        );
+        final errorMsg = response.message.isNotEmpty
+            ? response.message
+            : 'Failed to create employee. Please try again.';
+        CustomSnackbar.showError(errorMsg);
+        _handleErrorAndNavigateToField(errorMsg, response.errors);
       }
     } else {
       final double sal = double.tryParse(salaryVal) ?? 0.0;
@@ -805,11 +1133,18 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
         );
         Get.back(result: true);
       } else {
-        CustomSnackbar.showError(
-          response.message.isNotEmpty
-              ? response.message
-              : 'Failed to update employee. Please try again.',
-        );
+        final errorMsg = response.message.isNotEmpty
+            ? response.message
+            : 'Failed to update employee. Please try again.';
+        CustomSnackbar.showError(errorMsg);
+        Map<String, dynamic>? errMap;
+        if (response.errors != null && response.errors!.isNotEmpty) {
+          errMap = {};
+          for (var e in response.errors!) {
+            if (e.code != null) errMap[e.code!] = e.message;
+          }
+        }
+        _handleErrorAndNavigateToField(errorMsg, errMap);
       }
     }
   }
@@ -1164,6 +1499,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
               const SizedBox(height: 6),
               AppInputField(
                 controller: nameController,
+                focusNode: nameFocusNode,
                 hint: 'e.g. Rahul Sharma',
                 prefixIcon: const Icon(Iconsax.user, color: AppColors.textColorSecondary, size: 18),
                 onChanged: (_) => setState(() {}),
@@ -1174,6 +1510,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
               const SizedBox(height: 6),
               AppInputField(
                 controller: empIdController,
+                focusNode: empIdFocusNode,
                 hint: 'EMP-2026-001',
                 prefixIcon: const Icon(Iconsax.card, color: AppColors.textColorSecondary, size: 18),
               ),
@@ -1329,6 +1666,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
               const SizedBox(height: 6),
               AppInputField(
                 controller: mobileController,
+                focusNode: mobileFocusNode,
                 hint: '10-digit mobile number',
                 keyboardType: TextInputType.phone,
                 prefixIcon: const Icon(Iconsax.call, color: AppColors.textColorSecondary, size: 18),
@@ -1340,6 +1678,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
               const SizedBox(height: 6),
               AppInputField(
                 controller: altMobileController,
+                focusNode: altMobileFocusNode,
                 hint: '10-digit secondary contact number',
                 keyboardType: TextInputType.phone,
                 prefixIcon: const Icon(Iconsax.call_calling, color: AppColors.textColorSecondary, size: 18),
@@ -1351,6 +1690,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
               const SizedBox(height: 6),
               AppInputField(
                 controller: emailController,
+                focusNode: emailFocusNode,
                 hint: 'name@example.com',
                 keyboardType: TextInputType.emailAddress,
                 prefixIcon: const Icon(Iconsax.sms, color: AppColors.textColorSecondary, size: 18),
@@ -1362,6 +1702,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
               const SizedBox(height: 6),
               AppInputField(
                 controller: emergencyContactController,
+                focusNode: emergencyContactFocusNode,
                 hint: '10-digit emergency contact number',
                 keyboardType: TextInputType.phone,
                 prefixIcon: const Icon(Iconsax.security_user, color: AppColors.textColorSecondary, size: 18),
@@ -1380,6 +1721,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
               const SizedBox(height: 6),
               AppInputField(
                 controller: addressController,
+                focusNode: addressFocusNode,
                 hint: 'e.g. Flat 402, Sunshine Heights, MG Road',
                 prefixIcon: const Icon(Iconsax.home_2, color: AppColors.textColorSecondary, size: 18),
               ),
@@ -1395,6 +1737,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
                         const SizedBox(height: 6),
                         AppInputField(
                           controller: cityController,
+                          focusNode: cityFocusNode,
                           hint: 'e.g. Bengaluru',
                           prefixIcon: const Icon(Iconsax.building_4, color: AppColors.textColorSecondary, size: 18),
                         ),
@@ -1410,6 +1753,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
                         const SizedBox(height: 6),
                         AppInputField(
                           controller: pincodeController,
+                          focusNode: pincodeFocusNode,
                           hint: 'e.g. 560038',
                           keyboardType: TextInputType.number,
                           prefixIcon: const Icon(Iconsax.location_tick, color: AppColors.textColorSecondary, size: 18),
@@ -1432,6 +1776,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
                         const SizedBox(height: 6),
                         AppInputField(
                           controller: stateController,
+                          focusNode: stateFocusNode,
                           hint: 'e.g. Karnataka',
                           prefixIcon: const Icon(Iconsax.map_1, color: AppColors.textColorSecondary, size: 18),
                         ),
@@ -1447,6 +1792,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
                         const SizedBox(height: 6),
                         AppInputField(
                           controller: countryController,
+                          focusNode: countryFocusNode,
                           hint: 'e.g. India',
                           prefixIcon: const Icon(Iconsax.global, color: AppColors.textColorSecondary, size: 18),
                         ),
@@ -1878,6 +2224,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
               const SizedBox(height: 6),
               AppInputField(
                 controller: salaryController,
+                focusNode: salaryFocusNode,
                 hint: 'e.g. 75000',
                 keyboardType: TextInputType.number,
                 prefixIcon: const Padding(
@@ -1979,6 +2326,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
                           const SizedBox(height: 6),
                           AppInputField(
                             controller: targetAmountController,
+                            focusNode: targetAmountFocusNode,
                             hint: 'e.g. 500000',
                             keyboardType: TextInputType.number,
                             prefixIcon: const Icon(Iconsax.radar, color: AppColors.textColorSecondary, size: 18),
@@ -2013,6 +2361,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
                 const SizedBox(height: 6),
                 AppInputField(
                   controller: incentivePercentController,
+                  focusNode: incentivePercentFocusNode,
                   hint: 'e.g. 5.0 % on target achievement',
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   prefixIcon: const Icon(Iconsax.percentage_circle, color: AppColors.textColorSecondary, size: 18),
@@ -2076,6 +2425,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
               const SizedBox(height: 6),
               AppInputField(
                 controller: accountHolderNameController,
+                focusNode: accountHolderNameFocusNode,
                 hint: 'Name as registered with bank',
                 prefixIcon: const Icon(Iconsax.user, color: AppColors.textColorSecondary, size: 18),
               ),
@@ -2085,6 +2435,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
               const SizedBox(height: 6),
               AppInputField(
                 controller: bankNameController,
+                focusNode: bankNameFocusNode,
                 hint: 'e.g. HDFC Bank, SBI, ICICI Bank',
                 prefixIcon: const Icon(Iconsax.bank, color: AppColors.textColorSecondary, size: 18),
               ),
@@ -2094,6 +2445,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
               const SizedBox(height: 6),
               AppInputField(
                 controller: accountNumberController,
+                focusNode: accountNumberFocusNode,
                 hint: 'e.g. 50100456789123',
                 keyboardType: TextInputType.number,
                 prefixIcon: const Icon(Iconsax.card_edit, color: AppColors.textColorSecondary, size: 18),
@@ -2110,6 +2462,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
                         const SizedBox(height: 6),
                         AppInputField(
                           controller: ifscCodeController,
+                          focusNode: ifscCodeFocusNode,
                           hint: 'e.g. HDFC0001234',
                           prefixIcon: const Icon(Iconsax.code, color: AppColors.textColorSecondary, size: 18),
                         ),
@@ -2125,6 +2478,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
                         const SizedBox(height: 6),
                         AppInputField(
                           controller: branchNameController,
+                          focusNode: branchNameFocusNode,
                           hint: 'e.g. Indiranagar Branch',
                           prefixIcon: const Icon(Iconsax.buildings, color: AppColors.textColorSecondary, size: 18),
                         ),
@@ -2149,6 +2503,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
                   Expanded(
                     child: AppInputField(
                       controller: skillInputController,
+                      focusNode: skillInputFocusNode,
                       hint: 'e.g. Flutter, Sales, React, Python...',
                       prefixIcon: const Icon(Iconsax.tag, color: AppColors.textColorSecondary, size: 18),
                       onFieldSubmitted: (_) => _addSkill(),

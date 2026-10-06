@@ -11,6 +11,7 @@ import '../domain/usecases/apply_leave_usecase.dart';
 import '../domain/usecases/get_leave_types_usecase.dart';
 import '../models/apply_leave_request_model.dart';
 import '../models/apply_leave_response_model.dart';
+import '../models/assignee_user_model.dart';
 import '../models/leave_type_model.dart';
 import '../repositories/apply_leave_repository.dart';
 import '../repositories/apply_leave_repository_interface.dart';
@@ -33,18 +34,13 @@ class ApplyLeaveController extends GetxController {
   final Rxn<LeaveTypeModel> selectedLeaveTypeModel = Rxn<LeaveTypeModel>();
   final RxString selectedLeaveType = ''.obs;
 
-  // Assign To field (with static list and user ids)
-  final RxString selectedAssignee = 'Rahul Sharma (EMP1021)'.obs;
-  final List<Map<String, dynamic>> assignees = const [
-    {'id': 1, 'name': 'Rahul Sharma (EMP1021)'},
-    {'id': 2, 'name': 'Priya Verma (EMP1024)'},
-    {'id': 3, 'name': 'Amit Patel (EMP1028)'},
-    {'id': 4, 'name': 'Sneha Roy (EMP1032)'},
-    {'id': 5, 'name': 'Vikas Gupta (EMP1035)'},
-    {'id': 6, 'name': 'Ananya Mishra (EMP1040)'},
-  ];
+  // Assign To field (dynamic from all-users API)
+  final RxBool isLoadingAssignees = false.obs;
+  final RxList<AssigneeUserModel> assigneeUsers = <AssigneeUserModel>[].obs;
+  final Rxn<AssigneeUserModel> selectedAssigneeUser = Rxn<AssigneeUserModel>();
+  final RxString selectedAssignee = ''.obs;
 
-  List<String> get assigneeList => assignees.map((e) => e['name'] as String).toList();
+  List<String> get assigneeList => assigneeUsers.map((e) => e.displayName).toList();
 
   final Rx<DateTime?> fromDate = Rx<DateTime?>(null);
   final Rx<DateTime?> toDate = Rx<DateTime?>(null);
@@ -70,7 +66,9 @@ class ApplyLeaveController extends GetxController {
     toDate.value = now.add(const Duration(days: 1));
     calculateTotalDays();
 
+    _loadInitialAssignees();
     fetchLeaveTypes();
+    fetchAssignees();
   }
 
   @override
@@ -79,6 +77,101 @@ class ApplyLeaveController extends GetxController {
     contactController.dispose();
     addressController.dispose();
     super.onClose();
+  }
+
+  // ----------------------------------------------------
+  // Load Initial Fallback Assignees from All-Users schema
+  // ----------------------------------------------------
+  void _loadInitialAssignees() {
+    final initialList = [
+      AssigneeUserModel(id: 20, name: 'Rahul Sharma', employeeId: 'EMP-2026-019', designation: 'Lead Flutter Developer'),
+      AssigneeUserModel(id: 19, name: 'Rahul Sharma', employeeId: 'EMP-2026-018', designation: 'Lead Flutter Developer'),
+      AssigneeUserModel(id: 18, name: 'saurabh sawant', employeeId: 'EMP-2026-010', designation: 'Lead Flutter Developer'),
+      AssigneeUserModel(id: 17, name: 'Rahul Sharma', employeeId: 'EMP-2026-015', designation: 'Lead Flutter Developer'),
+      AssigneeUserModel(id: 16, name: 'Rahul Sharma', employeeId: 'EMP-2026-014', designation: 'Lead Flutter Developer'),
+      AssigneeUserModel(id: 15, name: 'Rahul Sharma', employeeId: 'EMP-2026-013', designation: 'Lead Flutter Developer'),
+      AssigneeUserModel(id: 14, name: 'Rahul Sharma', employeeId: 'EMP-2026-012', designation: 'Lead Flutter Developer'),
+      AssigneeUserModel(id: 13, name: 'Rahul Sharma', employeeId: 'EMP-2026-011', designation: 'Lead Flutter Developer'),
+      AssigneeUserModel(id: 12, name: 'Rahul Sharma01', employeeId: 'EMP1025', designation: 'UI/UX Designer'),
+      AssigneeUserModel(id: 7, name: 'Rahul Sharma', employeeId: 'EMP-2026-007', designation: 'Lead Flutter Developer'),
+      AssigneeUserModel(id: 8, name: 'Administrator', employeeId: 'EMP1025', designation: 'Administrator'),
+      AssigneeUserModel(id: 6, name: 'Rohit S. Sharma', employeeId: 'EMP-2026-003', designation: 'Lead Flutter Developer'),
+      AssigneeUserModel(id: 4, name: 'Sarah Smith', designation: 'HR Executive'),
+      AssigneeUserModel(id: 5, name: 'Michael Brown', designation: 'Lead Developer'),
+      AssigneeUserModel(id: 3, name: 'John Doe', employeeId: 'EMP1026', designation: 'Senior Flutter Developer'),
+      AssigneeUserModel(id: 2, name: 'Rahul Sharma', employeeId: 'EMP1025', designation: 'UI/UX Designer'),
+      AssigneeUserModel(id: 1, name: 'Rahul Sharma', employeeId: 'EMP1025', role: 'admin'),
+    ];
+
+    final Map<String, int> nameCounts = {};
+    for (final u in initialList) {
+      nameCounts[u.displayName] = (nameCounts[u.displayName] ?? 0) + 1;
+    }
+
+    final processed = initialList.map((u) {
+      if ((nameCounts[u.displayName] ?? 0) > 1) {
+        return u.copyWith(displayName: '${u.displayName} (#${u.id})');
+      }
+      return u;
+    }).toList();
+
+    assigneeUsers.assignAll(processed);
+    if (processed.isNotEmpty && selectedAssigneeUser.value == null) {
+      selectedAssigneeUser.value = processed.first;
+      selectedAssignee.value = processed.first.displayName;
+    }
+  }
+
+  // ----------------------------------------------------
+  // Fetch All Users / Assignees from API
+  // ----------------------------------------------------
+  Future<void> fetchAssignees() async {
+    try {
+      isLoadingAssignees.value = true;
+      final apiClient = Get.isRegistered<ApiClient>() ? Get.find<ApiClient>() : ApiClient();
+      final repo = repository ?? ApplyLeaveRepository(apiClient: apiClient);
+      final response = await repo.getAllUsers();
+
+      if (response.status && response.data.isNotEmpty) {
+        // Disambiguate if duplicate display names exist
+        final Map<String, int> nameCounts = {};
+        for (final u in response.data) {
+          nameCounts[u.displayName] = (nameCounts[u.displayName] ?? 0) + 1;
+        }
+
+        final processedUsers = response.data.map((u) {
+          if ((nameCounts[u.displayName] ?? 0) > 1) {
+            return u.copyWith(displayName: '${u.displayName} (#${u.id})');
+          }
+          return u;
+        }).toList();
+
+        assigneeUsers.assignAll(processedUsers);
+
+        // Retain current selection if valid, otherwise select first
+        if (selectedAssigneeUser.value != null &&
+            assigneeUsers.any((u) => u.id == selectedAssigneeUser.value!.id)) {
+          final matched = assigneeUsers.firstWhere((u) => u.id == selectedAssigneeUser.value!.id);
+          selectedAssigneeUser.value = matched;
+          selectedAssignee.value = matched.displayName;
+        } else if (assigneeUsers.isNotEmpty) {
+          selectedAssigneeUser.value = assigneeUsers.first;
+          selectedAssignee.value = assigneeUsers.first.displayName;
+        }
+      }
+    } catch (e) {
+      Logger.e('ApplyLeaveController => fetchAssignees error: $e');
+    } finally {
+      isLoadingAssignees.value = false;
+    }
+  }
+
+  void setAssignee(String assigneeDisplayName) {
+    selectedAssignee.value = assigneeDisplayName;
+    final match = assigneeUsers.firstWhereOrNull((u) => u.displayName == assigneeDisplayName);
+    if (match != null) {
+      selectedAssigneeUser.value = match;
+    }
   }
 
   // ----------------------------------------------------
@@ -120,10 +213,6 @@ class ApplyLeaveController extends GetxController {
     } finally {
       isLoadingLeaveTypes.value = false;
     }
-  }
-
-  void setAssignee(String assignee) {
-    selectedAssignee.value = assignee;
   }
 
   // ----------------------------------------------------
@@ -266,13 +355,16 @@ class ApplyLeaveController extends GetxController {
     try {
       isSubmitting.value = true;
 
-      int assignedUserId = 1;
-      for (final a in assignees) {
-        if (a['name'] == selectedAssignee.value) {
-          assignedUserId = a['id'] as int;
-          break;
+      int? assignedUserId = selectedAssigneeUser.value?.id;
+      if (assignedUserId == null) {
+        for (final a in assigneeUsers) {
+          if (a.displayName == selectedAssignee.value || a.name == selectedAssignee.value) {
+            assignedUserId = a.id;
+            break;
+          }
         }
       }
+      assignedUserId ??= assigneeUsers.isNotEmpty ? assigneeUsers.first.id : 1;
 
       final request = ApplyLeaveRequestModel(
         leaveTypeId: leaveModel.id,

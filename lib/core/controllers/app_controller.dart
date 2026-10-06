@@ -16,15 +16,12 @@ class AppController extends GetxController {
   }
 
   void _loadRoleFromPrefs() {
-    final roleId = SharedPrefs.getRoleId();
+    final roleId = SharedPrefs.getRoleId() ?? SharedPrefs.getUserData()?.primaryRoleId;
 
     if (roleId != null) {
-      // User has an assigned role_id: Employee perspective with RBAC
-      userRole.value = 'employee';
-      PermissionService.to.setAdminMode(false);
       PermissionService.to.loadCachedPermissions();
       PermissionService.to.fetchPermissions(roleId: roleId);
-      Logger.d('AppController => Employee mode activated for role_id=$roleId');
+      Logger.d('AppController => Initialized for role_id=$roleId');
       return;
     }
 

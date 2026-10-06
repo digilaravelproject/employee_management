@@ -13,6 +13,7 @@ import '../models/create_task_model.dart';
 import '../../role_permissions/models/role_permission_models.dart';
 import '../../projects/controllers/projects_controller.dart';
 import 'create_task_screen.dart';
+import 'tasks_list_screen.dart';
 
 class TaskDetailsScreen extends StatefulWidget {
   final String? taskId;
@@ -2798,8 +2799,9 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   void _showStartTaskDialog(BuildContext context, String taskId) {
     final noteController = TextEditingController(text: 'Starting work on task');
 
-    Get.dialog(
-      AlertDialog(
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Row(
           children: [
@@ -2834,7 +2836,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Get.back(),
+            onPressed: () => Navigator.of(dialogContext).pop(),
             child: const AppText('Cancel', color: AppColors.textColorSecondary),
           ),
           Obx(() {
@@ -2843,14 +2845,16 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
               onPressed: isStarting
                   ? null
                   : () async {
-                      final success = await controller.startTaskTimer(
+                      await controller.startTaskTimer(
                         taskId,
                         note: noteController.text.trim().isNotEmpty
                             ? noteController.text.trim()
                             : 'Starting work on task',
                       );
-                      if (success) {
-                        Get.back();
+                      if (dialogContext.mounted) {
+                        Navigator.of(dialogContext).pop();
+                      } else if (context.mounted && Navigator.of(context).canPop()) {
+                        Navigator.of(context).pop();
                       }
                     },
               style: ElevatedButton.styleFrom(
@@ -2874,8 +2878,9 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   void _showPauseTaskDialog(BuildContext context, String taskId) {
     final noteController = TextEditingController(text: 'Taking a short break');
 
-    Get.dialog(
-      AlertDialog(
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Row(
           children: [
@@ -2910,7 +2915,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Get.back(),
+            onPressed: () => Navigator.of(dialogContext).pop(),
             child: const AppText('Cancel', color: AppColors.textColorSecondary),
           ),
           Obx(() {
@@ -2919,14 +2924,16 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
               onPressed: isPausing
                   ? null
                   : () async {
-                      final success = await controller.pauseTaskTimer(
+                      await controller.pauseTaskTimer(
                         taskId,
                         note: noteController.text.trim().isNotEmpty
                             ? noteController.text.trim()
                             : 'Paused work on task',
                       );
-                      if (success) {
-                        Get.back();
+                      if (dialogContext.mounted) {
+                        Navigator.of(dialogContext).pop();
+                      } else if (context.mounted && Navigator.of(context).canPop()) {
+                        Navigator.of(context).pop();
                       }
                     },
               style: ElevatedButton.styleFrom(
@@ -2950,8 +2957,9 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   void _showStopTaskDialog(BuildContext context, String taskId) {
     final noteController = TextEditingController(text: 'Completed initial design iteration');
 
-    Get.dialog(
-      AlertDialog(
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Row(
           children: [
@@ -2986,7 +2994,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Get.back(),
+            onPressed: () => Navigator.of(dialogContext).pop(),
             child: const AppText('Cancel', color: AppColors.textColorSecondary),
           ),
           Obx(() {
@@ -2995,14 +3003,16 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
               onPressed: isStopping
                   ? null
                   : () async {
-                      final success = await controller.stopTaskTimer(
+                      await controller.stopTaskTimer(
                         taskId,
                         note: noteController.text.trim().isNotEmpty
                             ? noteController.text.trim()
                             : 'Stopped work on task',
                       );
-                      if (success) {
-                        Get.back();
+                      if (dialogContext.mounted) {
+                        Navigator.of(dialogContext).pop();
+                      } else if (context.mounted && Navigator.of(context).canPop()) {
+                        Navigator.of(context).pop();
                       }
                     },
               style: ElevatedButton.styleFrom(
@@ -3027,8 +3037,9 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
     final noteController = TextEditingController();
     final attachedFile = Rx<PlatformFile?>(null);
 
-    Get.dialog(
-      AlertDialog(
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Row(
           children: [
@@ -3130,7 +3141,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Get.back(),
+            onPressed: () => Navigator.of(dialogContext).pop(),
             child: const AppText('Cancel', color: AppColors.textColorSecondary, fontWeight: FontWeight.w600),
           ),
           Obx(() {
@@ -3139,13 +3150,15 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
               onPressed: isSubmitting
                   ? null
                   : () async {
-                      final success = await controller.submitTaskForTesting(
+                      await controller.submitTaskForTesting(
                         taskId,
                         remarks: noteController.text.trim().isNotEmpty ? noteController.text.trim() : null,
                         filePath: attachedFile.value?.path,
                       );
-                      if (success) {
-                        Get.back();
+                      if (dialogContext.mounted) {
+                        Navigator.of(dialogContext).pop();
+                      } else if (context.mounted && Navigator.of(context).canPop()) {
+                        Navigator.of(context).pop();
                       }
                     },
               style: ElevatedButton.styleFrom(
@@ -3169,8 +3182,9 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   void _showRequestChangesDialog(BuildContext context, String taskId) {
     final reasonController = TextEditingController();
 
-    Get.dialog(
-      AlertDialog(
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const AppText('Request Changes', fontSize: 15, fontWeight: FontWeight.bold),
         content: Column(
@@ -3198,12 +3212,12 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Get.back(),
+            onPressed: () => Navigator.of(dialogContext).pop(),
             child: const AppText('Cancel', color: AppColors.textColorSecondary),
           ),
           ElevatedButton(
             onPressed: () {
-              Get.back();
+              Navigator.of(dialogContext).pop();
               controller.sendBackToInProgress(taskId, reason: reasonController.text);
             },
             style: ElevatedButton.styleFrom(
@@ -3222,8 +3236,9 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
     final options = ['Pending', 'In Progress', 'Testing', 'Completed'];
     final selected = mapTaskStatusToApi(task.status).obs;
 
-    Get.dialog(
-      AlertDialog(
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const AppText('Update Task Status', fontSize: 15, fontWeight: FontWeight.bold),
         content: Column(
@@ -3247,12 +3262,12 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Get.back(),
+            onPressed: () => Navigator.of(dialogContext).pop(),
             child: const AppText('Cancel', color: AppColors.textColorSecondary),
           ),
           ElevatedButton(
             onPressed: () {
-              Get.back();
+              Navigator.of(dialogContext).pop();
               controller.updateTaskStatus(selected.value, 'Manager status update');
             },
             style: ElevatedButton.styleFrom(
@@ -3282,8 +3297,9 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
             : '')
         .obs;
 
-    Get.dialog(
-      AlertDialog(
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Row(
           children: [
@@ -3419,7 +3435,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Get.back(),
+            onPressed: () => Navigator.of(dialogContext).pop(),
             child: const AppText('Cancel', color: AppColors.textColorSecondary, fontWeight: FontWeight.w600),
           ),
           Obx(() {
@@ -3427,7 +3443,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
             return ElevatedButton(
               onPressed: isAdding
                   ? null
-                  : () {
+                  : () async {
                       final title = subTaskTextController.text.trim();
                       if (title.isEmpty) {
                         Get.snackbar(
@@ -3439,12 +3455,17 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                         );
                         return;
                       }
-                      controller.addSubTaskApi(
+                      await controller.addSubTaskApi(
                         taskId: task.id,
                         title: title,
                         assignedTo: selectedAssigneeId.value.isNotEmpty ? selectedAssigneeId.value : null,
                         dueDate: DateFormat('yyyy-MM-dd').format(selectedDueDate.value),
                       );
+                      if (dialogContext.mounted) {
+                        Navigator.of(dialogContext).pop();
+                      } else if (context.mounted && Navigator.of(context).canPop()) {
+                        Navigator.of(context).pop();
+                      }
                     },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primaryColor,
@@ -3466,20 +3487,26 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   }
 
   void _showDeleteConfirm(BuildContext context, String id) {
-    Get.dialog(
-      AlertDialog(
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const AppText('Delete Task', fontSize: 15, fontWeight: FontWeight.bold),
         content: const AppText('Are you sure you want to delete this task permanently?', fontSize: 13),
         actions: [
           TextButton(
-            onPressed: () => Get.back(),
+            onPressed: () => Navigator.of(dialogContext).pop(),
             child: const AppText('Cancel', color: AppColors.textColorSecondary, fontWeight: FontWeight.w600),
           ),
           Obx(() {
             final isDeleting = controller.isDeletingTask.value;
             return ElevatedButton(
-              onPressed: isDeleting ? null : () => controller.deleteTask(id, fromDetail: true),
+              onPressed: isDeleting
+                  ? null
+                  : () {
+                      Navigator.of(dialogContext).pop();
+                      controller.deleteTask(id, fromDetail: true);
+                    },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.errorColor,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -3500,29 +3527,14 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
 
   // ── Handover Modal Dialog ──
   void _showHandoverDialog(BuildContext context, TaskModel task) {
+    controller.fetchAllUsers();
     final projController = Get.find<ProjectsController>();
-    final projectMembers = projController.projects
-        .firstWhereOrNull((p) => p.name == task.project?.name)
-        ?.teamMembers ?? projController.allEmployees;
-    final candidates = projectMembers.where((m) => !task.assignees.any((a) => a.email == m.email)).toList();
-    final targetCandidates = candidates.isNotEmpty
-        ? candidates
-        : (projController.allEmployees.isNotEmpty
-            ? projController.allEmployees
-            : (controller.employeesList.isNotEmpty
-                ? controller.employeesList.map((e) => AppUser(name: e.name, email: e.email, avatarUrl: e.profilePic ?? '', designation: e.designation)).toList()
-                : <AppUser>[]));
-
-    if (targetCandidates.isEmpty) {
-      Get.snackbar('Notice', 'No employees available to select.', snackPosition: SnackPosition.BOTTOM);
-      return;
-    }
-
-    final selectedMember = Rx<AppUser>(targetCandidates.first);
+    final selectedMember = Rxn<AppUser>();
     final reasonController = TextEditingController();
 
-    Get.dialog(
-      AlertDialog(
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
@@ -3561,23 +3573,109 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                   border: Border.all(color: AppColors.borderColor),
                 ),
                 child: Obx(() {
+                  final isLoading = controller.isLoadingAllUsers.value;
+                  final allUsers = controller.allUsersList;
+
+                  List<AppUser> candidates;
+                  if (allUsers.isNotEmpty) {
+                    candidates = allUsers.where((u) {
+                      final isCurrentAssignee = task.assignees.any((a) =>
+                          (a.id != null && u.id != null && a.id == u.id) ||
+                          (a.email.isNotEmpty && u.email.isNotEmpty && a.email.toLowerCase() == u.email.toLowerCase()));
+                      return !isCurrentAssignee;
+                    }).toList();
+                  } else {
+                    final projMembers = projController.projects
+                        .firstWhereOrNull((p) => p.name == task.project?.name)
+                        ?.teamMembers ?? projController.allEmployees;
+                    final raw = projMembers.isNotEmpty
+                        ? projMembers
+                        : (projController.allEmployees.isNotEmpty
+                            ? projController.allEmployees
+                            : controller.employeesList
+                                .map((e) => AppUser(
+                                      id: int.tryParse(e.id),
+                                      name: e.name,
+                                      email: e.email,
+                                      avatarUrl: e.profilePic ?? '',
+                                      designation: e.designation,
+                                      employeeId: e.employeeId,
+                                    ))
+                                .toList());
+                    candidates = raw.where((u) => !task.assignees.any((a) => a.email == u.email)).toList();
+                  }
+
+                  if (isLoading && candidates.isEmpty) {
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 14),
+                      child: Center(
+                        child: SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primaryColor),
+                        ),
+                      ),
+                    );
+                  }
+
+                  if (candidates.isEmpty) {
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 14),
+                      child: Text('No employees available to select.', style: TextStyle(fontSize: 12, color: AppColors.textColorHint)),
+                    );
+                  }
+
+                  if (selectedMember.value == null ||
+                      !candidates.any((c) =>
+                          (c.id != null && c.id == selectedMember.value?.id) ||
+                          (c.email.isNotEmpty && c.email.toLowerCase() == selectedMember.value?.email.toLowerCase()))) {
+                    selectedMember.value = candidates.first;
+                  }
+
+                  final currentVal = candidates.firstWhereOrNull((c) =>
+                      (c.id != null && c.id == selectedMember.value?.id) ||
+                      (c.email.isNotEmpty && c.email.toLowerCase() == selectedMember.value?.email.toLowerCase())) ??
+                      candidates.first;
+
                   return DropdownButtonHideUnderline(
                     child: DropdownButton<AppUser>(
-                      value: selectedMember.value,
+                      value: currentVal,
                       isExpanded: true,
                       dropdownColor: Colors.white,
-                      items: targetCandidates.map((user) {
+                      items: candidates.map((user) {
                         return DropdownMenuItem<AppUser>(
                           value: user,
                           child: Row(
                             children: [
-                              CircleAvatar(radius: 10, backgroundImage: NetworkImage(user.avatarUrl)),
+                              CircleAvatar(
+                                radius: 12,
+                                backgroundColor: AppColors.slate200,
+                                backgroundImage: user.avatarUrl.isNotEmpty ? NetworkImage(user.avatarUrl) : null,
+                                child: user.avatarUrl.isEmpty
+                                    ? Text(
+                                        user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
+                                        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textColorPrimary),
+                                      )
+                                    : null,
+                              ),
                               const SizedBox(width: 8),
                               Expanded(
-                                child: Text(
-                                  user.name,
-                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                                  overflow: TextOverflow.ellipsis,
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      user.name,
+                                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    if (user.designation != null && user.designation!.isNotEmpty)
+                                      Text(
+                                        user.designation!,
+                                        style: const TextStyle(fontSize: 10, color: AppColors.textColorSecondary),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                  ],
                                 ),
                               ),
                             ],
@@ -3613,30 +3711,98 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Get.back(),
+            onPressed: () => Navigator.of(dialogContext).pop(),
             child: const AppText('Cancel', color: AppColors.textColorSecondary, fontWeight: FontWeight.w600),
           ),
-          ElevatedButton(
-            onPressed: () {
-              if (reasonController.text.trim().isEmpty) {
-                Get.snackbar('Reason Required', 'Please provide a brief reason for handing over this task',
-                    snackPosition: SnackPosition.BOTTOM, backgroundColor: AppColors.errorColor, colorText: Colors.white);
-                return;
-              }
-              Get.back();
-              controller.handoverTask(
-                taskId: task.id,
-                toUser: selectedMember.value,
-                type: 'Handover',
-                reason: reasonController.text.trim(),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primaryColor,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            child: const AppText('Confirm Pass', color: Colors.white, fontWeight: FontWeight.bold),
-          ),
+          Obx(() {
+            final isHandingOver = controller.isHandingOverTask.value;
+            return ElevatedButton(
+              onPressed: isHandingOver
+                  ? null
+                  : () async {
+                      if (selectedMember.value == null) {
+                        Get.snackbar(
+                          'Notice',
+                          'Please select a teammate to pass the task to',
+                          snackPosition: SnackPosition.BOTTOM,
+                          backgroundColor: AppColors.errorColor,
+                          colorText: Colors.white,
+                        );
+                        return;
+                      }
+                      if (reasonController.text.trim().isEmpty) {
+                        Get.snackbar(
+                          'Reason Required',
+                          'Please provide a brief reason for handing over this task',
+                          snackPosition: SnackPosition.BOTTOM,
+                          backgroundColor: AppColors.errorColor,
+                          colorText: Colors.white,
+                        );
+                        return;
+                      }
+                      final success = await controller.handoverTask(
+                        taskId: task.id,
+                        toUser: selectedMember.value!,
+                        type: 'Handover',
+                        reason: reasonController.text.trim(),
+                      );
+                      if (success) {
+                        controller.employeeTaskScope.value = 'My Tasks';
+                        controller.selectedFilter.value = 'All';
+                        controller.fetchTasks(isRefresh: true);
+                        if (Get.isRegistered<ProjectsController>()) {
+                          Get.find<ProjectsController>().fetchProjects(isRefresh: true);
+                        }
+
+                        bool arrivedAtTaskList = false;
+                        if (dialogContext.mounted) {
+                          Navigator.of(dialogContext).popUntil((route) {
+                            final name = route.settings.name ?? '';
+                            final isTaskList = name.contains('TasksList') ||
+                                (route is GetPageRoute && route.page?.call() is TasksListScreen);
+                            if (isTaskList) {
+                              arrivedAtTaskList = true;
+                              return true;
+                            }
+                            if (route.isFirst) {
+                              return true;
+                            }
+                            return false;
+                          });
+                        } else if (mounted) {
+                          Navigator.of(this.context).popUntil((route) {
+                            final name = route.settings.name ?? '';
+                            final isTaskList = name.contains('TasksList') ||
+                                (route is GetPageRoute && route.page?.call() is TasksListScreen);
+                            if (isTaskList) {
+                              arrivedAtTaskList = true;
+                              return true;
+                            }
+                            if (route.isFirst) {
+                              return true;
+                            }
+                            return false;
+                          });
+                        }
+
+                        if (!arrivedAtTaskList) {
+                          Get.to(() => const TasksListScreen());
+                        }
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryColor,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: isHandingOver
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const AppText('Confirm Pass', color: Colors.white, fontWeight: FontWeight.bold),
+            );
+          }),
         ],
       ),
     );
@@ -3644,24 +3810,15 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
 
   // ── Ask Question / Blocker Dialog ──
   void _showQueryOrBlockerDialog(BuildContext context, TaskModel task) {
+    controller.fetchAllUsers();
     final projController = Get.find<ProjectsController>();
-    final allEmployees = projController.allEmployees.isNotEmpty
-        ? projController.allEmployees
-        : (controller.employeesList.isNotEmpty
-            ? controller.employeesList.map((e) => AppUser(name: e.name, email: e.email, avatarUrl: e.profilePic ?? '', designation: e.designation)).toList()
-            : <AppUser>[]);
-
-    if (allEmployees.isEmpty) {
-      Get.snackbar('Notice', 'No employees available to select.', snackPosition: SnackPosition.BOTTOM);
-      return;
-    }
-
-    final selectedMember = Rx<AppUser>(allEmployees.first);
+    final selectedMember = Rxn<AppUser>();
     final isBlocker = false.obs;
     final noteController = TextEditingController();
 
-    Get.dialog(
-      AlertDialog(
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
@@ -3752,9 +3909,45 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                   border: Border.all(color: AppColors.borderColor),
                 ),
                 child: Obx(() {
+                  final allEmployees = controller.allUsersList.isNotEmpty
+                      ? controller.allUsersList
+                      : (projController.allEmployees.isNotEmpty
+                          ? projController.allEmployees
+                          : (controller.employeesList.isNotEmpty
+                              ? controller.employeesList
+                                  .map((e) => AppUser(
+                                        id: int.tryParse(e.id),
+                                        name: e.name,
+                                        email: e.email,
+                                        avatarUrl: e.profilePic ?? '',
+                                        designation: e.designation,
+                                        employeeId: e.employeeId,
+                                      ))
+                                  .toList()
+                              : <AppUser>[]));
+
+                  if (allEmployees.isEmpty) {
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 14),
+                      child: Text('No employees available to select.', style: TextStyle(fontSize: 12, color: AppColors.textColorHint)),
+                    );
+                  }
+
+                  if (selectedMember.value == null ||
+                      !allEmployees.any((c) =>
+                          (c.id != null && c.id == selectedMember.value?.id) ||
+                          (c.email.isNotEmpty && c.email.toLowerCase() == selectedMember.value?.email.toLowerCase()))) {
+                    selectedMember.value = allEmployees.first;
+                  }
+
+                  final currentVal = allEmployees.firstWhereOrNull((c) =>
+                      (c.id != null && c.id == selectedMember.value?.id) ||
+                      (c.email.isNotEmpty && c.email.toLowerCase() == selectedMember.value?.email.toLowerCase())) ??
+                      allEmployees.first;
+
                   return DropdownButtonHideUnderline(
                     child: DropdownButton<AppUser>(
-                      value: selectedMember.value,
+                      value: currentVal,
                       isExpanded: true,
                       dropdownColor: Colors.white,
                       items: allEmployees.map((user) {
@@ -3762,13 +3955,35 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                           value: user,
                           child: Row(
                             children: [
-                              CircleAvatar(radius: 10, backgroundImage: NetworkImage(user.avatarUrl)),
+                              CircleAvatar(
+                                radius: 12,
+                                backgroundColor: AppColors.slate200,
+                                backgroundImage: user.avatarUrl.isNotEmpty ? NetworkImage(user.avatarUrl) : null,
+                                child: user.avatarUrl.isEmpty
+                                    ? Text(
+                                        user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
+                                        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textColorPrimary),
+                                      )
+                                    : null,
+                              ),
                               const SizedBox(width: 8),
                               Expanded(
-                                child: Text(
-                                  user.name,
-                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                                  overflow: TextOverflow.ellipsis,
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      user.name,
+                                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    if (user.designation != null && user.designation!.isNotEmpty)
+                                      Text(
+                                        user.designation!,
+                                        style: const TextStyle(fontSize: 10, color: AppColors.textColorSecondary),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                  ],
                                 ),
                               ),
                             ],
@@ -3805,22 +4020,27 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Get.back(),
+            onPressed: () => Navigator.of(dialogContext).pop(),
             child: const AppText('Cancel', color: AppColors.textColorSecondary, fontWeight: FontWeight.w600),
           ),
           Obx(() {
             final isB = isBlocker.value;
             return ElevatedButton(
               onPressed: () {
+                if (selectedMember.value == null) {
+                  Get.snackbar('Input Required', 'Please select a recipient.',
+                      snackPosition: SnackPosition.BOTTOM, backgroundColor: AppColors.errorColor, colorText: Colors.white);
+                  return;
+                }
                 if (noteController.text.trim().isEmpty) {
                   Get.snackbar('Input Required', 'Please enter your question or describe the blocker.',
                       snackPosition: SnackPosition.BOTTOM, backgroundColor: AppColors.errorColor, colorText: Colors.white);
                   return;
                 }
-                Get.back();
+                Navigator.of(dialogContext).pop();
                 controller.handoverTask(
                   taskId: task.id,
-                  toUser: selectedMember.value,
+                  toUser: selectedMember.value!,
                   type: isB ? 'Blocker' : 'Query',
                   reason: noteController.text.trim(),
                 );
@@ -3841,8 +4061,9 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   void _showResolveQueryDialog(BuildContext context, TaskModel task) {
     final noteController = TextEditingController();
 
-    Get.dialog(
-      AlertDialog(
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Row(
           children: [
@@ -3888,12 +4109,12 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Get.back(),
+            onPressed: () => Navigator.of(dialogContext).pop(),
             child: const AppText('Cancel', color: AppColors.textColorSecondary),
           ),
           ElevatedButton(
             onPressed: () {
-              Get.back();
+              Navigator.of(dialogContext).pop();
               controller.resolveTaskQuery(task.id, noteController.text.trim());
             },
             style: ElevatedButton.styleFrom(

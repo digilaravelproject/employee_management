@@ -176,9 +176,12 @@ class ComplianceDashboardScreen extends StatelessWidget {
   // --- ADMIN VIEW PANEL ---
   // ==========================================
   Widget _buildAdminDashboard(BuildContext context, ComplianceController controller) {
-    return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+    return RefreshIndicator(
+      color: AppColors.primaryColor,
+      onRefresh: controller.refreshData,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -349,8 +352,9 @@ class ComplianceDashboardScreen extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildStatBadge(String count, String label, Color bgColor) {
     return Expanded(
@@ -643,9 +647,12 @@ class ComplianceDashboardScreen extends StatelessWidget {
       children: [
         // Top static panels inside scrollable body
         Expanded(
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: RefreshIndicator(
+            color: AppColors.primaryColor,
+            onRefresh: controller.refreshData,
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -749,8 +756,9 @@ class ComplianceDashboardScreen extends StatelessWidget {
             ),
           ),
         ),
+      ),
 
-        // ── Download Report Sticky Button ──
+      // ── Download Report Sticky Button ──
         Container(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
           decoration: const BoxDecoration(

@@ -138,10 +138,10 @@ class RolePermissionsController extends GetxController {
     }
   }
 
-  Future<void> fetchPermissionsFromApi() async {
+  Future<void> fetchPermissionsFromApi({dynamic roleId}) async {
     try {
       isLoadingPermissions.value = true;
-      final response = await _repository.getPermissions();
+      final response = await _repository.getPermissions(roleId: roleId);
       if (response.isSuccess && response.json != null && response.json!['status'] == true) {
         final modulesList = response.json!['modules'] as List;
         final List<ModulePermissionGroup> groups = [];
@@ -149,12 +149,16 @@ class RolePermissionsController extends GetxController {
         for (var moduleMap in modulesList) {
           final permissionsList = moduleMap['permissions'] as List;
           final List<GranularPermissionItem> permissions = permissionsList.map((p) {
+            final isAssigned = p['is_assigned'] == true ||
+                p['is_assigned'] == 1 ||
+                p['status']?.toString().toLowerCase() == 'allowed';
             return GranularPermissionItem(
               key: p['slug'] ?? p['id'].toString(),
               id: p['id'] != null ? int.tryParse(p['id'].toString()) : null,
               label: p['name'] ?? '',
               description: p['description'],
-              isGranted: p['is_assigned'] ?? false,
+              isGranted: isAssigned,
+              status: p['status']?.toString(),
             );
           }).toList();
 
@@ -163,6 +167,14 @@ class RolePermissionsController extends GetxController {
             moduleName: moduleMap['module'] ?? '',
             iconKey: 'element', // Default icon, adjust if mapping exists
             permissions: permissions,
+            totalPermissions: moduleMap['total_permissions'] is int
+                ? moduleMap['total_permissions']
+                : int.tryParse(moduleMap['total_permissions']?.toString() ?? ''),
+            assignedCountApi: moduleMap['assigned_permissions_count'] is int
+                ? moduleMap['assigned_permissions_count']
+                : int.tryParse(
+                    moduleMap['assigned_permissions_count']?.toString() ?? ''),
+            allAssigned: moduleMap['all_assigned'] == true,
           ));
         }
 

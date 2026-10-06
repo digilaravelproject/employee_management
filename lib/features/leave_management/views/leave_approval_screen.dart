@@ -127,8 +127,16 @@ class _LeaveApprovalScreenState extends State<LeaveApprovalScreen> {
             if (isLoading)
               const LinearProgressIndicator(minHeight: 2, color: AppColors.primaryColor, backgroundColor: Colors.transparent),
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
+              child: RefreshIndicator(
+                onRefresh: () async {
+                  final id = resolvedLeaveId;
+                  if (id != null) {
+                    await controller.fetchLeaveDetails(id);
+                  }
+                },
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.all(20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -168,6 +176,7 @@ class _LeaveApprovalScreenState extends State<LeaveApprovalScreen> {
                 ),
               ),
             ),
+          ),
 
             // Bottom Buttons
             _buildBottomActionBar(detail, fallback),

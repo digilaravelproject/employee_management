@@ -22,7 +22,7 @@ class AttendanceRepository {
     if (search != null && search.trim().isNotEmpty) {
       query['search'] = search.trim();
     }
-    if (status != null && status.isNotEmpty) {
+    if (status != null && status.isNotEmpty && status.toLowerCase() != 'all') {
       query['status'] = status;
     }
     if (sort != null && sort.isNotEmpty) {
@@ -39,7 +39,7 @@ class AttendanceRepository {
       showToaster: false,
     );
 
-    final json = response.json ?? (response.body is Map<String, dynamic> ? response.body as Map<String, dynamic> : null);
+    final json = response.json ?? (response.body is Map ? Map<String, dynamic>.from(response.body as Map) : null);
     if (json != null) {
       return AdminAttendanceResponseModel.fromJson(json);
     }

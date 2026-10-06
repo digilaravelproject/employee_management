@@ -46,8 +46,17 @@ class ApplyLeaveScreen extends StatelessWidget {
       body: Column(
         children: [
           Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
+            child: RefreshIndicator(
+              color: AppColors.primaryColor,
+              onRefresh: () async {
+                await Future.wait([
+                  controller.fetchLeaveTypes(),
+                  controller.fetchAssignees(),
+                ]);
+              },
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -214,17 +223,21 @@ class ApplyLeaveScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildLabel('Assign', false, isOptional: true),
+                        _buildLabel('Assign To', false, isOptional: true),
                         const SizedBox(height: 12),
-                        Obx(() => CustomBottomSheetDropdown(
-                          label: 'Assign',
-                          selectedValue: controller.selectedAssignee.value,
-                          items: controller.assigneeList,
-                          prefixIcon: Iconsax.user_tag,
-                          prefixIconColor: AppColors.primaryColor,
-                          prefixIconBgColor: AppColors.primaryLight,
-                          onChanged: (val) => controller.setAssignee(val),
-                        )),
+                        Obx(() {
+                          final selected = controller.selectedAssignee.value;
+                          final list = controller.assigneeList;
+                          return CustomBottomSheetDropdown(
+                            label: 'Assign To',
+                            selectedValue: selected.isNotEmpty ? selected : (list.isNotEmpty ? list.first : null),
+                            items: list,
+                            prefixIcon: Iconsax.user_tag,
+                            prefixIconColor: AppColors.primaryColor,
+                            prefixIconBgColor: AppColors.primaryLight,
+                            onChanged: (val) => controller.setAssignee(val),
+                          );
+                        }),
                       ],
                     ),
                   ),
@@ -410,6 +423,7 @@ class ApplyLeaveScreen extends StatelessWidget {
               ),
             ),
           ),
+        ),
           
           // Bottom button
           Container(

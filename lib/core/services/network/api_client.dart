@@ -52,7 +52,32 @@ class ApiClient {
           Logger.d('|🔍 Query Parameters: ${options.queryParameters}');
         }
         if (options.data != null) {
-          Logger.d('|📦 Body: ${options.data}');
+          if (options.data is FormData) {
+            final formData = options.data as FormData;
+            final fieldsMap = <String, dynamic>{};
+            for (final field in formData.fields) {
+              if (fieldsMap.containsKey(field.key)) {
+                final existing = fieldsMap[field.key];
+                if (existing is List) {
+                  existing.add(field.value);
+                } else {
+                  fieldsMap[field.key] = [existing, field.value];
+                }
+              } else {
+                fieldsMap[field.key] = field.value;
+              }
+            }
+            final filesSummary = formData.files
+                .map((file) => '${file.key}: ${file.value.filename} (${file.value.length} bytes)')
+                .toList();
+
+            Logger.d('|📦 FormData Fields: $fieldsMap');
+            if (filesSummary.isNotEmpty) {
+              Logger.d('|📁 FormData Files: $filesSummary');
+            }
+          } else {
+            Logger.d('|📦 Body: ${options.data}');
+          }
         }
 
         return handler.next(options);

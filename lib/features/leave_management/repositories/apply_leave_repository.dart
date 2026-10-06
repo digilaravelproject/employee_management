@@ -3,6 +3,7 @@ import '../../../core/services/network/api_client.dart';
 import '../../../core/utils/logger.dart';
 import '../models/apply_leave_request_model.dart';
 import '../models/apply_leave_response_model.dart';
+import '../models/assignee_user_model.dart';
 import '../models/leave_type_model.dart';
 import 'apply_leave_repository_interface.dart';
 
@@ -10,6 +11,40 @@ class ApplyLeaveRepository implements ApplyLeaveRepositoryInterface {
   final ApiClient apiClient;
 
   ApplyLeaveRepository({required this.apiClient});
+
+  @override
+  Future<AssigneeUsersResponseModel> getAllUsers() async {
+    try {
+      Logger.d('ApplyLeaveRepository => Fetching all users from ${AppConstants.adminAllUsersUrl}');
+      final response = await apiClient.get(
+        AppConstants.adminAllUsersUrl,
+        handleError: false,
+        showToaster: false,
+      );
+
+      Logger.d('ApplyLeaveRepository => All users response: status=${response.statusCode}, isSuccess=${response.isSuccess}');
+
+      if (response.json != null) {
+        return AssigneeUsersResponseModel.fromJson(response.json!);
+      } else if (response.body is Map<String, dynamic>) {
+        return AssigneeUsersResponseModel.fromJson(response.body as Map<String, dynamic>);
+      }
+
+      return AssigneeUsersResponseModel(
+        status: response.isSuccess,
+        message: response.message.isNotEmpty ? response.message : 'Failed to retrieve users',
+        data: [],
+      );
+    } catch (e, stackTrace) {
+      Logger.e('ApplyLeaveRepository => Exception in getAllUsers: $e');
+      Logger.e('ApplyLeaveRepository => StackTrace: $stackTrace');
+      return AssigneeUsersResponseModel(
+        status: false,
+        message: 'Failed to fetch users: $e',
+        data: [],
+      );
+    }
+  }
 
   @override
   Future<LeaveTypeListResponseModel> getLeaveTypes() async {

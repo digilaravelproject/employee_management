@@ -4,6 +4,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/services/network/api_client.dart';
 import '../../../core/utils/logger.dart';
 import '../../employee/management/models/employee_model.dart';
+import '../../role_permissions/models/role_permission_models.dart';
 import '../models/create_task_model.dart';
 import '../models/task_model.dart';
 import 'task_repository_interface.dart';
@@ -79,6 +80,58 @@ class TaskRepository implements TaskRepositoryInterface {
         message: e.toString(),
         data: [],
       );
+    }
+  }
+
+  @override
+  Future<List<AppUser>> getAllUsers() async {
+    try {
+      final url = AppConstants.adminAllUsersUrl;
+      Logger.d('TaskRepository => GET $url (getAllUsers)');
+
+      final response = await apiClient.get(
+        url,
+        handleError: false,
+        showToaster: false,
+      );
+
+      Logger.d('TaskRepository => getAllUsers Status: ${response.statusCode}, isSuccess: ${response.isSuccess}');
+
+      final Map<String, dynamic>? dataMap = response.json ??
+          (response.body is Map<String, dynamic> ? response.body as Map<String, dynamic> : null);
+
+      if (dataMap != null && dataMap['data'] is List) {
+        return (dataMap['data'] as List).whereType<Map<String, dynamic>>().map((u) {
+          final id = u['id'] is int ? u['id'] as int : int.tryParse(u['id']?.toString() ?? '');
+          String avatar = u['avatar']?.toString() ?? u['avatarUrl']?.toString() ?? '';
+          if (avatar.isNotEmpty) {
+            if (avatar.contains('127.0.0.1:8000') || avatar.contains('localhost:8000')) {
+              avatar = avatar
+                  .replaceFirst('http://127.0.0.1:8000', AppConstants.baseUrl)
+                  .replaceFirst('https://127.0.0.1:8000', AppConstants.baseUrl)
+                  .replaceFirst('http://localhost:8000', AppConstants.baseUrl)
+                  .replaceFirst('https://localhost:8000', AppConstants.baseUrl);
+            } else if (!avatar.startsWith('http://') && !avatar.startsWith('https://')) {
+              avatar = '${AppConstants.baseUrl}/${avatar.startsWith('/') ? avatar.substring(1) : avatar}';
+            }
+          }
+          return AppUser(
+            id: id,
+            name: u['name']?.toString() ?? '',
+            email: u['email']?.toString() ?? '',
+            avatarUrl: avatar,
+            designation: u['designation']?.toString() ?? u['role']?.toString(),
+            employeeId: u['employee_id']?.toString() ?? u['id']?.toString(),
+            status: u['status']?.toString(),
+          );
+        }).toList();
+      }
+
+      return [];
+    } catch (e, stack) {
+      Logger.e('TaskRepository => Error getting all users: $e');
+      Logger.e('TaskRepository => StackTrace: $stack');
+      return [];
     }
   }
 
@@ -538,6 +591,64 @@ class TaskRepository implements TaskRepositoryInterface {
         status: false,
         message: 'Something went wrong while retrieving comments: $e',
         data: const [],
+      );
+    }
+  }
+
+  @override
+  Future<TaskHandoverResponseModel> handoverAdminTask(
+    dynamic taskId, {
+    required int fromUserId,
+    required int toUserId,
+    required String reason,
+    int? xUserId,
+  }) async {
+    try {
+      final url = AppConstants.adminTaskHandoverUrl(taskId);
+      Logger.d('TaskRepository => POST $url (handover task)');
+
+      final body = {
+        'from_user_id': fromUserId,
+        'to_user_id': toUserId,
+        'reason': reason.trim(),
+      };
+
+      final options = Options(
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          if (xUserId != null) 'X-User-Id': xUserId.toString(),
+        },
+      );
+
+      final response = await apiClient.post(
+        url,
+        data: body,
+        options: options,
+        handleError: false,
+        showToaster: false,
+      );
+
+      Logger.d('TaskRepository => Handover POST Status: ${response.statusCode}, isSuccess: ${response.isSuccess}');
+
+      if (response.json != null) {
+        return TaskHandoverResponseModel.fromJson(response.json!, fallbackMessage: response.message);
+      } else if (response.body is Map<String, dynamic>) {
+        return TaskHandoverResponseModel.fromJson(response.body as Map<String, dynamic>, fallbackMessage: response.message);
+      }
+
+      return TaskHandoverResponseModel(
+        status: response.isSuccess,
+        message: response.message.isNotEmpty
+            ? response.message
+            : (response.isSuccess ? 'Task handed over successfully' : 'Failed to handover task'),
+      );
+    } catch (e, stack) {
+      Logger.e('TaskRepository => Error handing over task: $e');
+      Logger.e('TaskRepository => StackTrace: $stack');
+      return TaskHandoverResponseModel(
+        status: false,
+        message: 'Something went wrong while handing over task: $e',
       );
     }
   }

@@ -6,6 +6,8 @@ import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_text.dart';
 import '../../auth/domain/models/user_model.dart';
 import '../controllers/profile_controller.dart';
+import '../models/user_document_model.dart';
+import 'document_image_viewer_screen.dart';
 
 class EmployeeDocumentsScreen extends StatelessWidget {
   const EmployeeDocumentsScreen({super.key});
@@ -204,106 +206,142 @@ class EmployeeDocumentsScreen extends StatelessWidget {
           ),
         ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Row(
-          children: [
-            // Thumbnail / Icon
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                width: 54,
-                height: 54,
-                color: Colors.green.withValues(alpha: 0.08),
-                child: doc.url != null && isImage
-                    ? Image.network(
-                        doc.url!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (ctx, err, stack) => const Center(
-                          child: Icon(Iconsax.gallery,
-                              color: Colors.green, size: 24),
-                        ),
-                      )
-                    : const Center(
-                        child: Icon(Iconsax.document_text,
-                            color: Colors.green, size: 24),
-                      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () {
+            Get.to(
+              () => DocumentImageViewerScreen(
+                document: UserDocumentItem.fromUserDocument(doc),
               ),
-            ),
-            const SizedBox(width: 14),
-
-            // Info
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  AppText(
-                    displayName,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textColorPrimary,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+              transition: Transition.fadeIn,
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                // Thumbnail / Icon
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    width: 54,
+                    height: 54,
+                    color: Colors.green.withValues(alpha: 0.08),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        doc.url != null && isImage
+                            ? Image.network(
+                                doc.url!,
+                                fit: BoxFit.cover,
+                                errorBuilder: (ctx, err, stack) => const Center(
+                                  child: Icon(Iconsax.gallery,
+                                      color: Colors.green, size: 24),
+                                ),
+                              )
+                            : const Center(
+                                child: Icon(Iconsax.document_text,
+                                    color: Colors.green, size: 24),
+                              ),
+                        if (isImage)
+                          Positioned(
+                            right: 3,
+                            bottom: 3,
+                            child: Container(
+                              padding: const EdgeInsets.all(2.5),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.55),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.fullscreen_rounded,
+                                color: Colors.white,
+                                size: 12,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 4),
-                  Row(
+                ),
+                const SizedBox(width: 14),
+
+                // Info
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(
-                        isImage ? Iconsax.image : Iconsax.document,
-                        size: 13,
-                        color: AppColors.textColorSecondary,
-                      ),
-                      const SizedBox(width: 4),
                       AppText(
-                        '$sizeStr • Synced',
-                        fontSize: 12,
-                        color: AppColors.textColorSecondary,
+                        displayName,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textColorPrimary,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(
+                            isImage ? Iconsax.image : Iconsax.document,
+                            size: 13,
+                            color: AppColors.textColorSecondary,
+                          ),
+                          const SizedBox(width: 4),
+                          AppText(
+                            '$sizeStr • Synced',
+                            fontSize: 12,
+                            color: AppColors.textColorSecondary,
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ),
-            ),
-
-            // Verified Badge & Delete Button
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: const AppText(
-                    'Verified',
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.green,
-                  ),
                 ),
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(
-                    Iconsax.trash,
-                    size: 18,
-                    color: Colors.redAccent,
-                  ),
-                  tooltip: 'Delete Document',
-                  onPressed: () {
-                    if (doc.id != null) {
-                      profileController.showDeleteDocumentDialog(
-                        context,
-                        documentId: doc.id!,
-                        documentName: displayName,
-                      );
-                    }
-                  },
+
+                // Verified Badge & Delete Button
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const AppText(
+                        'Verified',
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.green,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: const Icon(
+                        Iconsax.trash,
+                        size: 18,
+                        color: Colors.redAccent,
+                      ),
+                      tooltip: 'Delete Document',
+                      onPressed: () {
+                        if (doc.id != null) {
+                          profileController.showDeleteDocumentDialog(
+                            context,
+                            documentId: doc.id!,
+                            documentName: displayName,
+                          );
+                        }
+                      },
+                    ),
+                  ],
                 ),
               ],
             ),
-          ],
+          ),
         ),
       ),
     );

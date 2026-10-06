@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:get/get.dart';
 import '../../../../core/services/network/api_client.dart';
@@ -31,6 +32,11 @@ class EmployeeController extends GetxController {
   final RxBool isUploadingAvatar = false.obs;
   var employees = <EmployeeModel>[].obs;
   var filteredEmployees = <EmployeeModel>[].obs;
+
+  // Search API & In-memory Cache State
+  final List<EmployeeModel> _allEmployeesCache = [];
+  final RxBool isSearching = false.obs;
+  Timer? _searchDebounceTimer;
 
   // Single Employee Detail State
   final Rx<EmployeeModel?> employeeDetail = Rx<EmployeeModel?>(null);
@@ -214,6 +220,7 @@ class EmployeeController extends GetxController {
 
       if (response.status) {
         employees.assignAll(response.data);
+        _allEmployeesCache.assignAll(response.data);
         applyFilters();
         Logger.d('EmployeeController => Loaded ${employees.length} employees from API');
       } else {
@@ -492,12 +499,51 @@ class EmployeeController extends GetxController {
         isActive: false,
       ),
     ]);
+    _allEmployeesCache.assignAll(employees);
     applyFilters();
   }
 
   void filterEmployees(String query) {
     searchQuery.value = query;
+    _searchDebounceTimer?.cancel();
+
+    if (query.trim().isEmpty) {
+      isSearching.value = false;
+      if (_allEmployeesCache.isNotEmpty) {
+        employees.assignAll(_allEmployeesCache);
+      }
+      applyFilters();
+      return;
+    }
+
+    // Apply immediate local filter for instant responsiveness
     applyFilters();
+
+    // Debounce remote search API call (350ms) without triggering full-screen loading spinners
+    _searchDebounceTimer = Timer(const Duration(milliseconds: 350), () {
+      searchEmployeesApi(query.trim());
+    });
+  }
+
+  Future<void> searchEmployeesApi(String query) async {
+    if (query.isEmpty) return;
+    try {
+      isSearching.value = true;
+      Logger.d('EmployeeController => Calling search API for query: "$query"');
+      final response = await _effectiveEmployeeRepository.searchEmployees(query);
+      if (response.status) {
+        // Ensure the active search query has not changed while waiting for API
+        if (searchQuery.value.trim().toLowerCase() == query.trim().toLowerCase()) {
+          employees.assignAll(response.data);
+          applyFilters();
+          Logger.d('EmployeeController => Search retrieved ${response.data.length} employees');
+        }
+      }
+    } catch (e) {
+      Logger.e('EmployeeController => Error in searchEmployeesApi: $e');
+    } finally {
+      isSearching.value = false;
+    }
   }
 
   void applyFilters() {
@@ -750,5 +796,11 @@ class EmployeeController extends GetxController {
     } else {
       selectedSkills.add(skill);
     }
+  }
+
+  @override
+  void onClose() {
+    _searchDebounceTimer?.cancel();
+    super.onClose();
   }
 }

@@ -15,6 +15,7 @@ import '../../auth/controllers/auth_controller.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_text.dart';
+import '../../dashboard/controllers/dashboard_controller.dart';
 
 class ProfileController extends GetxController {
   final ApiClient apiClient;
@@ -468,6 +469,13 @@ class ProfileController extends GetxController {
       }
 
       Logger.d('ProfileController => Updating profile at ${AppConstants.adminUpdateProfileUrl}');
+      Logger.d('ProfileController => Form Fields: $dataMap');
+      if (selectedAvatar.value != null) {
+        Logger.d('ProfileController => Avatar File: ${selectedAvatar.value!.path}');
+      }
+      if (selectedDocuments.isNotEmpty) {
+        Logger.d('ProfileController => Document Files: ${selectedDocuments.map((d) => d.path).toList()}');
+      }
       final response = await apiClient.post(
         AppConstants.adminUpdateProfileUrl,
         data: formData,
@@ -491,6 +499,11 @@ class ProfileController extends GetxController {
             }
             if (Get.isRegistered<AppController>()) {
               Get.find<AppController>().setRole(updatedUser.role);
+            }
+            if (Get.isRegistered<DashboardController>()) {
+              final dash = Get.find<DashboardController>();
+              dash.fetchEmployeeDashboard();
+              dash.fetchAdminDashboard();
             }
           }
           selectedAvatar.value = null;

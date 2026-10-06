@@ -206,7 +206,10 @@ class AttendanceDayDetailsScreen extends StatelessWidget {
                           label: 'Late By',
                           value: record.lateBy,
                           icon: Iconsax.timer,
-                          iconColor: AppColors.textColorHint,
+                          iconColor: record.hasLateIndication ? const Color(0xFFEA580C) : AppColors.textColorHint,
+                          useBadge: record.hasLateIndication,
+                          badgeBgColor: const Color(0xFFFFF7ED),
+                          badgeTextColor: const Color(0xFFEA580C),
                         ),
                         rightCell: _GridCell(
                           label: 'Early Leave',
@@ -226,6 +229,47 @@ class AttendanceDayDetailsScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 20),
+
+                if (record.hasLateIndication) ...[
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF7ED),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFFDBA74)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Iconsax.timer_1,
+                          color: Color(0xFFEA580C),
+                          size: 20,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const AppText(
+                                'Late Arrival Detected',
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFFEA580C),
+                              ),
+                              const SizedBox(height: 2),
+                              AppText(
+                                'Marked late by ${record.lateBy != '--' && record.lateBy.isNotEmpty ? record.lateBy : 'scheduled time'}.',
+                                fontSize: 11,
+                                color: const Color(0xFF9A3412),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
 
                 // Info Banner Alert (Screen 3 blue details alert)
                 Container(

@@ -9,6 +9,8 @@ import '../../../core/widgets/app_input_field.dart';
 import '../../../core/widgets/app_text.dart';
 import '../../auth/domain/models/user_model.dart';
 import '../controllers/profile_controller.dart';
+import '../models/user_document_model.dart';
+import 'document_image_viewer_screen.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -732,59 +734,75 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
                   return Container(
                     margin: const EdgeInsets.only(bottom: 8),
-                    padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
                       color: AppColors.slate50,
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(color: AppColors.slate200),
                     ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 38,
-                          height: 38,
-                          decoration: BoxDecoration(
-                            color: Colors.green.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(Iconsax.tick_circle,
-                              color: Colors.green, size: 20),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(10),
+                        onTap: () {
+                          Get.to(
+                            () => DocumentImageViewerScreen(
+                              document: UserDocumentItem.fromUserDocument(doc),
+                            ),
+                            transition: Transition.fadeIn,
+                          );
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.all(10),
+                          child: Row(
                             children: [
-                              AppText(displayName,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis),
-                              const SizedBox(height: 2),
-                              AppText(
-                                '$sizeKb • Verified',
-                                fontSize: 10,
-                                color: Colors.green,
-                                fontWeight: FontWeight.w500,
+                              Container(
+                                width: 38,
+                                height: 38,
+                                decoration: BoxDecoration(
+                                  color: Colors.green.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Icon(Iconsax.tick_circle,
+                                    color: Colors.green, size: 20),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    AppText(displayName,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis),
+                                    const SizedBox(height: 2),
+                                    AppText(
+                                      '$sizeKb • Verified',
+                                      fontSize: 10,
+                                      color: Colors.green,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Iconsax.trash,
+                                    size: 18, color: Colors.redAccent),
+                                tooltip: 'Delete Document',
+                                onPressed: () {
+                                  if (doc.id != null) {
+                                    controller.showDeleteDocumentDialog(
+                                      context,
+                                      documentId: doc.id!,
+                                      documentName: displayName,
+                                    );
+                                  }
+                                },
                               ),
                             ],
                           ),
                         ),
-                        IconButton(
-                          icon: const Icon(Iconsax.trash,
-                              size: 18, color: Colors.redAccent),
-                          tooltip: 'Delete Document',
-                          onPressed: () {
-                            if (doc.id != null) {
-                              controller.showDeleteDocumentDialog(
-                                context,
-                                documentId: doc.id!,
-                                documentName: displayName,
-                              );
-                            }
-                          },
-                        ),
-                      ],
+                      ),
                     ),
                   );
                 },

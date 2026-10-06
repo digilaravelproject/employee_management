@@ -8,7 +8,7 @@ import '../../../core/widgets/app_text.dart';
 import '../controllers/attendance_history_controller.dart';
 import 'attendance_day_details_screen.dart';
 
-class AttendanceHistoryScreen extends StatelessWidget {
+class AttendanceHistoryScreen extends StatefulWidget {
   final bool showBackButton;
   final String? employeeName;
   final String? employeeId;
@@ -23,17 +23,31 @@ class AttendanceHistoryScreen extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final controller = Get.isRegistered<AttendanceHistoryController>()
+  State<AttendanceHistoryScreen> createState() => _AttendanceHistoryScreenState();
+}
+
+class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
+  late final AttendanceHistoryController controller;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = Get.isRegistered<AttendanceHistoryController>()
         ? Get.find<AttendanceHistoryController>()
         : Get.put(AttendanceHistoryController());
 
+    // Ensure the attendance screen ALWAYS defaults to the current month on entry
+    controller.resetToCurrentMonth();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: AppColors.white,
         elevation: 0,
-        leading: showBackButton 
+        leading: widget.showBackButton 
             ? IconButton(
                 icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.textColorPrimary, size: 18),
                 onPressed: () => Get.back(),
@@ -44,14 +58,14 @@ class AttendanceHistoryScreen extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             AppText(
-              employeeName != null ? "$employeeName's Attendance" : 'Attendance History',
+              widget.employeeName != null ? "${widget.employeeName}'s Attendance" : 'Attendance History',
               fontSize: 17,
               fontWeight: FontWeight.w700,
               color: AppColors.textColorPrimary,
             ),
-            if (employeeId != null)
+            if (widget.employeeId != null)
               AppText(
-                '$employeeId${employeeDesignation != null ? ' • $employeeDesignation' : ''}',
+                '${widget.employeeId}${widget.employeeDesignation != null ? ' • ${widget.employeeDesignation}' : ''}',
                 fontSize: 11,
                 color: AppColors.textColorSecondary,
               ),
@@ -104,7 +118,7 @@ class AttendanceHistoryScreen extends StatelessWidget {
                   }
                   return const SizedBox.shrink();
                 }),
-                if (employeeName != null) ...[
+                if (widget.employeeName != null) ...[
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -123,7 +137,7 @@ class AttendanceHistoryScreen extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               AppText(
-                                employeeName!,
+                                widget.employeeName!,
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
                                 color: const Color(0xFF15803D),
@@ -490,35 +504,39 @@ class _MonthlySummaryCard extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 8),
-                      Row(
+                      Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 10,
+                        runSpacing: 4,
                         children: [
-                          const Icon(Icons.event, size: 12, color: AppColors.textColorHint),
-                          const SizedBox(width: 4),
-                          AppText(
-                            'Working Days: ',
-                            fontSize: 11,
-                            color: AppColors.textColorSecondary,
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.event, size: 12, color: AppColors.textColorHint),
+                              const SizedBox(width: 3),
+                              const AppText('Working: ', fontSize: 11, color: AppColors.textColorSecondary),
+                              AppText('$workingDays', fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textColorPrimary),
+                            ],
                           ),
-                          AppText(
-                            '$workingDays',
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textColorPrimary,
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.check_circle_outline, size: 12, color: AppColors.textColorHint),
+                              const SizedBox(width: 3),
+                              const AppText('Present: ', fontSize: 11, color: AppColors.textColorSecondary),
+                              AppText('$presentDays', fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textColorPrimary),
+                            ],
                           ),
-                          const SizedBox(width: 12),
-                          const Icon(Icons.check_circle_outline, size: 12, color: AppColors.textColorHint),
-                          const SizedBox(width: 4),
-                          AppText(
-                            'Present: ',
-                            fontSize: 11,
-                            color: AppColors.textColorSecondary,
-                          ),
-                          AppText(
-                            '$presentDays',
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textColorPrimary,
-                          ),
+                          if (controller.lateCount > 0)
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Iconsax.timer_1, size: 12, color: Color(0xFFEA580C)),
+                                const SizedBox(width: 3),
+                                const AppText('Late: ', fontSize: 11, color: AppColors.textColorSecondary),
+                                AppText('${controller.lateCount}', fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0xFFEA580C)),
+                              ],
+                            ),
                         ],
                       )
                     ],
@@ -754,11 +772,27 @@ class _CalendarGrid extends StatelessWidget {
                     : null,
               ),
               alignment: Alignment.center,
-              child: AppText(
-                date.day.toString(),
-                fontSize: 13,
-                fontWeight: isSelected ? FontWeight.w700 : (isCurrentMonth ? FontWeight.w600 : FontWeight.w400),
-                color: statusTextColor,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  AppText(
+                    date.day.toString(),
+                    fontSize: 12,
+                    fontWeight: isSelected ? FontWeight.w700 : (isCurrentMonth ? FontWeight.w600 : FontWeight.w400),
+                    color: statusTextColor,
+                  ),
+                  if (record != null && isCurrentMonth && record.hasLateIndication) ...[
+                    const SizedBox(height: 1),
+                    Container(
+                      width: 4,
+                      height: 4,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFF97316),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
           );
@@ -918,7 +952,43 @@ class _CalendarGrid extends StatelessWidget {
                     ],
                   ),
 
-                  const SizedBox(height: 24),
+                  if (record.hasLateIndication) ...[
+                    const SizedBox(height: 14),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF7ED),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFFFDBA74)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Iconsax.timer_1, size: 18, color: Color(0xFFEA580C)),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const AppText(
+                                  'Late Arrival Detected',
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFFEA580C),
+                                ),
+                                AppText(
+                                  'Late by ${record.lateBy != '--' && record.lateBy.isNotEmpty ? record.lateBy : 'time threshold'}.',
+                                  fontSize: 11,
+                                  color: const Color(0xFF9A3412),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  const SizedBox(height: 20),
                   
                   // Primary View Details Button
                   SizedBox(
@@ -1030,6 +1100,7 @@ class _CalendarLegend extends StatelessWidget {
         _LegendItem(color: AppColors.warningColor, label: 'Half Day'),
         _LegendItem(color: AppColors.errorColor, label: 'Absent'),
         _LegendItem(color: AppColors.indigo500, label: 'Leave'),
+        _LegendItem(color: const Color(0xFFF97316), label: 'Late'),
         _LegendItem(color: AppColors.slate200, label: 'Weekend'),
       ],
     );
@@ -1255,7 +1326,31 @@ class _RecentRecordsList extends StatelessWidget {
                               ),
                             ]
                           ],
-                        )
+                        ),
+                        if (record.hasLateIndication) ...[
+                          const SizedBox(height: 5),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFF7ED),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: const Color(0xFFFDBA74).withValues(alpha: 0.8)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Iconsax.timer_1, size: 10, color: Color(0xFFEA580C)),
+                                const SizedBox(width: 3),
+                                AppText(
+                                  'Late: ${record.lateBy}',
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w700,
+                                  color: const Color(0xFFEA580C),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),

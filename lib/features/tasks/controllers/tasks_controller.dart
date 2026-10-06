@@ -86,6 +86,10 @@ class TasksController extends GetxController {
   final RxBool isLoadingEmployees = false.obs;
   final RxString employeeSearchQuery = ''.obs;
 
+  // Live All Users List from /api/admin/employees/all-users
+  final RxList<AppUser> allUsersList = <AppUser>[].obs;
+  final RxBool isLoadingAllUsers = false.obs;
+
   // API Submission loading state
   final RxBool isCreatingTask = false.obs;
   final RxBool isUpdatingTask = false.obs;
@@ -124,6 +128,7 @@ class TasksController extends GetxController {
     }
     super.onInit();
     fetchEmployees();
+    fetchAllUsers();
     fetchTasks();
 
     // 1-second interval ticker for running timers
@@ -473,6 +478,7 @@ class TasksController extends GetxController {
   }
 
   final RxBool isSubmittingForTesting = false.obs;
+  final RxBool isHandingOverTask = false.obs;
 
   Future<bool> submitTaskForTesting(
     String taskId, {
@@ -713,85 +719,223 @@ class TasksController extends GetxController {
   // ── Jira Task Handover & Query Escalation Flow ──
   // If someone cannot complete a task, they pass it to someone else with reason.
   // Or if they have questions/blockers, they pass a query/blocker to another person.
-  void handoverTask({
+  Future<bool> handoverTask({
     required String taskId,
     required AppUser toUser,
     required String type, // 'Handover', 'Query', 'Blocker'
     required String reason,
-  }) {
+  }) async {
     final idx = tasks.indexWhere((t) => t.id == taskId);
-    if (idx == -1) return;
-
-    final current = tasks[idx];
-    final currentUser = current.assignees.isNotEmpty ? current.assignees.first : currentLoggedInUser;
-
-    final handoverEvent = TaskHandoverEvent(
-      id: 'handover_${DateTime.now().millisecondsSinceEpoch}',
-      fromUser: currentUser,
-      toUser: toUser,
-      type: type,
-      reason: reason.trim(),
-      timestamp: DateTime.now(),
-    );
-
-    String updateTitle;
-    String updateDesc;
-    List<AppUser> updatedAssignees = List<AppUser>.from(current.assignees);
-    bool hasQuery = current.hasActiveQuery;
-    String? queryNote = current.activeQueryNote;
-    AppUser? queryTarget = current.queryToUser;
+    final current = idx != -1 ? tasks[idx] : selectedTask.value;
+    if (current == null) return false;
 
     if (type == 'Handover') {
-      updateTitle = 'Task Handed Over';
-      updateDesc = 'Reassigned from ${currentUser.name} to ${toUser.name}.\nReason: ${reason.trim()}';
-      updatedAssignees = [toUser];
-    } else if (type == 'Query') {
-      updateTitle = 'Question / Help Escalated';
-      updateDesc = 'Question asked to ${toUser.name}:\n"${reason.trim()}"';
-      hasQuery = true;
-      queryNote = reason.trim();
-      queryTarget = toUser;
+      isHandingOverTask.value = true;
+      try {
+        // Resolve from_user_id
+        int? fromUserId = current.assignees.firstWhereOrNull((a) => a.id != null)?.id;
+        fromUserId ??= int.tryParse(current.assignees.firstOrNull?.employeeId ?? '');
+        fromUserId ??= SharedPrefs.getUserData()?.id;
+        fromUserId ??= int.tryParse(currentLoggedInUser.employeeId ?? '');
+
+        // Resolve to_user_id
+        int? toUserId = toUser.id ?? int.tryParse(toUser.employeeId ?? '');
+        if (toUserId == null) {
+          final userMatch = allUsersList.firstWhereOrNull(
+            (e) =>
+                e.email.toLowerCase() == toUser.email.toLowerCase() ||
+                e.name.toLowerCase() == toUser.name.toLowerCase(),
+          );
+          if (userMatch != null && userMatch.id != null) {
+            toUserId = userMatch.id;
+          } else {
+            final match = employeesList.firstWhereOrNull(
+              (e) =>
+                  e.email.toLowerCase() == toUser.email.toLowerCase() ||
+                  e.name.toLowerCase() == toUser.name.toLowerCase(),
+            );
+            if (match != null) {
+              toUserId = int.tryParse(match.id);
+            }
+          }
+        }
+
+        if (fromUserId == null || toUserId == null) {
+          Get.snackbar(
+            'Handover Notice',
+            'Could not resolve employee IDs for handover.',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: AppColors.errorColor,
+            colorText: Colors.white,
+          );
+          return false;
+        }
+
+        final xUserId = SharedPrefs.getUserData()?.id ?? fromUserId;
+
+        final response = await repository.handoverAdminTask(
+          taskId,
+          fromUserId: fromUserId,
+          toUserId: toUserId,
+          reason: reason.trim(),
+          xUserId: xUserId,
+        );
+
+        if (response.status) {
+          TaskModel updated;
+          if (response.task != null) {
+            final serverTask = response.task!;
+            final existingTask = idx != -1 ? tasks[idx] : selectedTask.value;
+            updated = serverTask.copyWith(
+              subTasks: serverTask.subTasks.isNotEmpty ? serverTask.subTasks : existingTask?.subTasks,
+              comments: serverTask.comments.isNotEmpty ? serverTask.comments : existingTask?.comments,
+              attachments: serverTask.attachments.isNotEmpty ? serverTask.attachments : existingTask?.attachments,
+              attachmentDetails: serverTask.attachmentDetails.isNotEmpty
+                  ? serverTask.attachmentDetails
+                  : existingTask?.attachmentDetails,
+              timeLogs: serverTask.timeLogs.isNotEmpty ? serverTask.timeLogs : existingTask?.timeLogs,
+              handovers: [
+                if (response.handover != null) response.handover!,
+                ...?existingTask?.handovers,
+              ],
+            );
+          } else {
+            final handoverEvent = TaskHandoverEvent(
+              id: 'handover_${DateTime.now().millisecondsSinceEpoch}',
+              fromUser: current.assignees.firstOrNull ?? currentLoggedInUser,
+              toUser: toUser,
+              type: type,
+              reason: reason.trim(),
+              timestamp: DateTime.now(),
+            );
+            final newStatusUpdate = TaskStatusUpdate(
+              id: 'update_ho_${DateTime.now().millisecondsSinceEpoch}',
+              status: current.status,
+              title: 'Task Handed Over',
+              description:
+                  'Reassigned from ${current.assignees.firstOrNull?.name ?? currentLoggedInUser.name} to ${toUser.name}.\nReason: ${reason.trim()}',
+              timestamp: DateTime.now(),
+              user: current.assignees.firstOrNull ?? currentLoggedInUser,
+            );
+            updated = current.copyWith(
+              assignees: [toUser],
+              handovers: List<TaskHandoverEvent>.from(current.handovers)..add(handoverEvent),
+              statusUpdates: List<TaskStatusUpdate>.from(current.statusUpdates)..add(newStatusUpdate),
+            );
+          }
+
+          if (idx != -1) {
+            tasks[idx] = updated;
+          }
+          if (selectedTask.value?.id == taskId ||
+              (response.task != null && selectedTask.value?.id == response.task!.id)) {
+            selectedTask.value = updated;
+          }
+          _syncTaskStatusWithProject(updated);
+
+          // Refresh tasks in background to ensure full server sync
+          fetchTasks(isRefresh: true);
+
+          Get.snackbar(
+            'Task Handed Over',
+            response.message.isNotEmpty
+                ? response.message
+                : 'Task successfully reassigned to ${toUser.name}',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: AppColors.primaryColor,
+            colorText: Colors.white,
+          );
+          return true;
+        } else {
+          Get.snackbar(
+            'Handover Failed',
+            response.message.isNotEmpty ? response.message : 'Could not handover task.',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: AppColors.errorColor,
+            colorText: Colors.white,
+          );
+          return false;
+        }
+      } catch (e) {
+        Logger.e('TasksController => Error in handoverTask: $e');
+        Get.snackbar(
+          'Error',
+          'Failed to handover task: $e',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: AppColors.errorColor,
+          colorText: Colors.white,
+        );
+        return false;
+      } finally {
+        isHandingOverTask.value = false;
+      }
     } else {
-      updateTitle = 'Blocker Reported';
-      updateDesc = 'Blocker reported to ${toUser.name}:\n"${reason.trim()}"';
-      hasQuery = true;
-      queryNote = reason.trim();
-      queryTarget = toUser;
+      // Escalation flow for 'Query' and 'Blocker'
+      final currentUser = current.assignees.isNotEmpty ? current.assignees.first : currentLoggedInUser;
+
+      final handoverEvent = TaskHandoverEvent(
+        id: 'handover_${DateTime.now().millisecondsSinceEpoch}',
+        fromUser: currentUser,
+        toUser: toUser,
+        type: type,
+        reason: reason.trim(),
+        timestamp: DateTime.now(),
+      );
+
+      String updateTitle;
+      String updateDesc;
+      bool hasQuery = current.hasActiveQuery;
+      String? queryNote = current.activeQueryNote;
+      AppUser? queryTarget = current.queryToUser;
+
+      if (type == 'Query') {
+        updateTitle = 'Question / Help Escalated';
+        updateDesc = 'Question asked to ${toUser.name}:\n"${reason.trim()}"';
+        hasQuery = true;
+        queryNote = reason.trim();
+        queryTarget = toUser;
+      } else {
+        updateTitle = 'Blocker Reported';
+        updateDesc = 'Blocker reported to ${toUser.name}:\n"${reason.trim()}"';
+        hasQuery = true;
+        queryNote = reason.trim();
+        queryTarget = toUser;
+      }
+
+      final newStatusUpdate = TaskStatusUpdate(
+        id: 'update_ho_${DateTime.now().millisecondsSinceEpoch}',
+        status: current.status,
+        title: updateTitle,
+        description: updateDesc,
+        timestamp: DateTime.now(),
+        user: currentUser,
+      );
+
+      final updated = current.copyWith(
+        handovers: List<TaskHandoverEvent>.from(current.handovers)..add(handoverEvent),
+        statusUpdates: List<TaskStatusUpdate>.from(current.statusUpdates)..add(newStatusUpdate),
+        hasActiveQuery: hasQuery,
+        activeQueryNote: queryNote,
+        queryToUser: queryTarget,
+      );
+
+      if (idx != -1) {
+        tasks[idx] = updated;
+      }
+      if (selectedTask.value?.id == taskId) {
+        selectedTask.value = updated;
+      }
+      _syncTaskStatusWithProject(updated);
+
+      Get.snackbar(
+        type == 'Query' ? 'Question Passed' : 'Blocker Raised',
+        '${type == 'Query' ? 'Query' : 'Blocker'} passed to ${toUser.name}. They will be notified to review.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: const Color(0xFFF59E0B),
+        colorText: Colors.white,
+      );
+      return true;
     }
-
-    final newStatusUpdate = TaskStatusUpdate(
-      id: 'update_ho_${DateTime.now().millisecondsSinceEpoch}',
-      status: current.status,
-      title: updateTitle,
-      description: updateDesc,
-      timestamp: DateTime.now(),
-      user: currentUser,
-    );
-
-    final updated = current.copyWith(
-      assignees: updatedAssignees,
-      handovers: List<TaskHandoverEvent>.from(current.handovers)..add(handoverEvent),
-      statusUpdates: List<TaskStatusUpdate>.from(current.statusUpdates)..add(newStatusUpdate),
-      hasActiveQuery: hasQuery,
-      activeQueryNote: queryNote,
-      queryToUser: queryTarget,
-    );
-
-    tasks[idx] = updated;
-    if (selectedTask.value?.id == taskId) {
-      selectedTask.value = updated;
-    }
-    _syncTaskStatusWithProject(updated);
-
-    Get.snackbar(
-      type == 'Handover' ? 'Task Handed Over' : (type == 'Query' ? 'Question Passed' : 'Blocker Raised'),
-      type == 'Handover'
-          ? 'Task successfully reassigned to ${toUser.name}'
-          : 'Query passed to ${toUser.name}. They will be notified to review.',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: type == 'Handover' ? AppColors.primaryColor : const Color(0xFFF59E0B),
-      colorText: Colors.white,
-    );
   }
 
   // Resolve pending question/blocker
@@ -1158,7 +1302,9 @@ class TasksController extends GetxController {
           }
         }
 
-        Get.back(); // Dismiss dialog
+        if (Get.isDialogOpen == true) {
+          Get.back(); // Dismiss dialog
+        }
         Get.snackbar(
           'Success',
           response.message.isNotEmpty ? response.message : 'Subtask added successfully',
@@ -1219,6 +1365,27 @@ class TasksController extends GetxController {
       Logger.e('TasksController => Error fetching employees: $e');
     } finally {
       isLoadingEmployees.value = false;
+    }
+  }
+
+  // ── Live All Users (Admin & Employees) API ──
+  Future<List<AppUser>> fetchAllUsers({bool forceRefresh = false}) async {
+    if (!forceRefresh && allUsersList.isNotEmpty) {
+      return allUsersList;
+    }
+    try {
+      isLoadingAllUsers.value = true;
+      final users = await repository.getAllUsers();
+      if (users.isNotEmpty) {
+        allUsersList.assignAll(users);
+        Logger.d('TasksController => Loaded ${users.length} users from /api/admin/employees/all-users');
+      }
+      return allUsersList;
+    } catch (e) {
+      Logger.e('TasksController => Error fetching all users: $e');
+      return allUsersList;
+    } finally {
+      isLoadingAllUsers.value = false;
     }
   }
 
@@ -1858,8 +2025,10 @@ class TasksController extends GetxController {
           selectedTask.value = null;
         }
 
-        // Dismiss confirmation dialog
-        Get.back();
+        // Dismiss confirmation dialog if still open
+        if (Get.isDialogOpen == true) {
+          Get.back();
+        }
 
         // If invoked from the task details screen, pop back to task list
         if (fromDetail) {
@@ -1877,7 +2046,9 @@ class TasksController extends GetxController {
         fetchTasks(isRefresh: true);
         return true;
       } else {
-        Get.back();
+        if (Get.isDialogOpen == true) {
+          Get.back();
+        }
         Get.snackbar(
           'Error',
           response.message.isNotEmpty ? response.message : 'Failed to delete task',
@@ -1889,7 +2060,9 @@ class TasksController extends GetxController {
       }
     } catch (e) {
       Logger.e('TasksController => deleteTask error: $e');
-      Get.back();
+      if (Get.isDialogOpen == true) {
+        Get.back();
+      }
       Get.snackbar(
         'Error',
         'An unexpected error occurred: $e',
