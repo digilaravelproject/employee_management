@@ -369,7 +369,7 @@ class _StatsOverviewGrid extends StatelessWidget {
             label: 'Leave',
             value: leave.toString(),
             color: AppColors.indigo500,
-            bgColor: const Color(0xFFEEF2FF),
+            bgColor: AppColors.primaryLight,
             icon: Icons.beach_access_outlined,
           ),
         ],
@@ -805,7 +805,7 @@ class _CalendarGrid extends StatelessWidget {
               badgeText = AppColors.errorColor;
               break;
             case 'leave':
-              badgeBg = const Color(0xFFEEF2FF);
+              badgeBg = AppColors.primaryLight;
               badgeText = AppColors.indigo500;
               break;
             case 'weekend':
@@ -1152,7 +1152,7 @@ class _RecentRecordsList extends StatelessWidget {
               break;
             case 'Leave':
               statusColor = AppColors.indigo500;
-              statusBg = const Color(0xFFEEF2FF);
+              statusBg = AppColors.primaryLight;
               break;
             default:
               statusColor = AppColors.textColorSecondary;

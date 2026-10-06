@@ -488,10 +488,10 @@ class _ShiftDetailsScreenState extends State<ShiftDetailsScreen> with SingleTick
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
-                              color: Colors.blue.withValues(alpha: 0.1),
+                              color: AppColors.primaryColor.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(6),
                             ),
-                            child: AppText('${b.durationMinutes} min', fontSize: 10, fontWeight: FontWeight.bold, color: Colors.blue),
+                            child: AppText('${b.durationMinutes} min', fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.primaryColor),
                           ),
                       ],
                     ),
@@ -522,7 +522,7 @@ class _ShiftDetailsScreenState extends State<ShiftDetailsScreen> with SingleTick
               children: [
                 _buildQuickActionTile(
                   icon: Iconsax.edit,
-                  iconColor: Colors.blue,
+                  iconColor: AppColors.primaryColor,
                   title: 'Edit Shift',
                   subtitle: 'Modify operational timings, breaks, or rules',
                   onTap: () async {

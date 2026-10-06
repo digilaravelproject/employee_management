@@ -366,7 +366,7 @@ class TasksController extends GetxController {
             'Timer Paused',
             response.message.isNotEmpty ? response.message : 'Task timer paused successfully',
             snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: const Color(0xFF3B82F6),
+            backgroundColor: AppColors.primaryColor,
             colorText: Colors.white,
             duration: const Duration(seconds: 2),
           );
@@ -519,7 +519,7 @@ class TasksController extends GetxController {
             'Submitted For Testing',
             response.message.isNotEmpty ? response.message : 'Task submitted for testing successfully',
             snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: const Color(0xFF6366F1),
+            backgroundColor: AppColors.primaryColor,
             colorText: Colors.white,
             duration: const Duration(seconds: 2),
           );
@@ -789,7 +789,7 @@ class TasksController extends GetxController {
           ? 'Task successfully reassigned to ${toUser.name}'
           : 'Query passed to ${toUser.name}. They will be notified to review.',
       snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: type == 'Handover' ? const Color(0xFF3B82F6) : const Color(0xFFF59E0B),
+      backgroundColor: type == 'Handover' ? AppColors.primaryColor : const Color(0xFFF59E0B),
       colorText: Colors.white,
     );
   }

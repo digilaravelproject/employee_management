@@ -14,6 +14,8 @@ import '../models/project_model.dart';
 import 'create_project_screen.dart';
 import 'project_file_viewer_screen.dart';
 import 'project_list_screen.dart';
+import '../../../core/services/permission/permission_service.dart';
+import '../../../core/services/permission/permission_constant.dart';
 
 class ProjectDetailsScreen extends StatefulWidget {
   final String? projectId;
@@ -88,9 +90,9 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
           Obx(() {
             final project = controller.selectedProject.value;
             if (project == null) return const SizedBox();
-            final appController = Get.isRegistered<AppController>() ? Get.find<AppController>() : null;
-            final isEmployee = appController?.userRole.value.toLowerCase() == 'employee';
-            if (isEmployee) return const SizedBox();
+            final canEdit = PermissionService.to.isAllowed(PermissionConstant.editProject);
+            final canDelete = PermissionService.to.isAllowed(PermissionConstant.deleteProject);
+            if (!canEdit && !canDelete) return const SizedBox();
 
             return PopupMenuButton<String>(
               icon: const Icon(Icons.more_vert_rounded, color: AppColors.textColorHint),
@@ -104,26 +106,28 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                 }
               },
               itemBuilder: (context) => [
-                const PopupMenuItem(
-                  value: 'edit',
-                  child: Row(
-                    children: [
-                      Icon(Iconsax.edit, size: 16, color: AppColors.textColorSecondary),
-                      SizedBox(width: 8),
-                      AppText('Edit Project', fontSize: 13, fontWeight: FontWeight.w500),
-                    ],
+                if (canEdit)
+                  const PopupMenuItem(
+                    value: 'edit',
+                    child: Row(
+                      children: [
+                        Icon(Iconsax.edit, size: 16, color: AppColors.textColorSecondary),
+                        SizedBox(width: 8),
+                        AppText('Edit Project', fontSize: 13, fontWeight: FontWeight.w500),
+                      ],
+                    ),
                   ),
-                ),
-                const PopupMenuItem(
-                  value: 'delete',
-                  child: Row(
-                    children: [
-                      Icon(Iconsax.trash, size: 16, color: Colors.redAccent),
-                      SizedBox(width: 8),
-                      AppText('Delete', fontSize: 13, fontWeight: FontWeight.w500, color: Colors.redAccent),
-                    ],
+                if (canDelete)
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: Row(
+                      children: [
+                        Icon(Iconsax.trash, size: 16, color: Colors.redAccent),
+                        SizedBox(width: 8),
+                        AppText('Delete', fontSize: 13, fontWeight: FontWeight.w500, color: Colors.redAccent),
+                      ],
+                    ),
                   ),
-                ),
               ],
             );
           }),
@@ -592,7 +596,7 @@ class _JiraBoardTab extends StatelessWidget {
         return AppColors.primaryColor;
       case 'testing':
       case 'review':
-        return const Color(0xFF6366F1);
+        return AppColors.primaryColor;
       case 'to do':
       default:
         return AppColors.slate500;
@@ -698,7 +702,7 @@ class _JiraBoardTab extends StatelessWidget {
                             _buildTaskSummaryChip('Total', summary.total, AppColors.slate700),
                             _buildTaskSummaryChip('To Do', summary.toDo, AppColors.slate500),
                             _buildTaskSummaryChip('In Progress', summary.inProgress, AppColors.primaryColor),
-                            _buildTaskSummaryChip('Testing', summary.testing, const Color(0xFF6366F1)),
+                            _buildTaskSummaryChip('Testing', summary.testing, AppColors.primaryColor),
                             _buildTaskSummaryChip('Completed', summary.completed, AppColors.successColor),
                           ],
                         ),

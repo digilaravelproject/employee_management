@@ -372,7 +372,7 @@ class _CompactSummarySection extends StatelessWidget {
               label: 'Total',
               value: '$total',
               subLabel: null,
-              color: const Color(0xFF2563EB),
+              color: AppColors.primaryColor,
               icon: Iconsax.people,
             ),
             _vDivider(),
@@ -836,7 +836,7 @@ class _EmployeeCard extends StatelessWidget {
                     label: 'Check-out',
                     value: item.checkOut != null && item.checkOut!.isNotEmpty ? item.checkOut! : '–',
                     valueColor: item.checkOut != null && item.checkOut!.isNotEmpty
-                        ? const Color(0xFF3B82F6)
+                        ? AppColors.primaryColor
                         : AppColors.textColorHint,
                   ),
                 ),

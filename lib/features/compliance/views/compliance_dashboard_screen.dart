@@ -141,7 +141,7 @@ class ComplianceDashboardScreen extends StatelessWidget {
             Icon(
               icon,
               size: 16,
-              color: isSelected ? const Color(0xFF4F46E5) : const Color(0xFF64748B),
+              color: isSelected ? AppColors.primaryColor : const Color(0xFF64748B),
             ),
             const SizedBox(width: 8),
             Column(
@@ -161,7 +161,7 @@ class ComplianceDashboardScreen extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 8.5,
                     fontWeight: FontWeight.w600,
-                    color: isSelected ? const Color(0xFF4F46E5) : const Color(0xFF94A3B8),
+                    color: isSelected ? AppColors.primaryColor : const Color(0xFF94A3B8),
                   ),
                 ),
               ],
@@ -187,14 +187,14 @@ class ComplianceDashboardScreen extends StatelessWidget {
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                colors: [Color(0xFF3B82F6), Color(0xFF4F46E5)],
+                colors: [AppColors.primaryGradientLight, AppColors.primaryGradientDark],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(24),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF4F46E5).withValues(alpha: 0.2),
+                  color: AppColors.primaryColor.withValues(alpha: 0.2),
                   blurRadius: 16,
                   offset: const Offset(0, 8),
                 ),
@@ -262,7 +262,7 @@ class ComplianceDashboardScreen extends StatelessWidget {
               _buildQuickActionBtn(
                 'Upload\nPolicy',
                 Iconsax.document_upload,
-                const Color(0xFF3B82F6),
+                AppColors.primaryColor,
                 () => Get.to(() => const UploadPolicyScreen()),
               ),
               _buildQuickActionBtn(
@@ -300,7 +300,7 @@ class ComplianceDashboardScreen extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFFEEF2FF)),
+              border: Border.all(color: AppColors.primaryLight),
             ),
             child: Column(
               children: [
@@ -330,7 +330,7 @@ class ComplianceDashboardScreen extends StatelessWidget {
                   'View All',
                   fontSize: 11,
                   fontWeight: FontWeight.w800,
-                  color: Color(0xFF2563EB),
+                  color: AppColors.primaryColor,
                 ),
               ),
             ],
@@ -391,7 +391,7 @@ class ComplianceDashboardScreen extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFEEF2FF)),
+          border: Border.all(color: AppColors.primaryLight),
           boxShadow: [
             BoxShadow(
               color: color.withValues(alpha: 0.02),
@@ -484,17 +484,17 @@ class ComplianceDashboardScreen extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFFEEF2FF)),
+          border: Border.all(color: AppColors.primaryLight),
         ),
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: const Color(0xFF6366F1).withValues(alpha: 0.08),
+                color: AppColors.primaryColor.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(Iconsax.document_text5, color: Color(0xFF6366F1), size: 20),
+              child: const Icon(Iconsax.document_text5, color: AppColors.primaryColor, size: 20),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -585,7 +585,7 @@ class ComplianceDashboardScreen extends StatelessWidget {
               color: Color(0xFF1E293B),
             ),
             const SizedBox(height: 16),
-            _buildCategoryTile('HR Policies', 'Policies relating to ethics, values and employee support.', 8, const Color(0xFF3B82F6)),
+            _buildCategoryTile('HR Policies', 'Policies relating to ethics, values and employee support.', 8, AppColors.primaryColor),
             const SizedBox(height: 10),
             _buildCategoryTile('Leave Policies', 'Entitlements, schedules and reporting channels.', 4, const Color(0xFF10B981)),
             const SizedBox(height: 10),
@@ -605,7 +605,7 @@ class ComplianceDashboardScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFEEF2FF)),
+        border: Border.all(color: AppColors.primaryLight),
       ),
       child: Row(
         children: [
@@ -655,10 +655,10 @@ class ComplianceDashboardScreen extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: const Color(0xFFEEF2FF)),
+                    border: Border.all(color: AppColors.primaryLight),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF4F46E5).withValues(alpha: 0.02),
+                        color: AppColors.primaryColor.withValues(alpha: 0.02),
                         blurRadius: 12,
                         offset: const Offset(0, 6),
                       ),
@@ -769,7 +769,7 @@ class ComplianceDashboardScreen extends StatelessWidget {
                 color: Colors.white,
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF4F46E5),
+                backgroundColor: AppColors.primaryColor,
                 minimumSize: const Size(double.infinity, 50),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 elevation: 0,
@@ -800,10 +800,10 @@ class ComplianceDashboardScreen extends StatelessWidget {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFF4F46E5) : Colors.white,
+            color: isSelected ? AppColors.primaryColor : Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: isSelected ? const Color(0xFF4F46E5) : const Color(0xFFE2E8F0),
+              color: isSelected ? AppColors.primaryColor : const Color(0xFFE2E8F0),
             ),
           ),
           child: Row(
@@ -856,7 +856,7 @@ class ComplianceDashboardScreen extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFFEEF2FF)),
+          border: Border.all(color: AppColors.primaryLight),
         ),
         child: Row(
           children: [
@@ -944,7 +944,7 @@ class ComplianceDashboardScreen extends StatelessWidget {
           child: const Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              CircularProgressIndicator(color: Color(0xFF4F46E5)),
+              CircularProgressIndicator(color: AppColors.primaryColor),
               SizedBox(height: 16),
               AppText(
                 'Generating PDF Report...',

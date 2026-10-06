@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:attendence_tracking_app/core/theme/app_colors.dart';
 import 'package:get/get.dart';
 import '../../../core/services/network/api_client.dart';
 import '../../../core/utils/logger.dart';
@@ -165,7 +166,7 @@ class ShiftController extends GetxController {
         userName: 'Firoz Mohammad',
         action: 'Updated',
         details: 'Grace Period: 10 min → 15 min',
-        actionColor: Colors.blue,
+        actionColor: AppColors.primaryColor,
       ),
       ShiftHistoryModel(
         date: '08 Sep 2026',
@@ -186,7 +187,7 @@ class ShiftController extends GetxController {
         userName: 'Admin',
         action: 'Updated',
         details: 'Break Time: 01:00 PM - 02:00 PM (Paid)',
-        actionColor: Colors.blue,
+        actionColor: AppColors.primaryColor,
       ),
       ShiftHistoryModel(
         date: '20 Aug 2026',
@@ -271,7 +272,7 @@ class ShiftController extends GetxController {
             userName: 'Current Admin',
             action: 'Updated',
             details: 'Updated ${updatedShift.name} (${updatedShift.startTime} - ${updatedShift.endTime})',
-            actionColor: Colors.blue,
+            actionColor: AppColors.primaryColor,
           ),
         );
       }

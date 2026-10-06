@@ -149,14 +149,14 @@ class _OverallPerformanceCard extends StatelessWidget {
       width: double.infinity,
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF4F46E5), Color(0xFF3B82F6)],
+          colors: [AppColors.primaryGradientLight, AppColors.primaryGradientDark],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF4F46E5).withValues(alpha: 0.28),
+            color: AppColors.primaryGradientLight.withValues(alpha: 0.28),
             blurRadius: 18,
             offset: const Offset(0, 8),
           ),
@@ -185,7 +185,7 @@ class _OverallPerformanceCard extends StatelessWidget {
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<String>(
                         value: controller.selectedMonth.value,
-                        dropdownColor: const Color(0xFF4F46E5),
+                        dropdownColor: AppColors.primaryGradientDark,
                         icon: const Icon(Icons.keyboard_arrow_down, color: Colors.white, size: 16),
                         style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
                         onChanged: (val) {
@@ -587,9 +587,9 @@ class _IncentiveEstimateRibbon extends StatelessWidget {
       return Container(
         width: double.infinity,
         decoration: BoxDecoration(
-          color: const Color(0xFFEFF6FF), // Tinted Blue background
+          color: AppColors.primaryLight, // Tinted Blue background
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFDBEAFE)),
+          border: Border.all(color: AppColors.primaryShade100),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
@@ -635,7 +635,7 @@ class _IncentiveEstimateRibbon extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: const Color(0xFFBFDBFE)),
+                  border: Border.all(color: AppColors.primaryShade200),
                 ),
                 child: const Row(
                   children: [
@@ -891,7 +891,7 @@ class _EmployeePerformanceCard extends StatelessWidget {
 
     switch (emp.ratingLabel) {
       case 'Excellent':
-        badgeBgColor = const Color(0xFFEFF6FF); // Slate Blue/Cyan
+        badgeBgColor = AppColors.primaryLight; // Slate Blue/Cyan
         badgeTextColor = AppColors.primaryColor;
         break;
       case 'Very Good':
@@ -899,7 +899,7 @@ class _EmployeePerformanceCard extends StatelessWidget {
         badgeTextColor = AppColors.successColor;
         break;
       case 'Good':
-        badgeBgColor = const Color(0xFFEFF6FF); // Light Sapphire
+        badgeBgColor = AppColors.primaryLight; // Light Sapphire
         badgeTextColor = AppColors.primaryColor;
         break;
       default:

@@ -56,7 +56,7 @@ class BackupRestoreScreen extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: const Color(0xFFEEF2FF)),
+                  border: Border.all(color: AppColors.primaryLight),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.02),
@@ -70,12 +70,12 @@ class BackupRestoreScreen extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFEFF6FF),
+                        color: AppColors.primaryLight,
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: const Icon(
                         Iconsax.cloud_add,
-                        color: Color(0xFF2563EB),
+                        color: AppColors.primaryColor,
                         size: 32,
                       ),
                     ),
@@ -148,7 +148,7 @@ class BackupRestoreScreen extends StatelessWidget {
                   child: ElevatedButton(
                     onPressed: loading ? null : () => controller.createBackup(),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2563EB),
+                      backgroundColor: AppColors.primaryColor,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
@@ -195,7 +195,7 @@ class BackupRestoreScreen extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: const Color(0xFFEEF2FF)),
+                        border: Border.all(color: AppColors.primaryLight),
                       ),
                       child: Material(
                         color: Colors.transparent,
@@ -260,7 +260,7 @@ class BackupRestoreScreen extends StatelessWidget {
                                   ),
                                 ),
                                 IconButton(
-                                  icon: const Icon(Iconsax.document_download, color: Color(0xFF2563EB), size: 18),
+                                  icon: const Icon(Iconsax.document_download, color: AppColors.primaryColor, size: 18),
                                   onPressed: () {
                                     Get.snackbar(
                                       'Snapshot Downloader',
@@ -292,16 +292,16 @@ class BackupRestoreScreen extends StatelessWidget {
                       Get.to(() => RestoreDataScreen(selectedBackup: controller.backupHistory.first));
                     }
                   },
-                  icon: const Icon(Iconsax.refresh, color: Color(0xFF2563EB), size: 16),
+                  icon: const Icon(Iconsax.refresh, color: AppColors.primaryColor, size: 16),
                   label: const AppText(
                     'Restore from Backup',
                     fontSize: 12,
                     fontWeight: FontWeight.w800,
-                    color: Color(0xFF2563EB),
+                    color: AppColors.primaryColor,
                   ),
                   style: OutlinedButton.styleFrom(
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    side: const BorderSide(color: Color(0xFF2563EB)),
+                    side: const BorderSide(color: AppColors.primaryColor),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                 ),
@@ -443,14 +443,14 @@ class _RestoreDataScreenState extends State<RestoreDataScreen> {
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: isSel ? const Color(0xFF2563EB) : const Color(0xFFEEF2FF),
+                          color: isSel ? AppColors.primaryColor : AppColors.primaryLight,
                         ),
                       ),
                       child: Row(
                         children: [
                           Icon(
                             isSel ? Icons.radio_button_checked_rounded : Icons.radio_button_off_rounded,
-                            color: isSel ? const Color(0xFF2563EB) : const Color(0xFFCBD5E1),
+                            color: isSel ? AppColors.primaryColor : const Color(0xFFCBD5E1),
                             size: 20,
                           ),
                           const SizedBox(width: 12),
@@ -496,7 +496,7 @@ class _RestoreDataScreenState extends State<RestoreDataScreen> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: const Color(0xFFEEF2FF)),
+                  border: Border.all(color: AppColors.primaryLight),
                 ),
                 child: const Column(
                   children: [
@@ -519,7 +519,7 @@ class _RestoreDataScreenState extends State<RestoreDataScreen> {
                   child: ElevatedButton(
                     onPressed: loading ? null : () => controller.restoreSelectedBackup(activeBackup),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2563EB),
+                      backgroundColor: AppColors.primaryColor,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),

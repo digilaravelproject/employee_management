@@ -316,7 +316,7 @@ class _CreateAnnouncementScreenState extends State<CreateAnnouncementScreen> {
                     const SizedBox(height: 10),
                     Row(
                       children: [
-                        Expanded(child: _buildPriorityCard('Low', Icons.arrow_downward, Colors.blue)),
+                        Expanded(child: _buildPriorityCard('Low', Icons.arrow_downward, AppColors.primaryColor)),
                         const SizedBox(width: 6),
                         Expanded(child: _buildPriorityCard('Normal', Icons.remove_circle_outline, Colors.green)),
                         const SizedBox(width: 6),

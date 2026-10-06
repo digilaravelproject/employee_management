@@ -196,7 +196,7 @@ class _DocumentImageViewerScreenState extends State<DocumentImageViewerScreen>
                               decoration: BoxDecoration(
                                 color: isVerified
                                     ? Colors.green.withValues(alpha: 0.25)
-                                    : Colors.blue.withValues(alpha: 0.25),
+                                    : AppColors.primaryColor.withValues(alpha: 0.25),
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: AppText(
@@ -205,7 +205,7 @@ class _DocumentImageViewerScreenState extends State<DocumentImageViewerScreen>
                                 fontWeight: FontWeight.bold,
                                 color: isVerified
                                     ? const Color(0xFF4ADE80)
-                                    : const Color(0xFF60A5FA),
+                                    : AppColors.primaryShade400,
                               ),
                             ),
                             const SizedBox(width: 8),

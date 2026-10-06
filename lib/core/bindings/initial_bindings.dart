@@ -23,8 +23,8 @@ class InitialBindings extends Bindings {
     Get.lazyPut(() => Connectivity(), fenix: true);
     Get.lazyPut(() => NetworkInfo(Get.find<Connectivity>()), fenix: true);
     Get.lazyPut(() => LocalizationController(), fenix: true);
+    Get.put(PermissionService(), permanent: true);
     Get.put(AppController(), permanent: true);
-    Get.lazyPut(() => PermissionService(), fenix: true);
     Get.lazyPut(() => DashboardController(), fenix: true);
     Get.lazyPut(() => AttendanceHistoryController(), fenix: true);
     Get.lazyPut(() => ProjectsController(), fenix: true);

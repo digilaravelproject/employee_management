@@ -566,7 +566,7 @@ class _TeamMemberPerformanceScreenState extends State<TeamMemberPerformanceScree
         progress: timelySubmissionProgress,
         icon: Iconsax.clock,
         accentColor: timelySubmissionProgress > 0.75 ? AppColors.primaryColor : AppColors.warningColor,
-        bgLightColor: timelySubmissionProgress > 0.75 ? const Color(0xFFEFF6FF) : const Color(0xFFFEF9EC),
+        bgLightColor: timelySubmissionProgress > 0.75 ? AppColors.primaryLight : const Color(0xFFFEF9EC),
       ),
       PerformanceMetric(
         name: 'Quality of Work',
@@ -847,14 +847,14 @@ class _TeamMemberPerformanceScreenState extends State<TeamMemberPerformanceScree
         gradient: LinearGradient(
           colors: score < 75 
               ? [const Color(0xFFEF4444), const Color(0xFFF87171)] 
-              : [const Color(0xFF4F46E5), const Color(0xFF3B82F6)],
+              : [AppColors.primaryGradientLight, AppColors.primaryGradientDark],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: (score < 75 ? const Color(0xFFEF4444) : const Color(0xFF4F46E5)).withValues(alpha: 0.28),
+            color: (score < 75 ? const Color(0xFFEF4444) : AppColors.primaryGradientLight).withValues(alpha: 0.28),
             blurRadius: 18,
             offset: const Offset(0, 8),
           ),
@@ -1216,7 +1216,7 @@ class _TeamMemberPerformanceScreenState extends State<TeamMemberPerformanceScree
                         _buildDivider(),
                         _buildTaskMiniStat('Completed', monthData['completedTasks'] as String, const Color(0xFF16A34A)),
                         _buildDivider(),
-                        _buildTaskMiniStat('In Progress', monthData['inProgressTasks'] as String, const Color(0xFF0284C7)),
+                        _buildTaskMiniStat('In Progress', monthData['inProgressTasks'] as String, AppColors.primaryColor),
                         _buildDivider(),
                         _buildTaskMiniStat('On Time', monthData['onTimeRate'] as String, const Color(0xFF9333EA)),
                       ],
@@ -1315,14 +1315,14 @@ class _TeamMemberPerformanceScreenState extends State<TeamMemberPerformanceScree
                                                   Icon(
                                                     isCompleted ? Icons.check_circle : Icons.timelapse_rounded,
                                                     size: 12,
-                                                    color: isCompleted ? const Color(0xFF16A34A) : const Color(0xFF0284C7),
+                                                    color: isCompleted ? const Color(0xFF16A34A) : AppColors.primaryColor,
                                                   ),
                                                   const SizedBox(width: 4),
                                                   AppText(
                                                     item['status'] as String,
                                                     fontSize: 10,
                                                     fontWeight: FontWeight.w800,
-                                                    color: isCompleted ? const Color(0xFF15803D) : const Color(0xFF0369A1),
+                                                    color: isCompleted ? const Color(0xFF15803D) : AppColors.primaryDark,
                                                   ),
                                                 ],
                                               ),
@@ -1361,7 +1361,7 @@ class _TeamMemberPerformanceScreenState extends State<TeamMemberPerformanceScree
                                           // Assigned Row
                                           Row(
                                             children: [
-                                              const Icon(Iconsax.calendar_add, size: 15, color: Color(0xFF0284C7)),
+                                              const Icon(Iconsax.calendar_add, size: 15, color: AppColors.primaryColor),
                                               const SizedBox(width: 8),
                                               const AppText('Assigned On: ', fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF334155)),
                                               Expanded(
@@ -1369,7 +1369,7 @@ class _TeamMemberPerformanceScreenState extends State<TeamMemberPerformanceScree
                                                   item['assignedDate'] as String,
                                                   fontSize: 11,
                                                   fontWeight: FontWeight.w700,
-                                                  color: const Color(0xFF0284C7),
+                                                  color: AppColors.primaryColor,
                                                 ),
                                               ),
                                             ],
@@ -1445,12 +1445,12 @@ class _TeamMemberPerformanceScreenState extends State<TeamMemberPerformanceScree
                                           decoration: BoxDecoration(
                                             color: (item['isEarly'] as bool)
                                                 ? const Color(0xFFF0FDF4)
-                                                : const Color(0xFFEFF6FF),
+                                                : AppColors.primaryLight,
                                             borderRadius: BorderRadius.circular(8),
                                             border: Border.all(
                                               color: (item['isEarly'] as bool)
                                                   ? const Color(0xFFBBF7D0)
-                                                  : const Color(0xFFBFDBFE),
+                                                  : AppColors.primaryShade200,
                                             ),
                                           ),
                                           child: Row(
@@ -1459,14 +1459,14 @@ class _TeamMemberPerformanceScreenState extends State<TeamMemberPerformanceScree
                                               Icon(
                                                 (item['isEarly'] as bool) ? Icons.electric_bolt_rounded : Icons.info_outline,
                                                 size: 13,
-                                                color: (item['isEarly'] as bool) ? const Color(0xFF16A34A) : const Color(0xFF2563EB),
+                                                color: (item['isEarly'] as bool) ? const Color(0xFF16A34A) : AppColors.primaryColor,
                                               ),
                                               const SizedBox(width: 4),
                                               AppText(
                                                 item['timeliness'] as String,
                                                 fontSize: 10,
                                                 fontWeight: FontWeight.bold,
-                                                color: (item['isEarly'] as bool) ? const Color(0xFF15803D) : const Color(0xFF1D4ED8),
+                                                color: (item['isEarly'] as bool) ? const Color(0xFF15803D) : AppColors.primaryDark,
                                               ),
                                             ],
                                           ),

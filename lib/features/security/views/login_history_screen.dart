@@ -146,10 +146,10 @@ class LoginHistoryScreen extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF2563EB) : Colors.white,
+          color: isSelected ? AppColors.primaryColor : Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected ? const Color(0xFF2563EB) : const Color(0xFFE2E8F0),
+            color: isSelected ? AppColors.primaryColor : const Color(0xFFE2E8F0),
           ),
         ),
         child: AppText(
@@ -179,7 +179,7 @@ class _LoginHistoryCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFEEF2FF)),
+        border: Border.all(color: AppColors.primaryLight),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.01),

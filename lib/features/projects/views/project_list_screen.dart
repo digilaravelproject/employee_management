@@ -3,11 +3,12 @@ import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_text.dart';
-import '../../../core/controllers/app_controller.dart';
 import '../controllers/projects_controller.dart';
 import '../models/project_model.dart';
 import 'create_project_screen.dart';
 import 'project_details_screen.dart';
+import '../../../core/services/permission/permission_service.dart';
+import '../../../core/services/permission/permission_constant.dart';
 
 class ProjectListScreen extends StatelessWidget {
   const ProjectListScreen({super.key});
@@ -56,9 +57,9 @@ class ProjectListScreen extends StatelessWidget {
         ),
         actions: [
           Obx(() {
-            final appController = Get.isRegistered<AppController>() ? Get.find<AppController>() : null;
-            final isEmployee = appController?.userRole.value.toLowerCase() == 'employee';
-            if (isEmployee) return const SizedBox.shrink();
+            final canCreateProject =
+                PermissionService.to.isAllowed(PermissionConstant.createProject);
+            if (!canCreateProject) return const SizedBox.shrink();
 
             return Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),

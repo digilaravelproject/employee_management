@@ -630,6 +630,25 @@ class UserModel {
           ? (roles!.first.name ?? role)
           : role;
 
+  int? get primaryRoleId {
+    if (roleIds != null && roleIds!.isNotEmpty) {
+      return roleIds!.first;
+    }
+    if (roles != null && roles!.isNotEmpty && roles!.first.id != null) {
+      return roles!.first.id;
+    }
+    if (rawJson != null) {
+      final directRoleId = rawJson!['role_id'];
+      if (directRoleId != null) {
+        return int.tryParse(directRoleId.toString());
+      }
+      if (rawJson!['role_ids'] is List && (rawJson!['role_ids'] as List).isNotEmpty) {
+        return int.tryParse((rawJson!['role_ids'] as List).first.toString());
+      }
+    }
+    return null;
+  }
+
   String get shiftDisplay => assignedShift != null
       ? '${assignedShift!.name ?? 'Shift'} (${assignedShift!.startTime ?? ''} - ${assignedShift!.endTime ?? ''})'
       : '';

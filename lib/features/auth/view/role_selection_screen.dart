@@ -25,7 +25,7 @@ class RoleSelectionScreen extends StatelessWidget {
               height: size.height * 0.45,
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Color(0xFF1D4ED8), Color(0xFF2563EB), Color(0xFF3B82F6)],
+                  colors: [AppColors.primaryGradientLight, AppColors.primaryGradientDark],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -72,7 +72,7 @@ class RoleSelectionScreen extends StatelessWidget {
                           title: 'Admin / Manager',
                           description: 'Access full dashboard, team tracking, reports & configuration.',
                           icon: Iconsax.personalcard,
-                          color: const Color(0xFF3B82F6),
+                          color: AppColors.primaryColor,
                           onTap: () {
                             appController.setRole('admin');
                             Get.toNamed(RouteHelper.getLoginRoute());

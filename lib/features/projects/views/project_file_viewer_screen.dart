@@ -296,7 +296,7 @@ class _ProjectImageViewerScreenState extends State<ProjectImageViewerScreen>
                                 file.type,
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
-                                color: const Color(0xFF60A5FA),
+                                color: AppColors.primaryShade400,
                               ),
                             ),
                             const SizedBox(width: 8),
@@ -895,7 +895,7 @@ class ProjectGenericDocViewerScreen extends StatelessWidget {
     switch (ext.toLowerCase()) {
       case 'doc':
       case 'docx':
-        return const Color(0xFF2563EB);
+        return AppColors.primaryColor;
       case 'xls':
       case 'xlsx':
       case 'csv':

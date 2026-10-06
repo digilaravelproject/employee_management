@@ -85,7 +85,7 @@ class EmployeeSharedScreen extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: const Color(0xFFEEF2FF)),
+                  border: Border.all(color: AppColors.primaryLight),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.01),
@@ -177,7 +177,7 @@ class EmployeeSharedScreen extends StatelessWidget {
         return const Color(0xFF10B981);
       case 'docx':
       case 'doc':
-        return const Color(0xFF3B82F6);
+        return AppColors.primaryColor;
       case 'zip':
       case 'rar':
         return const Color(0xFFF59E0B);

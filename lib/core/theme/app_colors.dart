@@ -1,12 +1,40 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  // SaaS Theme Colors (Bhagwa/Saffron Theme)
-//  static const Color primaryColor = Color(0xFFF97316); // Vibrant Saffron/Orange (Tailwind Orange 500)
-  static const Color primaryColor = Color(0xFF2563EB); // Vibrant Saffron/Orange (Tailwind Orange 500)
- // static const Color primaryLight = Color(0xFFFFEDD5);
-  static const Color primaryLight = Color(0xFFEFF6FF);
+  // Theme Colors
+  static const Color primaryColor = Color(0xFF3B206A); // Vibrant Primary (Deep Purple)
+  static const Color primaryLight = Color(0xFFF5F0FB); // Soft tint of primary
+  static const Color primaryDark = Color(0xFF261042); // Darker shade of primary
   static const Color secondaryColor = Color(0xFF10B981); // Emerald Secondary/Success remains
+
+  // Two-Tone Card Gradient Colors (One Light, One Dark in Primary Palette)
+  static const Color primaryGradientLight = Color(0xFF702F9B); // Vibrant lighter purple
+  static const Color primaryGradientDark = Color(0xFF261042);  // Rich deep dark purple
+
+  // Primary Palette Scale (for light and dark shades across the app)
+  static const Color primaryShade50 = Color(0xFFFAF7FD);
+  static const Color primaryShade100 = Color(0xFFF3EDFB);
+  static const Color primaryShade200 = Color(0xFFE0D2F4);
+  static const Color primaryShade300 = Color(0xFFC4ADEC);
+  static const Color primaryShade400 = Color(0xFF9168C4);
+  static const Color primaryShade500 = Color(0xFF702F9B);
+  static const Color primaryShade600 = Color(0xFF3B206A); // primaryColor
+  static const Color primaryShade700 = Color(0xFF2E1953);
+  static const Color primaryShade800 = Color(0xFF22123D);
+  static const Color primaryShade900 = Color(0xFF160B27);
+
+  // Gradient for headers / cards (Two distinct tones: one light, one dark)
+  static const LinearGradient primaryGradient = LinearGradient(
+    colors: [primaryGradientLight, primaryGradientDark],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  static const LinearGradient primaryCardGradient = LinearGradient(
+    colors: [primaryGradientLight, primaryGradientDark],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
 
   static const Color backgroundColor = Color(0xFFFFFFFF); // Pure White BG
   static const Color scaffoldBackgroundColor = Color(0xFFF9FAFB); // Very Light Grey/White
@@ -21,7 +49,7 @@ class AppColors {
   static const Color successColor = Color(0xFF10B981); // Emerald 500
   static const Color errorColor = Color(0xFFEF4444); // Red 500
   static const Color warningColor = Color(0xFFF59E0B); // Amber 500
-  static const Color infoColor = Color(0xFF3B82F6); // Blue 500
+  static const Color infoColor = Color(0xFF742eed); // Violet 500
 
   // Utility Colors
   static const Color white = Color(0xFFFFFFFF);
@@ -31,7 +59,7 @@ class AppColors {
   static const Color errorColorAccent = Color(0xFFFFE0E0);
 
   // Dark Theme Constants (Backwards Compatibility & SaaS Dark Mode)
-  static const Color darkPrimaryColor = Color(0xFFFB923C); // Lighter Saffron/Orange for Dark Mode (Orange 400)
+  static const Color darkPrimaryColor = Color(0xFFA855F7); // Purple for Dark Mode
   static const Color darkSecondaryColor = Color(0xFF34D399); // Emerald 400
   static const Color darkBackgroundColor = Color(0xFF0F172A); // Slate 900
   static const Color darkScaffoldBackgroundColor = Color(0xFF020617); // Slate 950
@@ -58,6 +86,6 @@ class AppColors {
   static const Color slate800 = Color(0xFF1E293B);
   static const Color slate900 = Color(0xFF0F172A);
   static const Color slate950 = Color(0xFF020617);
-  static const Color indigo500 = Color(0xFF6366F1);
+  static const Color indigo500 = Color(0xFF702F9B);
   static const Color white70 = Colors.white70;
 }

@@ -1939,10 +1939,10 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
                           margin: const EdgeInsets.symmetric(horizontal: 4),
                           padding: const EdgeInsets.symmetric(vertical: 10),
                           decoration: BoxDecoration(
-                            color: isSelected ? const Color(0xFF0284C7) : Colors.white,
+                            color: isSelected ? AppColors.primaryColor : Colors.white,
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(
-                              color: isSelected ? const Color(0xFF0284C7) : const Color(0xFFCBD5E1),
+                              color: isSelected ? AppColors.primaryColor : const Color(0xFFCBD5E1),
                             ),
                           ),
                           child: Center(

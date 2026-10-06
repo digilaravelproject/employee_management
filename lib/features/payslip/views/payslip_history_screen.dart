@@ -336,11 +336,11 @@ class PayslipHistoryScreen extends StatelessWidget {
                     width: 60,
                     height: 45,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF818CF8),
+                      color: AppColors.primaryShade300,
                       borderRadius: BorderRadius.circular(10),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.indigo.withValues(alpha: 0.2),
+                          color: AppColors.primaryColor.withValues(alpha: 0.2),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),
@@ -355,7 +355,7 @@ class PayslipHistoryScreen extends StatelessWidget {
                       width: 30,
                       height: 15,
                       decoration: const BoxDecoration(
-                        color: Color(0xFF6366F1),
+                        color: AppColors.primaryColor,
                         borderRadius: BorderRadius.only(
                           topLeft: Radius.circular(5),
                           bottomLeft: Radius.circular(5),

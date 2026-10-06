@@ -145,7 +145,7 @@ class PerformanceController extends GetxController {
         progress: 0.92,
         icon: Iconsax.clock,
         accentColor: AppColors.primaryColor,
-        bgLightColor: const Color(0xFFEFF6FF),
+        bgLightColor: AppColors.primaryLight,
       ),
       PerformanceMetric(
         name: 'Quality of Work',

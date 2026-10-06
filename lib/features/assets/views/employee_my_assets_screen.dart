@@ -18,7 +18,7 @@ class EmployeeMyAssetsScreen extends StatelessWidget {
         'dateAssigned': '10 Jan 2026',
         'status': 'Assigned',
         'icon': Iconsax.monitor,
-        'color': Colors.blue,
+        'color': AppColors.primaryColor,
       },
       {
         'name': 'Magic Mouse 2',

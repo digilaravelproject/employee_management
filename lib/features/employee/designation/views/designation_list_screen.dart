@@ -90,7 +90,7 @@ class DesignationListScreen extends StatelessWidget {
                       levelColor = const Color(0xFF10B981); // Emerald
                       break;
                     case 'Senior':
-                      levelColor = const Color(0xFF3B82F6); // Blue
+                      levelColor = AppColors.primaryColor; // Blue
                       break;
                     case 'Manager':
                       levelColor = const Color(0xFF8B5CF6); // Purple
@@ -298,7 +298,7 @@ class DesignationListScreen extends StatelessWidget {
                 levelColor = const Color(0xFF10B981);
                 break;
               case 'senior':
-                levelColor = const Color(0xFF3B82F6);
+                levelColor = AppColors.primaryColor;
                 break;
               case 'manager':
                 levelColor = const Color(0xFF8B5CF6);

@@ -219,7 +219,7 @@ class _EmployeeOverviewReportScreenState extends State<EmployeeOverviewReportScr
                 decoration: BoxDecoration(
                   border: Border(
                     bottom: BorderSide(
-                      color: isSelected ? const Color(0xFF2563EB) : Colors.transparent,
+                      color: isSelected ? AppColors.primaryColor : Colors.transparent,
                       width: 2.5,
                     ),
                   ),
@@ -229,7 +229,7 @@ class _EmployeeOverviewReportScreenState extends State<EmployeeOverviewReportScr
                   style: TextStyle(
                     fontSize: 12.5,
                     fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                    color: isSelected ? const Color(0xFF2563EB) : const Color(0xFF64748B),
+                    color: isSelected ? AppColors.primaryColor : const Color(0xFF64748B),
                   ),
                 ),
               ),
@@ -331,7 +331,7 @@ class _EmployeeOverviewReportScreenState extends State<EmployeeOverviewReportScr
                 'Total Sales',
                 formatCurrency,
                 Iconsax.wallet,
-                const Color(0xFF3B82F6),
+                AppColors.primaryColor,
               ),
             ),
             const SizedBox(width: 8),
@@ -353,7 +353,7 @@ class _EmployeeOverviewReportScreenState extends State<EmployeeOverviewReportScr
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFFEEF2FF)),
+            border: Border.all(color: AppColors.primaryLight),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -371,7 +371,7 @@ class _EmployeeOverviewReportScreenState extends State<EmployeeOverviewReportScr
                     '${employee.tasksCompleted} / ${employee.totalTasks}',
                     fontSize: 13,
                     fontWeight: FontWeight.w900,
-                    color: const Color(0xFF2563EB),
+                    color: AppColors.primaryColor,
                   ),
                 ],
               ),
@@ -382,8 +382,8 @@ class _EmployeeOverviewReportScreenState extends State<EmployeeOverviewReportScr
                 borderRadius: BorderRadius.circular(8),
                 child: LinearProgressIndicator(
                   value: employee.totalTasks > 0 ? (employee.tasksCompleted / employee.totalTasks) : 0,
-                  backgroundColor: const Color(0xFFEFF6FF),
-                  valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF2563EB)),
+                  backgroundColor: AppColors.primaryLight,
+                  valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primaryColor),
                   minHeight: 8,
                 ),
               ),
@@ -444,7 +444,7 @@ class _EmployeeOverviewReportScreenState extends State<EmployeeOverviewReportScr
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFEEF2FF)),
+              border: Border.all(color: AppColors.primaryLight),
             ),
             child: const Center(
               child: AppText(
@@ -460,7 +460,7 @@ class _EmployeeOverviewReportScreenState extends State<EmployeeOverviewReportScr
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFFEEF2FF)),
+              border: Border.all(color: AppColors.primaryLight),
             ),
             child: ListView.separated(
               shrinkWrap: true,
@@ -477,7 +477,7 @@ class _EmployeeOverviewReportScreenState extends State<EmployeeOverviewReportScr
                       width: 8,
                       height: 8,
                       decoration: const BoxDecoration(
-                        color: Color(0xFF2563EB),
+                        color: AppColors.primaryColor,
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -524,7 +524,7 @@ class _EmployeeOverviewReportScreenState extends State<EmployeeOverviewReportScr
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFEEF2FF)),
+        border: Border.all(color: AppColors.primaryLight),
       ),
       child: Row(
         children: [
@@ -651,7 +651,7 @@ class _EmployeeOverviewReportScreenState extends State<EmployeeOverviewReportScr
             _LegendItem(color: Color(0xFF10B981), label: 'Present'),
             _LegendItem(color: Color(0xFFEF4444), label: 'Absent'),
             _LegendItem(color: Color(0xFFF59E0B), label: 'Late'),
-            _LegendItem(color: Color(0xFF3B82F6), label: 'Half Day'),
+            _LegendItem(color: AppColors.primaryColor, label: 'Half Day'),
           ],
         ),
         const SizedBox(height: 20),
@@ -670,7 +670,7 @@ class _EmployeeOverviewReportScreenState extends State<EmployeeOverviewReportScr
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFFEEF2FF)),
+            border: Border.all(color: AppColors.primaryLight),
           ),
           child: Column(
             children: [
@@ -702,7 +702,7 @@ class _EmployeeOverviewReportScreenState extends State<EmployeeOverviewReportScr
               );
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF2563EB),
+              backgroundColor: AppColors.primaryColor,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               padding: const EdgeInsets.symmetric(vertical: 14),
             ),
@@ -738,9 +738,9 @@ class _EmployeeOverviewReportScreenState extends State<EmployeeOverviewReportScr
       ringColor = const Color(0xFFF59E0B).withValues(alpha: 0.25);
       textColor = const Color(0xFFB45309);
     } else if (status == 'Half Day') {
-      ringFill = const Color(0xFF3B82F6).withValues(alpha: 0.12);
-      ringColor = const Color(0xFF3B82F6).withValues(alpha: 0.25);
-      textColor = const Color(0xFF1D4ED8);
+      ringFill = AppColors.primaryColor.withValues(alpha: 0.12);
+      ringColor = AppColors.primaryColor.withValues(alpha: 0.25);
+      textColor = AppColors.primaryDark;
     }
 
     return Container(
@@ -829,14 +829,14 @@ class _EmployeeOverviewReportScreenState extends State<EmployeeOverviewReportScr
           width: double.infinity,
           decoration: BoxDecoration(
             gradient: const LinearGradient(
-              colors: [Color(0xFF2563EB), Color(0xFF3B82F6)],
+              colors: [AppColors.primaryGradientLight, AppColors.primaryGradientDark],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF2563EB).withValues(alpha: 0.15),
+                color: AppColors.primaryGradientLight.withValues(alpha: 0.18),
                 blurRadius: 12,
                 offset: const Offset(0, 6),
               ),
@@ -893,7 +893,7 @@ class _EmployeeOverviewReportScreenState extends State<EmployeeOverviewReportScr
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFFEEF2FF)),
+            border: Border.all(color: AppColors.primaryLight),
           ),
           child: Column(
             children: [
@@ -940,7 +940,7 @@ class _EmployeeOverviewReportScreenState extends State<EmployeeOverviewReportScr
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFFEEF2FF)),
+            border: Border.all(color: AppColors.primaryLight),
           ),
           child: Column(
             children: [
@@ -1002,7 +1002,7 @@ class _EmployeeOverviewReportScreenState extends State<EmployeeOverviewReportScr
               color: Colors.white,
             ),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF2563EB),
+              backgroundColor: AppColors.primaryColor,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               padding: const EdgeInsets.symmetric(vertical: 14),
             ),
@@ -1101,7 +1101,7 @@ class _EmployeeOverviewReportScreenState extends State<EmployeeOverviewReportScr
                 'Casual Leave',
                 employee.casualLeaveUsed,
                 employee.casualLeaveTotal,
-                const Color(0xFF3B82F6),
+                AppColors.primaryColor,
               ),
             ),
             const SizedBox(width: 8),
@@ -1142,7 +1142,7 @@ class _EmployeeOverviewReportScreenState extends State<EmployeeOverviewReportScr
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFEEF2FF)),
+              border: Border.all(color: AppColors.primaryLight),
             ),
             child: const Center(
               child: AppText(
@@ -1158,7 +1158,7 @@ class _EmployeeOverviewReportScreenState extends State<EmployeeOverviewReportScr
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFFEEF2FF)),
+              border: Border.all(color: AppColors.primaryLight),
             ),
             child: ListView.separated(
               shrinkWrap: true,
@@ -1256,7 +1256,7 @@ class _EmployeeOverviewReportScreenState extends State<EmployeeOverviewReportScr
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFEEF2FF)),
+        border: Border.all(color: AppColors.primaryLight),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1322,7 +1322,7 @@ class _EmployeeOverviewReportScreenState extends State<EmployeeOverviewReportScr
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFFEEF2FF)),
+          border: Border.all(color: AppColors.primaryLight),
         ),
         child: const Column(
           children: [
@@ -1388,7 +1388,7 @@ class _EmployeeOverviewReportScreenState extends State<EmployeeOverviewReportScr
         Row(
           children: [
             Expanded(
-              child: _buildSalesStatsCell('Leads', '${employee.leadsCount}', const Color(0xFF3B82F6)),
+              child: _buildSalesStatsCell('Leads', '${employee.leadsCount}', AppColors.primaryColor),
             ),
             const SizedBox(width: 8),
             Expanded(
@@ -1412,7 +1412,7 @@ class _EmployeeOverviewReportScreenState extends State<EmployeeOverviewReportScr
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFFEEF2FF)),
+            border: Border.all(color: AppColors.primaryLight),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1458,7 +1458,7 @@ class _EmployeeOverviewReportScreenState extends State<EmployeeOverviewReportScr
                     child: Column(
                       children: employee.leadsOverview.entries.map((entry) {
                         Color col;
-                        if (entry.key == 'New') col = const Color(0xFF3B82F6);
+                        if (entry.key == 'New') col = AppColors.primaryColor;
                         else if (entry.key == 'Contacted') col = const Color(0xFFF59E0B);
                         else if (entry.key == 'Converted') col = const Color(0xFF10B981);
                         else col = const Color(0xFFEF4444);
@@ -1505,7 +1505,7 @@ class _EmployeeOverviewReportScreenState extends State<EmployeeOverviewReportScr
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFFEEF2FF)),
+            border: Border.all(color: AppColors.primaryLight),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1529,8 +1529,8 @@ class _EmployeeOverviewReportScreenState extends State<EmployeeOverviewReportScr
                 borderRadius: BorderRadius.circular(6),
                 child: LinearProgressIndicator(
                   value: targetProgress,
-                  backgroundColor: const Color(0xFFEFF6FF),
-                  valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF2563EB)),
+                  backgroundColor: AppColors.primaryLight,
+                  valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primaryColor),
                   minHeight: 6,
                 ),
               ),
@@ -1553,7 +1553,7 @@ class _EmployeeOverviewReportScreenState extends State<EmployeeOverviewReportScr
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFFEEF2FF)),
+              border: Border.all(color: AppColors.primaryLight),
             ),
             child: ListView.separated(
               shrinkWrap: true,
@@ -1598,7 +1598,7 @@ class _EmployeeOverviewReportScreenState extends State<EmployeeOverviewReportScr
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFEEF2FF)),
+        border: Border.all(color: AppColors.primaryLight),
       ),
       child: Column(
         children: [
@@ -1653,7 +1653,7 @@ class _EmployeeOverviewReportScreenState extends State<EmployeeOverviewReportScr
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFFEEF2FF)),
+          border: Border.all(color: AppColors.primaryLight),
         ),
         child: const Column(
           children: [
@@ -1711,7 +1711,7 @@ class _EmployeeOverviewReportScreenState extends State<EmployeeOverviewReportScr
         // Summary totals card
         Row(
           children: [
-            Expanded(child: _buildSalesStatsCell('Total Projects', '$totalProjs', const Color(0xFF2563EB))),
+            Expanded(child: _buildSalesStatsCell('Total Projects', '$totalProjs', AppColors.primaryColor)),
             const SizedBox(width: 6),
             Expanded(child: _buildSalesStatsCell('Completed', '$completedProjs', const Color(0xFF10B981))),
             const SizedBox(width: 6),
@@ -1748,15 +1748,15 @@ class _EmployeeOverviewReportScreenState extends State<EmployeeOverviewReportScr
               statusBg = const Color(0xFFFEE2E2);
               statusText = const Color(0xFFDC2626);
             } else {
-              statusBg = const Color(0xFFEFF6FF);
-              statusText = const Color(0xFF2563EB);
+              statusBg = AppColors.primaryLight;
+              statusText = AppColors.primaryColor;
             }
 
             return Container(
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0xFFEEF2FF)),
+                border: Border.all(color: AppColors.primaryLight),
               ),
               child: Material(
                 color: Colors.transparent,
@@ -1823,10 +1823,10 @@ class _EmployeeOverviewReportScreenState extends State<EmployeeOverviewReportScr
                                 children: [
                                   Text(
                                     'View Tasks',
-                                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Color(0xFF2563EB)),
+                                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: AppColors.primaryColor),
                                   ),
                                   SizedBox(width: 2),
-                                  Icon(Icons.keyboard_arrow_right, size: 12, color: Color(0xFF2563EB)),
+                                  Icon(Icons.keyboard_arrow_right, size: 12, color: AppColors.primaryColor),
                                 ],
                               ),
                           ],
@@ -1900,7 +1900,7 @@ class _EmployeeOverviewReportScreenState extends State<EmployeeOverviewReportScr
                 if (task.status == 'Completed') {
                   statusColor = const Color(0xFF10B981);
                 } else if (task.status == 'In Progress') {
-                  statusColor = const Color(0xFF3B82F6);
+                  statusColor = AppColors.primaryColor;
                 } else {
                   statusColor = const Color(0xFF94A3B8);
                 }
@@ -2012,7 +2012,7 @@ class _EmployeeOverviewReportScreenState extends State<EmployeeOverviewReportScr
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
                     decoration: BoxDecoration(
-                      color: isSelected ? const Color(0xFFEFF6FF) : Colors.transparent,
+                      color: isSelected ? AppColors.primaryLight : Colors.transparent,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
@@ -2022,12 +2022,12 @@ class _EmployeeOverviewReportScreenState extends State<EmployeeOverviewReportScr
                           month,
                           fontSize: 13,
                           fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                          color: isSelected ? const Color(0xFF2563EB) : const Color(0xFF1E293B),
+                          color: isSelected ? AppColors.primaryColor : const Color(0xFF1E293B),
                         ),
                         if (isSelected)
                           const Icon(
                             Icons.check_circle_rounded,
-                            color: Color(0xFF2563EB),
+                            color: AppColors.primaryColor,
                             size: 20,
                           ),
                       ],
@@ -2106,7 +2106,7 @@ class _DonutChartPainter extends CustomPainter {
     slices.forEach((status, value) {
       final sweepAngle = (value / total) * 2 * 3.14159;
 
-      if (status == 'New') paint.color = const Color(0xFF3B82F6);
+      if (status == 'New') paint.color = AppColors.primaryColor;
       else if (status == 'Contacted') paint.color = const Color(0xFFF59E0B);
       else if (status == 'Converted') paint.color = const Color(0xFF10B981);
       else paint.color = const Color(0xFFEF4444);

@@ -69,7 +69,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
       case 'submitted for testing':
       case 'submitted for review':
       case 'qa':
-        return const Color(0xFF6366F1).withValues(alpha: 0.1); // Indigo
+        return AppColors.primaryColor.withValues(alpha: 0.1); // Indigo
       case 'to do':
       case 'todo':
       case 'pending':
@@ -100,7 +100,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
       case 'submitted for testing':
       case 'submitted for review':
       case 'qa':
-        return const Color(0xFF6366F1);
+        return AppColors.primaryColor;
       case 'to do':
       case 'todo':
       case 'pending':
@@ -602,20 +602,20 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFEFF6FF),
+                  color: AppColors.primaryLight,
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0xFFBFDBFE)),
+                  border: Border.all(color: AppColors.primaryShade200),
                 ),
                 child: const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Iconsax.arrow_swap_horizontal, size: 16, color: Color(0xFF2563EB)),
+                    Icon(Iconsax.arrow_swap_horizontal, size: 16, color: AppColors.primaryColor),
                     SizedBox(width: 6),
                     AppText(
                       'Pass / Handover',
                       fontSize: 11.5,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF1D4ED8),
+                      color: AppColors.primaryDark,
                     ),
                   ],
                 ),
@@ -669,9 +669,9 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: isRunning
-            ? const Color(0xFFEFF6FF) // light blue
+            ? AppColors.primaryLight // light blue
             : isTesting
-                ? const Color(0xFFEEF2FF) // light indigo
+                ? AppColors.primaryLight // light indigo
                 : isCompleted
                     ? const Color(0xFFECFDF5) // light emerald
                     : Colors.white,
@@ -680,7 +680,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
           color: isRunning
               ? AppColors.primaryColor
               : isTesting
-                  ? const Color(0xFF6366F1)
+                  ? AppColors.primaryColor
                   : isCompleted
                       ? AppColors.successColor
                       : (isReadyToStart ? AppColors.primaryColor.withValues(alpha: 0.35) : AppColors.borderColor),
@@ -703,7 +703,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                       color: isRunning
                           ? AppColors.primaryColor
                           : isTesting
-                              ? const Color(0xFF6366F1)
+                              ? AppColors.primaryColor
                               : isCompleted
                                   ? AppColors.successColor
                                   : AppColors.primaryColor,
@@ -976,19 +976,19 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFFEEF2FF),
+                color: AppColors.primaryLight,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFF6366F1).withValues(alpha: 0.25)),
+                border: Border.all(color: AppColors.primaryColor.withValues(alpha: 0.25)),
               ),
               child: Row(
                 children: [
-                  const Icon(Iconsax.verify, color: Color(0xFF6366F1), size: 20),
+                  const Icon(Iconsax.verify, color: AppColors.primaryColor, size: 20),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const AppText('In Testing / Review', fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF4338CA)),
+                        const AppText('In Testing / Review', fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primaryDark),
                         AppText(
                           task.testingRemarks != null && task.testingRemarks!.trim().isNotEmpty
                               ? 'Remarks: ${task.testingRemarks}'
@@ -1046,10 +1046,10 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: isTesting ? const Color(0xFFEEF2FF) : Colors.white,
+        color: isTesting ? AppColors.primaryLight : Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: isTesting ? const Color(0xFF6366F1) : AppColors.borderColor,
+          color: isTesting ? AppColors.primaryColor : AppColors.borderColor,
           width: isTesting ? 1.5 : 1,
         ),
       ),
@@ -1061,7 +1061,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: isTesting ? const Color(0xFF6366F1) : AppColors.primaryLight,
+                  color: isTesting ? AppColors.primaryColor : AppColors.primaryLight,
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -1099,11 +1099,11 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFC7D2FE)),
+                border: Border.all(color: AppColors.primaryShade200),
               ),
               child: const Row(
                 children: [
-                  Icon(Icons.info_outline, size: 16, color: Color(0xFF6366F1)),
+                  Icon(Icons.info_outline, size: 16, color: AppColors.primaryColor),
                   SizedBox(width: 8),
                   Expanded(
                     child: AppText(
@@ -1888,15 +1888,15 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFEFF6FF),
+                              color: AppColors.primaryLight,
                               borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: const Color(0xFFBFDBFE)),
+                              border: Border.all(color: AppColors.primaryShade200),
                             ),
                             child: AppText(
                               '${log.module} ${log.subModule != 'Default' ? '• ${log.subModule}' : ''}',
                               fontSize: 9.5,
                               fontWeight: FontWeight.w600,
-                              color: const Color(0xFF1D4ED8),
+                              color: AppColors.primaryDark,
                             ),
                           ),
                         ],
@@ -1928,10 +1928,10 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
             Container(
               padding: const EdgeInsets.all(14),
               decoration: const BoxDecoration(
-                color: Color(0xFFEFF6FF),
+                color: AppColors.primaryLight,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Iconsax.arrow_swap_horizontal, size: 30, color: Color(0xFF2563EB)),
+              child: const Icon(Iconsax.arrow_swap_horizontal, size: 30, color: AppColors.primaryColor),
             ),
             const SizedBox(height: 12),
             const AppText('No Handover or Queries', fontSize: 14, fontWeight: FontWeight.bold),
@@ -1948,10 +1948,10 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
               children: [
                 OutlinedButton.icon(
                   onPressed: () => _showHandoverDialog(context, task),
-                  icon: const Icon(Iconsax.arrow_swap_horizontal, size: 14, color: Color(0xFF2563EB)),
-                  label: const AppText('Pass Task', fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF2563EB)),
+                  icon: const Icon(Iconsax.arrow_swap_horizontal, size: 14, color: AppColors.primaryColor),
+                  label: const AppText('Pass Task', fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primaryColor),
                   style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Color(0xFF93C5FD)),
+                    side: const BorderSide(color: AppColors.primaryShade300),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
                 ),
@@ -1979,26 +1979,26 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
         Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: const Color(0xFFEFF6FF),
+            color: AppColors.primaryLight,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFBFDBFE)),
+            border: Border.all(color: AppColors.primaryShade200),
           ),
           child: Row(
             children: [
-              const Icon(Iconsax.info_circle, size: 18, color: Color(0xFF1D4ED8)),
+              const Icon(Iconsax.info_circle, size: 18, color: AppColors.primaryDark),
               const SizedBox(width: 10),
               const Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    AppText('Collaboration & Handover Audit', fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF1E3A8A)),
-                    AppText('Full audit log of task reassignments, doubts, and blocker escalations.', fontSize: 10, color: Color(0xFF3B82F6)),
+                    AppText('Collaboration & Handover Audit', fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primaryShade900),
+                    AppText('Full audit log of task reassignments, doubts, and blocker escalations.', fontSize: 10, color: AppColors.primaryColor),
                   ],
                 ),
               ),
               TextButton(
                 onPressed: () => _showHandoverDialog(context, task),
-                child: const AppText('+ Pass', fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF1D4ED8)),
+                child: const AppText('+ Pass', fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primaryDark),
               ),
             ],
           ),
@@ -2015,7 +2015,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
             final event = task.handovers.reversed.toList()[index];
             final isQuery = event.type == 'Query';
             final isBlocker = event.type == 'Blocker';
-            final tagColor = isBlocker ? AppColors.errorColor : (isQuery ? const Color(0xFFD97706) : const Color(0xFF2563EB));
+            final tagColor = isBlocker ? AppColors.errorColor : (isQuery ? const Color(0xFFD97706) : AppColors.primaryColor);
             final tagBg = tagColor.withValues(alpha: 0.1);
 
             return Container(
@@ -3032,7 +3032,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Row(
           children: [
-            Icon(Iconsax.verify, color: Color(0xFF6366F1), size: 20),
+            Icon(Iconsax.verify, color: AppColors.primaryColor, size: 20),
             SizedBox(width: 8),
             AppText('Submit for Testing', fontSize: 15, fontWeight: FontWeight.bold),
           ],
@@ -3070,26 +3070,26 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                   margin: const EdgeInsets.only(bottom: 10),
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFEEF2FF),
+                    color: AppColors.primaryLight,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: const Color(0xFF6366F1).withValues(alpha: 0.2)),
+                    border: Border.all(color: AppColors.primaryColor.withValues(alpha: 0.2)),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Iconsax.document_upload, size: 16, color: Color(0xFF6366F1)),
+                      const Icon(Iconsax.document_upload, size: 16, color: AppColors.primaryColor),
                       const SizedBox(width: 8),
                       Expanded(
                         child: AppText(
                           file.name,
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
-                          color: const Color(0xFF4338CA),
+                          color: AppColors.primaryDark,
                           maxLines: 1,
                         ),
                       ),
                       InkWell(
                         onTap: () => attachedFile.value = null,
-                        child: const Icon(Icons.close_rounded, size: 16, color: Color(0xFF6366F1)),
+                        child: const Icon(Icons.close_rounded, size: 16, color: AppColors.primaryColor),
                       ),
                     ],
                   ),
@@ -3149,7 +3149,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                       }
                     },
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF6366F1),
+                backgroundColor: AppColors.primaryColor,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
               child: isSubmitting
@@ -3529,10 +3529,10 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: const BoxDecoration(
-                color: Color(0xFFEFF6FF),
+                color: AppColors.primaryLight,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Iconsax.arrow_swap_horizontal, color: Color(0xFF2563EB), size: 18),
+              child: const Icon(Iconsax.arrow_swap_horizontal, color: AppColors.primaryColor, size: 18),
             ),
             const SizedBox(width: 10),
             const Expanded(
@@ -3632,7 +3632,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
               );
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF2563EB),
+              backgroundColor: AppColors.primaryColor,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
             child: const AppText('Confirm Pass', color: Colors.white, fontWeight: FontWeight.bold),

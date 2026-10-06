@@ -385,7 +385,7 @@ class EngagementScreen extends StatelessWidget {
       case 'Employee of the Month':
         return Colors.orange;
       case 'Wellness Webinar':
-        return Colors.blue;
+        return AppColors.primaryColor;
       case 'Kudos & Recognition':
       default:
         return AppColors.indigo500;

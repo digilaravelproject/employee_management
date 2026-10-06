@@ -101,7 +101,7 @@ class _DocumentPreviewScreenState extends State<DocumentPreviewScreen> {
                                 children: [
                                   const Icon(
                                     Iconsax.briefcase5,
-                                    color: Color(0xFF3B82F6),
+                                    color: AppColors.primaryColor,
                                     size: 32,
                                   ),
                                   const SizedBox(height: 8),

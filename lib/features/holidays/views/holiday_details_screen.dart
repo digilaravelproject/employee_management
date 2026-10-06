@@ -295,7 +295,7 @@ class _HolidayDetailsScreenState extends State<HolidayDetailsScreen> {
                                         horizontal: 10, vertical: 5),
                                     decoration: BoxDecoration(
                                       color: holiday.repeatEveryYear
-                                          ? const Color(0xFFEFF6FF)
+                                          ? AppColors.primaryLight
                                           : AppColors.slate100,
                                       borderRadius: BorderRadius.circular(8),
                                     ),
@@ -306,7 +306,7 @@ class _HolidayDetailsScreenState extends State<HolidayDetailsScreen> {
                                           Iconsax.repeat,
                                           size: 11,
                                           color: holiday.repeatEveryYear
-                                              ? const Color(0xFF2563EB)
+                                              ? AppColors.primaryColor
                                               : AppColors.textColorHint,
                                         ),
                                         const SizedBox(width: 4),
@@ -317,7 +317,7 @@ class _HolidayDetailsScreenState extends State<HolidayDetailsScreen> {
                                           fontSize: 10,
                                           fontWeight: FontWeight.w600,
                                           color: holiday.repeatEveryYear
-                                              ? const Color(0xFF2563EB)
+                                              ? AppColors.primaryColor
                                               : AppColors.textColorHint,
                                         ),
                                       ],

@@ -255,7 +255,7 @@ class _UploadDocumentBottomSheetState extends State<UploadDocumentBottomSheet> {
                       icon: Iconsax.camera,
                       title: 'Camera',
                       subtitle: 'Take photo',
-                      color: const Color(0xFF2563EB),
+                      color: AppColors.primaryColor,
                       onTap: () => _pickAndUpload(ImageSource.camera),
                     ),
                   ),

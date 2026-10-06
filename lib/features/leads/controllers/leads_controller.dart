@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:attendence_tracking_app/core/theme/app_colors.dart';
 import 'package:get/get.dart';
 import '../../role_permissions/models/role_permission_models.dart';
 import '../models/lead_model.dart';
@@ -402,7 +403,7 @@ class LeadsController extends GetxController {
         if (selectedLead.value?.id == id) {
           selectedLead.value = updatedLead;
         }
-        _showSnackbar('Lead Updated', 'Lead has been updated successfully!', const Color(0xFF2563EB));
+        _showSnackbar('Lead Updated', 'Lead has been updated successfully!', AppColors.primaryColor);
       }
     }
   }

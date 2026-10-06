@@ -14,6 +14,7 @@ import '../domain/models/admin_signup_response_model.dart';
 import '../domain/models/user_model.dart';
 import '../domain/usecases/admin_signup_usecase.dart';
 import 'auth_controller.dart';
+import '../../../../core/services/permission/permission_service.dart';
 
 class AdminSignupController extends GetxController {
   final AdminSignupUseCase _adminSignupUseCase;
@@ -220,9 +221,22 @@ class AdminSignupController extends GetxController {
           final user = UserModel.fromJson(response.rawData!);
           await SharedPrefs.saveUserData(user);
 
-          if (Get.isRegistered<AppController>()) {
-            Get.find<AppController>().setRole(user.role);
+          final roleId = user.primaryRoleId ?? SharedPrefs.getRoleId();
+          if (roleId != null) {
+            await SharedPrefs.setRoleId(roleId);
+            if (Get.isRegistered<AppController>()) {
+              Get.find<AppController>().setRole('employee');
+            }
+            PermissionService.to.setAdminMode(false);
+            await PermissionService.to.fetchPermissions(roleId: roleId);
+          } else {
+            await SharedPrefs.setRoleId(null);
+            if (Get.isRegistered<AppController>()) {
+              Get.find<AppController>().setRole(user.role.isNotEmpty ? user.role : 'admin');
+            }
+            PermissionService.to.setAdminMode(true);
           }
+
           if (Get.isRegistered<AuthController>()) {
             Get.find<AuthController>().currentUser.value = user;
           }
@@ -312,9 +326,22 @@ class AdminSignupController extends GetxController {
           final user = UserModel.fromJson(response.rawData!);
           await SharedPrefs.saveUserData(user);
 
-          if (Get.isRegistered<AppController>()) {
-            Get.find<AppController>().setRole(user.role);
+          final roleId = user.primaryRoleId ?? SharedPrefs.getRoleId();
+          if (roleId != null) {
+            await SharedPrefs.setRoleId(roleId);
+            if (Get.isRegistered<AppController>()) {
+              Get.find<AppController>().setRole('employee');
+            }
+            PermissionService.to.setAdminMode(false);
+            await PermissionService.to.fetchPermissions(roleId: roleId);
+          } else {
+            await SharedPrefs.setRoleId(null);
+            if (Get.isRegistered<AppController>()) {
+              Get.find<AppController>().setRole(user.role.isNotEmpty ? user.role : 'admin');
+            }
+            PermissionService.to.setAdminMode(true);
           }
+
           if (Get.isRegistered<AuthController>()) {
             Get.find<AuthController>().currentUser.value = user;
           }

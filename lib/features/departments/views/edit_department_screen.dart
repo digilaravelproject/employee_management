@@ -390,14 +390,14 @@ class EditDepartmentScreen extends StatelessWidget {
                                           Container(
                                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                             decoration: BoxDecoration(
-                                              color: const Color(0xFF6366F1).withValues(alpha: 0.1),
+                                              color: AppColors.primaryColor.withValues(alpha: 0.1),
                                               borderRadius: BorderRadius.circular(6),
                                             ),
                                             child: const AppText(
                                               'HEAD',
                                               fontSize: 8,
                                               fontWeight: FontWeight.w800,
-                                              color: Color(0xFF6366F1),
+                                              color: AppColors.primaryColor,
                                             ),
                                           ),
                                         ],

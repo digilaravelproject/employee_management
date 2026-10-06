@@ -238,7 +238,7 @@ class PayslipDetailScreen extends StatelessWidget {
           _buildDivider(),
           _buildStatItem(Iconsax.wallet, 'Net Pay', netPay, AppColors.primaryColor),
           _buildDivider(),
-          _buildStatItem(Iconsax.calendar, 'Total Days', days, Colors.blue),
+          _buildStatItem(Iconsax.calendar, 'Total Days', days, AppColors.primaryColor),
         ],
       ),
     );
@@ -428,7 +428,7 @@ class _SignaturePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.indigo
+      ..color = AppColors.primaryColor
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5;
 

@@ -68,7 +68,7 @@ class AttendanceDayDetailsScreen extends StatelessWidget {
             break;
           case 'Leave':
             statusColor = AppColors.indigo500;
-            statusLightBg = const Color(0xFFEEF2FF);
+            statusLightBg = AppColors.primaryLight;
             statusIcon = Icons.beach_access;
             break;
           default:

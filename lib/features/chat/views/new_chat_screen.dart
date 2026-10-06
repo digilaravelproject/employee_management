@@ -82,7 +82,7 @@ class NewChatScreen extends StatelessWidget {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: const BorderSide(color: Color(0xFF4F46E5), width: 1.5),
+                        borderSide: const BorderSide(color: AppColors.primaryColor, width: 1.5),
                       ),
                     ),
                   ),
@@ -119,7 +119,7 @@ class NewChatScreen extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: const Color(0xFFEEF2FF)),
+                  border: Border.all(color: AppColors.primaryLight),
                 ),
                 child: ListView.separated(
                   physics: const BouncingScrollPhysics(),

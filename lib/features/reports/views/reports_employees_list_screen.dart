@@ -169,15 +169,15 @@ class ReportsEmployeesListScreen extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF2563EB) : Colors.white,
+          color: isSelected ? AppColors.primaryColor : Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected ? const Color(0xFF2563EB) : const Color(0xFFE2E8F0),
+            color: isSelected ? AppColors.primaryColor : const Color(0xFFE2E8F0),
           ),
           boxShadow: [
             if (isSelected)
               BoxShadow(
-                color: const Color(0xFF2563EB).withValues(alpha: 0.15),
+                color: AppColors.primaryColor.withValues(alpha: 0.15),
                 blurRadius: 8,
                 offset: const Offset(0, 3),
               ),
@@ -238,7 +238,7 @@ class _EmployeeListCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFEEF2FF)),
+        border: Border.all(color: AppColors.primaryLight),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.01),

@@ -330,14 +330,14 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen>
                         indicatorSize: TabBarIndicatorSize.tab,
                         indicator: BoxDecoration(
                           gradient: const LinearGradient(
-                            colors: [Color(0xFF4F46E5), Color(0xFF2563EB)],
+                            colors: [AppColors.primaryGradientLight, AppColors.primaryGradientDark],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
                           borderRadius: BorderRadius.circular(10),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFF4F46E5).withValues(alpha: 0.3),
+                              color: AppColors.primaryGradientLight.withValues(alpha: 0.3),
                               blurRadius: 6,
                               offset: const Offset(0, 2),
                             ),
@@ -655,8 +655,8 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen>
               _buildQuickActionButton(
                 icon: Iconsax.message,
                 label: 'Message',
-                color: const Color(0xFF3B82F6),
-                bgColor: const Color(0xFFEFF6FF),
+                color: AppColors.primaryColor,
+                bgColor: AppColors.primaryLight,
                 onTap: () => _sendSms(emp.mobile),
               ),
               _buildQuickActionButton(
@@ -733,10 +733,10 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen>
             value: emp.workMode.isNotEmpty ? emp.workMode : 'Office',
             subtitle: emp.employeeType.isNotEmpty ? emp.employeeType : 'Full-time',
             icon: Iconsax.briefcase,
-            bgColors: [const Color(0xFFEFF6FF), const Color(0xFFDBEAFE)],
-            borderColor: const Color(0xFF93C5FD),
-            iconColor: const Color(0xFF2563EB),
-            textColor: const Color(0xFF1E3A8A),
+            bgColors: [AppColors.primaryLight, AppColors.primaryShade100],
+            borderColor: AppColors.primaryShade300,
+            iconColor: AppColors.primaryColor,
+            textColor: AppColors.primaryShade900,
           ),
         ),
         const SizedBox(width: 8),
@@ -894,18 +894,18 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen>
         _buildCardWrapper(
           title: 'Technical Skills & Expertise',
           icon: Iconsax.code,
-          iconColor: const Color(0xFF6366F1),
+          iconColor: AppColors.primaryGradientLight,
           trailing: Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
-              color: const Color(0xFFEEF2FF),
+              color: AppColors.primaryLight,
               borderRadius: BorderRadius.circular(10),
             ),
             child: AppText(
               '${emp.skills.length} listed',
               fontSize: 10.5,
               fontWeight: FontWeight.w700,
-              color: const Color(0xFF4F46E5),
+              color: AppColors.primaryColor,
             ),
           ),
           children: [
@@ -1019,7 +1019,7 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen>
 
   Widget _buildSkillTag(String skill, int index) {
     final palettes = [
-      {'bg': const Color(0xFFEFF6FF), 'border': const Color(0xFFBFDBFE), 'text': const Color(0xFF1D4ED8), 'dot': const Color(0xFF2563EB)},
+      {'bg': AppColors.primaryLight, 'border': AppColors.primaryShade200, 'text': AppColors.primaryDark, 'dot': AppColors.primaryColor},
       {'bg': const Color(0xFFF0FDF4), 'border': const Color(0xFFBBF7D0), 'text': const Color(0xFF15803D), 'dot': const Color(0xFF16A34A)},
       {'bg': const Color(0xFFFAF5FF), 'border': const Color(0xFFE9D5FF), 'text': const Color(0xFF7E22CE), 'dot': const Color(0xFF9333EA)},
       {'bg': const Color(0xFFFFF7ED), 'border': const Color(0xFFFED7AA), 'text': const Color(0xFFC2410C), 'dot': const Color(0xFFEA580C)},
@@ -1066,7 +1066,7 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen>
         _buildCardWrapper(
           title: 'Organization Details',
           icon: Iconsax.briefcase,
-          iconColor: const Color(0xFF2563EB),
+          iconColor: AppColors.primaryColor,
           children: [
             _buildInfoTile('Employee ID', emp.employeeId.isNotEmpty ? emp.employeeId : '—', icon: Iconsax.personalcard, isHighlight: true),
             _buildInfoTile('System Role', emp.role.isNotEmpty ? emp.role.toUpperCase() : 'EMPLOYEE', icon: Iconsax.user_tag),
@@ -1210,7 +1210,7 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen>
         _buildCardWrapper(
           title: 'Bank & Payroll Account',
           icon: Iconsax.bank,
-          iconColor: const Color(0xFF2563EB),
+          iconColor: AppColors.primaryColor,
           children: hasBank
               ? [
                   _buildInfoTile('Account Holder Name', emp.accountHolderName.isNotEmpty ? emp.accountHolderName : emp.name, icon: Iconsax.user),

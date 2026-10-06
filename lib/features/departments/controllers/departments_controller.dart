@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:attendence_tracking_app/core/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
@@ -565,7 +566,7 @@ class DepartmentsController extends GetxController {
   Color _getThemeColorForDepartmentName(String name) {
     final lower = name.toLowerCase();
     if (lower.contains('tech') || lower.contains('eng') || lower.contains('code') || lower.contains('dev') || lower.contains('product')) {
-      return const Color(0xFF6366F1);
+      return AppColors.primaryColor;
     } else if (lower.contains('hr') || lower.contains('people') || lower.contains('recruit') || lower.contains('human')) {
       return const Color(0xFFEC4899);
     } else if (lower.contains('market') || lower.contains('advert') || lower.contains('social')) {
@@ -573,7 +574,7 @@ class DepartmentsController extends GetxController {
     } else if (lower.contains('finance') || lower.contains('money') || lower.contains('audit') || lower.contains('pay')) {
       return const Color(0xFFF59E0B);
     } else if (lower.contains('sale') || lower.contains('deal') || lower.contains('revenue')) {
-      return const Color(0xFF3B82F6);
+      return AppColors.primaryColor;
     } else if (lower.contains('support') || lower.contains('it') || lower.contains('help')) {
       return const Color(0xFF06B6D4);
     }
@@ -584,11 +585,11 @@ class DepartmentsController extends GetxController {
 
   void _initializeDummyDepartments() {
     departments.addAll([
-      Department(id: '1', name: 'Engineering', description: 'Handles all engineering and product development activities.', head: null, employees: const [], teamsCount: 5, icon: Iconsax.code, themeColor: const Color(0xFF6366F1)),
+      Department(id: '1', name: 'Engineering', description: 'Handles all engineering and product development activities.', head: null, employees: const [], teamsCount: 5, icon: Iconsax.code, themeColor: AppColors.primaryColor),
       Department(id: '2', name: 'Human Resources', description: 'Manages employee recruitment, onboarding, benefits, and workplace culture.', head: null, employees: const [], teamsCount: 3, icon: Iconsax.user_octagon, themeColor: const Color(0xFFEC4899)),
       Department(id: '3', name: 'Marketing', description: 'Promotes brand growth, social media presence, and strategic campaigns.', head: null, employees: const [], teamsCount: 4, icon: Iconsax.volume_high, themeColor: const Color(0xFF10B981)),
       Department(id: '4', name: 'Finance', description: 'Oversees payroll, budgets, financial audits, and investment metrics.', head: null, employees: const [], teamsCount: 2, icon: Iconsax.empty_wallet, themeColor: const Color(0xFFF59E0B)),
-      Department(id: '5', name: 'Sales', description: 'Generates client deals, client management, and revenue expansion.', head: null, employees: const [], teamsCount: 4, icon: Iconsax.graph, themeColor: const Color(0xFF3B82F6)),
+      Department(id: '5', name: 'Sales', description: 'Generates client deals, client management, and revenue expansion.', head: null, employees: const [], teamsCount: 4, icon: Iconsax.graph, themeColor: AppColors.primaryColor),
       Department(id: '6', name: 'IT Support', description: 'Administers server operations, security settings, and technical support.', head: null, employees: const [], teamsCount: 2, icon: Iconsax.monitor, themeColor: const Color(0xFF06B6D4)),
     ]);
   }

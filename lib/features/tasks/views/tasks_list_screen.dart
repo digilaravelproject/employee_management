@@ -9,6 +9,8 @@ import '../models/task_model.dart';
 import '../models/create_task_model.dart';
 import 'create_task_screen.dart';
 import 'task_details_screen.dart';
+import '../../../core/services/permission/permission_service.dart';
+import '../../../core/services/permission/permission_constant.dart';
 
 class TasksListScreen extends StatelessWidget {
   const TasksListScreen({super.key});
@@ -36,7 +38,7 @@ class TasksListScreen extends StatelessWidget {
         return AppColors.primaryColor.withValues(alpha: 0.1);
       case 'testing':
       case 'review':
-        return const Color(0xFF6366F1).withValues(alpha: 0.1); // Indigo
+        return AppColors.primaryColor.withValues(alpha: 0.1); // Indigo
       case 'to do':
       case 'pending':
       default:
@@ -54,7 +56,7 @@ class TasksListScreen extends StatelessWidget {
         return AppColors.primaryColor;
       case 'testing':
       case 'review':
-        return const Color(0xFF6366F1);
+        return AppColors.primaryColor;
       case 'to do':
       case 'pending':
       default:
@@ -383,7 +385,9 @@ class TasksListScreen extends StatelessWidget {
                   itemBuilder: (context, index) {
                   final task = tList[index];
                   final prioColor = _getPriorityColor(task.priority);
-                  final isAdmin = appController.userRole.value.toLowerCase() == 'admin';
+                  final canEditTask = PermissionService.to.isAllowed(PermissionConstant.editTask);
+                  final canDeleteTask = PermissionService.to.isAllowed(PermissionConstant.deleteTask);
+                  final isAdmin = canEditTask && canDeleteTask;
                   final isEmployee = appController.userRole.value.toLowerCase() == 'employee';
 
                   return GestureDetector(
@@ -562,9 +566,9 @@ class TasksListScreen extends StatelessWidget {
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFFEFF6FF),
+                                      color: AppColors.primaryLight,
                                       borderRadius: BorderRadius.circular(4),
-                                      border: Border.all(color: const Color(0xFFBFDBFE)),
+                                      border: Border.all(color: AppColors.primaryShade200),
                                     ),
                                     child: AppText(
                                       task.subModule != 'Default'
@@ -572,7 +576,7 @@ class TasksListScreen extends StatelessWidget {
                                           : task.module,
                                       fontSize: 9.5,
                                       fontWeight: FontWeight.w600,
-                                      color: const Color(0xFF1D4ED8),
+                                      color: AppColors.primaryDark,
                                     ),
                                   ),
                                 ],
@@ -729,10 +733,10 @@ class TasksListScreen extends StatelessWidget {
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFF6366F1).withValues(alpha: 0.15),
+                                        color: AppColors.primaryColor.withValues(alpha: 0.15),
                                         borderRadius: BorderRadius.circular(6),
                                       ),
-                                      child: const AppText('Under Review', fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF6366F1)),
+                                      child: const AppText('Under Review', fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.primaryColor),
                                     )
                                   else if (task.normalizedStatus == TaskModel.statusCompleted)
                                     const Icon(Icons.check_circle_rounded, size: 18, color: AppColors.successColor),
@@ -744,10 +748,10 @@ class TasksListScreen extends StatelessWidget {
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFF6366F1).withValues(alpha: 0.15),
+                                        color: AppColors.primaryColor.withValues(alpha: 0.15),
                                         borderRadius: BorderRadius.circular(6),
                                       ),
-                                      child: const AppText('Under Review', fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF6366F1)),
+                                      child: const AppText('Under Review', fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.primaryColor),
                                     )
                                   else if (task.isTimerRunning)
                                     Container(
@@ -929,11 +933,10 @@ class TasksListScreen extends StatelessWidget {
         ],
       ),
 
-      // ── Floating / Bottom New Task button for Admin & Manager ──
+      // ── Floating / Bottom New Task button ──
       bottomNavigationBar: Obx(() {
-        final role = appController.userRole.value.toLowerCase();
-        if (role == 'employee') {
-          // Employee doesn't need creation button pinned
+        final canCreateTask = PermissionService.to.isAllowed(PermissionConstant.createTask);
+        if (!canCreateTask) {
           return const SizedBox.shrink();
         }
 
@@ -983,7 +986,7 @@ class TasksListScreen extends StatelessWidget {
               const SizedBox(width: 8),
               _buildKpiCard('Live Timers', '${controller.activeRunningTasks.length}', Iconsax.play_cricle, Colors.amber.shade700),
               const SizedBox(width: 8),
-              _buildKpiCard('In Testing', '${controller.testingTasks.length}', Iconsax.verify, const Color(0xFF6366F1)),
+              _buildKpiCard('In Testing', '${controller.testingTasks.length}', Iconsax.verify, AppColors.primaryColor),
             ],
           ),
         );
@@ -1023,7 +1026,7 @@ class TasksListScreen extends StatelessWidget {
             const SizedBox(width: 8),
             _buildKpiCard('In Progress', '$inProgCount', Iconsax.timer_1, Colors.amber.shade700),
             const SizedBox(width: 8),
-            _buildKpiCard('In Testing', '$testingCount', Iconsax.verify, const Color(0xFF6366F1)),
+            _buildKpiCard('In Testing', '$testingCount', Iconsax.verify, AppColors.primaryColor),
             const SizedBox(width: 8),
             _buildKpiCard('Completed', '$doneCount', Iconsax.tick_circle, AppColors.successColor),
           ],
@@ -1095,7 +1098,7 @@ class TasksListScreen extends StatelessWidget {
                 return Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFEFF6FF),
+                    color: AppColors.primaryLight,
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(color: AppColors.primaryColor.withValues(alpha: 0.3)),
                   ),
@@ -1139,7 +1142,7 @@ class TasksListScreen extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  const Icon(Iconsax.verify, color: Color(0xFF6366F1), size: 16),
+                  const Icon(Iconsax.verify, color: AppColors.primaryColor, size: 16),
                   const SizedBox(width: 6),
                   AppText('Testing / QA Queue (${testingList.length})', fontSize: 13, fontWeight: FontWeight.bold),
                 ],
@@ -1148,10 +1151,10 @@ class TasksListScreen extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF6366F1).withValues(alpha: 0.1),
+                    color: AppColors.primaryColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  child: const AppText('Needs Review', fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF6366F1)),
+                  child: const AppText('Needs Review', fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.primaryColor),
                 ),
             ],
           ),
@@ -1185,7 +1188,7 @@ class TasksListScreen extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFC7D2FE)),
+                    border: Border.all(color: AppColors.primaryShade200),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

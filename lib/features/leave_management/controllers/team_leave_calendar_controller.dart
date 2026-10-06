@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:attendence_tracking_app/core/theme/app_colors.dart';
 import 'package:get/get.dart';
 import '../../../core/services/network/api_client.dart';
 import '../../../core/utils/logger.dart';
@@ -196,7 +197,7 @@ class TeamLeaveCalendarController extends GetxController {
       case 'cancelled':
         return const Color(0xFF6B7280); // Gray
       default:
-        return const Color(0xFF6366F1); // Indigo
+        return AppColors.primaryColor; // Indigo
     }
   }
 }

@@ -92,7 +92,7 @@ class SecurityMonitoringScreen extends StatelessWidget {
                       '15',
                       'Today',
                       Iconsax.key,
-                      const Color(0xFF3B82F6),
+                      AppColors.primaryColor,
                     ),
                   ),
                 ],
@@ -113,7 +113,7 @@ class SecurityMonitoringScreen extends StatelessWidget {
                     'View All',
                     fontSize: 11,
                     fontWeight: FontWeight.w800,
-                    color: Color(0xFF2563EB),
+                    color: AppColors.primaryColor,
                   ),
                 ],
               ),
@@ -126,7 +126,7 @@ class SecurityMonitoringScreen extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFFEEF2FF)),
+                    border: Border.all(color: AppColors.primaryLight),
                   ),
                   child: ListView.separated(
                     shrinkWrap: true,
@@ -203,7 +203,7 @@ class SecurityMonitoringScreen extends StatelessWidget {
                     'View All',
                     fontSize: 11,
                     fontWeight: FontWeight.w800,
-                    color: Color(0xFF2563EB),
+                    color: AppColors.primaryColor,
                   ),
                 ],
               ),
@@ -225,7 +225,7 @@ class SecurityMonitoringScreen extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: const Color(0xFFEEF2FF)),
+                        border: Border.all(color: AppColors.primaryLight),
                       ),
                       child: Row(
                         children: [
@@ -296,7 +296,7 @@ class SecurityMonitoringScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFEEF2FF)),
+        border: Border.all(color: AppColors.primaryLight),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

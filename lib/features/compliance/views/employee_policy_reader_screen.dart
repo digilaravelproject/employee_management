@@ -197,7 +197,7 @@ class _EmployeePolicyReaderScreenState extends State<EmployeePolicyReaderScreen>
                 borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
                 boxShadow: [
                   BoxShadow(
-                    color: Color(0xFFEEF2FF),
+                    color: AppColors.primaryLight,
                     blurRadius: 12,
                     offset: Offset(0, -6),
                   ),
@@ -327,7 +327,7 @@ class _EmployeePolicyReaderScreenState extends State<EmployeePolicyReaderScreen>
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFEEF2FF)),
+        border: Border.all(color: AppColors.primaryLight),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -399,7 +399,7 @@ class _EmployeePolicyReaderScreenState extends State<EmployeePolicyReaderScreen>
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFEEF2FF)),
+        border: Border.all(color: AppColors.primaryLight),
       ),
       child: Column(
         children: [
@@ -409,7 +409,7 @@ class _EmployeePolicyReaderScreenState extends State<EmployeePolicyReaderScreen>
             decoration: const BoxDecoration(
               color: Color(0xFFF8FAFC),
               borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-              border: Border(bottom: BorderSide(color: Color(0xFFEEF2FF))),
+              border: Border(bottom: BorderSide(color: AppColors.primaryLight)),
             ),
             child: const Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,

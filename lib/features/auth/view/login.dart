@@ -88,7 +88,7 @@ class _TopWaveBackground extends StatelessWidget {
         height: height,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFF1D4ED8), Color(0xFF2563EB), Color(0xFF3B82F6)],
+            colors: [AppColors.primaryGradientLight, AppColors.primaryGradientDark],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -175,23 +175,25 @@ class _HeaderSection extends StatelessWidget {
     return Column(
       children: [
         // App icon badge
-        Container(
-          width: 72,
-          height: 72,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.15),
-                blurRadius: 20,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: const Center(
-            child: AppLogo(size: 44),
-          ),
+        // Container(
+        //   width: 100,
+        //   height: 100,
+          // decoration: BoxDecoration(
+          //   color: Colors.white,
+          //   borderRadius: BorderRadius.circular(20),
+          //   boxShadow: [
+          //     BoxShadow(
+          //       color: Colors.black.withValues(alpha: 0.15),
+          //       blurRadius: 20,
+          //       offset: const Offset(0, 8),
+          //     ),
+          //   ],
+          // ),
+          //child
+             // :
+    const Center(
+            child: AppLogo(size: 90),
+          //),
         ),
 
         const SizedBox(height: 16),

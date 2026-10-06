@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:attendence_tracking_app/core/theme/app_colors.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../../../core/widgets/app_text.dart';
@@ -107,7 +108,7 @@ class AcknowledgeSuccessScreen extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: const Color(0xFFF8FAFC),
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: const Color(0xFFEEF2FF)),
+                  border: Border.all(color: AppColors.primaryLight),
                 ),
                 child: Column(
                   children: [

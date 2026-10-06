@@ -58,7 +58,7 @@ class _UploadPolicyScreenState extends State<UploadPolicyScreen> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.light(
-              primary: Color(0xFF4F46E5),
+              primary: AppColors.primaryColor,
               onPrimary: Colors.white,
               onSurface: Color(0xFF1E293B),
             ),
@@ -123,7 +123,7 @@ class _UploadPolicyScreenState extends State<UploadPolicyScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                CircularProgressIndicator(color: Color(0xFF4F46E5)),
+                CircularProgressIndicator(color: AppColors.primaryColor),
                 SizedBox(height: 16),
                 AppText(
                   'Publishing Policy & Notifying Employees...',
@@ -151,7 +151,7 @@ class _UploadPolicyScreenState extends State<UploadPolicyScreen> {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(24),
-                          border: Border.all(color: const Color(0xFFEEF2FF)),
+                          border: Border.all(color: AppColors.primaryLight),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -279,14 +279,14 @@ class _UploadPolicyScreenState extends State<UploadPolicyScreen> {
                                   border: Border.all(
                                     color: _docError != null 
                                         ? AppColors.errorColor 
-                                        : const Color(0xFFEEF2FF),
+                                        : AppColors.primaryLight,
                                     style: BorderStyle.solid,
                                   ),
                                 ),
                                 child: Column(
                                   children: [
                                     if (isUploading) ...[
-                                      const CircularProgressIndicator(color: Color(0xFF4F46E5)),
+                                      const CircularProgressIndicator(color: AppColors.primaryColor),
                                       const SizedBox(height: 12),
                                       const AppText('Reading PDF metadata...', fontSize: 11.5, color: Color(0xFF64748B)),
                                     ] else if (fileName != null) ...[
@@ -321,7 +321,7 @@ class _UploadPolicyScreenState extends State<UploadPolicyScreen> {
                                         ],
                                       ),
                                     ] else ...[
-                                      const Icon(Iconsax.document_upload, color: Color(0xFF4F46E5), size: 36),
+                                      const Icon(Iconsax.document_upload, color: AppColors.primaryColor, size: 36),
                                       const SizedBox(height: 12),
                                       const AppText('Upload Document (PDF only)', fontSize: 12.5, fontWeight: FontWeight.w800, color: Color(0xFF1E293B)),
                                       const SizedBox(height: 4),
@@ -330,7 +330,7 @@ class _UploadPolicyScreenState extends State<UploadPolicyScreen> {
                                       ElevatedButton(
                                         onPressed: () => _simulateDocumentPick(),
                                         style: ElevatedButton.styleFrom(
-                                          backgroundColor: const Color(0xFF4F46E5),
+                                          backgroundColor: AppColors.primaryColor,
                                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                                           elevation: 0,
@@ -388,7 +388,7 @@ class _UploadPolicyScreenState extends State<UploadPolicyScreen> {
                       child: OutlinedButton(
                         onPressed: () => Get.back(),
                         style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: Color(0xFF4F46E5), width: 1.5),
+                          side: const BorderSide(color: AppColors.primaryColor, width: 1.5),
                           minimumSize: const Size(0, 50),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                         ),
@@ -396,7 +396,7 @@ class _UploadPolicyScreenState extends State<UploadPolicyScreen> {
                           'Cancel',
                           fontSize: 13.5,
                           fontWeight: FontWeight.w800,
-                          color: Color(0xFF4F46E5),
+                          color: AppColors.primaryColor,
                         ),
                       ),
                     ),
@@ -405,7 +405,7 @@ class _UploadPolicyScreenState extends State<UploadPolicyScreen> {
                       child: ElevatedButton(
                         onPressed: () => _submitForm(controller),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF4F46E5),
+                          backgroundColor: AppColors.primaryColor,
                           minimumSize: const Size(0, 50),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                           elevation: 0,

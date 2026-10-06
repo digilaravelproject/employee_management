@@ -102,8 +102,8 @@ class AccessControlScreen extends StatelessWidget {
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                      backgroundColor: const Color(0xFF3B82F6).withValues(alpha: 0.08),
-                      foregroundColor: const Color(0xFF3B82F6),
+                      backgroundColor: AppColors.primaryColor.withValues(alpha: 0.08),
+                      foregroundColor: AppColors.primaryColor,
                       elevation: 0,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
@@ -116,7 +116,7 @@ class AccessControlScreen extends StatelessWidget {
                           'Add People / Group',
                           fontSize: 11,
                           fontWeight: FontWeight.w800,
-                          color: Color(0xFF3B82F6),
+                          color: AppColors.primaryColor,
                         ),
                       ],
                     ),
@@ -141,7 +141,7 @@ class AccessControlScreen extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: const Color(0xFFEEF2FF)),
+                        border: Border.all(color: AppColors.primaryLight),
                       ),
                       child: Row(
                         children: [
@@ -256,7 +256,7 @@ class AccessControlScreen extends StatelessWidget {
   Color _getAccessTypeColor(String type) {
     switch (type.toLowerCase()) {
       case 'group':
-        return const Color(0xFF3B82F6);
+        return AppColors.primaryColor;
       case 'department':
         return const Color(0xFF8B5CF6);
       case 'individual':
@@ -363,7 +363,7 @@ class AccessControlScreen extends StatelessWidget {
               height: 48,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF3B82F6),
+                  backgroundColor: AppColors.primaryColor,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 ),
                 onPressed: () {

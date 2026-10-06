@@ -476,7 +476,7 @@ class _NotificationCard extends StatelessWidget {
   Widget build(BuildContext context) {
     // Style configurations based on module, action, and type
     Color accentColor = AppColors.primaryColor;
-    Color bgLightColor = const Color(0xFFEFF6FF);
+    Color bgLightColor = AppColors.primaryLight;
     IconData visualIcon = Iconsax.notification;
 
     final module = item.module?.toLowerCase() ?? '';
@@ -496,7 +496,7 @@ class _NotificationCard extends StatelessWidget {
       bgLightColor = const Color(0xFFF5F3FF);
       visualIcon = Iconsax.clock;
     } else if (module == 'leaves' || module == 'leave') {
-      accentColor = const Color(0xFF0EA5E9); // Sky blue
+      accentColor = AppColors.primaryShade400; // Sky blue
       bgLightColor = const Color(0xFFF0F9FF);
       visualIcon = Iconsax.calendar;
     } else if (module == 'attendance') {
@@ -515,7 +515,7 @@ class _NotificationCard extends StatelessWidget {
       visualIcon = Iconsax.warning_2;
     } else if (type == 'info') {
       accentColor = AppColors.primaryColor;
-      bgLightColor = const Color(0xFFEFF6FF);
+      bgLightColor = AppColors.primaryLight;
       visualIcon = Iconsax.info_circle;
     }
 

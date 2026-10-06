@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:attendence_tracking_app/core/theme/app_colors.dart';
 import 'package:get/get.dart';
 import '../../role_permissions/models/role_permission_models.dart';
 import '../../projects/controllers/projects_controller.dart';
@@ -305,7 +306,7 @@ class AssetsController extends GetxController {
         'Resource Allocated',
         '${asset.name} has been assigned to ${employee.name}.',
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: const Color(0xFF4F46E5),
+        backgroundColor: AppColors.primaryColor,
         colorText: Colors.white,
       );
     }

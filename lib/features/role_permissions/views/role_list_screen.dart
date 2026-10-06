@@ -166,13 +166,13 @@ class _RoleCard extends StatelessWidget {
     
     if (role.name.toLowerCase().contains('admin')) {
       roleIcon = Iconsax.security_safe;
-      iconColor = const Color(0xFF6366F1); // Indigo
+      iconColor = AppColors.primaryColor; // Indigo
     } else if (role.name.toLowerCase().contains('hr')) {
       roleIcon = Iconsax.profile_2user;
       iconColor = const Color(0xFFF97316); // Orange/Amber
     } else if (role.name.toLowerCase().contains('manager')) {
       roleIcon = Iconsax.profile_add;
-      iconColor = const Color(0xFF3B82F6); // Blue
+      iconColor = AppColors.primaryColor; // Blue
     } else if (role.name.toLowerCase().contains('lead')) {
       roleIcon = Iconsax.people;
       iconColor = const Color(0xFF8B5CF6); // Purple

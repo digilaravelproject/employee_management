@@ -117,10 +117,10 @@ class ComplianceAuditLogsScreen extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF4F46E5) : const Color(0xFFF8FAFC),
+          color: isSelected ? AppColors.primaryColor : const Color(0xFFF8FAFC),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected ? const Color(0xFF4F46E5) : const Color(0xFFE2E8F0),
+            color: isSelected ? AppColors.primaryColor : const Color(0xFFE2E8F0),
           ),
         ),
         child: AppText(
@@ -134,7 +134,7 @@ class ComplianceAuditLogsScreen extends StatelessWidget {
   }
 
   Widget _buildAuditLogCard(ComplianceAuditLog log) {
-    Color actColor = const Color(0xFF3B82F6);
+    Color actColor = AppColors.primaryColor;
     IconData actIcon = Iconsax.document_text;
     
     if (log.activity == 'Policy Created') {
@@ -158,7 +158,7 @@ class ComplianceAuditLogsScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFEEF2FF)),
+        border: Border.all(color: AppColors.primaryLight),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -353,7 +353,7 @@ class ComplianceAuditLogsScreen extends StatelessWidget {
                     _simulateExportLoading(activeFormat.value);
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF4F46E5),
+                    backgroundColor: AppColors.primaryColor,
                     minimumSize: const Size(double.infinity, 50),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     elevation: 0,
@@ -383,7 +383,7 @@ class ComplianceAuditLogsScreen extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const CircularProgressIndicator(color: Color(0xFF4F46E5)),
+              const CircularProgressIndicator(color: AppColors.primaryColor),
               const SizedBox(height: 16),
               AppText(
                 'Compiling & Formatting $format...',

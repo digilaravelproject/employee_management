@@ -46,7 +46,7 @@ class EmployeeMoreScreen extends StatelessWidget {
               icon: Iconsax.task_square,
               title: 'My Tasks',
               subtitle: 'View and update your daily tasks',
-              iconColor: Colors.blue,
+              iconColor: AppColors.primaryColor,
               onTap: () {
                 Get.to(() => const TasksListScreen());
               },
@@ -91,7 +91,7 @@ class EmployeeMoreScreen extends StatelessWidget {
               icon: Iconsax.briefcase,
               title: 'My Leads & Targets',
               subtitle: 'Track monthly sales target, closed deals & leads',
-              iconColor: Colors.blueAccent,
+              iconColor: AppColors.primaryColor,
               onTap: () {
                 Get.to(() => const BdeLeadsTargetScreen());
               },
@@ -134,7 +134,7 @@ class EmployeeMoreScreen extends StatelessWidget {
               icon: Iconsax.document_text,
               title: 'Policies',
               subtitle: 'View company rules and guidelines',
-              iconColor: Colors.indigo,
+              iconColor: AppColors.primaryColor,
               onTap: () {
                 Get.to(() => const ComplianceDashboardScreen());
               },
@@ -152,7 +152,7 @@ class EmployeeMoreScreen extends StatelessWidget {
               icon: Iconsax.building,
               title: 'Company Profile',
               subtitle: 'About the organization',
-              iconColor: Colors.blueGrey,
+              iconColor: AppColors.slate500,
               onTap: () {
                 Get.to(() => const CompanyProfileViewScreen());
               },

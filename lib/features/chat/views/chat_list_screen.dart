@@ -55,7 +55,7 @@ class ChatListScreen extends StatelessWidget {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => Get.to(() => const NewChatScreen()),
-        backgroundColor: const Color(0xFF2563EB),
+        backgroundColor: AppColors.primaryColor,
         elevation: 6,
         child: const Icon(Icons.message, color: Colors.white, size: 22),
       ),
@@ -102,7 +102,7 @@ class ChatListScreen extends StatelessWidget {
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(16),
-                            borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5),
+                            borderSide: const BorderSide(color: AppColors.primaryColor, width: 1.5),
                           ),
                         ),
                       ),
@@ -168,17 +168,17 @@ class ChatListScreen extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFEFF6FF) : const Color(0xFFF0F2F5),
+          color: isSelected ? AppColors.primaryLight : const Color(0xFFF0F2F5),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected ? const Color(0xFFBFDBFE) : const Color(0xFFE2E8F0),
+            color: isSelected ? AppColors.primaryShade200 : const Color(0xFFE2E8F0),
           ),
         ),
         child: AppText(
           label,
           fontSize: 11,
           fontWeight: FontWeight.w800,
-          color: isSelected ? const Color(0xFF2563EB) : const Color(0xFF64748B),
+          color: isSelected ? AppColors.primaryColor : const Color(0xFF64748B),
         ),
       ),
     );
@@ -257,7 +257,7 @@ class ChatListScreen extends StatelessWidget {
                   timeStr,
                   fontSize: 9.5,
                   fontWeight: hasUnread ? FontWeight.w800 : FontWeight.w600,
-                  color: hasUnread ? const Color(0xFF2563EB) : const Color(0xFF94A3B8),
+                  color: hasUnread ? AppColors.primaryColor : const Color(0xFF94A3B8),
                 ),
               ],
             ),
@@ -283,7 +283,7 @@ class ChatListScreen extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: const BoxDecoration(
-                        color: Color(0xFF2563EB),
+                        color: AppColors.primaryColor,
                         shape: BoxShape.circle,
                       ),
                       child: Text(

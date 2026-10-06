@@ -131,7 +131,7 @@ class _AddDesignationScreenState extends State<AddDesignationScreen> {
                     activeColor = const Color(0xFF10B981); // Emerald
                     break;
                   case 'Senior':
-                    activeColor = const Color(0xFF3B82F6); // Blue
+                    activeColor = AppColors.primaryColor; // Blue
                     break;
                   case 'Manager':
                     activeColor = const Color(0xFF8B5CF6); // Purple

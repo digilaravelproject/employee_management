@@ -212,7 +212,7 @@ class LeaveCalendarScreen extends StatelessWidget {
                       Expanded(
                         child: _buildStatItem(
                           Iconsax.calendar_1,
-                          Colors.blue,
+                          AppColors.primaryColor,
                           'Total Holidays',
                           '$total',
                         ),
@@ -556,18 +556,18 @@ class LeaveCalendarScreen extends StatelessWidget {
 
   _MonthTheme _getMonthTheme(int index) {
     const themes = [
-      _MonthTheme(Colors.blue, Color(0x1A2196F3)),
+      _MonthTheme(AppColors.primaryColor, AppColors.primaryLight),
       _MonthTheme(Colors.purple, Color(0x1A9C27B0)),
       _MonthTheme(Colors.green, Color(0x1A4CAF50)),
       _MonthTheme(Colors.orange, Color(0x1AFF9800)),
       _MonthTheme(Colors.pink, Color(0x1AE91E63)),
-      _MonthTheme(Colors.indigo, Color(0x1A3F51B5)),
+      _MonthTheme(AppColors.primaryColor, Color(0x1A3F51B5)),
       _MonthTheme(Colors.teal, Color(0x1A009688)),
       _MonthTheme(Colors.deepOrange, Color(0x1AFF5722)),
       _MonthTheme(Colors.cyan, Color(0x1A00BCD4)),
       _MonthTheme(Colors.amber, Color(0x1AFFC107)),
       _MonthTheme(Colors.deepPurple, Color(0x1A673AB7)),
-      _MonthTheme(Colors.lightBlue, Color(0x1A03A9F4)),
+      _MonthTheme(AppColors.primaryShade400, AppColors.primaryLight),
     ];
     return themes[index % themes.length];
   }

@@ -215,7 +215,7 @@ class _BdeTargetsTabGateway extends StatelessWidget {
                         color: Colors.white.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(14),
                       ),
-                      child: const Icon(Iconsax.chart_21, color: Color(0xFF38BDF8), size: 28),
+                      child: const Icon(Iconsax.chart_21, color: AppColors.primaryShade300, size: 28),
                     ),
                     const SizedBox(width: 14),
                     const Expanded(
@@ -251,7 +251,7 @@ class _BdeTargetsTabGateway extends StatelessWidget {
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF38BDF8),
+                      backgroundColor: AppColors.primaryShade300,
                       foregroundColor: const Color(0xFF0F172A),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -296,7 +296,7 @@ class _BdeTargetsTabGateway extends StatelessWidget {
                   icon: Iconsax.status_up,
                   title: 'Monthly Target Progress',
                   desc: 'Track target vs achieved revenue with auto-updating progress bar',
-                  color: Colors.blue,
+                  color: AppColors.primaryColor,
                 ),
                 const SizedBox(height: 12),
                 _buildHighlightRow(

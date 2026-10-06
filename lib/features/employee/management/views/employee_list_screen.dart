@@ -932,10 +932,10 @@ class EmployeeListScreen extends StatelessWidget {
               leading: Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Colors.blue.withValues(alpha: 0.1),
+                  color: AppColors.primaryColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Iconsax.document_text, color: Colors.blue, size: 22),
+                child: const Icon(Iconsax.document_text, color: AppColors.primaryColor, size: 22),
               ),
               title: const AppText('CSV Format (.csv)', fontSize: 14, fontWeight: FontWeight.bold),
               subtitle: const AppText('Standard tabular spreadsheet format', fontSize: 11, color: AppColors.textColorSecondary),

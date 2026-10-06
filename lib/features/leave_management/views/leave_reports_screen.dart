@@ -305,7 +305,7 @@ class LeaveReportsScreen extends StatelessWidget {
           children: [
             Expanded(child: _buildStatCard('Total Requests', '$totalRequests', AppColors.primaryColor)),
             const SizedBox(width: 8),
-            Expanded(child: _buildStatCard('Total Days', daysStr, const Color(0xFF6366F1))),
+            Expanded(child: _buildStatCard('Total Days', daysStr, AppColors.primaryColor)),
             const SizedBox(width: 8),
             Expanded(child: _buildStatCard('Approved', '$approved', Colors.green)),
             const SizedBox(width: 8),
@@ -362,7 +362,7 @@ class LeaveReportsScreen extends StatelessWidget {
     final totalRequests = summary.totalRequests;
 
     final chartColors = [
-      const Color(0xFF2563EB), // Blue
+      AppColors.primaryColor, // Blue
       const Color(0xFF10B981), // Emerald
       const Color(0xFFF59E0B), // Amber
       const Color(0xFF8B5CF6), // Violet
@@ -488,7 +488,7 @@ class LeaveReportsScreen extends StatelessWidget {
     }
 
     final deptPalette = [
-      const Color(0xFF2563EB),
+      AppColors.primaryColor,
       const Color(0xFF10B981),
       const Color(0xFF8B5CF6),
       const Color(0xFFF59E0B),

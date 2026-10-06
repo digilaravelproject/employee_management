@@ -85,18 +85,36 @@ class SharedPrefs {
     if (data == null) return false;
     try {
       String jsonString;
+      int? extractedRoleId;
+
       if (data is String) {
         jsonString = data;
+        try {
+          final decoded = jsonDecode(data);
+          if (decoded is Map<String, dynamic>) {
+            extractedRoleId = UserModel.fromJson(decoded).primaryRoleId;
+          }
+        } catch (_) {}
       } else if (data is UserModel) {
         jsonString = jsonEncode(data.toJson());
+        extractedRoleId = data.primaryRoleId;
       } else if (data is Map<String, dynamic>) {
         jsonString = jsonEncode(data);
+        extractedRoleId = UserModel.fromJson(data).primaryRoleId;
       } else {
         jsonString = jsonEncode(data);
       }
 
       final success = await setString(AppConstants.userData, jsonString);
       await setBool(AppConstants.isLoggedIn, true);
+
+      // Automatically sync role_id based on user model
+      if (extractedRoleId != null) {
+        await setInt(AppConstants.roleId, extractedRoleId);
+      } else {
+        await remove(AppConstants.roleId);
+      }
+
       return success;
     } catch (e) {
       return false;
@@ -123,10 +141,42 @@ class SharedPrefs {
     return null;
   }
 
-  /// Clear all auth & user data from SharedPreferences
+  /// Get stored role_id if user is an employee / has assigned role
+  static int? getRoleId() {
+    final id = getInt(AppConstants.roleId);
+    if (id != null) return id;
+    final str = getString(AppConstants.roleId);
+    if (str != null && str.isNotEmpty) {
+      final parsed = int.tryParse(str);
+      if (parsed != null) return parsed;
+    }
+
+    // Fallback: check stored user data
+    final user = getUserData();
+    if (user != null && user.primaryRoleId != null) {
+      return user.primaryRoleId;
+    }
+    return null;
+  }
+
+  /// Explicitly save or remove role_id
+  static Future<bool> setRoleId(int? roleId) async {
+    if (roleId != null) {
+      return await setInt(AppConstants.roleId, roleId);
+    } else {
+      return await remove(AppConstants.roleId);
+    }
+  }
+
+  /// Check if user has an assigned employee role_id
+  static bool hasRoleId() => getRoleId() != null;
+
+  /// Clear all auth, role & user data from SharedPreferences
   static Future<void> clearUserData() async {
     await remove(AppConstants.userData);
     await remove(AppConstants.token);
+    await remove(AppConstants.roleId);
+    await remove(AppConstants.permissionsCache);
     await setBool(AppConstants.isLoggedIn, false);
   }
 }

@@ -5,6 +5,9 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/services/storage/shared_prefs.dart';
 import '../../../routes/route_helper.dart';
 
+import '../../../core/controllers/app_controller.dart';
+import '../../../core/services/permission/permission_service.dart';
+
 class IntroController extends GetxController {
   final PageController pageController = PageController();
   final RxInt currentPage = 0.obs;
@@ -18,6 +21,21 @@ class IntroController extends GetxController {
   void _checkLoginStatus() {
     final isLoggedIn = SharedPrefs.getBool(AppConstants.isLoggedIn) ?? false;
     if (isLoggedIn) {
+      final roleId = SharedPrefs.getRoleId();
+      if (roleId != null) {
+        if (Get.isRegistered<AppController>()) {
+          Get.find<AppController>().setRole('employee');
+        }
+        PermissionService.to.setAdminMode(false);
+        PermissionService.to.loadCachedPermissions();
+        PermissionService.to.fetchPermissions(roleId: roleId);
+      } else {
+        if (Get.isRegistered<AppController>()) {
+          Get.find<AppController>().setRole('admin');
+        }
+        PermissionService.to.setAdminMode(true);
+      }
+
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Get.offAllNamed(RouteHelper.getDashboardRoute());
       });
@@ -70,7 +88,9 @@ class IntroController extends GetxController {
   }
 
   void getStarted() {
-    Get.offAllNamed(RouteHelper.getRoleSelectionRoute());
+
+    //Get.offAllNamed(RouteHelper.getRoleSelectionRoute());
+    Get.offAllNamed(RouteHelper.getLoginRoute());
   }
 
   @override

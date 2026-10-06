@@ -104,7 +104,7 @@ class ComplianceTrackingScreen extends StatelessWidget {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: const BorderSide(color: Color(0xFF4F46E5), width: 1.5),
+                        borderSide: const BorderSide(color: AppColors.primaryColor, width: 1.5),
                       ),
                     ),
                   ),
@@ -146,7 +146,7 @@ class ComplianceTrackingScreen extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: const Color(0xFFEEF2FF)),
+                      border: Border.all(color: AppColors.primaryLight),
                     ),
                     child: Row(
                       children: [
@@ -208,12 +208,12 @@ class ComplianceTrackingScreen extends StatelessWidget {
                             child: Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF6366F1).withValues(alpha: 0.08),
+                                color: AppColors.primaryColor.withValues(alpha: 0.08),
                                 shape: BoxShape.circle,
                               ),
                               child: const Icon(
                                 Iconsax.notification,
-                                color: Color(0xFF6366F1),
+                                color: AppColors.primaryColor,
                                 size: 14,
                               ),
                             ),
@@ -238,10 +238,10 @@ class ComplianceTrackingScreen extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF4F46E5) : const Color(0xFFF8FAFC),
+          color: isSelected ? AppColors.primaryColor : const Color(0xFFF8FAFC),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected ? const Color(0xFF4F46E5) : const Color(0xFFE2E8F0),
+            color: isSelected ? AppColors.primaryColor : const Color(0xFFE2E8F0),
           ),
         ),
         child: Row(

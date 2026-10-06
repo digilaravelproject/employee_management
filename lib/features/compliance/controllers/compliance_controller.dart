@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:attendence_tracking_app/core/theme/app_colors.dart';
 import 'package:get/get.dart';
 import '../models/compliance_models.dart';
 
@@ -194,7 +195,7 @@ class ComplianceController extends GetxController {
       'Reminder Dispatched 🔔',
       'Compliance notification sent to ${ack.employeeName} for policy "$policyTitle".',
       snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: const Color(0xFF6366F1),
+      backgroundColor: AppColors.primaryColor,
       colorText: Colors.white,
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
       borderRadius: 16,

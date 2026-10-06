@@ -154,9 +154,9 @@ class _DocumentDetailsScreenState extends State<DocumentDetailsScreen> with Sing
               color: Colors.white,
               child: TabBar(
                 controller: _tabController,
-                indicatorColor: const Color(0xFF3B82F6),
+                indicatorColor: AppColors.primaryColor,
                 indicatorSize: TabBarIndicatorSize.tab,
-                labelColor: const Color(0xFF3B82F6),
+                labelColor: AppColors.primaryColor,
                 unselectedLabelColor: AppColors.textColorHint,
                 labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
                 unselectedLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
@@ -202,7 +202,7 @@ class _DocumentDetailsScreenState extends State<DocumentDetailsScreen> with Sing
                   _buildBottomBtn(
                     icon: Iconsax.eye,
                     label: 'Preview',
-                    color: const Color(0xFF4F46E5),
+                    color: AppColors.primaryColor,
                     onTap: () => Get.to(() => DocumentPreviewScreen(fileName: widget.document.name)),
                   ),
                   const SizedBox(width: 8),
@@ -262,7 +262,7 @@ class _DocumentDetailsScreenState extends State<DocumentDetailsScreen> with Sing
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: const Color(0xFFEEF2FF)),
+          border: Border.all(color: AppColors.primaryLight),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -343,11 +343,11 @@ class _DocumentDetailsScreenState extends State<DocumentDetailsScreen> with Sing
                   TextButton.icon(
                     style: TextButton.styleFrom(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      backgroundColor: const Color(0xFFEFF6FF),
+                      backgroundColor: AppColors.primaryLight,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
-                    icon: const Icon(Iconsax.user_add, size: 14, color: Color(0xFF3B82F6)),
-                    label: const AppText('Add People', fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF3B82F6)),
+                    icon: const Icon(Iconsax.user_add, size: 14, color: AppColors.primaryColor),
+                    label: const AppText('Add People', fontSize: 11, fontWeight: FontWeight.w800, color: AppColors.primaryColor),
                     onPressed: () {
                       Get.to(() => AccessControlScreen(fileName: widget.document.name));
                     },
@@ -359,7 +359,7 @@ class _DocumentDetailsScreenState extends State<DocumentDetailsScreen> with Sing
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: const Color(0xFFEEF2FF)),
+                border: Border.all(color: AppColors.primaryLight),
               ),
               child: ListView.separated(
                 shrinkWrap: true,
@@ -450,7 +450,7 @@ class _DocumentDetailsScreenState extends State<DocumentDetailsScreen> with Sing
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFFEEF2FF)),
+              border: Border.all(color: AppColors.primaryLight),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -461,14 +461,14 @@ class _DocumentDetailsScreenState extends State<DocumentDetailsScreen> with Sing
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFEFF6FF),
+                        color: AppColors.primaryLight,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: AppText(
                         ver.version,
                         fontSize: 11,
                         fontWeight: FontWeight.w800,
-                        color: const Color(0xFF3B82F6),
+                        color: AppColors.primaryColor,
                       ),
                     ),
                     AppText(
@@ -629,7 +629,7 @@ class _DocumentDetailsScreenState extends State<DocumentDetailsScreen> with Sing
         return const Color(0xFF10B981);
       case 'docx':
       case 'doc':
-        return const Color(0xFF3B82F6);
+        return AppColors.primaryColor;
       case 'zip':
       case 'rar':
         return const Color(0xFFF59E0B);
@@ -653,7 +653,7 @@ class _DocumentDetailsScreenState extends State<DocumentDetailsScreen> with Sing
   Color _getAccessTypeColor(String type) {
     switch (type.toLowerCase()) {
       case 'group':
-        return const Color(0xFF3B82F6);
+        return AppColors.primaryColor;
       case 'department':
         return const Color(0xFF8B5CF6);
       case 'individual':
@@ -667,7 +667,7 @@ class _DocumentDetailsScreenState extends State<DocumentDetailsScreen> with Sing
       case 'share':
         return const Color(0xFFF97316);
       case 'update':
-        return const Color(0xFF3B82F6);
+        return AppColors.primaryColor;
       case 'download':
         return const Color(0xFF10B981);
       case 'view':

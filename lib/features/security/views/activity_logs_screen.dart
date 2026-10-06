@@ -155,7 +155,7 @@ class ActivityLogsScreen extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: const Color(0xFFEEF2FF)),
+                            border: Border.all(color: AppColors.primaryLight),
                           ),
                           child: ListView.separated(
                             shrinkWrap: true,
@@ -187,10 +187,10 @@ class ActivityLogsScreen extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF2563EB) : Colors.white,
+          color: isSelected ? AppColors.primaryColor : Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected ? const Color(0xFF2563EB) : const Color(0xFFE2E8F0),
+            color: isSelected ? AppColors.primaryColor : const Color(0xFFE2E8F0),
           ),
         ),
         child: AppText(
@@ -216,7 +216,7 @@ class _ActivityLogTile extends StatelessWidget {
 
     if (item.category == 'Data Changes') {
       icon = Iconsax.edit;
-      color = const Color(0xFF3B82F6);
+      color = AppColors.primaryColor;
     } else if (item.category == 'Actions') {
       icon = Iconsax.trash;
       color = const Color(0xFFEF4444);

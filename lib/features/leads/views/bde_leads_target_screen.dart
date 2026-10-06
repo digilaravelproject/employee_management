@@ -392,10 +392,10 @@ class BdeLeadsTargetScreen extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: isTargetAchieved
                         ? Colors.green.withValues(alpha: 0.25)
-                        : Colors.blue.withValues(alpha: 0.25),
+                        : AppColors.primaryColor.withValues(alpha: 0.25),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: isTargetAchieved ? Colors.greenAccent : Colors.lightBlueAccent,
+                      color: isTargetAchieved ? Colors.greenAccent : AppColors.primaryShade300,
                       width: 1,
                     ),
                   ),
@@ -404,14 +404,14 @@ class BdeLeadsTargetScreen extends StatelessWidget {
                       Icon(
                         isTargetAchieved ? Icons.verified : Iconsax.timer,
                         size: 13,
-                        color: isTargetAchieved ? Colors.greenAccent : Colors.lightBlueAccent,
+                        color: isTargetAchieved ? Colors.greenAccent : AppColors.primaryShade300,
                       ),
                       const SizedBox(width: 4),
                       AppText(
                         isTargetAchieved ? 'Target Met!' : '$pctDisplay%',
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
-                        color: isTargetAchieved ? Colors.greenAccent : Colors.lightBlueAccent,
+                        color: isTargetAchieved ? Colors.greenAccent : AppColors.primaryShade300,
                       ),
                     ],
                   ),
@@ -439,7 +439,7 @@ class BdeLeadsTargetScreen extends StatelessWidget {
                       formatInr(achieved),
                       fontSize: 26,
                       fontWeight: FontWeight.w900,
-                      color: const Color(0xFF38BDF8), // vibrant cyan
+                      color: AppColors.primaryShade300, // vibrant cyan
                     ),
                   ],
                 ),
@@ -475,7 +475,7 @@ class BdeLeadsTargetScreen extends StatelessWidget {
                 valueColor: AlwaysStoppedAnimation<Color>(
                   isTargetAchieved
                       ? const Color(0xFF10B981) // Emerald Green
-                      : const Color(0xFF38BDF8), // Sky Blue
+                      : AppColors.primaryShade300, // Sky Blue
                 ),
               ),
             ),
@@ -769,13 +769,13 @@ class BdeLeadsTargetScreen extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Iconsax.note_2, size: 12, color: Colors.blueGrey),
+                  const Icon(Iconsax.note_2, size: 12, color: AppColors.slate500),
                   const SizedBox(width: 6),
                   Expanded(
                     child: AppText(
                       lead.conversionNotes!,
                       fontSize: 11,
-                      color: Colors.blueGrey.shade700,
+                      color: AppColors.slate700,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -909,7 +909,7 @@ class BdeLeadsTargetScreen extends StatelessWidget {
     final isWon = status == 'converted' || status == 'closed won';
     final isLost = status == 'lost' || status == 'closed lost';
 
-    Color badgeColor = Colors.blue;
+    Color badgeColor = AppColors.primaryColor;
     if (isWon) {
       badgeColor = Colors.green;
     } else if (isLost) {
@@ -1009,7 +1009,7 @@ class BdeLeadsTargetScreen extends StatelessWidget {
                 ),
                 Row(
                   children: [
-                    const Icon(Iconsax.calendar_1, size: 16, color: Colors.blueGrey),
+                    const Icon(Iconsax.calendar_1, size: 16, color: AppColors.slate500),
                     const SizedBox(width: 6),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,

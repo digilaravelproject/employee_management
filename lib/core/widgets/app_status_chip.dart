@@ -47,7 +47,7 @@ class AppStatusChip extends StatelessWidget {
         break;
       case 'in progress':
       case 'started':
-        color = Colors.blue;
+        color = AppColors.primaryColor;
         icon = Icons.directions_run_rounded;
         break;
       case 'inactive':

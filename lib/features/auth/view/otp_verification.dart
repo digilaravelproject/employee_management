@@ -75,7 +75,7 @@ class _TopHeader extends StatelessWidget {
         height: height,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFF1D4ED8), Color(0xFF2563EB), Color(0xFF3B82F6)],
+            colors: [AppColors.primaryGradientLight, AppColors.primaryGradientDark],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),

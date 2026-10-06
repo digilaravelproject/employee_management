@@ -327,9 +327,9 @@ class HolidayCalendarScreen extends StatelessWidget {
             _buildSummaryPill(
               label: 'Total',
               count: controller.totalHolidays,
-              bgColor: const Color(0xFFEFF6FF),
-              textColor: const Color(0xFF2563EB),
-              borderColor: const Color(0xFFBFDBFE),
+              bgColor: AppColors.primaryLight,
+              textColor: AppColors.primaryColor,
+              borderColor: AppColors.primaryShade200,
             ),
             const SizedBox(width: 8),
             _buildSummaryPill(

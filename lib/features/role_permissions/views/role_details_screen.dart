@@ -328,7 +328,7 @@ class RoleDetailsScreen extends StatelessWidget {
                             title: '${role.permissionGroups.length}',
                             subtitle: 'Configured Modules',
                             icon: Iconsax.category,
-                            color: Colors.blueAccent,
+                            color: AppColors.primaryColor,
                           ),
                         ),
                       ],

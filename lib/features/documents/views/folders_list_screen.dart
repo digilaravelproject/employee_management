@@ -98,7 +98,7 @@ class FoldersListScreen extends StatelessWidget {
           ),
         ),
         floatingActionButton: FloatingActionButton(
-          backgroundColor: isAdmin ? const Color(0xFF3B82F6) : const Color(0xFF10B981),
+          backgroundColor: isAdmin ? AppColors.primaryColor : const Color(0xFF10B981),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           child: const Icon(Iconsax.add, color: Colors.white, size: 26),
           onPressed: () => _showAddOptionsBottomSheet(context, controller),
@@ -140,7 +140,7 @@ class FoldersListScreen extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFFEEF2FF)),
+              border: Border.all(color: AppColors.primaryLight),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.01),
@@ -168,12 +168,12 @@ class FoldersListScreen extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
-                              color: (isAdmin ? const Color(0xFF3B82F6) : const Color(0xFF10B981)).withValues(alpha: 0.08),
+                              color: (isAdmin ? AppColors.primaryColor : const Color(0xFF10B981)).withValues(alpha: 0.08),
                               shape: BoxShape.circle,
                             ),
                             child: Icon(
                               Iconsax.folder_open5,
-                              color: isAdmin ? const Color(0xFF3B82F6) : const Color(0xFF10B981),
+                              color: isAdmin ? AppColors.primaryColor : const Color(0xFF10B981),
                               size: 20,
                             ),
                           ),
@@ -247,7 +247,7 @@ class FoldersListScreen extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFFEEF2FF)),
+              border: Border.all(color: AppColors.primaryLight),
             ),
             child: Material(
               color: Colors.transparent,
@@ -344,7 +344,7 @@ class FoldersListScreen extends StatelessWidget {
         return const Color(0xFF10B981);
       case 'docx':
       case 'doc':
-        return const Color(0xFF3B82F6);
+        return AppColors.primaryColor;
       case 'zip':
       case 'rar':
         return const Color(0xFFF59E0B);
@@ -356,9 +356,9 @@ class FoldersListScreen extends StatelessWidget {
   Color _getStatusBgColor(String status) {
     switch (status.toLowerCase()) {
       case 'public':
-        return const Color(0xFFEFF6FF);
+        return AppColors.primaryLight;
       case 'hr only':
-        return const Color(0xFFEEF2FF);
+        return AppColors.primaryLight;
       case 'team':
       default:
         return const Color(0xFFFFF7ED);
@@ -368,9 +368,9 @@ class FoldersListScreen extends StatelessWidget {
   Color _getStatusTextColor(String status) {
     switch (status.toLowerCase()) {
       case 'public':
-        return const Color(0xFF2563EB);
+        return AppColors.primaryColor;
       case 'hr only':
-        return const Color(0xFF4F46E5);
+        return AppColors.primaryColor;
       case 'team':
       default:
         return const Color(0xFFEA580C);
@@ -406,7 +406,7 @@ class FoldersListScreen extends StatelessWidget {
             _buildActionItem(
               icon: Iconsax.folder_add,
               label: 'Create New Folder',
-              color: isAdmin ? const Color(0xFF3B82F6) : const Color(0xFF10B981),
+              color: isAdmin ? AppColors.primaryColor : const Color(0xFF10B981),
               onTap: () {
                 Get.back();
                 _showAddFolderDialog(context, controller);
@@ -416,7 +416,7 @@ class FoldersListScreen extends StatelessWidget {
             _buildActionItem(
               icon: Iconsax.document_upload,
               label: 'Upload New File',
-              color: isAdmin ? const Color(0xFF3B82F6) : const Color(0xFF10B981),
+              color: isAdmin ? AppColors.primaryColor : const Color(0xFF10B981),
               onTap: () {
                 Get.back();
                 _showUploadSheet(context, controller);
@@ -439,7 +439,7 @@ class FoldersListScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.slate50,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFEEF2FF)),
+        border: Border.all(color: AppColors.primaryLight),
       ),
       child: Material(
         color: Colors.transparent,
@@ -497,7 +497,7 @@ class FoldersListScreen extends StatelessWidget {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: controller.isAdminView.value ? const Color(0xFF3B82F6) : const Color(0xFF10B981),
+              backgroundColor: controller.isAdminView.value ? AppColors.primaryColor : const Color(0xFF10B981),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
             onPressed: () {
@@ -634,7 +634,7 @@ class FoldersListScreen extends StatelessWidget {
                 height: 48,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: controller.isAdminView.value ? const Color(0xFF3B82F6) : const Color(0xFF10B981),
+                    backgroundColor: controller.isAdminView.value ? AppColors.primaryColor : const Color(0xFF10B981),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   ),
                   onPressed: () {

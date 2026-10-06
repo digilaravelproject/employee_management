@@ -328,11 +328,11 @@ class _DepartmentPickerBottomSheetState extends State<DepartmentPickerBottomShee
 
   Color _getThemeColor(String name) {
     final lower = name.toLowerCase();
-    if (lower.contains('tech') || lower.contains('eng') || lower.contains('code') || lower.contains('dev') || lower.contains('product')) return const Color(0xFF6366F1);
+    if (lower.contains('tech') || lower.contains('eng') || lower.contains('code') || lower.contains('dev') || lower.contains('product')) return AppColors.primaryColor;
     if (lower.contains('hr') || lower.contains('people') || lower.contains('recruit') || lower.contains('human')) return const Color(0xFFEC4899);
     if (lower.contains('market') || lower.contains('advert') || lower.contains('social')) return const Color(0xFF10B981);
     if (lower.contains('finance') || lower.contains('money') || lower.contains('audit') || lower.contains('pay')) return const Color(0xFFF59E0B);
-    if (lower.contains('sale') || lower.contains('deal') || lower.contains('revenue')) return const Color(0xFF3B82F6);
+    if (lower.contains('sale') || lower.contains('deal') || lower.contains('revenue')) return AppColors.primaryColor;
     if (lower.contains('support') || lower.contains('it') || lower.contains('help')) return const Color(0xFF06B6D4);
     return const Color(0xFF8B5CF6);
   }

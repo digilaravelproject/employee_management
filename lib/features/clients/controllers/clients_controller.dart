@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:attendence_tracking_app/core/theme/app_colors.dart';
 import 'package:get/get.dart';
 import '../../role_permissions/models/role_permission_models.dart';
 import '../models/client_model.dart';
@@ -375,7 +376,7 @@ class ClientsController extends GetxController {
         if (selectedClient.value?.id == id) {
           selectedClient.value = updated;
         }
-        _showSnackbar('Success 🎉', 'Client details updated', const Color(0xFF3B82F6));
+        _showSnackbar('Success 🎉', 'Client details updated', AppColors.primaryColor);
       }
     }
   }

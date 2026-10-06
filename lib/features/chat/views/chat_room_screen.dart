@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:attendence_tracking_app/core/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
@@ -81,7 +82,7 @@ class ChatRoomScreen extends StatelessWidget {
                         'typing...',
                         fontSize: 9.5,
                         fontWeight: FontWeight.w800,
-                        color: Color(0xFF2563EB),
+                        color: AppColors.primaryColor,
                       );
                     }
                     return AppText(
@@ -98,11 +99,11 @@ class ChatRoomScreen extends StatelessWidget {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Iconsax.video5, color: Color(0xFF2563EB), size: 20),
+            icon: const Icon(Iconsax.video5, color: AppColors.primaryColor, size: 20),
             onPressed: () => _simulateCallAction('Video Call'),
           ),
           IconButton(
-            icon: const Icon(Iconsax.call5, color: Color(0xFF2563EB), size: 18),
+            icon: const Icon(Iconsax.call5, color: AppColors.primaryColor, size: 18),
             onPressed: () => _simulateCallAction('Audio Call'),
           ),
           const SizedBox(width: 8),
@@ -146,7 +147,7 @@ class ChatRoomScreen extends StatelessWidget {
         margin: const EdgeInsets.symmetric(vertical: 4),
         padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
         decoration: BoxDecoration(
-          color: isMe ? const Color(0xFF2563EB) : Colors.white,
+          color: isMe ? AppColors.primaryColor : Colors.white,
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(16),
             topRight: const Radius.circular(16),
@@ -198,7 +199,7 @@ class ChatRoomScreen extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 8.5,
                     fontWeight: FontWeight.w600,
-                    color: isMe ? const Color(0xFFDBEAFE) : const Color(0xFF8B96A5),
+                    color: isMe ? AppColors.primaryShade100 : const Color(0xFF8B96A5),
                     fontFamily: 'Outfit',
                   ),
                 ),
@@ -206,7 +207,7 @@ class ChatRoomScreen extends StatelessWidget {
                   const SizedBox(width: 4),
                   Icon(
                     message.isRead ? Icons.done_all_rounded : Icons.done_rounded,
-                    color: message.isRead ? const Color(0xFF93C5FD) : Colors.white70,
+                    color: message.isRead ? AppColors.primaryShade300 : Colors.white70,
                     size: 12,
                   ),
                 ],
@@ -239,7 +240,7 @@ class ChatRoomScreen extends StatelessWidget {
                       child: SizedBox(
                         width: 20,
                         height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF2563EB)),
+                        child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primaryColor),
                       ),
                     ),
                   );
@@ -254,14 +255,14 @@ class ChatRoomScreen extends StatelessWidget {
       );
     } else if (message.mediaType == 'document') {
       final Color tintColor = const Color(0xFFEF4444); // Crimson for PDF
-      final Color boxColor = message.isMe ? const Color(0xFFEFF6FF) : const Color(0xFFF1F5F9);
+      final Color boxColor = message.isMe ? AppColors.primaryLight : const Color(0xFFF1F5F9);
       return Container(
         width: 220,
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
           color: boxColor,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: message.isMe ? const Color(0xFFBFDBFE).withValues(alpha: 0.3) : const Color(0xFFE2E8F0)),
+          border: Border.all(color: message.isMe ? AppColors.primaryShade200.withValues(alpha: 0.3) : const Color(0xFFE2E8F0)),
         ),
         child: Row(
           children: [
@@ -359,7 +360,7 @@ class ChatRoomScreen extends StatelessWidget {
                         maxLines: 5,
                         keyboardType: TextInputType.multiline,
                         textCapitalization: TextCapitalization.sentences,
-                        cursorColor: const Color(0xFF2563EB),
+                        cursorColor: AppColors.primaryColor,
                         style: const TextStyle(
                           fontSize: 13.5,
                           fontWeight: FontWeight.w600,
@@ -423,7 +424,7 @@ class ChatRoomScreen extends StatelessWidget {
                 height: 38,
                 width: 38,
                 decoration: const BoxDecoration(
-                  color: Color(0xFF2563EB),
+                  color: AppColors.primaryColor,
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -541,7 +542,7 @@ class ChatRoomScreen extends StatelessWidget {
                 _buildAttachmentOption(
                   'Send Image',
                   Iconsax.image5,
-                  const Color(0xFF3B82F6),
+                  AppColors.primaryColor,
                   () {
                     Get.back();
                     controller.sendMediaAttachment('image');
@@ -595,7 +596,7 @@ class ChatRoomScreen extends StatelessWidget {
       'Establishing Connection 📞',
       'Initiating peer-to-peer security protocol for $type.',
       snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: const Color(0xFF2563EB),
+      backgroundColor: AppColors.primaryColor,
       colorText: Colors.white,
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
       borderRadius: 16,

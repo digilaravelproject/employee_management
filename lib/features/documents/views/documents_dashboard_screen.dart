@@ -57,13 +57,13 @@ class DocumentsDashboardScreen extends StatelessWidget {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: isAdmin 
-                      ? [const Color(0xFF3B82F6), const Color(0xFF4F46E5)]
+                      ? [AppColors.primaryGradientLight, AppColors.primaryGradientDark]
                       : [const Color(0xFF10B981), const Color(0xFF059669)],
                   ),
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: (isAdmin ? const Color(0xFF3B82F6) : const Color(0xFF10B981)).withValues(alpha: 0.2),
+                      color: (isAdmin ? AppColors.primaryColor : const Color(0xFF10B981)).withValues(alpha: 0.2),
                       blurRadius: 8,
                       offset: const Offset(0, 3),
                     ),
@@ -160,7 +160,7 @@ class DocumentsDashboardScreen extends StatelessWidget {
                           'View all',
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
-                          color: isAdmin ? const Color(0xFF4F46E5) : const Color(0xFF059669),
+                          color: isAdmin ? AppColors.primaryColor : const Color(0xFF059669),
                         ),
                       ),
                     ],
@@ -187,14 +187,14 @@ class _AdminOverviewCard extends StatelessWidget {
       width: double.infinity,
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF3B82F6), Color(0xFF1E3A8A)],
+          colors: [AppColors.primaryColor, AppColors.primaryDark],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF3B82F6).withValues(alpha: 0.3),
+            color: AppColors.primaryColor.withValues(alpha: 0.3),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -384,7 +384,7 @@ class _AdminQuickActions extends StatelessWidget {
         _buildAction(
           icon: Iconsax.document_upload,
           label: 'Upload\nDocument',
-          color: const Color(0xFF3B82F6),
+          color: AppColors.primaryColor,
           onTap: () => _showUploadSheet(context, controller),
         ),
         _buildAction(
@@ -487,7 +487,7 @@ class _EmployeeQuickAccess extends StatelessWidget {
         _buildAccessCard(
           icon: Iconsax.people,
           label: 'Shared with Me',
-          color: const Color(0xFF3B82F6),
+          color: AppColors.primaryColor,
           onTap: () => Get.to(() => const EmployeeSharedScreen()),
         ),
         _buildAccessCard(
@@ -584,7 +584,7 @@ class _RecentDocumentsList extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFFEEF2FF)),
+            border: Border.all(color: AppColors.primaryLight),
           ),
           child: Column(
             children: [
@@ -633,7 +633,7 @@ class _DocumentTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFEEF2FF)),
+        border: Border.all(color: AppColors.primaryLight),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.01),
@@ -776,7 +776,7 @@ class _DocumentTile extends StatelessWidget {
         return const Color(0xFF10B981); // Green
       case 'docx':
       case 'doc':
-        return const Color(0xFF3B82F6); // Blue
+        return AppColors.primaryColor; // Blue
       case 'zip':
       case 'rar':
         return const Color(0xFFF59E0B); // Amber
@@ -788,9 +788,9 @@ class _DocumentTile extends StatelessWidget {
   Color _getStatusBgColor(String status) {
     switch (status.toLowerCase()) {
       case 'public':
-        return const Color(0xFFEFF6FF); // Slate Blue
+        return AppColors.primaryLight; // Slate Blue
       case 'hr only':
-        return const Color(0xFFEEF2FF); // Indigo
+        return AppColors.primaryLight; // Indigo
       case 'team':
       default:
         return const Color(0xFFFFF7ED); // Orange
@@ -800,9 +800,9 @@ class _DocumentTile extends StatelessWidget {
   Color _getStatusTextColor(String status) {
     switch (status.toLowerCase()) {
       case 'public':
-        return const Color(0xFF2563EB); // Dark Blue
+        return AppColors.primaryColor; // Dark Blue
       case 'hr only':
-        return const Color(0xFF4F46E5); // Indigo
+        return AppColors.primaryColor; // Indigo
       case 'team':
       default:
         return const Color(0xFFEA580C); // Dark Orange
@@ -832,7 +832,7 @@ void _showAddFolderDialog(BuildContext context, DocumentsController controller) 
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Color(0xFF3B82F6), width: 1.5),
+            borderSide: const BorderSide(color: AppColors.primaryColor, width: 1.5),
           ),
         ),
       ),
@@ -843,7 +843,7 @@ void _showAddFolderDialog(BuildContext context, DocumentsController controller) 
         ),
         ElevatedButton(
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF3B82F6),
+            backgroundColor: AppColors.primaryColor,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           ),
@@ -983,7 +983,7 @@ void _showUploadSheet(BuildContext context, DocumentsController controller) {
               height: 48,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF3B82F6),
+                  backgroundColor: AppColors.primaryColor,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 ),
                 onPressed: () {

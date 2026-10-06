@@ -28,6 +28,8 @@ import '../../documents/views/documents_dashboard_screen.dart';
 import '../../shift_management/views/shift_management_screen.dart';
 import '../../employee/management/views/employee_list_screen.dart';
 import '../../../../routes/route_helper.dart';
+import '../../../core/services/permission/permission_service.dart';
+import '../../../core/services/permission/permission_constant.dart';
 
 
 class AllModulesScreen extends StatelessWidget {
@@ -93,10 +95,10 @@ class _AllModulesHeader extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFEEF2FF)),
+              border: Border.all(color: AppColors.primaryLight),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF6366F1).withValues(alpha: 0.05),
+                  color: AppColors.primaryColor.withValues(alpha: 0.05),
                   blurRadius: 8,
                   offset: const Offset(0, 3),
                 ),
@@ -107,14 +109,14 @@ class _AllModulesHeader extends StatelessWidget {
                 Icon(
                   Iconsax.setting_4,
                   size: 14,
-                  color: Color(0xFF4F46E5),
+                  color: AppColors.primaryColor,
                 ),
                 SizedBox(width: 6),
                 AppText(
                   'Customise',
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF4F46E5),
+                  color: AppColors.primaryColor,
                 ),
               ],
             ),
@@ -136,14 +138,14 @@ class _GoodMorningBanner extends StatelessWidget {
       width: double.infinity,
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF3B82F6), Color(0xFF4F46E5), Color(0xFF6366F1)],
+          colors: [AppColors.primaryGradientLight, AppColors.primaryGradientDark],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF4F46E5).withValues(alpha: 0.25),
+            color: AppColors.primaryColor.withValues(alpha: 0.25),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -454,7 +456,7 @@ class _GlassmorphicPlatformIllustration extends StatelessWidget {
                         height: 12,
                         width: 4,
                         decoration: BoxDecoration(
-                          color: const Color(0xFF4F46E5),
+                          color: AppColors.primaryColor,
                           borderRadius: BorderRadius.circular(1),
                         ),
                       ),
@@ -498,7 +500,7 @@ class _ModulesGrid extends StatelessWidget {
       const _ModuleItem(
         label: 'Department',
         icon: Iconsax.buildings,
-        color: Color(0xFF6366F1), // Indigo
+        color: AppColors.primaryColor, // Indigo
       ),
       const _ModuleItem(
         label: 'Role',
@@ -508,7 +510,7 @@ class _ModulesGrid extends StatelessWidget {
       const _ModuleItem(
         label: 'Designation',
         icon: Iconsax.user_tag,
-        color: Color(0xFF3B82F6), // Blue
+        color: AppColors.primaryColor, // Blue
       ),
       const _ModuleItem(
         label: 'Shift',
@@ -523,7 +525,7 @@ class _ModulesGrid extends StatelessWidget {
       const _ModuleItem(
         label: 'Projects',
         icon: Iconsax.folder_open,
-        color: Color(0xFF2563EB), // Deep Blue
+        color: AppColors.primaryColor, // Deep Blue
       ),
       const _ModuleItem(
         label: 'Tasks',
@@ -538,7 +540,7 @@ class _ModulesGrid extends StatelessWidget {
       const _ModuleItem(
         label: 'Company Profile',
         icon: Iconsax.profile_2user,
-        color: Color(0xFF3B82F6), // Blue
+        color: AppColors.primaryColor, // Blue
       ),
       // const _ModuleItem(
       //   label: 'Attendance',
@@ -579,12 +581,12 @@ class _ModulesGrid extends StatelessWidget {
       const _ModuleItem(
         label: 'Follow-ups',
         icon: Iconsax.call,
-        color: Color(0xFF3B82F6), // Blue
+        color: AppColors.primaryColor, // Blue
       ),
       const _ModuleItem(
         label: 'Chat',
         icon: Iconsax.message_text,
-        color: Color(0xFF0EA5E9), // Sky
+        color: AppColors.primaryShade400, // Sky
       ),
       // const _ModuleItem(
       //   label: 'Announcements',
@@ -604,13 +606,13 @@ class _ModulesGrid extends StatelessWidget {
       const _ModuleItem(
         label: 'security',
         icon: Iconsax.shield,
-        color: Color(0xFF3B82F6), // Blue
+        color: AppColors.primaryColor, // Blue
       ),
 
       const _ModuleItem(
         label: 'Policies',
         icon: Iconsax.document_text,
-        color: Color(0xFF6366F1), // Indigo
+        color: AppColors.primaryColor, // Indigo
       ),
       const _ModuleItem(
         label: 'Calendar',
@@ -620,7 +622,7 @@ class _ModulesGrid extends StatelessWidget {
       const _ModuleItem(
         label: 'Performance',
         icon: Iconsax.graph,
-        color: Color(0xFF6366F1), // Indigo
+        color: AppColors.primaryColor, // Indigo
       ),
       // const _ModuleItem(
       //   label: 'Settings',
@@ -630,30 +632,69 @@ class _ModulesGrid extends StatelessWidget {
       // const _ModuleItem(
       //   label: 'Roles & Permissions',
       //   icon: Iconsax.shield,
-      //   color: Color(0xFF2563EB), // Deep Blue
+      //   color: AppColors.primaryColor, // Deep Blue
       // ),
       // const _ModuleItem(
       //   label: 'More',
       //   icon: Iconsax.element_equal,
-      //   color: Color(0xFF6366F1), // Indigo
+      //   color: AppColors.primaryColor, // Indigo
       // ),
     ];
 
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 4,
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 14,
-        childAspectRatio: 0.76,
-      ),
-      itemCount: modules.length,
-      itemBuilder: (context, index) {
-        final item = modules[index];
-        return _ModuleCard(item: item);
-      },
-    );
+    return Obx(() {
+      final filteredModules = modules.where((item) {
+        if (PermissionService.to.isAdmin.value) return true;
+        switch (item.label.trim()) {
+          case 'Department':
+            return PermissionService.to.isAllowed(PermissionConstant.viewDepartments, moduleSlug: PermissionConstant.moduleDepartmentsDesignations);
+          case 'Role':
+            return PermissionService.to.isAllowed(PermissionConstant.viewRolesList, moduleSlug: PermissionConstant.moduleRolesPermissionsRbac);
+          case 'Designation':
+            return PermissionService.to.isAllowed(PermissionConstant.viewDesignations, moduleSlug: PermissionConstant.moduleDepartmentsDesignations);
+          case 'Employee':
+            return PermissionService.to.isAllowed(PermissionConstant.viewEmployeeDirectory, moduleSlug: PermissionConstant.moduleEmployeeManagement);
+          case 'Projects':
+            return PermissionService.to.isAllowed(PermissionConstant.viewProjects, moduleSlug: PermissionConstant.moduleTasksProjects);
+          case 'Tasks':
+            return PermissionService.to.isAllowed(PermissionConstant.viewTasks, moduleSlug: PermissionConstant.moduleTasksProjects);
+          case 'Assets':
+            return PermissionService.to.isAllowed(PermissionConstant.viewAssets, moduleSlug: PermissionConstant.moduleAssetsManagement);
+          case 'Company Profile':
+            return PermissionService.to.isAllowed(PermissionConstant.viewCompanyProfile, moduleSlug: PermissionConstant.moduleCompanyProfilePolicies);
+          case 'Payroll / Salary':
+            return PermissionService.to.isAllowed(PermissionConstant.viewMySalary, moduleSlug: PermissionConstant.modulePayrollSalary) ||
+                PermissionService.to.isAllowed(PermissionConstant.manageCompanyPayroll, moduleSlug: PermissionConstant.modulePayrollSalary);
+          case 'Clients':
+            return PermissionService.to.isAllowed(PermissionConstant.viewClients, moduleSlug: PermissionConstant.moduleClientsLeadsCrm);
+          case 'Leads':
+            return PermissionService.to.isAllowed(PermissionConstant.viewLeads, moduleSlug: PermissionConstant.moduleClientsLeadsCrm);
+          case 'Follow-ups':
+            return PermissionService.to.isAllowed(PermissionConstant.viewMeetings, moduleSlug: PermissionConstant.moduleMeetingsFollowUps);
+          case 'Documents':
+            return PermissionService.to.isAllowed(PermissionConstant.browseDocumentFolders, moduleSlug: PermissionConstant.moduleDocumentsFolders);
+          case 'Policies':
+            return PermissionService.to.isAllowed(PermissionConstant.readCompliancePolicies, moduleSlug: PermissionConstant.moduleCompanyProfilePolicies);
+          default:
+            return true;
+        }
+      }).toList();
+
+      return GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 4,
+          crossAxisSpacing: 10,
+          mainAxisSpacing: 14,
+          childAspectRatio: 0.76,
+        ),
+        itemCount: filteredModules.length,
+        itemBuilder: (context, index) {
+          final item = filteredModules[index];
+          return _ModuleCard(item: item);
+        },
+      );
+    });
   }
 }
 
@@ -814,7 +855,7 @@ class _StayOnTrackBanner extends StatelessWidget {
         border: Border.all(color: const Color(0xFFEDE9FE)),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF6366F1).withValues(alpha: 0.03),
+            color: AppColors.primaryColor.withValues(alpha: 0.03),
             blurRadius: 15,
             offset: const Offset(0, 6),
           ),
@@ -865,11 +906,11 @@ class _StayOnTrackBanner extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF4F46E5), // Indigo Purple
+                    color: AppColors.primaryColor, // Indigo Purple
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF4F46E5).withValues(alpha: 0.2),
+                        color: AppColors.primaryColor.withValues(alpha: 0.2),
                         blurRadius: 8,
                         offset: const Offset(0, 3),
                       ),
@@ -998,7 +1039,7 @@ class _ThreeDIllustrationGraphics extends StatelessWidget {
             height: 44,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(color: const Color(0xFFC7D2FE), width: 3),
+              border: Border.all(color: AppColors.primaryShade200, width: 3),
               color: Colors.white,
             ),
             child: Center(
@@ -1006,7 +1047,7 @@ class _ThreeDIllustrationGraphics extends StatelessWidget {
                 width: 28,
                 height: 28,
                 decoration: const BoxDecoration(
-                  color: Color(0xFF818CF8),
+                  color: AppColors.primaryShade300,
                   shape: BoxShape.circle,
                 ),
                 child: Center(
@@ -1014,7 +1055,7 @@ class _ThreeDIllustrationGraphics extends StatelessWidget {
                     width: 14,
                     height: 14,
                     decoration: const BoxDecoration(
-                      color: Color(0xFF4F46E5),
+                      color: AppColors.primaryColor,
                       shape: BoxShape.circle,
                     ),
                     child: Center(

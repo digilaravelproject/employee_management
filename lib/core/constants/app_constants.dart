@@ -111,6 +111,8 @@ class AppConstants {
   static const String userData = 'user_data';
   static const String profileData = 'profile_data';
   static const String isLoggedIn = 'is_logged_in';
+  static const String roleId = 'role_id';
+  static const String permissionsCache = 'permissions_cache';
   static const String leadsUrl = '/api/v1/leads';
   static String convertLeadToTripUrl(dynamic id) => '/api/v1/leads/$id/convert-to-trip';
   static String getLeadBillUrl(dynamic id) => '/api/v1/leads/$id/bill';

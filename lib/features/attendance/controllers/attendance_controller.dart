@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:attendence_tracking_app/core/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -133,7 +134,7 @@ class AttendanceController extends GetxController {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: Theme.of(context).colorScheme.copyWith(
-                  primary: const Color(0xFF2563EB),
+                  primary: AppColors.primaryColor,
                 ),
           ),
           child: child!,

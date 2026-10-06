@@ -79,7 +79,7 @@ dependencies:
   iconsax: ^0.0.8
   country_picker: ^2.0.27
   open_filex: ^4.5.2
-  flutter_launcher_icons: ^0.14.3
+  flutter_launcher_icons: ^0.14.4
   geolocator: ^14.0.2
 
 
@@ -105,7 +105,7 @@ dev_dependencies:
 flutter_icons:
   android: true
   ios: true
-  image_path: "assets/images/logo.png"
+  image_path: "assets/images/Digi-logo_preview.png"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

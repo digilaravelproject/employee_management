@@ -73,7 +73,7 @@ class ReportsDashboardScreen extends StatelessWidget {
                     child: _OverviewStatCard(
                       value: '25',
                       label: 'Total Employees',
-                      color: Color(0xFF3B82F6), // Blue
+                      color: AppColors.primaryColor, // Blue
                     ),
                   ),
                   SizedBox(width: 10),
@@ -148,7 +148,7 @@ class ReportsDashboardScreen extends StatelessWidget {
                 title: 'Sales Reports',
                 subtitle: 'View sales & leads conversion performance',
                 icon: Iconsax.filter,
-                color: const Color(0xFF3B82F6),
+                color: AppColors.primaryColor,
                 onTap: () => Get.to(() => const ReportsEmployeesListScreen(initialTab: 'Sales')),
               ),
               const SizedBox(height: 12),
@@ -204,7 +204,7 @@ class ReportsDashboardScreen extends StatelessWidget {
                       label: 'Most Sales',
                       name: 'Neha Kapoor',
                       value: '₹2,50,000',
-                      color: Color(0xFF3B82F6),
+                      color: AppColors.primaryColor,
                     ),
                   ),
                   SizedBox(width: 8),
@@ -244,7 +244,7 @@ class _OverviewStatCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFEEF2FF)),
+        border: Border.all(color: AppColors.primaryLight),
         boxShadow: [
           BoxShadow(
             color: color.withValues(alpha: 0.03),
@@ -296,7 +296,7 @@ class _ReportCategoryTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFEEF2FF)),
+        border: Border.all(color: AppColors.primaryLight),
         boxShadow: [
           BoxShadow(
             color: color.withValues(alpha: 0.02),
@@ -383,7 +383,7 @@ class _AnalyticsCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFEEF2FF)),
+        border: Border.all(color: AppColors.primaryLight),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

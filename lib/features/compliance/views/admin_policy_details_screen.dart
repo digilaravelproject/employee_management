@@ -44,7 +44,7 @@ class _AdminPolicyDetailsScreenState extends State<AdminPolicyDetailsScreen> wit
       'Notifications Dispatched! 📢',
       'Broadcasting compliance alerts for "${widget.policy.title}" to all pending employees.',
       snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: const Color(0xFF4F46E5),
+      backgroundColor: AppColors.primaryColor,
       colorText: Colors.white,
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
       borderRadius: 16,
@@ -183,9 +183,9 @@ class _AdminPolicyDetailsScreenState extends State<AdminPolicyDetailsScreen> wit
             width: double.infinity,
             child: TabBar(
               controller: _tabController,
-              indicatorColor: const Color(0xFF4F46E5),
+              indicatorColor: AppColors.primaryColor,
               indicatorWeight: 3,
-              labelColor: const Color(0xFF4F46E5),
+              labelColor: AppColors.primaryColor,
               unselectedLabelColor: const Color(0xFF64748B),
               labelStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800),
               unselectedLabelStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
@@ -232,12 +232,12 @@ class _AdminPolicyDetailsScreenState extends State<AdminPolicyDetailsScreen> wit
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFFEEF2FF)),
+                    border: Border.all(color: AppColors.primaryLight),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _buildMiniOverviewStat('180', 'Total Assigned', const Color(0xFF4F46E5)),
+                      _buildMiniOverviewStat('180', 'Total Assigned', AppColors.primaryColor),
                       _buildMiniOverviewStat('156', 'Acknowledged', const Color(0xFF10B981)),
                       _buildMiniOverviewStat('24', 'Pending Review', const Color(0xFFF59E0B)),
                       _buildMiniOverviewStat('0', 'Overdue Standard', const Color(0xFFEF4444)),
@@ -260,7 +260,7 @@ class _AdminPolicyDetailsScreenState extends State<AdminPolicyDetailsScreen> wit
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFFEEF2FF)),
+                    border: Border.all(color: AppColors.primaryLight),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -303,7 +303,7 @@ class _AdminPolicyDetailsScreenState extends State<AdminPolicyDetailsScreen> wit
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFFEEF2FF)),
+                    border: Border.all(color: AppColors.primaryLight),
                   ),
                   child: Column(
                     children: [
@@ -344,7 +344,7 @@ class _AdminPolicyDetailsScreenState extends State<AdminPolicyDetailsScreen> wit
                   child: OutlinedButton(
                     onPressed: () {},
                     style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Color(0xFF4F46E5), width: 1.5),
+                      side: const BorderSide(color: AppColors.primaryColor, width: 1.5),
                       minimumSize: const Size(0, 50),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     ),
@@ -352,7 +352,7 @@ class _AdminPolicyDetailsScreenState extends State<AdminPolicyDetailsScreen> wit
                       'Edit Policy',
                       fontSize: 13.5,
                       fontWeight: FontWeight.w800,
-                      color: Color(0xFF4F46E5),
+                      color: AppColors.primaryColor,
                     ),
                   ),
                 ),
@@ -361,7 +361,7 @@ class _AdminPolicyDetailsScreenState extends State<AdminPolicyDetailsScreen> wit
                   child: ElevatedButton(
                     onPressed: isNotifying ? null : () => _notifyEmployees(controller),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF4F46E5),
+                      backgroundColor: AppColors.primaryColor,
                       minimumSize: const Size(0, 50),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       elevation: 0,
@@ -431,7 +431,7 @@ class _AdminPolicyDetailsScreenState extends State<AdminPolicyDetailsScreen> wit
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFFEEF2FF)),
+              border: Border.all(color: AppColors.primaryLight),
             ),
             child: ListView.separated(
               shrinkWrap: true,

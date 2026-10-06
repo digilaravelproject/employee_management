@@ -470,7 +470,7 @@ class _HistoryLineChart extends StatelessWidget {
             gradient: const LinearGradient(
               colors: [
                 AppColors.primaryColor,
-                Color(0xFF60A5FA), // Light Blue
+                AppColors.primaryShade400, // Light Blue
               ],
             ),
             barWidth: 3.5,
@@ -516,9 +516,9 @@ class _IncentiveImpactCard extends StatelessWidget {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: const Color(0xFFEFF6FF), // Soft primary light blue
+        color: AppColors.primaryLight, // Soft primary light blue
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFDBEAFE)),
+        border: Border.all(color: AppColors.primaryShade100),
       ),
       padding: const EdgeInsets.all(18),
       child: Column(
@@ -556,7 +556,7 @@ class _IncentiveImpactCard extends StatelessWidget {
               ),
             ],
           ),
-          const Divider(height: 24, color: Color(0xFFBFDBFE)),
+          const Divider(height: 24, color: AppColors.primaryShade200),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [

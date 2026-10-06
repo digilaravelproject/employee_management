@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:attendence_tracking_app/core/theme/app_colors.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../../../core/constants/app_constants.dart';
@@ -316,7 +317,7 @@ class LeaveReportsController extends GetxController {
       case 'cancelled':
         return const Color(0xFF6B7280);
       default:
-        return const Color(0xFF3B82F6);
+        return AppColors.primaryColor;
     }
   }
 }

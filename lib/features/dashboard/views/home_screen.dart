@@ -23,6 +23,8 @@ import '../../shift_management/views/shift_details_screen.dart';
 import '../../shift_management/models/shift_model.dart';
 import '../models/admin_dashboard_model.dart';
 import '../models/employee_dashboard_model.dart';
+import '../../../core/services/permission/permission_service.dart';
+import '../../../core/services/permission/permission_constant.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -287,14 +289,14 @@ class _TodaySummaryCard extends StatelessWidget {
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-            colors: [Color(0xFF2563EB), Color(0xFF3B82F6)],
+            colors: [AppColors.primaryGradientLight, AppColors.primaryGradientDark],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF2563EB).withValues(alpha: 0.3),
+              color: AppColors.primaryGradientLight.withValues(alpha: 0.3),
               blurRadius: 20,
               offset: const Offset(0, 10),
             ),
@@ -338,7 +340,7 @@ class _TodaySummaryCard extends StatelessWidget {
                   icon: Iconsax.people,
                   label: 'Total Employees',
                   value: '$total',
-                  iconColor: const Color(0xFF3B82F6),
+                  iconColor: AppColors.primaryColor,
                   bgColor: Colors.white,
                 ),
                 _StatItem(
@@ -593,7 +595,7 @@ class _QuickActionsGrid extends StatelessWidget {
       {
         'icon': Iconsax.buildings,
         'label': 'Department',
-        'color': const Color(0xFF6366F1), // Indigo
+        'color': AppColors.primaryColor, // Indigo
         'onTap': () => Get.toNamed('/department-list'),
       },
       {
@@ -605,7 +607,7 @@ class _QuickActionsGrid extends StatelessWidget {
       {
         'icon': Iconsax.user_tag,
         'label': 'Designation',
-        'color': const Color(0xFF3B82F6), // Blue
+        'color': AppColors.primaryColor, // Blue
         'onTap': () => Get.toNamed(RouteHelper.getDesignationListRoute()),
       },
       {
@@ -736,7 +738,7 @@ class EmployeeShiftAttendanceCard extends StatelessWidget {
           color: Colors.white,
           boxShadow: [
             BoxShadow(
-              color: AppColors.primaryColor.withValues(alpha: 0.12),
+              color: AppColors.primaryGradientLight.withValues(alpha: 0.18),
               blurRadius: 22,
               offset: const Offset(0, 10),
             ),
@@ -752,7 +754,7 @@ class EmployeeShiftAttendanceCard extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(18, 18, 18, 70),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
-                    colors: [Color(0xFF2563EB), Color(0xFF3B82F6)],
+                    colors: [AppColors.primaryGradientLight, AppColors.primaryGradientDark],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -1623,7 +1625,7 @@ class _TodayWorkSummary extends StatelessWidget {
         physics: const BouncingScrollPhysics(),
         child: Row(
           children: [
-            _SummaryItem(icon: Iconsax.clock, label: 'Working Hours', value: workingHours, color: const Color(0xFF3B82F6)),
+            _SummaryItem(icon: Iconsax.clock, label: 'Working Hours', value: workingHours, color: AppColors.primaryColor),
             const SizedBox(width: 12),
             _SummaryItem(icon: Iconsax.coffee, label: 'Break Hours', value: breakHours, color: Colors.orange),
             const SizedBox(width: 12),
@@ -1683,31 +1685,54 @@ class _EmployeeQuickActions extends StatelessWidget {
       {'icon': Iconsax.wallet, 'label': 'Payslip', 'color': Colors.orange, 'onTap': () => Get.to(() => const PayslipHistoryScreen(), binding: SalaryHistoryBinding())},
     ];
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: actions.map((item) {
-        return Expanded(
-          child: GestureDetector(
-            onTap: item['onTap'] as VoidCallback?,
-            behavior: HitTestBehavior.opaque,
-            child: Column(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: (item['color'] as Color).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(16),
+    return Obx(() {
+      final filteredActions = actions.where((item) {
+        if (PermissionService.to.isAdmin.value) return true;
+        final label = item['label'] as String;
+        switch (label) {
+          case 'Apply Leave':
+            return PermissionService.to.isAllowed(PermissionConstant.applyForLeave, moduleSlug: PermissionConstant.moduleLeaveManagement);
+          case 'My Leaves':
+            return PermissionService.to.isAllowed(PermissionConstant.viewLeaveBalance, moduleSlug: PermissionConstant.moduleLeaveManagement) ||
+                PermissionService.to.isAllowed(PermissionConstant.viewLeaveDashboard, moduleSlug: PermissionConstant.moduleLeaveManagement);
+          case 'Attendance History':
+            return PermissionService.to.isAllowed(PermissionConstant.viewAttendanceHistory, moduleSlug: PermissionConstant.moduleAttendanceRegularization);
+          case 'Payslip':
+            return PermissionService.to.isAllowed(PermissionConstant.viewMySalary, moduleSlug: PermissionConstant.modulePayrollSalary) ||
+                PermissionService.to.isAllowed(PermissionConstant.downloadPayslip, moduleSlug: PermissionConstant.modulePayrollSalary);
+          default:
+            return true;
+        }
+      }).toList();
+
+      if (filteredActions.isEmpty) return const SizedBox.shrink();
+
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: filteredActions.map((item) {
+          return Expanded(
+            child: GestureDetector(
+              onTap: item['onTap'] as VoidCallback?,
+              behavior: HitTestBehavior.opaque,
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: (item['color'] as Color).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Icon(item['icon'] as IconData, color: item['color'] as Color, size: 24),
                   ),
-                  child: Icon(item['icon'] as IconData, color: item['color'] as Color, size: 24),
-                ),
-                const SizedBox(height: 8),
-                AppText(item['label'] as String, fontSize: 10, textAlign: TextAlign.center, fontWeight: FontWeight.w600),
-              ],
+                  const SizedBox(height: 8),
+                  AppText(item['label'] as String, fontSize: 10, textAlign: TextAlign.center, fontWeight: FontWeight.w600),
+                ],
+              ),
             ),
-          ),
-        );
-      }).toList(),
-    );
+          );
+        }).toList(),
+      );
+    });
   }
 }
 

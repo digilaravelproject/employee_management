@@ -91,7 +91,7 @@ class _ShiftManagementScreenState extends State<ShiftManagementScreen> {
                       icon: Iconsax.add_circle5,
                       title: 'Create Shift',
                       subtitle: 'New schedule & rules',
-                      primaryColor: const Color(0xFF6366F1), // Indigo
+                      primaryColor: AppColors.primaryColor, // Indigo
                       onTap: () async {
                         final res = await Get.to(() => const CreateShiftScreen());
                         if (res == true) {
@@ -128,7 +128,7 @@ class _ShiftManagementScreenState extends State<ShiftManagementScreen> {
                       Expanded(
                         child: _buildStatGridCard(
                           icon: Iconsax.calendar_1,
-                          iconColor: const Color(0xFF3B82F6),
+                          iconColor: AppColors.primaryColor,
                           count: '${_controller.totalShifts}',
                           title: 'Total Shifts',
                           subtitle: 'Configured schedules',

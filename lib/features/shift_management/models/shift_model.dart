@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:attendence_tracking_app/core/theme/app_colors.dart';
 import 'package:iconsax/iconsax.dart';
 import 'shift_response_model.dart';
 
@@ -78,7 +79,7 @@ class ShiftModel {
 
     if (isNight) {
       icon = Icons.nightlight_outlined;
-      iconColor = Colors.blue;
+      iconColor = AppColors.primaryColor;
     } else if (isFlexi) {
       icon = Iconsax.slider_horizontal;
       iconColor = Colors.redAccent;
@@ -141,6 +142,6 @@ class ShiftHistoryModel {
     this.userRole = 'Admin',
     required this.action,
     required this.details,
-    this.actionColor = const Color(0xFF2563EB),
+    this.actionColor = AppColors.primaryColor,
   });
 }

@@ -874,10 +874,10 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
                           Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: Colors.indigo.withValues(alpha: 0.1),
+                              color: AppColors.primaryColor.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: const Icon(Iconsax.moon, size: 20, color: Colors.indigo),
+                            child: const Icon(Iconsax.moon, size: 20, color: AppColors.primaryColor),
                           ),
                           const SizedBox(width: 12),
                           Column(
@@ -1937,14 +1937,14 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: isAssigned ? Colors.green.withValues(alpha: 0.1) : Colors.blue.withValues(alpha: 0.1),
+                              color: isAssigned ? Colors.green.withValues(alpha: 0.1) : AppColors.primaryColor.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: AppText(
                               emp.status,
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
-                              color: isAssigned ? Colors.green : Colors.blue,
+                              color: isAssigned ? Colors.green : AppColors.primaryColor,
                             ),
                           ),
                         ],

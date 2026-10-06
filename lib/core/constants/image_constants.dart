@@ -4,7 +4,7 @@ class ImageConstants {
   static const String language = 'assets/language/';
 
   // Common Images
-  static const String logo = 'assets/images/logo.png';
+  static const String logo = 'assets/images/Digi-logo_preview.png';
   static const String splashBackground = '${imagePath}splash_bg.png';
   static const String imageNotFound = '${imagePath}image_not_found.png';
 

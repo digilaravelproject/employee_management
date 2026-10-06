@@ -118,7 +118,7 @@ void showDeleteHolidayDialog({
                               decoration: BoxDecoration(
                                 color: holiday.type.contains('National')
                                     ? const Color(0xFFECFDF5)
-                                    : const Color(0xFFEFF6FF),
+                                    : AppColors.primaryLight,
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: AppText(
@@ -127,7 +127,7 @@ void showDeleteHolidayDialog({
                                 fontWeight: FontWeight.bold,
                                 color: holiday.type.contains('National')
                                     ? const Color(0xFF059669)
-                                    : const Color(0xFF2563EB),
+                                    : AppColors.primaryColor,
                               ),
                             ),
                             const SizedBox(width: 6),

@@ -77,7 +77,7 @@ class SecurityDashboardScreen extends StatelessWidget {
                       '${controller.totalLogins.value}',
                       '+12%',
                       Iconsax.user_tick,
-                      const Color(0xFF3B82F6),
+                      AppColors.primaryColor,
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -133,7 +133,7 @@ class SecurityDashboardScreen extends StatelessWidget {
                   _buildQuickActionBtn(
                     'Login\nHistory',
                     Iconsax.clock,
-                    const Color(0xFF3B82F6),
+                    AppColors.primaryColor,
                     () => Get.to(() => const LoginHistoryScreen()),
                   ),
                   _buildQuickActionBtn(
@@ -172,7 +172,7 @@ class SecurityDashboardScreen extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: const Color(0xFFEEF2FF)),
+                  border: Border.all(color: AppColors.primaryLight),
                 ),
                 child: Column(
                   children: [
@@ -217,7 +217,7 @@ class SecurityDashboardScreen extends StatelessWidget {
                       'View All',
                       fontSize: 11,
                       fontWeight: FontWeight.w800,
-                      color: Color(0xFF2563EB),
+                      color: AppColors.primaryColor,
                     ),
                   ),
                 ],
@@ -235,7 +235,7 @@ class SecurityDashboardScreen extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFFEEF2FF)),
+                    border: Border.all(color: AppColors.primaryLight),
                   ),
                   child: ListView.separated(
                     shrinkWrap: true,
@@ -309,7 +309,7 @@ class SecurityDashboardScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFEEF2FF)),
+        border: Border.all(color: AppColors.primaryLight),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -332,7 +332,7 @@ class SecurityDashboardScreen extends StatelessWidget {
                       ? const Color(0xFFD1FAE5) 
                       : badge.contains('-') 
                           ? const Color(0xFFFEE2E2) 
-                          : const Color(0xFFEFF6FF),
+                          : AppColors.primaryLight,
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
@@ -344,7 +344,7 @@ class SecurityDashboardScreen extends StatelessWidget {
                         ? const Color(0xFF059669) 
                         : badge.contains('-') 
                             ? const Color(0xFFDC2626) 
-                            : const Color(0xFF2563EB),
+                            : AppColors.primaryColor,
                   ),
                 ),
               ),
@@ -380,7 +380,7 @@ class SecurityDashboardScreen extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFEEF2FF)),
+          border: Border.all(color: AppColors.primaryLight),
           boxShadow: [
             BoxShadow(
               color: color.withValues(alpha: 0.02),
@@ -437,7 +437,7 @@ class _TrendChartPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final borderPaint = Paint()
-      ..color = const Color(0xFF2563EB)
+      ..color = AppColors.primaryColor
       ..strokeWidth = 3.0
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
@@ -446,15 +446,15 @@ class _TrendChartPainter extends CustomPainter {
       ..style = PaintingStyle.fill
       ..shader = LinearGradient(
         colors: [
-          const Color(0xFF2563EB).withValues(alpha: 0.25),
-          const Color(0xFF2563EB).withValues(alpha: 0.01),
+          AppColors.primaryColor.withValues(alpha: 0.25),
+          AppColors.primaryColor.withValues(alpha: 0.01),
         ],
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
 
     final dotPaint = Paint()
-      ..color = const Color(0xFF2563EB)
+      ..color = AppColors.primaryColor
       ..style = PaintingStyle.fill;
 
     final dotRingPaint = Paint()

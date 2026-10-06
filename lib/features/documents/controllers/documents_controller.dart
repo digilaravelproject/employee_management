@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:attendence_tracking_app/core/theme/app_colors.dart';
 import 'package:get/get.dart';
 import '../models/document_model.dart';
 
@@ -43,7 +44,7 @@ class DocumentsController extends GetxController {
       'View Switched',
       'Showing ${isAdminView.value ? "Admin" : "Employee"} Side Document screens',
       snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: isAdminView.value ? const Color(0xFF3B82F6) : const Color(0xFF10B981),
+      backgroundColor: isAdminView.value ? AppColors.primaryColor : const Color(0xFF10B981),
       colorText: Colors.white,
       duration: const Duration(seconds: 2),
     );

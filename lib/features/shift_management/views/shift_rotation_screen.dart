@@ -251,7 +251,7 @@ class _ShiftRotationScreenState extends State<ShiftRotationScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Row(
               children: [
-                Expanded(child: _buildStatCard('Total Rotations', '$_totalRotations', Colors.blue)),
+                Expanded(child: _buildStatCard('Total Rotations', '$_totalRotations', AppColors.primaryColor)),
                 const SizedBox(width: 8),
                 Expanded(child: _buildStatCard('Active', '$_activeCount', Colors.green)),
                 const SizedBox(width: 8),
@@ -609,7 +609,7 @@ class _ShiftRotationScreenState extends State<ShiftRotationScreen> {
                                           Container(
                                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                             decoration: BoxDecoration(
-                                              color: const Color(0xFFEFF6FF),
+                                              color: AppColors.primaryLight,
                                               borderRadius: BorderRadius.circular(6),
                                             ),
                                             child: AppText(
