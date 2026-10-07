@@ -1,124 +1,155 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:intl/intl.dart';
+import '../../../core/services/network/api_client.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/logger.dart';
 import '../models/performance_model.dart';
+import '../repositories/performance_repository.dart';
+import '../repositories/performance_repository_interface.dart';
 
 class PerformanceController extends GetxController {
+  final PerformanceRepositoryInterface repository;
+
+  PerformanceController({PerformanceRepositoryInterface? repository})
+      : repository = repository ??
+            (Get.isRegistered<PerformanceRepositoryInterface>()
+                ? Get.find<PerformanceRepositoryInterface>()
+                : PerformanceRepository(
+                    apiClient: Get.isRegistered<ApiClient>() ? Get.find<ApiClient>() : ApiClient(),
+                  ));
+
   // Navigation Tabs
   final RxInt selectedDashboardTab = 0.obs; // 0 = My Overview, 1 = Team Overview
-  final RxInt selectedTeamSubTab = 0.obs; // 0 = Team View, 1 = Department View
   final RxInt selectedTargetTab = 0.obs; // 0 = Active, 1 = Completed
 
+  // API Loading & Error states
+  final RxBool isLoadingEmployees = false.obs;
+  final RxString errorMessage = "".obs;
+
   // Month Selector
-  final RxString selectedMonth = "May 2024".obs;
-  final RxList<String> monthsList = ["Jan 2024", "Feb 2024", "Mar 2024", "Apr 2024", "May 2024", "Jun 2024"].obs;
+  final RxString selectedMonthApi = "".obs; // YYYY-MM
+  final RxString selectedMonthDisplay = "".obs;
+  late final RxString selectedMonth;
+  late final RxList<String> monthsList;
 
   // Search Filter query
   final RxString searchQuery = "".obs;
 
-  // Data lists
+  // API Data
   final RxList<EmployeePerformance> employees = <EmployeePerformance>[].obs;
+  final Rxn<PerformanceSummaryModel> summary = Rxn<PerformanceSummaryModel>();
+
+  // Additional metrics & targets for employee view
   final RxList<PerformanceMetric> metrics = <PerformanceMetric>[].obs;
   final RxList<PerformanceTarget> targets = <PerformanceTarget>[].obs;
 
   @override
   void onInit() {
     super.onInit();
-    _loadMockData();
+    final now = DateTime.now();
+    final currentYear = now.year;
+    selectedMonthApi.value = DateFormat('yyyy-MM').format(now);
+    selectedMonthDisplay.value = DateFormat('MMMM yyyy').format(now);
+    
+    selectedMonth = DateFormat('MMM yyyy').format(now).obs;
+    monthsList = List.generate(now.month, (i) {
+      final dt = DateTime(currentYear, i + 1);
+      return DateFormat('MMM yyyy').format(dt);
+    }).obs;
+    
+    _loadMockMetricsAndTargets();
+    fetchPerformanceEmployees();
+  }
+
+  /// Calendar Date Picker for Dashboard
+  Future<void> openCalendarDatePicker(BuildContext context) async {
+    final now = DateTime.now();
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: now,
+      firstDate: DateTime(now.year - 3, 1, 1),
+      lastDate: DateTime(now.year + 1, 12, 31),
+      currentDate: now,
+      helpText: 'Select Date for Performance Month',
+      cancelText: 'Cancel',
+      confirmText: 'Select',
+    );
+
+    if (pickedDate != null) {
+      selectedMonthApi.value = DateFormat('yyyy-MM').format(pickedDate);
+      selectedMonthDisplay.value = DateFormat('MMMM yyyy').format(pickedDate);
+      selectedMonth.value = DateFormat('MMM yyyy').format(pickedDate);
+      await fetchPerformanceEmployees(month: selectedMonthApi.value);
+    }
+  }
+
+  // ── Fetch Employee Performance via Repository ────────────────────────
+  Future<void> fetchPerformanceEmployees({String? month}) async {
+    try {
+      isLoadingEmployees.value = true;
+      errorMessage.value = "";
+
+      final targetMonth = month ?? selectedMonthApi.value;
+      Logger.d('PerformanceController => Fetching performance for month=$targetMonth, view=team');
+
+      final response = await repository.getEmployeePerformance(
+        month: targetMonth,
+        view: 'team',
+        page: 1,
+        perPage: 20,
+      );
+
+      if (response.status) {
+        summary.value = response.summary;
+        if (response.filters?.period?.label.isNotEmpty == true) {
+          selectedMonthDisplay.value = response.filters!.period!.label;
+        }
+
+        final list = response.data.map((item) => item.toUiModel()).toList();
+        employees.assignAll(list);
+        Logger.d('PerformanceController => Loaded ${employees.length} employees from repository');
+      } else {
+        errorMessage.value = response.message.isNotEmpty
+            ? response.message
+            : 'Failed to retrieve performance data.';
+        Logger.w('PerformanceController => Repository returned status false: ${response.message}');
+      }
+    } catch (e, st) {
+      Logger.e('PerformanceController => Exception in fetchPerformanceEmployees: $e\n$st');
+      errorMessage.value = 'Something went wrong while fetching performance data.';
+    } finally {
+      isLoadingEmployees.value = false;
+    }
   }
 
   Future<void> refreshData() async {
-    await Future.delayed(const Duration(milliseconds: 500));
-    _loadMockData();
+    await fetchPerformanceEmployees();
   }
 
-  void _loadMockData() {
-    // Populate mock employees
-    employees.assignAll([
-      EmployeePerformance(
-        id: '1',
-        name: 'Rohit Sharma',
-        designation: 'HR Executive',
-        department: 'HR & People',
-        performanceScore: 87,
-        ratingLabel: 'Very Good',
-        imageUrl: 'https://i.pravatar.cc/150?u=rohit',
-        rank: 1,
-      ),
-      EmployeePerformance(
-        id: '2',
-        name: 'Priya Singh',
-        designation: 'Sr. Executive',
-        department: 'Operations',
-        performanceScore: 74,
-        ratingLabel: 'Good',
-        imageUrl: 'https://i.pravatar.cc/150?u=priya',
-        rank: 3,
-      ),
-      EmployeePerformance(
-        id: '3',
-        name: 'Amit Verma',
-        designation: 'Accountant',
-        department: 'Finance',
-        performanceScore: 68,
-        ratingLabel: 'Average',
-        imageUrl: 'https://i.pravatar.cc/150?u=amit',
-        rank: 5,
-      ),
-      EmployeePerformance(
-        id: '4',
-        name: 'Sneha Patel',
-        designation: 'Executive',
-        department: 'Tech Support',
-        performanceScore: 90,
-        ratingLabel: 'Excellent',
-        imageUrl: 'https://i.pravatar.cc/150?u=sneha',
-        rank: 2,
-      ),
-      EmployeePerformance(
-        id: '5',
-        name: 'Vikram Mehta',
-        designation: 'Sales Executive',
-        department: 'Sales & Growth',
-        performanceScore: 72,
-        ratingLabel: 'Good',
-        imageUrl: 'https://i.pravatar.cc/150?u=vikram',
-        rank: 4,
-      ),
-      EmployeePerformance(
-        id: '6',
-        name: 'Neha Gupta',
-        designation: 'HR Coordinator',
-        department: 'HR & People',
-        performanceScore: 65,
-        ratingLabel: 'Average',
-        imageUrl: 'https://i.pravatar.cc/150?u=neha',
-        rank: 6,
-      ),
-      EmployeePerformance(
-        id: '7',
-        name: 'Karan Das',
-        designation: 'Operations Specialist',
-        department: 'Operations',
-        performanceScore: 80,
-        ratingLabel: 'Very Good',
-        imageUrl: 'https://i.pravatar.cc/150?u=karan',
-        rank: 7,
-      ),
-      EmployeePerformance(
-        id: '8',
-        name: 'Pooja Nair',
-        designation: 'Marketing Manager',
-        department: 'Sales & Growth',
-        performanceScore: 78,
-        ratingLabel: 'Good',
-        imageUrl: 'https://i.pravatar.cc/150?u=pooja',
-        rank: 8,
-      ),
-    ]);
+  // Filtered employees by search query
+  List<EmployeePerformance> get filteredEmployees {
+    final query = searchQuery.value.trim().toLowerCase();
+    final list = List<EmployeePerformance>.from(employees)
+      ..sort((a, b) => a.rank.compareTo(b.rank));
 
-    // Populate mock key metrics
+    if (query.isEmpty) return list;
+    return list.where((e) =>
+      e.name.toLowerCase().contains(query) ||
+      e.designation.toLowerCase().contains(query) ||
+      e.department.toLowerCase().contains(query) ||
+      (e.employeeCode != null && e.employeeCode!.toLowerCase().contains(query))
+    ).toList();
+  }
+
+  // Summary helpers
+  int get totalEmployeesCount => summary.value?.totalEmployees ?? employees.length;
+  num get averagePerformancePercent => summary.value?.averagePerformance ?? 0;
+  PerformanceTopPerformerModel? get topPerformer => summary.value?.topPerformer;
+
+  void _loadMockMetricsAndTargets() {
+    // Populate mock key metrics for employee tab
     metrics.assignAll([
       PerformanceMetric(
         name: 'Attendance',
@@ -157,8 +188,8 @@ class PerformanceController extends GetxController {
         label: '4.5 / 5.0 Rating',
         progress: 0.9,
         icon: Iconsax.star,
-        accentColor: const Color(0xFFF43F5E), // Rose 500
-        bgLightColor: const Color(0xFFFFF1F2), // Rose 50
+        accentColor: const Color(0xFFF43F5E),
+        bgLightColor: const Color(0xFFFFF1F2),
       ),
     ]);
 
@@ -236,53 +267,7 @@ class PerformanceController extends GetxController {
           'May 31': 1.0,
         },
       ),
-      PerformanceTarget(
-        id: '4',
-        title: 'Upsell Existing Clients',
-        description: 'Close 10 upsell opportunities',
-        targetValue: '10 Deals',
-        achievedValue: '6 Deals',
-        progress: 0.6,
-        status: 'In Progress',
-        frequency: 'Monthly',
-        dueDate: DateTime(2026, 5, 31),
-        isCompleted: false,
-        goalType: 'Individual',
-        assignedOn: DateTime(2026, 5, 1),
-        assignedByName: 'Vikram Mehta',
-        assignedByImage: 'https://i.pravatar.cc/150?u=manager',
-        estimatedIncentive: 3500,
-        progressHistory: {
-          'May 1': 0.0,
-          'May 8': 0.20,
-          'May 15': 0.40,
-          'May 22': 0.60,
-          'May 31': 0.60,
-        },
-      ),
     ]);
-  }
-
-  // Filtered lists
-  List<EmployeePerformance> get filteredEmployees {
-    final query = searchQuery.value.trim().toLowerCase();
-    
-    // Grouping/Filtering by team vs department
-    List<EmployeePerformance> list = employees;
-    if (selectedTeamSubTab.value == 1) {
-      // Sort or filter differently if needed for Department View, e.g. group by department
-      list = List.from(employees)..sort((a, b) => a.department.compareTo(b.department));
-    } else {
-      // Sort by rank for Team View
-      list = List.from(employees)..sort((a, b) => a.rank.compareTo(b.rank));
-    }
-
-    if (query.isEmpty) return list;
-    return list.where((e) =>
-      e.name.toLowerCase().contains(query) ||
-      e.designation.toLowerCase().contains(query) ||
-      e.department.toLowerCase().contains(query)
-    ).toList();
   }
 
   List<PerformanceTarget> get activeTargets => targets.where((t) => !t.isCompleted).toList();
@@ -294,7 +279,6 @@ class PerformanceController extends GetxController {
   int get overallProgressOverdueCount => targets.where((t) => !t.isCompleted && t.dueDate.isBefore(DateTime.now())).length;
 
   int get totalEstimatedIncentive {
-    // Sum incentives of active and completed targets multiplied by progress
     double total = 0;
     for (var t in targets) {
       total += t.estimatedIncentive * t.progress;
@@ -306,9 +290,8 @@ class PerformanceController extends GetxController {
     final index = targets.indexWhere((t) => t.id == id);
     if (index != -1) {
       final old = targets[index];
-      // Update progress history for today
       final newHistory = Map<String, double>.from(old.progressHistory);
-      newHistory['May 22'] = newProgress; // Mock current date node
+      newHistory['May 22'] = newProgress;
 
       targets[index] = old.copyWith(
         achievedValue: achievedVal,

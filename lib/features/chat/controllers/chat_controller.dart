@@ -3,6 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
+import '../../../core/services/network/api_client.dart';
+import '../../../core/utils/logger.dart';
+import '../../performance/repositories/performance_repository.dart';
+import '../../performance/repositories/performance_repository_interface.dart';
 import '../models/chat_models.dart';
 
 class ChatController extends GetxController {
@@ -74,17 +78,130 @@ class ChatController extends GetxController {
     activeMessages.assignAll(_messagesStore[conversationId] ?? []);
   }
 
+  // --- Performance API Integration ---
+  Future<void> loadPerformanceMessages(dynamic employeeId) async {
+    try {
+      final repo = Get.isRegistered<PerformanceRepositoryInterface>()
+          ? Get.find<PerformanceRepositoryInterface>()
+          : PerformanceRepository(apiClient: Get.find<ApiClient>());
+
+      final response = await repo.getEmployeePerformanceMessages(
+        employeeId: employeeId,
+        page: 1,
+        perPage: 50,
+      );
+
+      if (response.status && response.data.isNotEmpty) {
+        final List<ChatMessage> fetchedMessages = response.data.map((msgItem) {
+          final senderName = msgItem.sender?.name ?? 'Admin';
+          final senderAvatar = msgItem.sender?.avatar ?? '';
+          final timestamp = msgItem.createdAt != null
+              ? (DateTime.tryParse(msgItem.createdAt!) ?? DateTime.now())
+              : DateTime.now();
+
+          // senderId != employeeId means message was sent by current user / admin
+          final bool isMe = (msgItem.receiverId?.toString() == employeeId.toString()) ||
+              (msgItem.senderId?.toString() != employeeId.toString());
+
+          return ChatMessage(
+            id: msgItem.id?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString(),
+            senderId: msgItem.senderId?.toString() ?? '',
+            senderName: senderName,
+            senderAvatar: senderAvatar,
+            text: msgItem.message,
+            timestamp: timestamp,
+            isMe: isMe,
+          );
+        }).toList();
+
+        // Sort messages chronologically
+        fetchedMessages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+
+        activeMessages.assignAll(fetchedMessages);
+        _messagesStore[employeeId.toString()] = fetchedMessages;
+
+        final conversationId = employeeId.toString();
+        final index = conversations.indexWhere((c) => c.id == conversationId);
+        if (index != -1 && fetchedMessages.isNotEmpty) {
+          final lastMsg = fetchedMessages.last;
+          conversations[index] = conversations[index].copyWith(
+            lastMessage: lastMsg.text,
+            lastMessageTime: lastMsg.timestamp,
+          );
+        }
+      }
+    } catch (e) {
+      Logger.e('ChatController => Error in loadPerformanceMessages: $e');
+    }
+  }
+
   // Send message
   void sendTextMessage() {
     final text = messageInputController.text.trim();
     if (text.isEmpty) return;
 
     messageInputController.clear();
-    
-    _executeMessageSend(
-      text: text,
-      mediaType: null,
-    );
+
+    final convoId = activeConversationId.value;
+    if (convoId.isNotEmpty) {
+      sendPerformanceMessage(convoId, text);
+    } else {
+      _executeMessageSend(
+        text: text,
+        mediaType: null,
+      );
+    }
+  }
+
+  Future<void> sendPerformanceMessage(dynamic employeeId, String text) async {
+    try {
+      final repo = Get.isRegistered<PerformanceRepositoryInterface>()
+          ? Get.find<PerformanceRepositoryInterface>()
+          : PerformanceRepository(apiClient: Get.find<ApiClient>());
+
+      final result = await repo.sendEmployeePerformanceMessage(
+        employeeId: employeeId,
+        message: text,
+      );
+
+      if (result != null) {
+        final newMsg = ChatMessage(
+          id: result.id?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString(),
+          senderId: result.senderId?.toString() ?? '',
+          senderName: result.sender?.name ?? 'Admin',
+          senderAvatar: result.sender?.avatar ?? '',
+          text: result.message,
+          timestamp: result.createdAt != null
+              ? (DateTime.tryParse(result.createdAt!) ?? DateTime.now())
+              : DateTime.now(),
+          isMe: true,
+        );
+
+        activeMessages.add(newMsg);
+        final list = _messagesStore[employeeId.toString()] ?? [];
+        list.add(newMsg);
+        _messagesStore[employeeId.toString()] = list;
+
+        final index = conversations.indexWhere((c) => c.id == employeeId.toString());
+        if (index != -1) {
+          conversations[index] = conversations[index].copyWith(
+            lastMessage: result.message,
+            lastMessageTime: newMsg.timestamp,
+          );
+        }
+      } else {
+        _executeMessageSend(
+          text: text,
+          mediaType: null,
+        );
+      }
+    } catch (e) {
+      Logger.e('ChatController => Error sending performance message: $e');
+      _executeMessageSend(
+        text: text,
+        mediaType: null,
+      );
+    }
   }
 
   // Send media attachments by picking actual files from the system

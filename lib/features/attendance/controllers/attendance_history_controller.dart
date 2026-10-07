@@ -1,6 +1,8 @@
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../../../core/services/network/api_client.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/logger.dart';
 import '../models/attendance_history_model.dart';
 import '../models/attendance_history_response_model.dart';
@@ -34,6 +36,12 @@ class AttendanceHistoryController extends GetxController {
   // Recent attendance records
   final RxList<AttendanceRecord> recentRecords = <AttendanceRecord>[].obs;
 
+  // Active employee ID if viewing a specific employee's attendance
+  final Rxn<dynamic> employeeId = Rxn<dynamic>();
+
+  // Active employee name if viewing a specific employee's attendance
+  final Rxn<String> employeeName = Rxn<String>();
+
   // Full API response data
   final Rxn<AttendanceHistoryData> historyData = Rxn<AttendanceHistoryData>();
 
@@ -56,13 +64,19 @@ class AttendanceHistoryController extends GetxController {
   }
 
   // Fetch Attendance History from API for a specific month
-  Future<void> fetchAttendanceHistory(DateTime month) async {
+  Future<void> fetchAttendanceHistory(DateTime month, {dynamic empId}) async {
     try {
       isLoading.value = true;
+      final targetEmpId = empId ?? employeeId.value;
       final monthStr = DateFormat('yyyy-MM').format(month);
-      Logger.d('AttendanceHistoryController => Fetching history for $monthStr');
+      Logger.d('AttendanceHistoryController => Fetching history for $monthStr (empId: $targetEmpId)');
 
-      final response = await _repository.getAttendanceHistory(monthStr);
+      final response = targetEmpId != null
+          ? await _repository.getEmployeeAttendanceHistory(
+              employeeId: targetEmpId,
+              month: monthStr,
+            )
+          : await _repository.getAttendanceHistory(monthStr);
 
       if (response.status && response.data != null) {
         final data = response.data!;
@@ -81,13 +95,15 @@ class AttendanceHistoryController extends GetxController {
           recentRecords.assignAll(filtered);
         }
 
-        // Set default selected record
+        // Set default selected record (today or latest past record, never future)
         final now = DateTime.now();
         AttendanceRecord? currentDayRecord;
         if (month.year == now.year && month.month == now.month) {
           currentDayRecord = getRecordForDate(now);
         }
-        selectedRecord.value = currentDayRecord ?? records.firstOrNull;
+        selectedRecord.value = currentDayRecord ??
+            records.where((r) => !r.date.isAfter(now)).lastOrNull ??
+            records.firstOrNull;
 
         Logger.d('AttendanceHistoryController => Loaded ${records.length} calendar days, summary: present=${data.summary?.present}, absent=${data.summary?.absent}');
       } else {
@@ -97,6 +113,46 @@ class AttendanceHistoryController extends GetxController {
       Logger.e('AttendanceHistoryController => Exception fetching history: $e');
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  /// Interactive Calendar Date Picker
+  Future<void> openDatePickerCalendar(BuildContext context) async {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final initial = selectedMonth.value.isAfter(today) ? today : selectedMonth.value;
+
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: DateTime(now.year - 3, 1, 1),
+      lastDate: today,
+      currentDate: today,
+      helpText: 'Select Date for Attendance Month',
+      cancelText: 'Cancel',
+      confirmText: 'Select',
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: AppColors.primaryColor,
+              onPrimary: Colors.white,
+              onSurface: AppColors.textColorPrimary,
+            ),
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.primaryColor,
+              ),
+            ),
+          ),
+          child: child ?? const SizedBox(),
+        );
+      },
+    );
+
+    if (pickedDate != null) {
+      selectedMonth.value = DateTime(pickedDate.year, pickedDate.month, 1);
+      await fetchAttendanceHistory(selectedMonth.value);
     }
   }
 

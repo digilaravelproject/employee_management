@@ -104,7 +104,7 @@ class AttendanceDayDetailsScreen extends StatelessWidget {
                         height: 66,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: statusColor.withOpacity(0.2),
+                          color: statusColor.withValues(alpha: 0.2),
                         ),
                       ),
                       Icon(
@@ -141,7 +141,7 @@ class AttendanceDayDetailsScreen extends StatelessWidget {
                     border: Border.all(color: AppColors.borderColor),
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.black.withOpacity(0.01),
+                        color: AppColors.black.withValues(alpha: 0.01),
                         blurRadius: 8,
                         offset: const Offset(0, 4),
                       )
@@ -277,7 +277,7 @@ class AttendanceDayDetailsScreen extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: AppColors.primaryLight,
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: AppColors.primaryColor.withOpacity(0.15)),
+                    border: Border.all(color: AppColors.primaryColor.withValues(alpha: 0.15)),
                   ),
                   child: Row(
                     children: [
@@ -292,7 +292,7 @@ class AttendanceDayDetailsScreen extends StatelessWidget {
                           'Working hours includes break time.',
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: AppColors.primaryColor.withOpacity(0.9),
+                          color: AppColors.primaryColor.withValues(alpha: 0.9),
                         ),
                       ),
                     ],

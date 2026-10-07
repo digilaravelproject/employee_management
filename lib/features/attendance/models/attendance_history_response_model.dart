@@ -1,3 +1,4 @@
+import 'package:intl/intl.dart';
 import 'attendance_history_model.dart';
 
 class AttendanceHistoryResponseModel {
@@ -52,9 +53,13 @@ class AttendanceHistoryData {
           .toList();
     }
 
+    final period = json['period'] is Map<String, dynamic>
+        ? json['period'] as Map<String, dynamic>
+        : null;
+
     return AttendanceHistoryData(
-      month: json['month']?.toString(),
-      monthLabel: json['month_label']?.toString(),
+      month: json['month']?.toString() ?? period?['month']?.toString(),
+      monthLabel: json['month_label']?.toString() ?? period?['label']?.toString(),
       summary: json['summary'] != null && json['summary'] is Map<String, dynamic>
           ? AttendanceSummary.fromJson(json['summary'])
           : null,
@@ -99,7 +104,11 @@ class AttendanceSummary {
               json['late_count']?.toString() ??
               '0') ??
           0,
-      attendancePercentage: double.tryParse(json['attendance_percentage']?.toString() ?? '0.0') ?? 0.0,
+      attendancePercentage: double.tryParse(
+              json['attendance_percent']?.toString() ??
+              json['attendance_percentage']?.toString() ??
+              '0.0') ??
+          0.0,
     );
   }
 }
@@ -115,6 +124,7 @@ class AttendanceCalendarDay {
   final String workingHours;
   final bool isLate;
   final String? lateBy;
+  final String? holiday;
 
   AttendanceCalendarDay({
     required this.date,
@@ -127,13 +137,41 @@ class AttendanceCalendarDay {
     this.workingHours = '00h 00m',
     this.isLate = false,
     this.lateBy,
+    this.holiday,
   });
 
   factory AttendanceCalendarDay.fromJson(Map<String, dynamic> json) {
-    final statusStr = json['status']?.toString() ?? 'Upcoming';
-    final categoryStr = json['category']?.toString() ?? 'upcoming';
-    final checkInStr = json['check_in']?.toString();
-    final lateByVal = json['late_by']?.toString() ?? json['late_minutes']?.toString();
+    final statusStr = json['status']?.toString() ??
+        (json['holiday'] != null ? 'Holiday' : 'Upcoming');
+    final categoryStr = json['category']?.toString() ??
+        (json['holiday'] != null ? 'holiday' : 'upcoming');
+    final holidayStr = json['holiday']?.toString();
+
+    String? checkInStr =
+        json['check_in']?.toString() ?? json['check_in_at']?.toString();
+    String? checkOutStr =
+        json['check_out']?.toString() ?? json['check_out_at']?.toString();
+
+    // Format ISO timestamps (e.g. 2026-10-06T06:02:01.000000Z) to readable local time format
+    if (checkInStr != null && checkInStr.contains('T')) {
+      final dt = DateTime.tryParse(checkInStr);
+      if (dt != null) {
+        checkInStr = DateFormat('hh:mm a').format(dt.toLocal());
+      }
+    }
+    if (checkOutStr != null && checkOutStr.contains('T')) {
+      final dt = DateTime.tryParse(checkOutStr);
+      if (dt != null) {
+        checkOutStr = DateFormat('hh:mm a').format(dt.toLocal());
+      }
+    }
+
+    final dateStr = json['date']?.toString() ??
+        json['attendance_date']?.toString() ??
+        '';
+
+    final lateByVal =
+        json['late_by']?.toString() ?? json['late_minutes']?.toString();
 
     bool lateFlag = false;
     if (json['is_late'] == true ||
@@ -145,7 +183,8 @@ class AttendanceCalendarDay {
         json['late'] == '1' ||
         json['late'] == 'true') {
       lateFlag = true;
-    } else if (statusStr.toLowerCase().contains('late') || categoryStr.toLowerCase().contains('late')) {
+    } else if (statusStr.toLowerCase().contains('late') ||
+        categoryStr.toLowerCase().contains('late')) {
       lateFlag = true;
     } else if (lateByVal != null &&
         lateByVal.isNotEmpty &&
@@ -154,12 +193,17 @@ class AttendanceCalendarDay {
         lateByVal != '00m' &&
         lateByVal != '0m') {
       lateFlag = true;
-    } else if (checkInStr != null && checkInStr.isNotEmpty && checkInStr != '--:-- --') {
+    } else if (checkInStr != null &&
+        checkInStr.isNotEmpty &&
+        checkInStr != '--:-- --') {
       lateFlag = _isLateTime(checkInStr);
     }
 
     String? computedLateBy = lateByVal;
-    if ((computedLateBy == null || computedLateBy.isEmpty || computedLateBy == '--') && lateFlag) {
+    if ((computedLateBy == null ||
+            computedLateBy.isEmpty ||
+            computedLateBy == '--') &&
+        lateFlag) {
       if (checkInStr != null && checkInStr.isNotEmpty) {
         computedLateBy = _computeLateDifference(checkInStr);
       } else {
@@ -167,17 +211,28 @@ class AttendanceCalendarDay {
       }
     }
 
+    final wm = int.tryParse(json['working_minutes']?.toString() ?? '0') ?? 0;
+    String wh = json['working_hours']?.toString() ?? '';
+    if (wh.isEmpty || wh == '00h 00m') {
+      if (wm > 0) {
+        wh = '${(wm ~/ 60).toString().padLeft(2, '0')}h ${(wm % 60).toString().padLeft(2, '0')}m';
+      } else {
+        wh = '00h 00m';
+      }
+    }
+
     return AttendanceCalendarDay(
-      date: json['date']?.toString() ?? '',
+      date: dateStr,
       day: json['day']?.toString(),
       category: categoryStr,
       status: statusStr,
       checkIn: checkInStr,
-      checkOut: json['check_out']?.toString(),
-      workingMinutes: int.tryParse(json['working_minutes']?.toString() ?? '0') ?? 0,
-      workingHours: json['working_hours']?.toString() ?? '00h 00m',
+      checkOut: checkOutStr,
+      workingMinutes: wm,
+      workingHours: wh,
       isLate: lateFlag,
       lateBy: computedLateBy,
+      holiday: holidayStr,
     );
   }
 
@@ -240,6 +295,12 @@ class AttendanceCalendarDay {
 
   AttendanceRecord toAttendanceRecord() {
     final parsed = parsedDate ?? DateTime.now();
+    final remarkText = holiday != null && holiday!.isNotEmpty
+        ? holiday!
+        : (status == 'Weekend'
+            ? 'Weekly Off'
+            : (status == 'Absent' ? 'Absent' : '--'));
+
     return AttendanceRecord(
       date: parsed,
       status: status,
@@ -250,7 +311,7 @@ class AttendanceCalendarDay {
       lateBy: (lateBy != null && lateBy!.isNotEmpty) ? lateBy! : (isLate ? 'Late' : '--'),
       earlyLeave: '--',
       location: 'Office',
-      remarks: status == 'Weekend' ? 'Weekly Off' : (status == 'Absent' ? 'Absent' : '--'),
+      remarks: remarkText,
       isLate: isLate,
     );
   }

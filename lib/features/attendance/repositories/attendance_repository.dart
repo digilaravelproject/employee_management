@@ -102,4 +102,28 @@ class AttendanceRepository {
       message: response.message.isNotEmpty ? response.message : 'Invalid response format',
     );
   }
+
+  Future<AttendanceHistoryResponseModel> getEmployeeAttendanceHistory({
+    required dynamic employeeId,
+    required String month,
+  }) async {
+    final endpoint = AppConstants.adminEmployeePerformanceAttendanceUrl(employeeId);
+    final response = await apiClient.get(
+      endpoint,
+      queryParameters: {'month': month},
+      handleError: false,
+      showToaster: false,
+    );
+
+    final json = response.json ?? (response.body is Map<String, dynamic> ? response.body as Map<String, dynamic> : null);
+    if (json != null) {
+      return AttendanceHistoryResponseModel.fromJson(json);
+    }
+    return AttendanceHistoryResponseModel(
+      status: false,
+      message: response.message.isNotEmpty
+          ? response.message
+          : 'Failed to retrieve employee attendance history',
+    );
+  }
 }

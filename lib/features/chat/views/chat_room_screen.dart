@@ -320,7 +320,7 @@ class ChatRoomScreen extends StatelessWidget {
     return SafeArea(
       top: false,
       child: Container(
-        padding: const EdgeInsets.only(top: 8,left: 8,right: 8,bottom: 15),
+        padding: const EdgeInsets.only(top: 10, left: 14, right: 14, bottom: 12),
         decoration: const BoxDecoration(
           color: Color(0xFFF8FAFC),
           border: Border(top: BorderSide(color: Color(0xFFE2E8F0), width: 0.5)),
@@ -330,99 +330,51 @@ class ChatRoomScreen extends StatelessWidget {
           children: [
             Expanded(
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 0),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(32),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: const Color(0xFFCBD5E1)),
                 ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    // Emoji button
-                    // IconButton(
-                    //   icon: const Icon(
-                    //     Icons.emoji_emotions_outlined,
-                    //     color: Color(0xFF64748B),
-                    //     size: 20,
-                    //   ),
-                    //   onPressed: () => _showEmojiPicker(context, controller),
-                    //   constraints: const BoxConstraints(),
-                    //   padding: const EdgeInsets.all(6),
-                    // ),
-                    // const SizedBox(width: 2),
-
-                    // Text Field
-                    Expanded(
-                      child: TextField(
-                        controller: controller.messageInputController,
-                        minLines: 1,
-                        maxLines: 5,
-                        keyboardType: TextInputType.multiline,
-                        textCapitalization: TextCapitalization.sentences,
-                        cursorColor: AppColors.primaryColor,
-                        style: const TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF0F172A),
-                        ),
-                        decoration: const InputDecoration(
-                          hintText: 'Message',
-                          hintStyle: TextStyle(
-                            color: Color(0xFF94A3B8),
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          border: InputBorder.none,
-                          enabledBorder: InputBorder.none,
-                          focusedBorder: InputBorder.none,
-                          isDense: true,
-                          contentPadding: EdgeInsets.symmetric(
-                            vertical: 8,
-                            horizontal: 4,
-                          ),
-                        ),
-                      ),
+                child: TextField(
+                  controller: controller.messageInputController,
+                  minLines: 1,
+                  maxLines: 5,
+                  keyboardType: TextInputType.multiline,
+                  textCapitalization: TextCapitalization.sentences,
+                  cursorColor: AppColors.primaryColor,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF0F172A),
+                  ),
+                  decoration: const InputDecoration(
+                    hintText: 'Type a message...',
+                    hintStyle: TextStyle(
+                      color: Color(0xFF94A3B8),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w400,
                     ),
-                    const SizedBox(width: 2),
-
-                    // Paperclip Attachment button
-                    IconButton(
-                      icon: const Icon(
-                        Icons.attach_file_rounded,
-                        color: Color(0xFF64748B),
-                        size: 18,
-                      ),
-                      onPressed: () => _showAttachmentSelector(context, controller),
-                      constraints: const BoxConstraints(),
-                      padding: const EdgeInsets.all(6),
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    isDense: true,
+                    contentPadding: EdgeInsets.symmetric(
+                      vertical: 11,
+                      horizontal: 0,
                     ),
-
-                    // Camera button
-                    IconButton(
-                      icon: const Icon(
-                        Icons.camera_alt_rounded,
-                        color: Color(0xFF64748B),
-                        size: 18,
-                      ),
-                      onPressed: () {
-                        controller.sendMediaAttachment('image');
-                      },
-                      constraints: const BoxConstraints(),
-                      padding: const EdgeInsets.all(6),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 10),
 
             // Send Button
             GestureDetector(
               onTap: controller.sendTextMessage,
               child: Container(
-                height: 38,
-                width: 38,
+                height: 44,
+                width: 44,
                 decoration: const BoxDecoration(
                   color: AppColors.primaryColor,
                   shape: BoxShape.circle,
@@ -430,7 +382,7 @@ class ChatRoomScreen extends StatelessWidget {
                 child: const Icon(
                   Icons.send_rounded,
                   color: Colors.white,
-                  size: 18,
+                  size: 20,
                 ),
               ),
             ),

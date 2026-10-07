@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_text.dart';
+import '../bindings/performance_binding.dart';
 import '../controllers/performance_controller.dart';
 import '../models/performance_model.dart';
 import 'my_targets_screen.dart';
@@ -16,7 +17,9 @@ class PerformanceDashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Get.put(PerformanceController());
+    if (!Get.isRegistered<PerformanceController>()) {
+      PerformanceBinding().dependencies();
+    }
 
     return Scaffold(
       backgroundColor: AppColors.scaffoldBackgroundColor,
@@ -34,15 +37,6 @@ class PerformanceDashboardScreen extends StatelessWidget {
           color: AppColors.textColorPrimary,
         ),
         centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Iconsax.notification, color: AppColors.textColorPrimary, size: 20),
-            onPressed: () {
-              // Action for notification
-            },
-          ),
-          const SizedBox(width: 8),
-        ],
       ),
       body: SafeArea(
         child: Column(
@@ -668,6 +662,18 @@ class _TeamOverviewTab extends StatelessWidget {
 
     return Column(
       children: [
+        // ── In-flight Progress Indicator ──
+        Obx(() {
+          if (controller.isLoadingEmployees.value) {
+            return const LinearProgressIndicator(
+              minHeight: 2.5,
+              color: AppColors.primaryColor,
+              backgroundColor: Colors.transparent,
+            );
+          }
+          return const SizedBox(height: 2.5);
+        }),
+
         // ── Stats Horizontal Strip ──
         Container(
           color: Colors.white,
@@ -679,16 +685,20 @@ class _TeamOverviewTab extends StatelessWidget {
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: AppColors.slate200),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const _TeamStatItem(icon: Iconsax.profile_2user, label: 'Total Employees', value: '24'),
-                Container(height: 24, width: 1, color: AppColors.slate200),
-                const _TeamStatItem(icon: Iconsax.graph, label: 'Avg. Performance', value: '76%'),
-                Container(height: 24, width: 1, color: AppColors.slate200),
-                const _TopPerformerItem(name: 'Rohit Sharma'),
-              ],
-            ),
+            child: Obx(() {
+              final total = controller.totalEmployeesCount;
+              final avg = controller.averagePerformancePercent;
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _TeamStatItem(icon: Iconsax.profile_2user, label: 'Total Employees', value: '$total'),
+                  Container(height: 24, width: 1, color: AppColors.slate200),
+                  _TeamStatItem(icon: Iconsax.graph, label: 'Avg. Performance', value: '$avg%'),
+                  Container(height: 24, width: 1, color: AppColors.slate200),
+                  const _TopPerformerItem(),
+                ],
+              );
+            }),
           ),
         ),
 
@@ -731,21 +741,53 @@ class _TeamOverviewTab extends StatelessWidget {
           ),
         ),
 
-        // ── Sub-tabs: Team View & Department View ──
-        Container(
-          color: Colors.white,
-          child: Row(
-            children: [
-              _TeamSubTabButton(index: 0, label: 'Team View'),
-              _TeamSubTabButton(index: 1, label: 'Department View'),
-            ],
-          ),
-        ),
-
         // ── Employee rankings list ──
         Expanded(
           child: Obx(() {
+            final isLoading = controller.isLoadingEmployees.value;
+            final error = controller.errorMessage.value;
             final list = controller.filteredEmployees;
+
+            if (isLoading && list.isEmpty) {
+              return const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.primaryColor),
+                    SizedBox(height: 12),
+                    AppText('Loading employee performance...', fontSize: 13, color: AppColors.textColorSecondary),
+                  ],
+                ),
+              );
+            }
+
+            if (error.isNotEmpty && list.isEmpty) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.error_outline, size: 44, color: Colors.redAccent),
+                      const SizedBox(height: 12),
+                      AppText(error, fontSize: 13, color: AppColors.textColorSecondary, textAlign: TextAlign.center),
+                      const SizedBox(height: 16),
+                      ElevatedButton.icon(
+                        onPressed: () => controller.fetchPerformanceEmployees(),
+                        icon: const Icon(Icons.refresh, size: 16, color: Colors.white),
+                        label: const AppText('Retry', fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primaryColor,
+                          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+
             if (list.isEmpty) {
               return RefreshIndicator(
                 color: AppColors.primaryColor,
@@ -769,7 +811,7 @@ class _TeamOverviewTab extends StatelessWidget {
                         const SizedBox(height: 12),
                         const AppText('No Employees Found', fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textColorPrimary),
                         const SizedBox(height: 4),
-                        const AppText('Try searching another name or division.', fontSize: 11, color: AppColors.textColorSecondary),
+                        const AppText('Try searching another name or designation.', fontSize: 11, color: AppColors.textColorSecondary),
                       ],
                     ),
                   ),
@@ -825,74 +867,80 @@ class _TeamStatItem extends StatelessWidget {
 }
 
 class _TopPerformerItem extends StatelessWidget {
-  final String name;
-
-  const _TopPerformerItem({required this.name});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        const CircleAvatar(
-          radius: 14,
-          backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=rohit'),
-        ),
-        const SizedBox(width: 8),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const AppText('Top Performer', fontSize: 8.5, color: AppColors.textColorSecondary, fontWeight: FontWeight.w600),
-            const SizedBox(height: 2),
-            AppText(name, fontSize: 11.5, fontWeight: FontWeight.w800, color: AppColors.textColorPrimary),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _TeamSubTabButton extends StatelessWidget {
-  final int index;
-  final String label;
-
-  const _TeamSubTabButton({required this.index, required this.label});
+  const _TopPerformerItem();
 
   @override
   Widget build(BuildContext context) {
     final controller = Get.find<PerformanceController>();
+    return Obx(() {
+      final top = controller.topPerformer;
+      final name = top?.name ?? 'None';
+      final avatar = top?.avatar ?? '';
 
-    return Expanded(
-      child: Obx(() {
-        final isActive = controller.selectedTeamSubTab.value == index;
-        return GestureDetector(
-          onTap: () => controller.selectedTeamSubTab.value = index,
-          behavior: HitTestBehavior.opaque,
-          child: Column(
+      return Row(
+        children: [
+          _buildEmployeeAvatarWidget(avatar, radius: 14),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12),
+              const AppText('Top Performer', fontSize: 8.5, color: AppColors.textColorSecondary, fontWeight: FontWeight.w600),
+              const SizedBox(height: 2),
+              SizedBox(
+                width: 75,
                 child: AppText(
-                  label,
-                  fontSize: 13,
-                  fontWeight: isActive ? FontWeight.w800 : FontWeight.w600,
-                  color: isActive ? AppColors.primaryColor : AppColors.textColorHint,
-                ),
-              ),
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                height: 2.5,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: isActive ? AppColors.primaryColor : Colors.transparent,
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(2)),
+                  name,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textColorPrimary,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
           ),
-        );
-      }),
-    );
+        ],
+      );
+    });
   }
+}
+
+// Helper widget to build employee avatar with fallback user icon
+Widget _buildEmployeeAvatarWidget(String imageUrl, {double radius = 18}) {
+  final cleanUrl = imageUrl.trim();
+  final hasValidUrl = cleanUrl.isNotEmpty &&
+      (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) &&
+      !cleanUrl.contains('127.0.0.1') &&
+      !cleanUrl.contains('localhost');
+
+  return ClipRRect(
+    borderRadius: BorderRadius.circular(radius),
+    child: Container(
+      width: radius * 2,
+      height: radius * 2,
+      color: AppColors.primaryLight,
+      alignment: Alignment.center,
+      child: hasValidUrl
+          ? Image.network(
+              cleanUrl,
+              width: radius * 2,
+              height: radius * 2,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Icon(
+                  Iconsax.user,
+                  size: radius * 1.1,
+                  color: AppColors.primaryColor,
+                );
+              },
+            )
+          : Icon(
+              Iconsax.user,
+              size: radius * 1.1,
+              color: AppColors.primaryColor,
+            ),
+    ),
+  );
 }
 
 // ── INDIVIDUAL TEAM MEMBER PERFORMANCE CARD ────────────────────────────────────
@@ -909,21 +957,36 @@ class _EmployeePerformanceCard extends StatelessWidget {
 
     switch (emp.ratingLabel) {
       case 'Excellent':
-        badgeBgColor = AppColors.primaryLight; // Slate Blue/Cyan
+        badgeBgColor = AppColors.primaryLight;
         badgeTextColor = AppColors.primaryColor;
         break;
       case 'Very Good':
-        badgeBgColor = const Color(0xFFEAFAF1); // Light Green
+        badgeBgColor = const Color(0xFFEAFAF1);
         badgeTextColor = AppColors.successColor;
         break;
       case 'Good':
-        badgeBgColor = AppColors.primaryLight; // Light Sapphire
-        badgeTextColor = AppColors.primaryColor;
+        badgeBgColor = const Color(0xFFEFF6FF);
+        badgeTextColor = const Color(0xFF2563EB);
+        break;
+      case 'Average':
+        badgeBgColor = const Color(0xFFFEF9EC);
+        badgeTextColor = AppColors.warningColor;
+        break;
+      case 'Needs Improvement':
+        badgeBgColor = const Color(0xFFFFF1F2);
+        badgeTextColor = const Color(0xFFE11D48);
+        break;
+      case 'Not Rated':
+        badgeBgColor = const Color(0xFFF1F5F9);
+        badgeTextColor = const Color(0xFF64748B);
         break;
       default:
-        badgeBgColor = const Color(0xFFFEF9EC); // Light Yellow
-        badgeTextColor = AppColors.warningColor;
+        badgeBgColor = const Color(0xFFF1F5F9);
+        badgeTextColor = AppColors.textColorSecondary;
     }
+
+    final hasScore = emp.rawScore != null;
+    final scoreText = hasScore ? '${emp.performanceScore}%' : '-';
 
     return GestureDetector(
       onTap: () => Get.to(() => TeamMemberPerformanceScreen(emp: emp)),
@@ -936,73 +999,67 @@ class _EmployeePerformanceCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-          // Rank Badge Indicator
-          Container(
-            width: 24,
-            height: 24,
-            decoration: BoxDecoration(
-              color: emp.rank <= 3 ? AppColors.primaryLight : AppColors.slate100,
-              shape: BoxShape.circle,
+            // Rank Badge Indicator
+            Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                color: emp.rank <= 3 ? AppColors.primaryLight : AppColors.slate100,
+                shape: BoxShape.circle,
+              ),
+              alignment: Alignment.center,
+              child: AppText(
+                '${emp.rank}',
+                fontSize: 10.5,
+                fontWeight: FontWeight.w900,
+                color: emp.rank <= 3 ? AppColors.primaryColor : AppColors.textColorSecondary,
+              ),
             ),
-            alignment: Alignment.center,
-            child: AppText(
-              '${emp.rank}',
-              fontSize: 10.5,
-              fontWeight: FontWeight.w900,
-              color: emp.rank <= 3 ? AppColors.primaryColor : AppColors.textColorSecondary,
+            const SizedBox(width: 12),
+
+            // Employee Avatar with User Icon Fallback
+            _buildEmployeeAvatarWidget(emp.imageUrl, radius: 18),
+            const SizedBox(width: 12),
+
+            // Name and designation details
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  AppText(emp.name, fontSize: 13, fontWeight: FontWeight.w800),
+                  const SizedBox(height: 2),
+                  AppText(emp.designation, fontSize: 10.5, color: AppColors.textColorSecondary),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: 12),
+            const SizedBox(width: 8),
 
-          // Custom Network Avatar
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: AppColors.slate200,
-            backgroundImage: NetworkImage(emp.imageUrl),
-            onBackgroundImageError: (exception, stackTrace) {
-              // Fallback image handled gracefully by system
-            },
-          ),
-          const SizedBox(width: 12),
-
-          // Name and designation details
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            // Visual Performance Ranking & Percentage Badge
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                AppText(emp.name, fontSize: 13, fontWeight: FontWeight.w800),
-                const SizedBox(height: 2),
-                AppText(emp.designation, fontSize: 10.5, color: AppColors.textColorSecondary),
+                AppText(scoreText, fontSize: 13.5, fontWeight: FontWeight.w900, color: AppColors.textColorPrimary),
+                const SizedBox(height: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: badgeBgColor,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: AppText(
+                    emp.ratingLabel,
+                    fontSize: 8.5,
+                    fontWeight: FontWeight.w800,
+                    color: badgeTextColor,
+                  ),
+                ),
               ],
             ),
-          ),
-          const SizedBox(width: 8),
-
-          // Visual Performance Ranking & Percentage Badge
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              AppText('${emp.performanceScore}%', fontSize: 13.5, fontWeight: FontWeight.w900, color: AppColors.textColorPrimary),
-              const SizedBox(height: 4),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: badgeBgColor,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: AppText(
-                  emp.ratingLabel,
-                  fontSize: 8.5,
-                  fontWeight: FontWeight.w800,
-                  color: badgeTextColor,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(width: 8),
-          Icon(Icons.arrow_forward_ios, size: 10, color: AppColors.textColorHint.withValues(alpha: 0.6)),
-        ],
+            const SizedBox(width: 8),
+            Icon(Icons.arrow_forward_ios, size: 10, color: AppColors.textColorHint.withValues(alpha: 0.6)),
+          ],
+        ),
       ),
-    ));
+    );
   }
 }

@@ -13,6 +13,7 @@ class AttendanceHistoryScreen extends StatefulWidget {
   final String? employeeName;
   final String? employeeId;
   final String? employeeDesignation;
+  final DateTime? initialMonth;
 
   const AttendanceHistoryScreen({
     super.key,
@@ -20,6 +21,7 @@ class AttendanceHistoryScreen extends StatefulWidget {
     this.employeeName,
     this.employeeId,
     this.employeeDesignation,
+    this.initialMonth,
   });
 
   @override
@@ -36,8 +38,21 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
         ? Get.find<AttendanceHistoryController>()
         : Get.put(AttendanceHistoryController());
 
-    // Ensure the attendance screen ALWAYS defaults to the current month on entry
-    controller.resetToCurrentMonth();
+    controller.employeeId.value = widget.employeeId;
+    if (widget.employeeName != null) {
+      controller.employeeName.value = widget.employeeName!;
+    }
+
+    if (widget.initialMonth != null) {
+      controller.selectedMonth.value = DateTime(
+        widget.initialMonth!.year,
+        widget.initialMonth!.month,
+        1,
+      );
+      controller.fetchAttendanceHistory(controller.selectedMonth.value);
+    } else {
+      controller.resetToCurrentMonth();
+    }
   }
 
   @override
@@ -73,7 +88,7 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
         ),
         centerTitle: false,
         actions: [
-          // Month Selector in AppBar
+          // Month & Calendar Selector in AppBar
           Obx(() {
             final monthText = DateFormat('MMMM yyyy').format(controller.selectedMonth.value);
             return TextButton.icon(
@@ -93,7 +108,12 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
               ),
             );
           }),
-          const SizedBox(width: 8),
+          IconButton(
+            tooltip: 'Pick Date from Calendar',
+            icon: const Icon(Iconsax.calendar_search, size: 18, color: AppColors.primaryColor),
+            onPressed: () => controller.openDatePickerCalendar(context),
+          ),
+          const SizedBox(width: 6),
         ],
       ),
       body: SafeArea(
@@ -413,7 +433,7 @@ class _StatCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.15), width: 1),
+        border: Border.all(color: color.withValues(alpha: 0.15), width: 1),
       ),
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
       child: Column(
@@ -461,7 +481,7 @@ class _MonthlySummaryCard extends StatelessWidget {
           border: Border.all(color: AppColors.borderColor),
           boxShadow: [
             BoxShadow(
-              color: AppColors.black.withOpacity(0.02),
+              color: AppColors.black.withValues(alpha: 0.02),
               blurRadius: 10,
               offset: const Offset(0, 4),
             )
@@ -598,7 +618,7 @@ class _CalendarSectionCard extends StatelessWidget {
         border: Border.all(color: AppColors.borderColor),
         boxShadow: [
           BoxShadow(
-            color: AppColors.black.withOpacity(0.02),
+            color: AppColors.black.withValues(alpha: 0.02),
             blurRadius: 10,
             offset: const Offset(0, 4),
           )
@@ -702,20 +722,33 @@ class _CalendarGrid extends StatelessWidget {
           final isCurrentMonth = date.month == activeMonth.month && date.year == activeMonth.year;
           final record = controller.getRecordForDate(date);
           
+          final now = DateTime.now();
+          final today = DateTime(now.year, now.month, now.day);
+          final dayDate = DateTime(date.year, date.month, date.day);
+          final isFuture = dayDate.isAfter(today);
+
           final isSelected = selectedRecord != null &&
               selectedRecord.date.day == date.day &&
               selectedRecord.date.month == date.month &&
               selectedRecord.date.year == date.year;
 
-          // Status determinations
+          // Status determinations: only show status color for dates up to today
           Color? statusBgColor;
           Color statusTextColor = AppColors.textColorPrimary;
           
-          if (record != null && isCurrentMonth) {
+          if (!isFuture && isCurrentMonth && record != null) {
             final normalizedStatus = record.status.trim().toLowerCase();
             switch (normalizedStatus) {
               case 'present':
                 statusBgColor = AppColors.successColor;
+                statusTextColor = AppColors.white;
+                break;
+              case 'late':
+                statusBgColor = const Color(0xFFF97316);
+                statusTextColor = AppColors.white;
+                break;
+              case 'holiday':
+                statusBgColor = const Color(0xFF8B5CF6);
                 statusTextColor = AppColors.white;
                 break;
               case 'half day':
@@ -735,6 +768,8 @@ class _CalendarGrid extends StatelessWidget {
                 statusBgColor = AppColors.slate100;
                 statusTextColor = AppColors.textColorSecondary.withValues(alpha: 0.7);
                 break;
+              case 'not recorded':
+              case 'not_recorded':
               case 'not marked':
               case 'not_marked':
                 statusBgColor = const Color(0xFFFEF3C7);
@@ -748,26 +783,32 @@ class _CalendarGrid extends StatelessWidget {
                 statusBgColor = Colors.transparent;
                 statusTextColor = AppColors.textColorPrimary;
             }
-          } else {
-            // Out of month or no record
+          } else if (isCurrentMonth) {
+            // Future dates in current month: keep background white/transparent
             statusBgColor = Colors.transparent;
-            statusTextColor = AppColors.textColorHint.withValues(alpha: 0.5);
+            statusTextColor = isFuture
+                ? AppColors.textColorSecondary.withValues(alpha: 0.75)
+                : AppColors.textColorPrimary;
+          } else {
+            // Out of month padding days
+            statusBgColor = Colors.transparent;
+            statusTextColor = AppColors.textColorHint.withValues(alpha: 0.4);
           }
 
           return InkWell(
-            onTap: () {
-              if (isCurrentMonth && record != null) {
-                controller.selectedRecord.value = record;
-                _showDayDetailsBottomSheet(context, controller);
-              }
-            },
+            onTap: isFuture || !isCurrentMonth || record == null
+                ? null
+                : () {
+                    controller.selectedRecord.value = record;
+                    _showDayDetailsBottomSheet(context, controller);
+                  },
             borderRadius: BorderRadius.circular(20),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 150),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: statusBgColor,
-                border: isSelected
+                border: isSelected && !isFuture
                     ? Border.all(color: AppColors.primaryColor, width: 2)
                     : null,
               ),
@@ -778,10 +819,12 @@ class _CalendarGrid extends StatelessWidget {
                   AppText(
                     date.day.toString(),
                     fontSize: 12,
-                    fontWeight: isSelected ? FontWeight.w700 : (isCurrentMonth ? FontWeight.w600 : FontWeight.w400),
+                    fontWeight: isSelected && !isFuture
+                        ? FontWeight.w700
+                        : (isCurrentMonth && !isFuture ? FontWeight.w600 : FontWeight.w400),
                     color: statusTextColor,
                   ),
-                  if (record != null && isCurrentMonth && record.hasLateIndication) ...[
+                  if (!isFuture && record != null && isCurrentMonth && record.hasLateIndication) ...[
                     const SizedBox(height: 1),
                     Container(
                       width: 4,
@@ -829,6 +872,14 @@ class _CalendarGrid extends StatelessWidget {
               badgeBg = const Color(0xFFEAFAF1);
               badgeText = AppColors.successColor;
               break;
+            case 'late':
+              badgeBg = const Color(0xFFFFF7ED);
+              badgeText = const Color(0xFFEA580C);
+              break;
+            case 'holiday':
+              badgeBg = const Color(0xFFEDE9FE);
+              badgeText = const Color(0xFF7C3AED);
+              break;
             case 'half day':
             case 'half_day':
               badgeBg = const Color(0xFFFEF9EC);
@@ -846,6 +897,8 @@ class _CalendarGrid extends StatelessWidget {
               badgeBg = AppColors.slate100;
               badgeText = AppColors.textColorSecondary;
               break;
+            case 'not recorded':
+            case 'not_recorded':
             case 'not marked':
             case 'not_marked':
               badgeBg = const Color(0xFFFEF3C7);
@@ -988,6 +1041,62 @@ class _CalendarGrid extends StatelessWidget {
                     ),
                   ],
 
+                  if (record.remarks.isNotEmpty && record.remarks != '--') ...[
+                    const SizedBox(height: 14),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: normStatus == 'holiday'
+                            ? const Color(0xFFEDE9FE)
+                            : AppColors.slate50,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: normStatus == 'holiday'
+                              ? const Color(0xFFDDD6FE)
+                              : AppColors.borderColor,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            normStatus == 'holiday'
+                                ? Iconsax.calendar_tick
+                                : Iconsax.info_circle,
+                            size: 18,
+                            color: normStatus == 'holiday'
+                                ? const Color(0xFF7C3AED)
+                                : AppColors.textColorSecondary,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                AppText(
+                                  normStatus == 'holiday'
+                                      ? 'Holiday'
+                                      : 'Remarks / Notes',
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: normStatus == 'holiday'
+                                      ? const Color(0xFF7C3AED)
+                                      : AppColors.textColorPrimary,
+                                ),
+                                AppText(
+                                  record.remarks,
+                                  fontSize: 11,
+                                  color: normStatus == 'holiday'
+                                      ? const Color(0xFF5B21B6)
+                                      : AppColors.textColorSecondary,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
                   const SizedBox(height: 20),
                   
                   // Primary View Details Button
@@ -1045,7 +1154,7 @@ class _QuickDetailCell extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.slate50,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.borderColor.withOpacity(0.6)),
+        border: Border.all(color: AppColors.borderColor.withValues(alpha: 0.6)),
       ),
       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
       child: Row(
@@ -1053,7 +1162,7 @@ class _QuickDetailCell extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: iconColor.withOpacity(0.1),
+              color: iconColor.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, color: iconColor, size: 16),
@@ -1097,10 +1206,11 @@ class _CalendarLegend extends StatelessWidget {
       alignment: WrapAlignment.center,
       children: [
         _LegendItem(color: AppColors.successColor, label: 'Present'),
+        _LegendItem(color: const Color(0xFFF97316), label: 'Late'),
+        _LegendItem(color: const Color(0xFF8B5CF6), label: 'Holiday'),
         _LegendItem(color: AppColors.warningColor, label: 'Half Day'),
         _LegendItem(color: AppColors.errorColor, label: 'Absent'),
         _LegendItem(color: AppColors.indigo500, label: 'Leave'),
-        _LegendItem(color: const Color(0xFFF97316), label: 'Late'),
         _LegendItem(color: AppColors.slate200, label: 'Weekend'),
       ],
     );
@@ -1208,22 +1318,35 @@ class _RecentRecordsList extends StatelessWidget {
 
           Color statusColor;
           Color statusBg;
-          switch (record.status) {
-            case 'Present':
+          switch (record.status.trim().toLowerCase()) {
+            case 'present':
               statusColor = AppColors.successColor;
               statusBg = const Color(0xFFEAFAF1);
               break;
-            case 'Half Day':
+            case 'late':
+              statusColor = const Color(0xFFEA580C);
+              statusBg = const Color(0xFFFFF7ED);
+              break;
+            case 'holiday':
+              statusColor = const Color(0xFF7C3AED);
+              statusBg = const Color(0xFFEDE9FE);
+              break;
+            case 'half day':
+            case 'half_day':
               statusColor = AppColors.warningColor;
               statusBg = const Color(0xFFFEF9EC);
               break;
-            case 'Absent':
+            case 'absent':
               statusColor = AppColors.errorColor;
               statusBg = const Color(0xFFFDF2F2);
               break;
-            case 'Leave':
+            case 'leave':
               statusColor = AppColors.indigo500;
               statusBg = AppColors.primaryLight;
+              break;
+            case 'weekend':
+              statusColor = AppColors.textColorSecondary;
+              statusBg = AppColors.slate100;
               break;
             default:
               statusColor = AppColors.textColorSecondary;
@@ -1252,7 +1375,7 @@ class _RecentRecordsList extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: AppColors.slate50,
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: AppColors.borderColor.withOpacity(0.6)),
+                      border: Border.all(color: AppColors.borderColor.withValues(alpha: 0.6)),
                     ),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,

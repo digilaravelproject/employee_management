@@ -70,6 +70,14 @@ class AppConstants {
   static const String adminAttendanceCheckInUrl = '/api/admin/attendance/check-in';
   static const String adminAttendanceCheckOutUrl = '/api/admin/attendance/check-out';
   static const String adminAttendanceHistoryUrl = '/api/admin/attendance/history';
+  static const String adminPerformanceEmployeesUrl = '/api/admin/performance/employees';
+  static String adminEmployeePerformanceDetailUrl(dynamic id) => '$adminPerformanceEmployeesUrl/$id';
+  static String adminEmployeePerformanceLeaveUrl(dynamic id) => '$adminPerformanceEmployeesUrl/$id/leave';
+  static String adminEmployeePerformanceAttendanceUrl(dynamic id) => '$adminPerformanceEmployeesUrl/$id/attendance';
+  static String adminEmployeePerformanceTaskCompletionUrl(dynamic id) => '$adminPerformanceEmployeesUrl/$id/task-completion';
+  static String adminEmployeePerformanceTimelySubmissionsUrl(dynamic id) => '$adminPerformanceEmployeesUrl/$id/timely-submissions';
+  static String adminEmployeePerformanceQualityUrl(dynamic id) => '$adminPerformanceEmployeesUrl/$id/quality';
+  static String adminEmployeePerformanceMessagesUrl(dynamic id) => '$adminPerformanceEmployeesUrl/$id/messages';
   static const String adminNotificationsUrl = '/api/admin/notifications';
   static const String adminNotificationMarkAllReadUrl = '/api/admin/notifications/read-all';
   static String adminNotificationDetailUrl(dynamic id) => '$adminNotificationsUrl/$id';
