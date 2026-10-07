@@ -1,11 +1,14 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_text.dart';
 import '../bindings/admin_leave_binding.dart';
 import '../controllers/admin_leave_controller.dart';
 import '../models/admin_leave_model.dart';
+import 'leave_attachment_viewer_screen.dart';
 
 class LeaveApprovalScreen extends StatefulWidget {
   final int? leaveId;
@@ -389,52 +392,124 @@ class _LeaveApprovalScreenState extends State<LeaveApprovalScreen> {
     );
   }
 
+  String _resolveAttachmentUrl(String? path) {
+    if (path == null || path.trim().isEmpty) return '';
+    var p = path.trim();
+
+    if (File(p).existsSync()) {
+      return p;
+    }
+
+    if (p.contains('127.0.0.1:8000') || p.contains('localhost:8000')) {
+      p = p
+          .replaceFirst('http://127.0.0.1:8000', AppConstants.baseUrl)
+          .replaceFirst('http://localhost:8000', AppConstants.baseUrl);
+    }
+
+    if (p.startsWith('http://') || p.startsWith('https://')) {
+      return p;
+    }
+
+    final base = AppConstants.baseUrl.endsWith('/')
+        ? AppConstants.baseUrl.substring(0, AppConstants.baseUrl.length - 1)
+        : AppConstants.baseUrl;
+
+    if (p.startsWith('/')) {
+      return '$base$p';
+    } else if (p.startsWith('storage/')) {
+      return '$base/$p';
+    } else {
+      return '$base/storage/$p';
+    }
+  }
+
   // ── Attachment Card ────────────────────────────────────────────
   Widget _buildAttachmentCard(AdminLeaveDetailDataModel? detail, Map<String, dynamic>? fallback) {
     final name = detail?.attachmentName ??
         (detail?.attachmentPath?.split('/').last) ??
+        fallback?['documentUrl']?.toString().split('/').last ??
         'Attached_Document.pdf';
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderColor),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: AppColors.primaryLight,
-              borderRadius: BorderRadius.circular(8),
+    final rawPath = detail?.attachmentPath ??
+        fallback?['documentUrl']?.toString() ??
+        fallback?['attachment_path']?.toString() ??
+        fallback?['attachment_url']?.toString() ??
+        fallback?['attachment']?.toString() ??
+        detail?.attachmentName;
+
+    final resolvedUrl = _resolveAttachmentUrl(rawPath);
+
+    void openFullView() {
+      Get.to(
+        () => LeaveAttachmentViewerScreen(
+          title: name,
+          url: resolvedUrl,
+          originalPath: rawPath,
+        ),
+      );
+    }
+
+    final isPdf = name.toLowerCase().endsWith('.pdf') || (rawPath?.toLowerCase().endsWith('.pdf') ?? false);
+
+    return InkWell(
+      onTap: openFullView,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.borderColor),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.02),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
-            child: const Icon(Iconsax.document, color: AppColors.primaryColor, size: 24),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                AppText(name, fontSize: 13, fontWeight: FontWeight.w600, maxLines: 1, overflow: TextOverflow.ellipsis),
-                const SizedBox(height: 2),
-                const AppText('Document Attachment', fontSize: 11, color: AppColors.textColorSecondary),
-              ],
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: isPdf ? const Color(0xFFEF4444).withValues(alpha: 0.1) : AppColors.primaryLight,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                isPdf ? Icons.picture_as_pdf_rounded : Iconsax.document,
+                color: isPdf ? const Color(0xFFEF4444) : AppColors.primaryColor,
+                size: 24,
+              ),
             ),
-          ),
-          IconButton(
-            icon: const Icon(Iconsax.document_download, color: AppColors.primaryColor),
-            onPressed: () {
-              Get.snackbar(
-                'Attachment',
-                'Attachment: $name',
-                snackPosition: SnackPosition.BOTTOM,
-                margin: const EdgeInsets.all(16),
-              );
-            },
-          ),
-        ],
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  AppText(name, fontSize: 13, fontWeight: FontWeight.w600, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 2),
+                  AppText(
+                    isPdf ? 'PDF Document • Tap to view' : 'Image Attachment • Tap to view',
+                    fontSize: 11,
+                    color: isPdf ? const Color(0xFFEF4444) : AppColors.primaryColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              tooltip: 'View Full Screen',
+              icon: const Icon(Iconsax.eye, color: AppColors.primaryColor),
+              onPressed: openFullView,
+            ),
+            IconButton(
+              tooltip: 'Download / Open',
+              icon: const Icon(Iconsax.document_download, color: AppColors.primaryColor),
+              onPressed: openFullView,
+            ),
+          ],
+        ),
       ),
     );
   }

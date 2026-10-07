@@ -18,6 +18,8 @@ import '../controllers/dashboard_controller.dart';
 import 'upcoming_birthdays_screen.dart';
 import 'package:intl/intl.dart';
 import '../../employee/management/views/employee_list_screen.dart';
+import '../../attendance/views/attendance_screen.dart';
+import '../../attendance/controllers/attendance_controller.dart';
 import '../../role_permissions/views/role_list_screen.dart';
 import '../../shift_management/views/shift_details_screen.dart';
 import '../../shift_management/models/shift_model.dart';
@@ -290,6 +292,19 @@ class _HomeHeader extends StatelessWidget {
 class _TodaySummaryCard extends StatelessWidget {
   const _TodaySummaryCard();
 
+  void _navigateToAttendanceTab(int tabIndex) {
+    final attendanceController = Get.isRegistered<AttendanceController>()
+        ? Get.find<AttendanceController>()
+        : Get.put(AttendanceController());
+    attendanceController.changeTab(tabIndex);
+
+    if (Get.isRegistered<DashboardController>()) {
+      Get.find<DashboardController>().changeIndex(1);
+    } else {
+      Get.to(() => AttendanceScreen(initialTab: tabIndex));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final dashboardController = Get.isRegistered<DashboardController>()
@@ -379,6 +394,7 @@ class _TodaySummaryCard extends StatelessWidget {
                   value: '$total',
                   iconColor: AppColors.primaryColor,
                   bgColor: Colors.white,
+                  onTap: () => Get.to(() => const EmployeeListScreen()),
                 ),
                 _StatItem(
                   icon: Iconsax.tick_circle,
@@ -387,6 +403,7 @@ class _TodaySummaryCard extends StatelessWidget {
                   subValue: '$presentPct%',
                   iconColor: Colors.green,
                   bgColor: Colors.white,
+                  onTap: () => _navigateToAttendanceTab(1),
                 ),
                 _StatItem(
                   icon: Iconsax.close_circle,
@@ -395,6 +412,7 @@ class _TodaySummaryCard extends StatelessWidget {
                   subValue: '$absentPct%',
                   iconColor: Colors.red,
                   bgColor: Colors.white,
+                  onTap: () => _navigateToAttendanceTab(2),
                 ),
                 _StatItem(
                   icon: Iconsax.calendar_remove,
@@ -403,6 +421,7 @@ class _TodaySummaryCard extends StatelessWidget {
                   subValue: '$onLeavePct%',
                   iconColor: Colors.orange,
                   bgColor: Colors.white,
+                  onTap: () => _navigateToAttendanceTab(3),
                 ),
               ],
             ),
@@ -420,6 +439,7 @@ class _StatItem extends StatelessWidget {
   final String? subValue;
   final Color iconColor;
   final Color bgColor;
+  final VoidCallback? onTap;
 
   const _StatItem({
     required this.icon,
@@ -428,29 +448,37 @@ class _StatItem extends StatelessWidget {
     this.subValue,
     required this.iconColor,
     required this.bgColor,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: bgColor,
-            shape: BoxShape.circle,
-          ),
-          child: Icon(icon, color: iconColor, size: 20),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: bgColor,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: iconColor, size: 20),
+            ),
+            const SizedBox(height: 10),
+            AppText(value, color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800),
+            const SizedBox(height: 2),
+            AppText(label, color: Colors.white.withValues(alpha: 0.8), fontSize: 9, textAlign: TextAlign.center),
+            if (subValue != null) ...[
+              const SizedBox(height: 2),
+              AppText(subValue!, color: Colors.white, fontSize: 9, fontWeight: FontWeight.w600),
+            ],
+          ],
         ),
-        const SizedBox(height: 10),
-        AppText(value, color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800),
-        const SizedBox(height: 2),
-        AppText(label, color: Colors.white.withValues(alpha: 0.8), fontSize: 9, textAlign: TextAlign.center),
-        if (subValue != null) ...[
-          const SizedBox(height: 2),
-          AppText(subValue!, color: Colors.white, fontSize: 9, fontWeight: FontWeight.w600),
-        ],
-      ],
+      ),
     );
   }
 }

@@ -1,9 +1,13 @@
 import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:iconsax/iconsax.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import '../../../core/services/network/api_client.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/app_text.dart';
 import '../../../core/utils/custom_snackbar.dart';
 import '../../../core/utils/app_validators.dart';
 import '../../../core/utils/logger.dart';
@@ -314,6 +318,169 @@ class ApplyLeaveController extends GetxController {
       Logger.e('ApplyLeaveController => pickAttachment error: $e');
       CustomSnackbar.showError('Failed to pick document: $e');
     }
+  }
+
+  Future<void> pickPdf() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf'],
+      );
+      if (result != null && result.files.single.path != null) {
+        selectedAttachment.value = File(result.files.single.path!);
+      }
+    } catch (e) {
+      Logger.e('ApplyLeaveController => pickPdf error: $e');
+      CustomSnackbar.showError('Failed to pick PDF: $e');
+    }
+  }
+
+  Future<void> pickDocument() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png', 'webp'],
+      );
+      if (result != null && result.files.single.path != null) {
+        selectedAttachment.value = File(result.files.single.path!);
+      }
+    } catch (e) {
+      Logger.e('ApplyLeaveController => pickDocument error: $e');
+      CustomSnackbar.showError('Failed to pick document: $e');
+    }
+  }
+
+  void showAttachmentPickerModal(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const AppText(
+                      'Upload Document',
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textColorPrimary,
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded, size: 20, color: AppColors.textColorHint),
+                      onPressed: () => Navigator.pop(ctx),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                const AppText(
+                  'Select a document format to attach to your leave request',
+                  fontSize: 12,
+                  color: AppColors.textColorSecondary,
+                ),
+                const SizedBox(height: 20),
+
+                // Option 1: PDF Document
+                _buildPickerOption(
+                  icon: Icons.picture_as_pdf_rounded,
+                  iconColor: const Color(0xFFEF4444),
+                  iconBgColor: const Color(0xFFEF4444).withValues(alpha: 0.1),
+                  title: 'Upload PDF Document',
+                  subtitle: 'Select .pdf file from your device files',
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    pickPdf();
+                  },
+                ),
+                const SizedBox(height: 12),
+
+                // Option 2: Image from Gallery
+                _buildPickerOption(
+                  icon: Iconsax.gallery,
+                  iconColor: AppColors.primaryColor,
+                  iconBgColor: AppColors.primaryLight,
+                  title: 'Choose from Gallery',
+                  subtitle: 'Select JPG, PNG photo from gallery',
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    pickAttachment(source: ImageSource.gallery);
+                  },
+                ),
+                const SizedBox(height: 12),
+
+                // Option 3: Camera
+                _buildPickerOption(
+                  icon: Iconsax.camera,
+                  iconColor: const Color(0xFF10B981),
+                  iconBgColor: const Color(0xFF10B981).withValues(alpha: 0.1),
+                  title: 'Take a Photo',
+                  subtitle: 'Capture document with your camera',
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    pickAttachment(source: ImageSource.camera);
+                  },
+                ),
+                const SizedBox(height: 10),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPickerOption({
+    required IconData icon,
+    required Color iconColor,
+    required Color iconBgColor,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.slate200),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: iconBgColor,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: iconColor, size: 22),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  AppText(title, fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textColorPrimary),
+                  const SizedBox(height: 2),
+                  AppText(subtitle, fontSize: 11, color: AppColors.textColorSecondary),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded, color: AppColors.textColorHint, size: 20),
+          ],
+        ),
+      ),
+    );
   }
 
   void removeAttachment() {

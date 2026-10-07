@@ -10,7 +10,8 @@ import '../controllers/attendance_controller.dart';
 import '../models/admin_attendance_model.dart';
 
 class AttendanceScreen extends StatefulWidget {
-  const AttendanceScreen({super.key});
+  final int initialTab;
+  const AttendanceScreen({super.key, this.initialTab = 0});
 
   @override
   State<AttendanceScreen> createState() => _AttendanceScreenState();
@@ -26,6 +27,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         ? Get.find<AttendanceController>()
         : Get.put(AttendanceController());
 
+    if (widget.initialTab != 0) {
+      controller.selectedTab.value = widget.initialTab;
+    }
     // Ensure the screen defaults to today / current month on entry
     controller.selectToday();
   }
@@ -132,7 +136,9 @@ class _DateSelectionStrip extends StatelessWidget {
     return Obx(() {
       final selectedDate = controller.selectedDate.value;
       final selectedDateStr = DateFormat('yyyy-MM-dd').format(selectedDate);
-      final dateCards = controller.attendanceData.value?.dateCards ?? [];
+      final dateCards = controller.attendanceData.value?.dateCards.isNotEmpty == true
+          ? controller.attendanceData.value!.dateCards
+          : controller.cachedDateCards;
       final now = DateTime.now();
       final isTodayOrFuture = !selectedDate.isBefore(DateTime(now.year, now.month, now.day));
 
@@ -357,13 +363,13 @@ class _CompactSummarySection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      final summary = controller.attendanceData.value?.summary;
-      final total = summary?.totalEmployees ?? 0;
-      final present = summary?.present ?? 0;
-      final absent = summary?.absent ?? 0;
-      final onLeave = summary?.onLeave ?? 0;
-      final presentPct = summary?.presentPercentage ?? 0;
-      final absentPct = summary?.absentPercentage ?? 0;
+      final summary = controller.attendanceData.value?.summary ?? controller.cachedSummary.value;
+      final total = summary?.totalEmployees ?? controller.allEmployeesCount;
+      final present = summary?.present ?? controller.presentEmployeesCount;
+      final absent = summary?.absent ?? controller.absentEmployeesCount;
+      final onLeave = summary?.onLeave ?? controller.leaveEmployeesCount;
+      final presentPct = summary?.presentPercentage ?? (total > 0 ? ((present / total) * 100).toStringAsFixed(1) : 0);
+      final absentPct = summary?.absentPercentage ?? (total > 0 ? ((absent / total) * 100).toStringAsFixed(1) : 0);
 
       return Container(
         width: double.infinity,
@@ -388,6 +394,7 @@ class _CompactSummarySection extends StatelessWidget {
               subLabel: null,
               color: AppColors.primaryColor,
               icon: Iconsax.people,
+              onTap: () => controller.changeTab(0),
             ),
             _vDivider(),
             _SummaryStatItem(
@@ -396,6 +403,7 @@ class _CompactSummarySection extends StatelessWidget {
               subLabel: '$presentPct%',
               color: const Color(0xFF10B981),
               icon: Iconsax.tick_circle,
+              onTap: () => controller.changeTab(1),
             ),
             _vDivider(),
             _SummaryStatItem(
@@ -404,6 +412,7 @@ class _CompactSummarySection extends StatelessWidget {
               subLabel: '$absentPct%',
               color: const Color(0xFFEF4444),
               icon: Iconsax.close_circle,
+              onTap: () => controller.changeTab(2),
             ),
             _vDivider(),
             _SummaryStatItem(
@@ -412,6 +421,7 @@ class _CompactSummarySection extends StatelessWidget {
               subLabel: null,
               color: const Color(0xFFF59E0B),
               icon: Iconsax.clock,
+              onTap: () => controller.changeTab(3),
             ),
           ],
         ),
@@ -435,6 +445,7 @@ class _SummaryStatItem extends StatelessWidget {
   final String? subLabel;
   final Color color;
   final IconData icon;
+  final VoidCallback? onTap;
 
   const _SummaryStatItem({
     required this.label,
@@ -442,60 +453,68 @@ class _SummaryStatItem extends StatelessWidget {
     this.subLabel,
     required this.color,
     required this.icon,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return Expanded(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 12, color: color),
-              const SizedBox(width: 4),
-              Flexible(
-                child: Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textColorSecondary,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(icon, size: 12, color: color),
+                  const SizedBox(width: 4),
+                  Flexible(
+                    child: Text(
+                      label,
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textColorSecondary,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                  overflow: TextOverflow.ellipsis,
-                ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Text(
+                    value,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: color,
+                    ),
+                  ),
+                  if (subLabel != null) ...[
+                    const SizedBox(width: 2),
+                    Text(
+                      subLabel!,
+                      style: TextStyle(
+                        fontSize: 8,
+                        fontWeight: FontWeight.w600,
+                        color: color.withValues(alpha: 0.8),
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ],
           ),
-          const SizedBox(height: 4),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                  color: color,
-                ),
-              ),
-              if (subLabel != null) ...[
-                const SizedBox(width: 2),
-                Text(
-                  subLabel!,
-                  style: TextStyle(
-                    fontSize: 8,
-                    fontWeight: FontWeight.w600,
-                    color: color.withValues(alpha: 0.8),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -670,12 +689,39 @@ class _EmployeeList extends StatelessWidget {
         );
       }
 
-      final totalEmployees = controller.allEmployeesCount > 0
-          ? controller.allEmployeesCount
-          : (controller.attendanceData.value?.summary?.totalEmployees ?? employees.length);
+      int currentTabTotal;
+      switch (controller.selectedTab.value) {
+        case 1:
+          currentTabTotal = controller.presentEmployeesCount;
+          break;
+        case 2:
+          currentTabTotal = controller.absentEmployeesCount;
+          break;
+        case 3:
+          currentTabTotal = controller.leaveEmployeesCount;
+          break;
+        case 0:
+        default:
+          currentTabTotal = controller.allEmployeesCount;
+          break;
+      }
+      if (currentTabTotal <= 0) currentTabTotal = employees.length;
 
       return Column(
         children: [
+          if (controller.isLoading.value) ...[
+            const Padding(
+              padding: EdgeInsets.only(bottom: 8),
+              child: ClipRRect(
+                borderRadius: BorderRadius.all(Radius.circular(2)),
+                child: LinearProgressIndicator(
+                  minHeight: 2,
+                  backgroundColor: AppColors.slate100,
+                  color: AppColors.primaryColor,
+                ),
+              ),
+            ),
+          ],
           ListView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -687,7 +733,7 @@ class _EmployeeList extends StatelessWidget {
           const SizedBox(height: 12),
           Center(
             child: AppText(
-              'Showing 1 to ${employees.length} of $totalEmployees employees',
+              'Showing 1 to ${employees.length} of $currentTabTotal employees',
               fontSize: 11,
               color: AppColors.textColorHint,
             ),

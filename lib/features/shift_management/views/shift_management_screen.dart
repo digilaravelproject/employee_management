@@ -642,11 +642,13 @@ class _ShiftManagementScreenState extends State<ShiftManagementScreen> {
                             if (res == true) {
                               controller.fetchShifts();
                             }
-                          } else if (val == 'toggle') {
-                            controller.toggleShiftStatus(shift);
-                          } else if (val == 'duplicate') {
-                            controller.duplicateShift(shift);
-                          } else if (val == 'delete') {
+                          }
+                          // else if (val == 'toggle') {
+                          //   controller.toggleShiftStatus(shift);
+                          // } else if (val == 'duplicate') {
+                          //   controller.duplicateShift(shift);
+                          // }
+                          else if (val == 'delete') {
                             _showDeleteDialog(context, shift, controller);
                           }
                         },
@@ -681,7 +683,7 @@ class _ShiftManagementScreenState extends State<ShiftManagementScreen> {
                               ],
                             ),
                           ),
-                          const PopupMenuItem(
+                         /* const PopupMenuItem(
                             value: 'duplicate',
                             child: Row(
                               children: [
@@ -704,7 +706,7 @@ class _ShiftManagementScreenState extends State<ShiftManagementScreen> {
                                 AppText(shift.isActive ? 'Deactivate' : 'Activate', fontSize: 12),
                               ],
                             ),
-                          ),
+                          ),*/
                           const PopupMenuItem(
                             value: 'delete',
                             child: Row(

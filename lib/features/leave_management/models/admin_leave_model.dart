@@ -708,8 +708,15 @@ class AdminLeaveDetailDataModel {
       totalDays: days,
       reason: json['reason']?.toString() ?? '',
       contactDuringLeave: json['contact_during_leave']?.toString() ?? '',
-      attachmentName: json['attachment_name']?.toString(),
-      attachmentPath: json['attachment_path']?.toString(),
+      attachmentName: json['attachment_name']?.toString() ??
+          json['attachment_path']?.toString().split('/').last ??
+          json['attachment_url']?.toString().split('/').last ??
+          json['attachment']?.toString().split('/').last,
+      attachmentPath: json['attachment_path']?.toString() ??
+          json['attachment_url']?.toString() ??
+          json['attachment']?.toString() ??
+          json['document_url']?.toString() ??
+          json['document']?.toString(),
       status: normStatus,
       reviewNote: json['review_note']?.toString(),
       reviewedByUserId: int.tryParse(json['reviewed_by_user_id']?.toString() ?? ''),

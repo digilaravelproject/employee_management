@@ -110,5 +110,22 @@ void main() {
       expect(item.employee?.name, 'Amit Kumar');
       expect(item.status, 'Present');
     });
+
+    test('Correctly identifies Present, Absent, and Leave items for tabs', () {
+      final presentItem = AdminAttendanceEmployeeItem(
+        status: 'Present',
+        checkIn: '09:00 AM',
+      );
+      final absentItem = AdminAttendanceEmployeeItem(
+        status: 'Absent',
+      );
+      final leaveItem = AdminAttendanceEmployeeItem(
+        status: 'On Leave',
+      );
+
+      expect(presentItem.status.toLowerCase(), 'present');
+      expect(absentItem.status.toLowerCase(), 'absent');
+      expect(leaveItem.status.toLowerCase(), 'on leave');
+    });
   });
 }

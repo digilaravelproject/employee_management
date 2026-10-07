@@ -324,22 +324,27 @@ class ApplyLeaveScreen extends StatelessWidget {
                           final file = controller.selectedAttachment.value;
                           if (file != null) {
                             final fileName = file.path.split('/').last;
+                            final isPdf = fileName.toLowerCase().endsWith('.pdf');
                             return Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: AppColors.primaryLight.withValues(alpha: 0.3),
+                                color: (isPdf ? const Color(0xFFEF4444) : AppColors.primaryColor).withValues(alpha: 0.05),
                                 borderRadius: BorderRadius.circular(14),
-                                border: Border.all(color: AppColors.primaryColor.withValues(alpha: 0.3)),
+                                border: Border.all(color: (isPdf ? const Color(0xFFEF4444) : AppColors.primaryColor).withValues(alpha: 0.3)),
                               ),
                               child: Row(
                                 children: [
                                   Container(
                                     padding: const EdgeInsets.all(10),
                                     decoration: BoxDecoration(
-                                      color: AppColors.primaryLight,
+                                      color: isPdf ? const Color(0xFFEF4444).withValues(alpha: 0.1) : AppColors.primaryLight,
                                       borderRadius: BorderRadius.circular(10),
                                     ),
-                                    child: const Icon(Iconsax.document_text, color: AppColors.primaryColor, size: 22),
+                                    child: Icon(
+                                      isPdf ? Icons.picture_as_pdf_rounded : Iconsax.document_text,
+                                      color: isPdf ? const Color(0xFFEF4444) : AppColors.primaryColor,
+                                      size: 22,
+                                    ),
                                   ),
                                   const SizedBox(width: 12),
                                   Expanded(
@@ -354,10 +359,10 @@ class ApplyLeaveScreen extends StatelessWidget {
                                           overflow: TextOverflow.ellipsis,
                                         ),
                                         const SizedBox(height: 2),
-                                        const AppText(
-                                          'Attached successfully',
+                                        AppText(
+                                          isPdf ? 'PDF Document attached' : 'Image attached',
                                           fontSize: 11,
-                                          color: Colors.green,
+                                          color: isPdf ? const Color(0xFFEF4444) : Colors.green,
                                           fontWeight: FontWeight.w500,
                                         ),
                                       ],
@@ -373,7 +378,7 @@ class ApplyLeaveScreen extends StatelessWidget {
                           }
                           
                           return GestureDetector(
-                            onTap: () => controller.pickAttachment(),
+                            onTap: () => controller.showAttachmentPickerModal(context),
                             child: Container(
                               width: double.infinity,
                               decoration: BoxDecoration(
@@ -403,7 +408,7 @@ class ApplyLeaveScreen extends StatelessWidget {
                                       ),
                                       const SizedBox(height: 4),
                                       const AppText(
-                                        'JPG, PNG (Max 5MB)',
+                                        'PDF, JPG, PNG (Max 10MB)',
                                         fontSize: 11,
                                         color: AppColors.textColorSecondary,
                                       ),
