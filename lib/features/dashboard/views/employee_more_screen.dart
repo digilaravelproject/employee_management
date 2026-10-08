@@ -17,6 +17,8 @@ import '../../assets/views/employee_my_assets_screen.dart';
 import '../../followup/views/followup_dashboard_screen.dart';
 import '../../performance/views/performance_dashboard_screen.dart';
 import '../../leads/views/bde_leads_target_screen.dart';
+import '../../leads/views/sales_admin_crm_dashboard_screen.dart';
+import '../../leads/views/sales_executive_tele_crm_screen.dart';
 
 import '../../../core/services/permission/permission_service.dart';
 import '../../../core/services/permission/permission_constant.dart';
@@ -99,9 +101,9 @@ class EmployeeMoreScreen extends StatelessWidget {
                 () => const FollowupDashboardScreen(isEmployeeOnly: true)),
           ));
         }
-        if (isAdmin ||
-            p.isAllowed(PermissionConstant.viewLeads,
-                moduleSlug: PermissionConstant.moduleClientsLeadsCrm)) {
+        // if (isAdmin ||
+        //     p.isAllowed(PermissionConstant.viewLeads,
+        //         moduleSlug: PermissionConstant.moduleClientsLeadsCrm)) {
           workItems.add(_MoreMenuItem(
             icon: Iconsax.briefcase,
             title: 'My Leads & Targets',
@@ -109,7 +111,21 @@ class EmployeeMoreScreen extends StatelessWidget {
             iconColor: AppColors.primaryColor,
             onTap: () => Get.to(() => const BdeLeadsTargetScreen()),
           ));
-        }
+          workItems.add(_MoreMenuItem(
+            icon: Iconsax.chart_2,
+            title: 'Sales CRM (Admin View)',
+            subtitle: 'Multi-source leads, executive revenue & lead allocation',
+            iconColor: const Color(0xFF312E81),
+            onTap: () => Get.to(() => const SalesAdminDashboardScreen()),
+          ));
+          workItems.add(_MoreMenuItem(
+            icon: Iconsax.headphone,
+            title: 'Sales Tele-CRM (Executive)',
+            subtitle: 'Call queue, follow-up timer, discussion notes & deals',
+            iconColor: const Color(0xFF10B981),
+            onTap: () => Get.to(() => const SalesExecutiveTeleCrmScreen()),
+          ));
+      //  }
 
         // 2. Finance & Communication
         final financeItems = <Widget>[];
