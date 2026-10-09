@@ -7,6 +7,6 @@ class DefaultRes {
   DefaultRes._();
 
   static const String PROJECT_NAME = 'dgm360';
-  static const String PROJECT_VERSION = '1.0.0+1';
+  static const String PROJECT_VERSION = '1.0.1+2';
   static const String = '.env';
 }
