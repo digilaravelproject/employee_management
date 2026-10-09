@@ -10,7 +10,7 @@ import '../../leave_management/views/apply_leave_screen.dart';
 import '../../leave_management/views/manager_leave_dashboard.dart';
 import '../../shift_management/views/shift_management_screen.dart';
 import '../../payroll/bindings/salary_history_binding.dart';
-import '../../payslip/views/payslip_history_screen.dart';
+import '../../payroll/views/employee_my_salary_screen.dart';
 import '../../attendance/views/attendance_history_screen.dart';
 import '../../notification/controllers/notification_controller.dart';
 import '../../../core/controllers/app_controller.dart';
@@ -1809,7 +1809,7 @@ class _EmployeeQuickActions extends StatelessWidget {
       {'icon': Iconsax.document_text, 'label': 'Apply Leave', 'color': Colors.green, 'onTap': () => Get.to(() => const ApplyLeaveScreen())},
       {'icon': Iconsax.note_text, 'label': 'My Leaves', 'color': Colors.purple, 'onTap': () => Get.to(() => const MyLeavesScreen())},
       {'icon': Iconsax.calendar_tick, 'label': 'Attendance History', 'color': AppColors.primaryColor, 'onTap': () =>Get.to(() => const AttendanceHistoryScreen())},
-      {'icon': Iconsax.wallet, 'label': 'Payslip', 'color': Colors.orange, 'onTap': () => Get.to(() => const PayslipHistoryScreen(), binding: SalaryHistoryBinding())},
+      {'icon': Iconsax.wallet, 'label': 'Payslip', 'color': Colors.orange, 'onTap': () => Get.to(() => const EmployeeMySalaryScreen(), binding: SalaryHistoryBinding())},
     ];
 
     return Obx(() {
