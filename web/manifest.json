@@ -1,6 +1,6 @@
 {
-    "name": "attendence_tracking_app",
-    "short_name": "attendence_tracking_app",
+    "name": "dgm360",
+    "short_name": "dgm360",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

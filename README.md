@@ -1,4 +1,4 @@
-# attendence_tracking_app
+# dgm360
 
 A new Flutter project.
 

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:attendence_tracking_app/core/theme/app_colors.dart';
+import 'package:dgm360/core/theme/app_colors.dart';
 import 'package:get/get.dart';
 import '../../../core/services/network/api_client.dart';
 import '../../../core/utils/logger.dart';

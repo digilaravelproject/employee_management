@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:attendence_tracking_app/features/attendance/models/admin_attendance_model.dart';
+import 'package:dgm360/features/attendance/models/admin_attendance_model.dart';
 
 void main() {
   group('AdminAttendanceModel Tests', () {

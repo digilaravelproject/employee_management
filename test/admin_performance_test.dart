@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:attendence_tracking_app/features/performance/models/employee_performance_response_model.dart';
-import 'package:attendence_tracking_app/features/performance/repositories/performance_repository_interface.dart';
-import 'package:attendence_tracking_app/features/performance/controllers/performance_controller.dart';
-import 'package:attendence_tracking_app/features/attendance/models/attendance_history_response_model.dart';
-import 'package:attendence_tracking_app/features/performance/controllers/employee_performance_detail_controller.dart';
+import 'package:dgm360/features/performance/models/employee_performance_response_model.dart';
+import 'package:dgm360/features/performance/repositories/performance_repository_interface.dart';
+import 'package:dgm360/features/performance/controllers/performance_controller.dart';
+import 'package:dgm360/features/attendance/models/attendance_history_response_model.dart';
+import 'package:dgm360/features/performance/controllers/employee_performance_detail_controller.dart';
 
 class MockPerformanceRepository implements PerformanceRepositoryInterface {
   final EmployeePerformanceResponseModel response;

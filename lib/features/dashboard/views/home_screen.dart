@@ -1,4 +1,4 @@
-import 'package:attendence_tracking_app/core/widgets/app_button.dart';
+import 'package:dgm360/core/widgets/app_button.dart';
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:get/get.dart';

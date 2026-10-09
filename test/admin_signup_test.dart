@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:attendence_tracking_app/features/auth/domain/models/admin_signup_request_model.dart';
-import 'package:attendence_tracking_app/features/auth/domain/models/admin_signup_response_model.dart';
-import 'package:attendence_tracking_app/features/auth/domain/repositories/admin_signup_repository_interface.dart';
-import 'package:attendence_tracking_app/features/auth/domain/usecases/admin_signup_usecase.dart';
+import 'package:dgm360/features/auth/domain/models/admin_signup_request_model.dart';
+import 'package:dgm360/features/auth/domain/models/admin_signup_response_model.dart';
+import 'package:dgm360/features/auth/domain/repositories/admin_signup_repository_interface.dart';
+import 'package:dgm360/features/auth/domain/usecases/admin_signup_usecase.dart';
 
 class MockAdminSignupRepository implements AdminSignupRepositoryInterface {
   final AdminSignupResponseModel mockResponse;

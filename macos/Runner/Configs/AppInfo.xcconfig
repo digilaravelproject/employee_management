@@ -5,10 +5,10 @@
 // 'flutter create' template.
 
 // The application's name. By default this is also the title of the Flutter window.
-PRODUCT_NAME = attendence_tracking_app
+PRODUCT_NAME = DGM360
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = com.example.attendenceTrackingApp
+PRODUCT_BUNDLE_IDENTIFIER = com.dgm360
 
 // The copyright displayed in application information
 PRODUCT_COPYRIGHT = Copyright © 2026 com.example. All rights reserved.

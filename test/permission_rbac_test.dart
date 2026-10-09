@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:attendence_tracking_app/core/services/storage/shared_prefs.dart';
-import 'package:attendence_tracking_app/core/services/permission/permission_service.dart';
-import 'package:attendence_tracking_app/core/services/permission/permission_constant.dart';
-import 'package:attendence_tracking_app/features/auth/domain/models/user_model.dart';
+import 'package:dgm360/core/services/storage/shared_prefs.dart';
+import 'package:dgm360/core/services/permission/permission_service.dart';
+import 'package:dgm360/core/services/permission/permission_constant.dart';
+import 'package:dgm360/features/auth/domain/models/user_model.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

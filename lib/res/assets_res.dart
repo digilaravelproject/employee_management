@@ -6,12 +6,9 @@
 class AssetsRes {
   AssetsRes._();
 
-  static const String PROJECT_NAME = 'credit_debit';
+  static const String PROJECT_NAME = 'dgm360';
   static const String PROJECT_VERSION = '1.0.0+1';
-  static const String INTRO_1_V2 = 'assets/images/intro_1_v2.png';
-  static const String INTRO_2_V2 = 'assets/images/intro_2_v2.png';
-  static const String INTRO_3_V2 = 'assets/images/intro_3_v2.png';
-  static const String INTRO_4_V2 = 'assets/images/intro_4_v2.png';
-  static const String GU_IN = 'assets/translations/gu_IN.json';
-  static const String MR_IN = 'assets/translations/mr_IN.json';
+  static const String DIGI_BACKGROUND = 'assets/images/Digi-Background.jpeg';
+  static const String DIGI_LOGO = 'assets/images/Digi-logo.jpeg';
+  static const String DIGI_LOGO_PREVIEW = 'assets/images/Digi-logo_preview.png';
 }

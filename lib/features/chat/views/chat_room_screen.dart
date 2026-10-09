@@ -1,5 +1,5 @@
 import 'dart:io';
-import 'package:attendence_tracking_app/core/theme/app_colors.dart';
+import 'package:dgm360/core/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
