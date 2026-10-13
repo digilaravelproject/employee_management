@@ -10,16 +10,81 @@ import 'sales_executive_create_lead_screen.dart';
 class ExecLeadProcessStep {
   final String title;
   final String date;
+  final String time;
   final String note;
+  final String performedBy;
   final bool isCompleted;
 
   ExecLeadProcessStep({
     required this.title,
     required this.date,
+    this.time = '',
     required this.note,
+    this.performedBy = '',
     required this.isCompleted,
   });
 }
+
+class TeleCrmColleague {
+  final String name;
+  final String email;
+  final String role;
+  final String avatarUrl;
+  final int activeLeadsCount;
+  final String phone;
+
+  const TeleCrmColleague({
+    required this.name,
+    required this.email,
+    required this.role,
+    required this.avatarUrl,
+    required this.activeLeadsCount,
+    this.phone = '+91 98765 00000',
+  });
+}
+
+final List<TeleCrmColleague> _defaultColleaguesList = [
+  const TeleCrmColleague(
+    name: 'Neha Verma',
+    email: 'neha.verma@company.com',
+    role: 'Senior Sales Executive',
+    avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
+    activeLeadsCount: 14,
+    phone: '+91 98765 11221',
+  ),
+  const TeleCrmColleague(
+    name: 'Aman Khan',
+    email: 'aman.khan@company.com',
+    role: 'Tele-CRM Specialist',
+    avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
+    activeLeadsCount: 19,
+    phone: '+91 98765 22332',
+  ),
+  const TeleCrmColleague(
+    name: 'Pooja Singh',
+    email: 'pooja.singh@company.com',
+    role: 'BDE Executive',
+    avatarUrl: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&auto=format&fit=crop&q=80',
+    activeLeadsCount: 11,
+    phone: '+91 98765 33443',
+  ),
+  const TeleCrmColleague(
+    name: 'Kunal Roy',
+    email: 'kunal.roy@company.com',
+    role: 'Enterprise Sales Lead',
+    avatarUrl: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=150&auto=format&fit=crop&q=80',
+    activeLeadsCount: 8,
+    phone: '+91 98765 44554',
+  ),
+  const TeleCrmColleague(
+    name: 'Priya Patel',
+    email: 'priya.patel@company.com',
+    role: 'Client Relationship Exec',
+    avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+    activeLeadsCount: 16,
+    phone: '+91 98765 55665',
+  ),
+];
 
 class TeleCrmLeadItem {
   final String id;
@@ -40,6 +105,11 @@ class TeleCrmLeadItem {
   String lastCallDuration;
   String lastCallDate;
 
+  String assignedEmployee;
+  String assignedEmployeeAvatar;
+  String assignedEmployeeRole;
+  bool isReassigned;
+
   TeleCrmLeadItem({
     required this.id,
     required this.customerName,
@@ -57,6 +127,10 @@ class TeleCrmLeadItem {
     this.lastCallNote = '',
     this.lastCallDuration = '',
     this.lastCallDate = '',
+    this.assignedEmployee = 'Rahul Sharma (You)',
+    this.assignedEmployeeAvatar = 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+    this.assignedEmployeeRole = 'Sales Executive',
+    this.isReassigned = false,
   });
 }
 
@@ -89,9 +163,10 @@ class _SalesExecutiveTeleCrmScreenState extends State<SalesExecutiveTeleCrmScree
       lastCallNote: 'Interested. Asked for custom pricing quotation.',
       lastCallDuration: '8m 45s',
       lastCallDate: 'Yesterday 04:30 PM',
+      assignedEmployee: 'Rahul Sharma (You)',
       processSteps: [
-        ExecLeadProcessStep(title: 'Lead Assigned by Admin', date: '06 Oct 2026', note: 'Source: Facebook Ads', isCompleted: true),
-        ExecLeadProcessStep(title: 'First Call Attempt', date: '07 Oct 2026', note: 'Client asked to share quotation.', isCompleted: true),
+        ExecLeadProcessStep(title: 'Lead Assigned by Admin', date: '06 Oct 2026', time: '10:00 AM', note: 'Source: Facebook Ads', performedBy: 'System Auto', isCompleted: true),
+        ExecLeadProcessStep(title: 'First Call Attempt', date: '07 Oct 2026', time: '11:15 AM', note: 'Client asked to share quotation.', performedBy: 'Rahul Sharma', isCompleted: true),
       ],
     ),
     TeleCrmLeadItem(
@@ -109,8 +184,9 @@ class _SalesExecutiveTeleCrmScreenState extends State<SalesExecutiveTeleCrmScree
       lastCallNote: 'Call back in afternoon after surgery.',
       lastCallDuration: '3m 12s',
       lastCallDate: 'Today 11:00 AM',
+      assignedEmployee: 'Rahul Sharma (You)',
       processSteps: [
-        ExecLeadProcessStep(title: 'Lead Created by You', date: '08 Oct 2026', note: 'Outreach to local clinics.', isCompleted: true),
+        ExecLeadProcessStep(title: 'Lead Created by You', date: '08 Oct 2026', time: '02:30 PM', note: 'Outreach to local clinics.', performedBy: 'Rahul Sharma', isCompleted: true),
       ],
     ),
     TeleCrmLeadItem(
@@ -128,10 +204,11 @@ class _SalesExecutiveTeleCrmScreenState extends State<SalesExecutiveTeleCrmScree
       lastCallNote: 'Demo completed. Shared trial credentials.',
       lastCallDuration: '14m 20s',
       lastCallDate: '06 Oct 2026',
+      assignedEmployee: 'Rahul Sharma (You)',
       processSteps: [
-        ExecLeadProcessStep(title: 'Lead Assigned by Admin', date: '04 Oct 2026', note: '', isCompleted: true),
-        ExecLeadProcessStep(title: 'Demo Scheduled', date: '05 Oct 2026', note: 'Zoom link shared.', isCompleted: true),
-        ExecLeadProcessStep(title: 'Demo Completed', date: '06 Oct 2026', note: 'Trial activated for 7 days.', isCompleted: true),
+        ExecLeadProcessStep(title: 'Lead Assigned by Admin', date: '04 Oct 2026', time: '09:10 AM', note: '', performedBy: 'Admin', isCompleted: true),
+        ExecLeadProcessStep(title: 'Demo Scheduled', date: '05 Oct 2026', time: '04:00 PM', note: 'Zoom link shared.', performedBy: 'Rahul Sharma', isCompleted: true),
+        ExecLeadProcessStep(title: 'Demo Completed', date: '06 Oct 2026', time: '05:30 PM', note: 'Trial activated for 7 days.', performedBy: 'Rahul Sharma', isCompleted: true),
       ],
     ),
     TeleCrmLeadItem(
@@ -149,8 +226,31 @@ class _SalesExecutiveTeleCrmScreenState extends State<SalesExecutiveTeleCrmScree
       lastCallNote: 'Fresh lead assigned today.',
       lastCallDuration: '-',
       lastCallDate: '-',
+      assignedEmployee: 'Rahul Sharma (You)',
       processSteps: [
-        ExecLeadProcessStep(title: 'Lead Assigned by Admin', date: '08 Oct 2026', note: 'Fresh lead.', isCompleted: true),
+        ExecLeadProcessStep(title: 'Lead Assigned by Admin', date: '08 Oct 2026', time: '10:05 AM', note: 'Fresh lead.', performedBy: 'System Auto', isCompleted: true),
+      ],
+    ),
+    TeleCrmLeadItem(
+      id: 'TC-205',
+      customerName: 'Sunil Mehta',
+      phone: '+91 98110 55443',
+      city: 'Pune',
+      source: 'Referral',
+      sourceColorHex: '0xFF10B981',
+      status: 'Converted',
+      isSelfGenerated: false,
+      requirement: 'Annual SaaS subscription with 120 user licenses.',
+      potentialValue: 185000,
+      nextFollowupDateTime: null,
+      lastCallNote: 'Payment received. Contract executed.',
+      lastCallDuration: '12m 30s',
+      lastCallDate: 'Yesterday 02:15 PM',
+      assignedEmployee: 'Rahul Sharma (You)',
+      processSteps: [
+        ExecLeadProcessStep(title: 'Lead Assigned by Admin', date: '01 Oct 2026', time: '09:30 AM', note: 'Referred by standard client.', performedBy: 'Admin', isCompleted: true),
+        ExecLeadProcessStep(title: 'Product Demo', date: '03 Oct 2026', time: '03:00 PM', note: 'Demo presented to leadership.', performedBy: 'Rahul Sharma', isCompleted: true),
+        ExecLeadProcessStep(title: 'Converted to Customer 🎉', date: '10 Oct 2026', time: '11:45 AM', note: 'Deal closed at ₹1,85,000. Contract finalized.', performedBy: 'Rahul Sharma', isCompleted: true),
       ],
     ),
   ];
@@ -391,7 +491,7 @@ class _SalesExecutiveTeleCrmScreenState extends State<SalesExecutiveTeleCrmScree
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               AppText(
-                '$_selectedTab Leads (${_filteredLeads.length})',
+                '${_selectedTab.endsWith('Leads') ? _selectedTab : '$_selectedTab Leads'} (${_filteredLeads.length})',
                 fontSize: 14,
                 fontWeight: FontWeight.w800,
                 color: const Color(0xFF0F172A),
@@ -428,7 +528,7 @@ class _SalesExecutiveTeleCrmScreenState extends State<SalesExecutiveTeleCrmScree
             )
           else
             ..._filteredLeads.map((lead) => _buildTeleCrmLeadCard(lead)),
-            const SizedBox(height: 60), // FAB spacing
+            const SizedBox(height: 100), // Generous FAB spacing so cards are never covered
         ],
       ),
     );
@@ -512,8 +612,6 @@ class _SalesExecutiveTeleCrmScreenState extends State<SalesExecutiveTeleCrmScree
         statusColor = const Color(0xFF475569);
         statusBgColor = const Color(0xFFF1F5F9);
     }
-
-    final sourceColor = Color(int.parse(lead.sourceColorHex));
 
     return GestureDetector(
       onTap: () => Get.to(() => ExecLeadFullDetailScreen(
@@ -632,7 +730,60 @@ class _SalesExecutiveTeleCrmScreenState extends State<SalesExecutiveTeleCrmScree
                 ),
               ],
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
+
+            // Assigned Employee Bar
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+              decoration: BoxDecoration(
+                color: lead.isReassigned ? const Color(0xFFEFF6FF) : const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: lead.isReassigned ? const Color(0xFFDBEAFE) : const Color(0xFFE2E8F0)),
+              ),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 11,
+                    backgroundImage: NetworkImage(lead.assignedEmployeeAvatar),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: RichText(
+                      text: TextSpan(
+                        style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B)),
+                        children: [
+                          TextSpan(
+                            text: lead.isReassigned ? 'Transferred to: ' : 'Assigned to: ',
+                            style: const TextStyle(fontWeight: FontWeight.w500),
+                          ),
+                          TextSpan(
+                            text: lead.assignedEmployee,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: lead.isReassigned ? const Color(0xFF1D4ED8) : const Color(0xFF0F172A),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                    decoration: BoxDecoration(
+                      color: lead.isReassigned ? const Color(0xFFDBEAFE) : const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: AppText(
+                      lead.isReassigned ? 'Transferred' : 'Owner',
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: lead.isReassigned ? const Color(0xFF1D4ED8) : const Color(0xFF64748B),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
 
             // Follow-up Timer Alert Bar (if follow-up date set)
             if (lead.nextFollowupDateTime != null) ...[
@@ -662,7 +813,7 @@ class _SalesExecutiveTeleCrmScreenState extends State<SalesExecutiveTeleCrmScree
             // Last Discussion Note
             if (lead.lastCallNote.isNotEmpty) ...[
               Container(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF8FAFC),
                   borderRadius: BorderRadius.circular(10),
@@ -678,11 +829,11 @@ class _SalesExecutiveTeleCrmScreenState extends State<SalesExecutiveTeleCrmScree
                         AppText('Duration: ${lead.lastCallDuration}', fontSize: 9.5, color: AppColors.textColorSecondary),
                       ],
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 3),
                     Text(
                       lead.lastCallNote,
                       style: const TextStyle(
-                        fontSize: 11.5,
+                        fontSize: 11,
                         color: Color(0xFF334155),
                         fontStyle: FontStyle.italic,
                       ),
@@ -696,41 +847,128 @@ class _SalesExecutiveTeleCrmScreenState extends State<SalesExecutiveTeleCrmScree
             const Divider(height: 1, color: Color(0xFFF1F5F9)),
             const SizedBox(height: 12),
 
-            // Action Buttons
+            // ── Modern Unified Action Toolbar (3 Professional Balanced Buttons) ──
             Row(
               children: [
+                // 1. Call Action (Emerald Tonal)
                 Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      _showUpdateStatusModal(lead);
-                    },
-                    icon: const Icon(Icons.edit_note_rounded, size: 16, color: Color(0xFF0F172A)),
-                    label: const AppText('Update Status', fontSize: 11.5, color: Color(0xFF0F172A), fontWeight: FontWeight.bold),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Color(0xFFCBD5E1)),
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  child: Material(
+                    color: const Color(0xFFECFDF5),
+                    borderRadius: BorderRadius.circular(12),
+                    child: InkWell(
+                      onTap: () {
+                        Get.snackbar(
+                          'Dialing Call 📞',
+                          'Calling ${lead.customerName} (${lead.phone})...',
+                          snackPosition: SnackPosition.BOTTOM,
+                          backgroundColor: const Color(0xFF059669),
+                          colorText: Colors.white,
+                          margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                          borderRadius: 14,
+                        );
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        height: 38,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFA7F3D0)),
+                        ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.phone_rounded, size: 14, color: Color(0xFF059669)),
+                            SizedBox(width: 5),
+                            AppText('Call', fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFF059669)),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ),
                 const SizedBox(width: 8),
+
+                // 2. Status Action (Slate Tonal)
                 Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      Get.snackbar(
-                        'Dialing Call 📞',
-                        'Calling ${lead.customerName}...',
-                        snackPosition: SnackPosition.BOTTOM,
-                        backgroundColor: AppColors.primaryColor,
-                        colorText: Colors.white,
-                      );
-                    },
-                    icon: const Icon(Icons.phone_rounded, size: 14, color: Colors.white),
-                    label: const AppText('Call Now', fontSize: 11.5, color: Colors.white, fontWeight: FontWeight.bold),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primaryColor,
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  child: Material(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(12),
+                    child: InkWell(
+                      onTap: () => _showUpdateStatusModal(lead),
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        height: 38,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFCBD5E1)),
+                        ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.edit_note_rounded, size: 16, color: Color(0xFF334155)),
+                            SizedBox(width: 4),
+                            AppText('Status', fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFF334155)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+
+                // 3. Assign Action (Royal Blue Tonal / Grey Locked if Converted)
+                Expanded(
+                  child: Material(
+                    color: lead.status == 'Converted' ? const Color(0xFFF1F5F9) : const Color(0xFFEFF6FF),
+                    borderRadius: BorderRadius.circular(12),
+                    child: InkWell(
+                      onTap: () {
+                        if (lead.status == 'Converted') {
+                          Get.snackbar(
+                            'Reassignment Locked',
+                            'This lead is already converted and cannot be reassigned to another employee.',
+                            snackPosition: SnackPosition.BOTTOM,
+                            backgroundColor: const Color(0xFF475569),
+                            colorText: Colors.white,
+                            icon: const Icon(Icons.lock_rounded, color: Colors.white),
+                            margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                            borderRadius: 14,
+                          );
+                        } else {
+                          showAssignLeadToColleagueModal(
+                            context: context,
+                            lead: lead,
+                            onAssigned: () => setState(() {}),
+                          );
+                        }
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        height: 38,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: lead.status == 'Converted' ? const Color(0xFFE2E8F0) : const Color(0xFFBFDBFE),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              lead.status == 'Converted' ? Icons.lock_outline_rounded : Icons.swap_horiz_rounded,
+                              size: 15,
+                              color: lead.status == 'Converted' ? const Color(0xFF94A3B8) : const Color(0xFF2563EB),
+                            ),
+                            const SizedBox(width: 4),
+                            AppText(
+                              lead.status == 'Converted' ? 'Locked' : 'Assign',
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.bold,
+                              color: lead.status == 'Converted' ? const Color(0xFF94A3B8) : const Color(0xFF2563EB),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -742,9 +980,9 @@ class _SalesExecutiveTeleCrmScreenState extends State<SalesExecutiveTeleCrmScree
     );
   }
 
-
   void _showUpdateStatusModal(TeleCrmLeadItem lead) {
     String selectedStatus = lead.status;
+    final noteController = TextEditingController();
     
     showModalBottomSheet(
       context: context,
@@ -767,8 +1005,17 @@ class _SalesExecutiveTeleCrmScreenState extends State<SalesExecutiveTeleCrmScree
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const AppText('Update Lead Status', fontSize: 18, fontWeight: FontWeight.w800),
-                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const AppText('Update Lead Status', fontSize: 18, fontWeight: FontWeight.w800),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded, size: 20),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
                   
                   const AppText('Status', fontSize: 12, fontWeight: FontWeight.bold),
                   const SizedBox(height: 8),
@@ -776,10 +1023,11 @@ class _SalesExecutiveTeleCrmScreenState extends State<SalesExecutiveTeleCrmScree
                     spacing: 8,
                     runSpacing: 8,
                     children: ['Interested', 'Follow-up', 'Converted', 'Unreachable', 'Wrong Number'].map((s) {
+                      final isSelected = selectedStatus == s;
                       return ChoiceChip(
-                        label: Text(s, style: TextStyle(fontSize: 12, color: selectedStatus == s ? Colors.white : Colors.black)),
-                        selected: selectedStatus == s,
-                        selectedColor: AppColors.primaryColor,
+                        label: Text(s, style: TextStyle(fontSize: 12, color: isSelected ? Colors.white : Colors.black, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
+                        selected: isSelected,
+                        selectedColor: s == 'Converted' ? const Color(0xFF10B981) : AppColors.primaryColor,
                         onSelected: (bool selected) {
                           setModalState(() {
                             selectedStatus = s;
@@ -788,11 +1036,37 @@ class _SalesExecutiveTeleCrmScreenState extends State<SalesExecutiveTeleCrmScree
                       );
                     }).toList(),
                   ),
+                  if (selectedStatus == 'Converted') ...[
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFECFDF5),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFFA7F3D0)),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.check_circle_rounded, color: Color(0xFF059669), size: 16),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: AppText(
+                              'Converting this lead will lock reassignment permanently.',
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF065F46),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 16),
                   
                   const AppText('Call Note / Update Details', fontSize: 12, fontWeight: FontWeight.bold),
                   const SizedBox(height: 8),
                   TextField(
+                    controller: noteController,
                     maxLines: 3,
                     decoration: InputDecoration(
                       hintText: 'E.g., Client wants a demo tomorrow...',
@@ -800,27 +1074,37 @@ class _SalesExecutiveTeleCrmScreenState extends State<SalesExecutiveTeleCrmScree
                       isDense: true,
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 20),
                   
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: () {
                         setState(() {
+                          final prevStatus = lead.status;
                           lead.status = selectedStatus;
                           lead.processSteps.add(ExecLeadProcessStep(
-                            title: 'Status updated to $selectedStatus',
-                            date: DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.now()),
-                            note: 'Updated via Executive App',
+                            title: selectedStatus == 'Converted' 
+                                ? 'Converted to Customer 🎉' 
+                                : 'Status updated from $prevStatus to $selectedStatus',
+                            date: DateFormat('dd MMM yyyy').format(DateTime.now()),
+                            time: DateFormat('hh:mm a').format(DateTime.now()),
+                            note: noteController.text.trim().isNotEmpty
+                                ? noteController.text.trim()
+                                : (selectedStatus == 'Converted' ? 'Lead closed & converted successfully.' : 'Updated via Executive App'),
+                            performedBy: 'Rahul Sharma',
                             isCompleted: true,
                           ));
                         });
                         Navigator.pop(context);
                         Get.snackbar(
-                          'Status Updated',
-                          'Lead has been updated.',
+                          selectedStatus == 'Converted' ? 'Lead Converted 🎉' : 'Status Updated',
+                          selectedStatus == 'Converted' ? 'Congratulations! Deal successfully closed.' : 'Lead status has been updated to $selectedStatus.',
                           backgroundColor: const Color(0xFF16A34A),
                           colorText: Colors.white,
+                          snackPosition: SnackPosition.BOTTOM,
+                          margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                          borderRadius: 14,
                         );
                       },
                       style: ElevatedButton.styleFrom(
@@ -843,16 +1127,394 @@ class _SalesExecutiveTeleCrmScreenState extends State<SalesExecutiveTeleCrmScree
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 🚀 REASSIGN LEAD TO ANOTHER EMPLOYEE MODAL (PROVISION FOR UNCONVERTED LEADS)
+// ─────────────────────────────────────────────────────────────────────────────
+void showAssignLeadToColleagueModal({
+  required BuildContext context,
+  required TeleCrmLeadItem lead,
+  required VoidCallback onAssigned,
+}) {
+  // Guard check: cannot reassign converted lead
+  if (lead.status == 'Converted') {
+    Get.snackbar(
+      'Reassignment Locked',
+      'This lead is already converted and cannot be reassigned to another employee.',
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: const Color(0xFF475569),
+      colorText: Colors.white,
+      icon: const Icon(Icons.lock_rounded, color: Colors.white),
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+      borderRadius: 14,
+    );
+    return;
+  }
+
+  TeleCrmColleague? selectedColleague = _defaultColleaguesList.first;
+  String selectedReason = 'Branch / Location Transfer';
+  final noteController = TextEditingController(text: 'Assigned for follow-up and client meeting.');
+  final searchController = TextEditingController();
+
+  final List<String> transferReasons = [
+    'Branch / Location Transfer',
+    'Language Preference',
+    'Enterprise Specialist',
+    'Workload Balancing',
+    'Client Requested Callback',
+    'Special Deal Term Requirement',
+  ];
+
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.white,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+    ),
+    builder: (modalCtx) {
+      return StatefulBuilder(
+        builder: (context, setModalState) {
+          final query = searchController.text.trim().toLowerCase();
+          final filteredColleagues = _defaultColleaguesList.where((c) {
+            return c.name.toLowerCase().contains(query) ||
+                c.role.toLowerCase().contains(query) ||
+                c.email.toLowerCase().contains(query);
+          }).toList();
+
+          return Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(modalCtx).viewInsets.bottom,
+              left: 20,
+              right: 20,
+              top: 20,
+            ),
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE2E8F0),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const AppText(
+                            'Assign Lead to Colleague',
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF0F172A),
+                          ),
+                          const SizedBox(height: 3),
+                          AppText(
+                            '${lead.customerName} (${lead.id})',
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF64748B),
+                          ),
+                        ],
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded, size: 22, color: Color(0xFF64748B)),
+                        onPressed: () => Navigator.pop(modalCtx),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Provision Policy Information Banner
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEFF6FF),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFBFDBFE)),
+                    ),
+                    child: const Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.info_outline_rounded, color: Color(0xFF2563EB), size: 18),
+                        SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Provision: You can transfer this lead to another sales executive as long as it has not been converted. Once converted, the deal is permanently won.',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              color: Color(0xFF1E40AF),
+                              fontWeight: FontWeight.w500,
+                              height: 1.35,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Search Sales Executive Colleague
+                  Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: TextField(
+                      controller: searchController,
+                      onChanged: (val) => setModalState(() {}),
+                      decoration: const InputDecoration(
+                        hintText: 'Search colleague name or role...',
+                        hintStyle: TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
+                        prefixIcon: Icon(Iconsax.search_normal, size: 18, color: Color(0xFF94A3B8)),
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  const AppText(
+                    'Select Colleague *',
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF334155),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Colleagues List
+                  Container(
+                    constraints: const BoxConstraints(maxHeight: 180),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: filteredColleagues.isEmpty
+                        ? const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(20),
+                              child: AppText('No colleagues found matching search.', fontSize: 12, color: Color(0xFF94A3B8)),
+                            ),
+                          )
+                        : ListView.separated(
+                            shrinkWrap: true,
+                            itemCount: filteredColleagues.length,
+                            separatorBuilder: (context, index) => const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                            itemBuilder: (context, index) {
+                              final colleague = filteredColleagues[index];
+                              final isSelected = selectedColleague?.email == colleague.email;
+
+                              return InkWell(
+                                onTap: () {
+                                  setModalState(() {
+                                    selectedColleague = colleague;
+                                  });
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                  color: isSelected ? const Color(0xFFEFF6FF) : Colors.transparent,
+                                  child: Row(
+                                    children: [
+                                      CircleAvatar(
+                                        radius: 17,
+                                        backgroundImage: NetworkImage(colleague.avatarUrl),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            AppText(
+                                              colleague.name,
+                                              fontSize: 13.5,
+                                              fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                                              color: const Color(0xFF0F172A),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            AppText(
+                                              colleague.role,
+                                              fontSize: 11,
+                                              color: const Color(0xFF64748B),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFF1F5F9),
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: AppText(
+                                          '${colleague.activeLeadsCount} Leads',
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                          color: const Color(0xFF475569),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Icon(
+                                        isSelected ? Icons.check_circle_rounded : Icons.circle_outlined,
+                                        size: 20,
+                                        color: isSelected ? const Color(0xFF2563EB) : const Color(0xFFCBD5E1),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Reason for Reassignment
+                  const AppText(
+                    'Reason for Reassignment',
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF334155),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: transferReasons.map((reason) {
+                      final isSelected = selectedReason == reason;
+                      return ChoiceChip(
+                        label: Text(reason, style: TextStyle(fontSize: 11, color: isSelected ? Colors.white : const Color(0xFF334155), fontWeight: isSelected ? FontWeight.bold : FontWeight.w500)),
+                        selected: isSelected,
+                        selectedColor: const Color(0xFF2563EB),
+                        backgroundColor: const Color(0xFFF8FAFC),
+                        side: BorderSide(color: isSelected ? const Color(0xFF2563EB) : const Color(0xFFE2E8F0)),
+                        onSelected: (val) {
+                          setModalState(() {
+                            selectedReason = reason;
+                          });
+                        },
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Instructions for Colleague
+                  const AppText(
+                    'Notes / Handoff Instructions',
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF334155),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: noteController,
+                    maxLines: 2,
+                    decoration: InputDecoration(
+                      hintText: 'Add client requirement or specific instructions...',
+                      hintStyle: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                      ),
+                      contentPadding: const EdgeInsets.all(12),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Submit Assignment Button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        if (selectedColleague == null) {
+                          Get.snackbar('Select Colleague', 'Please pick an executive to transfer this lead.');
+                          return;
+                        }
+
+                        // Apply update
+                        final chosen = selectedColleague!;
+                        lead.assignedEmployee = chosen.name;
+                        lead.assignedEmployeeAvatar = chosen.avatarUrl;
+                        lead.assignedEmployeeRole = chosen.role;
+                        lead.isReassigned = true;
+
+                        lead.processSteps.add(ExecLeadProcessStep(
+                          title: 'Lead Reassigned to ${chosen.name}',
+                          date: DateFormat('dd MMM yyyy').format(DateTime.now()),
+                          time: DateFormat('hh:mm a').format(DateTime.now()),
+                          note: 'Transferred by Rahul Sharma. Reason: $selectedReason. ${noteController.text.trim().isNotEmpty ? 'Note: ${noteController.text.trim()}' : ''}',
+                          performedBy: 'Rahul Sharma',
+                          isCompleted: true,
+                        ));
+
+                        Navigator.pop(modalCtx);
+                        onAssigned();
+
+                        Get.snackbar(
+                          'Lead Assigned 🎉',
+                          'Lead ${lead.id} successfully reassigned to ${chosen.name}.',
+                          snackPosition: SnackPosition.BOTTOM,
+                          backgroundColor: const Color(0xFF10B981),
+                          colorText: Colors.white,
+                          icon: const Icon(Icons.swap_horiz_rounded, color: Colors.white),
+                          margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                          borderRadius: 14,
+                        );
+                      },
+                      icon: const Icon(Icons.swap_horiz_rounded, color: Colors.white, size: 18),
+                      label: AppText(
+                        'Assign Lead to ${selectedColleague?.name ?? 'Colleague'}',
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2563EB),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        elevation: 0,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    },
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // 📱 FULL SCREEN LEAD DETAIL VIEW FOR EXECUTIVE (TREE FORMAT)
 // ─────────────────────────────────────────────────────────────────────────────
-class ExecLeadFullDetailScreen extends StatelessWidget {
+class ExecLeadFullDetailScreen extends StatefulWidget {
   final TeleCrmLeadItem lead;
   final VoidCallback onStatusUpdated;
 
   const ExecLeadFullDetailScreen({super.key, required this.lead, required this.onStatusUpdated});
 
   @override
+  State<ExecLeadFullDetailScreen> createState() => _ExecLeadFullDetailScreenState();
+}
+
+class _ExecLeadFullDetailScreenState extends State<ExecLeadFullDetailScreen> {
+  @override
   Widget build(BuildContext context) {
+    final lead = widget.lead;
+    final isConverted = lead.status == 'Converted';
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
@@ -878,6 +1540,21 @@ class ExecLeadFullDetailScreen extends StatelessWidget {
           color: Color(0xFF0F172A),
         ),
         centerTitle: true,
+        actions: [
+          if (!isConverted)
+            IconButton(
+              icon: const Icon(Icons.swap_horiz_rounded, color: Color(0xFF2563EB)),
+              tooltip: 'Assign to Colleague',
+              onPressed: () => showAssignLeadToColleagueModal(
+                context: context,
+                lead: lead,
+                onAssigned: () {
+                  setState(() {});
+                  widget.onStatusUpdated();
+                },
+              ),
+            ),
+        ],
       ),
       bottomNavigationBar: Container(
         padding: const EdgeInsets.all(16),
@@ -887,18 +1564,59 @@ class ExecLeadFullDetailScreen extends StatelessWidget {
             BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, -5)),
           ],
         ),
-        child: ElevatedButton.icon(
-          onPressed: () {
-            // Can show the same update status modal here by extracting it to a standalone widget or controller.
-            Get.snackbar('Quick Action', 'Use Update Status button on card for now.');
-          },
-          icon: const Icon(Icons.phone_rounded, color: Colors.white),
-          label: const AppText('Call Client Now', color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primaryColor,
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          ),
+        child: Row(
+          children: [
+            if (!isConverted) ...[
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => showAssignLeadToColleagueModal(
+                    context: context,
+                    lead: lead,
+                    onAssigned: () {
+                      setState(() {});
+                      widget.onStatusUpdated();
+                    },
+                  ),
+                  icon: const Icon(Icons.swap_horiz_rounded, size: 17, color: Color(0xFF2563EB)),
+                  label: const AppText(
+                    'Assign Lead',
+                    color: Color(0xFF2563EB),
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Color(0xFFBFDBFE)),
+                    backgroundColor: const Color(0xFFEFF6FF),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+            ],
+            Expanded(
+              flex: isConverted ? 1 : 2,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Get.snackbar(
+                    'Dialing Call 📞',
+                    'Calling ${lead.customerName}...',
+                    snackPosition: SnackPosition.BOTTOM,
+                    backgroundColor: AppColors.primaryColor,
+                    colorText: Colors.white,
+                  );
+                },
+                icon: const Icon(Icons.phone_rounded, color: Colors.white, size: 18),
+                label: const AppText('Call Client Now', color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryColor,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  elevation: 0,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
       body: SingleChildScrollView(
@@ -945,21 +1663,110 @@ class ExecLeadFullDetailScreen extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFDCFCE7),
+                          color: isConverted ? const Color(0xFFDCFCE7) : const Color(0xFFFEF3C7),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: AppText(
                           lead.status,
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
-                          color: const Color(0xFF16A34A),
+                          color: isConverted ? const Color(0xFF16A34A) : const Color(0xFFD97706),
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 16),
                   const Divider(height: 1, color: Color(0xFFF1F5F9)),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 14),
+
+                  // Assigned Employee Detailed Row with Reassign action
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: lead.isReassigned ? const Color(0xFFEFF6FF) : const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: lead.isReassigned ? const Color(0xFFBFDBFE) : const Color(0xFFE2E8F0)),
+                    ),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 18,
+                          backgroundImage: NetworkImage(lead.assignedEmployeeAvatar),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  AppText(
+                                    lead.isReassigned ? 'Transferred Employee' : 'Assigned Executive',
+                                    fontSize: 10.5,
+                                    color: const Color(0xFF64748B),
+                                  ),
+                                  if (lead.isReassigned) ...[
+                                    const SizedBox(width: 4),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFDBEAFE),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: const AppText('Handed Over', fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF1D4ED8)),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                              const SizedBox(height: 2),
+                              AppText(
+                                lead.assignedEmployee,
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF0F172A),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (!isConverted)
+                          ElevatedButton.icon(
+                            onPressed: () => showAssignLeadToColleagueModal(
+                              context: context,
+                              lead: lead,
+                              onAssigned: () {
+                                setState(() {});
+                                widget.onStatusUpdated();
+                              },
+                            ),
+                            icon: const Icon(Icons.swap_horiz_rounded, size: 14, color: Colors.white),
+                            label: const AppText('Reassign', fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF2563EB),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                          )
+                        else
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Row(
+                              children: [
+                                Icon(Icons.lock_rounded, size: 12, color: Color(0xFF64748B)),
+                                SizedBox(width: 4),
+                                AppText('Locked (Converted)', fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF64748B)),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
                   Row(
                     children: [
                       const Icon(Icons.phone_rounded, size: 16, color: Color(0xFF64748B)),
@@ -1016,6 +1823,8 @@ class ExecLeadFullDetailScreen extends StatelessWidget {
             ...List.generate(lead.processSteps.length, (index) {
               final step = lead.processSteps[index];
               final isLast = index == lead.processSteps.length - 1;
+              final isReassignStep = step.title.toLowerCase().contains('reassigned');
+
               return IntrinsicHeight(
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1027,16 +1836,22 @@ class ExecLeadFullDetailScreen extends StatelessWidget {
                           width: 24,
                           height: 24,
                           decoration: BoxDecoration(
-                            color: step.isCompleted ? const Color(0xFF10B981) : Colors.white,
+                            color: isReassignStep 
+                                ? const Color(0xFF2563EB) 
+                                : (step.isCompleted ? const Color(0xFF10B981) : Colors.white),
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: step.isCompleted ? const Color(0xFF10B981) : const Color(0xFFCBD5E1),
+                              color: isReassignStep 
+                                  ? const Color(0xFF2563EB) 
+                                  : (step.isCompleted ? const Color(0xFF10B981) : const Color(0xFFCBD5E1)),
                               width: 2,
                             ),
                           ),
-                          child: step.isCompleted
-                              ? const Icon(Icons.check_rounded, size: 14, color: Colors.white)
-                              : null,
+                          child: Icon(
+                            isReassignStep ? Icons.swap_horiz_rounded : Icons.check_rounded,
+                            size: 14,
+                            color: Colors.white,
+                          ),
                         ),
                         if (!isLast)
                           Expanded(
@@ -1055,9 +1870,9 @@ class ExecLeadFullDetailScreen extends StatelessWidget {
                         child: Container(
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: isReassignStep ? const Color(0xFFF8FAFC) : Colors.white,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                            border: Border.all(color: isReassignStep ? const Color(0xFFBFDBFE) : const Color(0xFFE2E8F0)),
                             boxShadow: [
                               BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 4, offset: const Offset(0, 2)),
                             ],
@@ -1069,7 +1884,15 @@ class ExecLeadFullDetailScreen extends StatelessWidget {
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   Expanded(child: AppText(step.title, fontSize: 13.5, fontWeight: FontWeight.bold)),
-                                  AppText(step.date, fontSize: 11, color: const Color(0xFF64748B)),
+                                  AppText('${step.date} ${step.time}'.trim(), fontSize: 11, color: const Color(0xFF64748B)),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  const Icon(Icons.person_outline_rounded, size: 12, color: Color(0xFF94A3B8)),
+                                  const SizedBox(width: 4),
+                                  AppText(step.performedBy.isNotEmpty ? step.performedBy : 'Unknown', fontSize: 11, color: const Color(0xFF64748B), fontWeight: FontWeight.w500),
                                 ],
                               ),
                               if (step.note.isNotEmpty) ...[
@@ -1091,3 +1914,4 @@ class ExecLeadFullDetailScreen extends StatelessWidget {
     );
   }
 }
+

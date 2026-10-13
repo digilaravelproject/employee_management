@@ -773,9 +773,6 @@ class _QuickActionsGrid extends StatelessWidget {
 // ── EMPLOYEE VIEW WIDGETS ───────────────────────────────────────────────────
 
 
-
-
-
 class EmployeeShiftAttendanceCard extends StatelessWidget {
   const EmployeeShiftAttendanceCard({super.key});
 
@@ -1594,8 +1591,6 @@ class _CheckItem extends StatelessWidget {
   }
 }
 
-
-
 class _TodayBirthdayCard extends StatelessWidget {
   const _TodayBirthdayCard();
 
@@ -1797,8 +1792,6 @@ class _SummaryItem extends StatelessWidget {
     );
   }
 }
-
-
 
 class _EmployeeQuickActions extends StatelessWidget {
   const _EmployeeQuickActions();

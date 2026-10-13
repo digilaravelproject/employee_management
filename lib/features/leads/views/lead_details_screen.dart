@@ -318,8 +318,19 @@ class LeadDetailsScreen extends StatelessWidget {
             label: 'Assigned To',
             value: lead.assignedTo.name,
             avatarUrl: lead.assignedTo.avatarUrl,
-            hasChevron: true,
-            onTap: () => Get.to(() => AssignSalesTeamScreen(lead: lead)),
+            hasChevron: lead.leadStatus != 'Converted',
+            onTap: lead.leadStatus == 'Converted'
+                ? () {
+                    Get.snackbar(
+                      'Reassignment Locked',
+                      'This lead is already converted and cannot be reassigned to another employee.',
+                      snackPosition: SnackPosition.BOTTOM,
+                      backgroundColor: const Color(0xFF64748B),
+                      colorText: Colors.white,
+                      icon: const Icon(Icons.lock_rounded, color: Colors.white),
+                    );
+                  }
+                : () => Get.to(() => AssignSalesTeamScreen(lead: lead)),
           ),
           _buildDetailItem(label: 'Mobile', value: lead.mobile, trailingIcon: Icons.phone_in_talk_outlined),
           _buildDetailItem(label: 'Email', value: lead.email, trailingIcon: Icons.mail_outline),

@@ -101,6 +101,33 @@ class _AssignSalesTeamScreenState extends State<AssignSalesTeamScreen> {
             ),
             const SizedBox(height: 10),
 
+            if (widget.lead.leadStatus == 'Converted')
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF2F2),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFFECACA)),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.lock_rounded, color: Color(0xFFDC2626), size: 18),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'This lead has already been converted to a customer. Reassignment is locked.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFFB91C1C),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
             // ── Salespersons list ──
             Expanded(
               child: SingleChildScrollView(
@@ -241,17 +268,17 @@ class _AssignSalesTeamScreenState extends State<AssignSalesTeamScreen> {
               child: SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _submitAssignment,
+                  onPressed: widget.lead.leadStatus == 'Converted' ? null : _submitAssignment,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryColor,
+                    backgroundColor: widget.lead.leadStatus == 'Converted' ? const Color(0xFF94A3B8) : AppColors.primaryColor,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
                     elevation: 0,
                   ),
-                  child: const AppText(
-                    'Assign Lead',
+                  child: AppText(
+                    widget.lead.leadStatus == 'Converted' ? 'Cannot Reassign Converted Lead' : 'Assign Lead',
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
@@ -266,6 +293,17 @@ class _AssignSalesTeamScreenState extends State<AssignSalesTeamScreen> {
   }
 
   void _submitAssignment() {
+    if (widget.lead.leadStatus == 'Converted') {
+      Get.snackbar(
+        'Reassignment Locked',
+        'Converted leads cannot be reassigned to another employee.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: const Color(0xFF64748B),
+        colorText: Colors.white,
+      );
+      return;
+    }
+
     if (selectedRep.value == null) {
       setState(() {
         _selectionError = 'Please select a sales representative to assign';
