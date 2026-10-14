@@ -5,6 +5,13 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_text.dart';
 import 'sales_executive_tele_crm_screen.dart';
 import 'sales_executive_create_lead_screen.dart';
+import '../bindings/admin_leads_hub_binding.dart';
+import '../controllers/admin_leads_hub_controller.dart';
+import '../models/admin_leads_request_model.dart';
+import '../models/admin_leads_response_model.dart';
+import '../models/sales_employee_model.dart';
+import '../repositories/admin_leads_repository_interface.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 // ── MODELS ───────────────────────────────────────────────────────────────────
 
@@ -130,6 +137,22 @@ class SalesExecutivePerf {
   int get totalLeads => totalLeadsAssigned + totalLeadsSelfGenerated;
   double get targetPercentage => target > 0 ? (revenue / target * 100).clamp(0, 100) : 0;
   double get conversionRate => totalLeads > 0 ? (convertedLeads / totalLeads * 100).clamp(0, 100) : 0;
+
+  factory SalesExecutivePerf.fromSalesEmployee(SalesEmployeeModel emp) {
+    return SalesExecutivePerf(
+      name: emp.displayName,
+      avatar: emp.avatar ?? '',
+      designation: emp.displayDesignation,
+      revenue: 0.0,
+      target: emp.salesTarget > 0 ? emp.salesTarget : 500000.0,
+      callsCount: 0,
+      totalTalkTime: '0h 0m',
+      avgTalkTime: '0m',
+      convertedLeads: emp.dealsClosedCount,
+      totalLeadsAssigned: emp.assignedLeadsCount,
+      totalLeadsSelfGenerated: 0,
+    );
+  }
 }
 
 // ── SALES ADMIN DASHBOARD SCREEN ─────────────────────────────────────────────
@@ -145,12 +168,6 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
   late TabController _mainTabController;
   int? _selectedModuleIndex; // null = Main 4 Vertical Cards Dashboard overview; 0=Sales Team, 1=Leads Hub, 2=Source Rules, 3=Lead Statuses
 
-
-  // Search & Filter Controllers for Option 2 (Leads Hub)
-  String _selectedSourceFilter = 'All';
-  String _selectedLeadAllocationCategory = 'All'; // All, New (Unassigned), Assigned
-  final String _selectedStatusFilter = 'All';
-  final TextEditingController _searchController = TextEditingController();
 
   // Search for Option 1 (Sales Team)
   final TextEditingController _teamSearchController = TextEditingController();
@@ -220,10 +237,15 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
 
   // Mock Master Leads Database
   late List<AdminLeadItem> _leadsList;
+  late final AdminLeadsHubController _hubController;
 
   @override
   void initState() {
     super.initState();
+    if (!Get.isRegistered<AdminLeadsHubController>()) {
+      AdminLeadsHubBinding().dependencies();
+    }
+    _hubController = Get.find<AdminLeadsHubController>();
     _mainTabController = TabController(length: 4, vsync: this);
     _mainTabController.addListener(() {
       if (mounted) setState(() {});
@@ -592,47 +614,29 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
   @override
   void dispose() {
     _mainTabController.dispose();
-    _searchController.dispose();
     _teamSearchController.dispose();
     super.dispose();
   }
 
-  // Filtered Leads for Option 2
-  List<AdminLeadItem> get _filteredLeads {
-    final query = _searchController.text.trim().toLowerCase();
-    return _leadsList.where((lead) {
-      final matchesQuery = lead.customerName.toLowerCase().contains(query) ||
-          lead.phone.toLowerCase().contains(query) ||
-          lead.id.toLowerCase().contains(query) ||
-          lead.requirement.toLowerCase().contains(query);
-      if (!matchesQuery) return false;
-
-      // Allocation Category Filter
-      if (_selectedLeadAllocationCategory == 'New (Unassigned)' && lead.assignedExecutive != 'Unassigned') {
-        return false;
+  // Dynamic or fallback executives list
+  List<SalesExecutivePerf> get _effectiveExecutivesList {
+    if (Get.isRegistered<AdminLeadsHubController>()) {
+      final ctrl = Get.find<AdminLeadsHubController>();
+      if (ctrl.salesEmployees.isNotEmpty) {
+        return ctrl.salesEmployees
+            .map((emp) => SalesExecutivePerf.fromSalesEmployee(emp))
+            .toList();
       }
-      if (_selectedLeadAllocationCategory == 'Assigned' && lead.assignedExecutive == 'Unassigned') {
-        return false;
-      }
-
-      // Source Filter
-      if (_selectedSourceFilter != 'All' && lead.source != _selectedSourceFilter) {
-        return false;
-      }
-
-      // Status Filter
-      if (_selectedStatusFilter != 'All' && lead.status != _selectedStatusFilter) {
-        return false;
-      }
-      return true;
-    }).toList();
+    }
+    return _executives;
   }
 
   // Filtered Executives for Option 1
   List<SalesExecutivePerf> get _filteredExecutives {
+    final list = _effectiveExecutivesList;
     final query = _teamSearchController.text.trim().toLowerCase();
-    if (query.isEmpty) return _executives;
-    return _executives.where((exec) =>
+    if (query.isEmpty) return list;
+    return list.where((exec) =>
       exec.name.toLowerCase().contains(query) ||
       exec.designation.toLowerCase().contains(query)
     ).toList();
@@ -642,11 +646,12 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
 
   @override
   Widget build(BuildContext context) {
-    final totalRevenue = _executives.fold<double>(0, (sum, item) => sum + item.revenue);
-    final totalTarget = _executives.fold<double>(0, (sum, item) => sum + item.target);
+    final execs = _effectiveExecutivesList;
+    final totalRevenue = execs.fold<double>(0, (sum, item) => sum + item.revenue);
+    final totalTarget = execs.fold<double>(0, (sum, item) => sum + item.target);
     final overallProgress = totalTarget > 0 ? (totalRevenue / totalTarget * 100) : 0;
-    final totalCalls = _executives.fold<int>(0, (sum, item) => sum + item.callsCount);
-    final totalConverted = _executives.fold<int>(0, (sum, item) => sum + item.convertedLeads);
+    final totalCalls = execs.fold<int>(0, (sum, item) => sum + item.callsCount);
+    final totalConverted = execs.fold<int>(0, (sum, item) => sum + item.convertedLeads);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -788,27 +793,32 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
   // ── 4 VERTICAL CARDS MAIN DASHBOARD VIEW ───────────────────────────────────
 
   Widget _build4VerticalCardsDashboard() {
-    final navItems = [
-      {
-        'index': 0,
-        'title': 'Sales Team',
-        'subtitle': 'Monitor executive performance, talk-time & call logs',
-        'stat': '${_executives.length} Active Executives',
-        'icon': Iconsax.user_search,
-        'color': AppColors.primaryColor,
-        'lightColor': const Color(0xFFEEF2FF),
-        'badge': null,
-      },
-      {
-        'index': 1,
-        'title': 'Leads Hub',
-        'subtitle': 'View & assign inbound multi-source sales leads',
-        'stat': '${_leadsList.length} Total Master Leads',
-        'icon': Iconsax.task_square,
-        'color': const Color(0xFF2563EB),
-        'lightColor': const Color(0xFFEFF6FF),
-        'badge': _unassignedLeadsCount > 0 ? '$_unassignedLeadsCount New' : null,
-      },
+    return Obx(() {
+      final summary = _hubController.summary.value;
+      final totalLeadsCount = summary?.all ?? _leadsList.length;
+      final unassignedLeads = summary?.unassigned ?? _unassignedLeadsCount;
+
+      final navItems = [
+        {
+          'index': 0,
+          'title': 'Sales Team',
+          'subtitle': 'Monitor executive performance, talk-time & call logs',
+          'stat': '${_executives.length} Active Executives',
+          'icon': Iconsax.user_search,
+          'color': AppColors.primaryColor,
+          'lightColor': const Color(0xFFEEF2FF),
+          'badge': null,
+        },
+        {
+          'index': 1,
+          'title': 'Leads Hub',
+          'subtitle': 'View & assign inbound multi-source sales leads',
+          'stat': '$totalLeadsCount Total Master Leads',
+          'icon': Iconsax.task_square,
+          'color': const Color(0xFF2563EB),
+          'lightColor': const Color(0xFFEFF6FF),
+          'badge': unassignedLeads > 0 ? '$unassignedLeads New' : null,
+        },
       {
         'index': 2,
         'title': 'Source Rules',
@@ -977,6 +987,7 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
         }),
       ],
     );
+    });
   }
 
 
@@ -1283,300 +1294,272 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
     );
   }
 
-  // Employee Deep-Dive Detailed Modal/Sheet
-  // Employee details are now shown in a separate full screen via EmployeeLeadDetailScreen
 
-  Widget _buildEmployeeModalStat(String label, String value, Color color) {
-    return Column(
-      children: [
-        AppText(value, fontSize: 13, fontWeight: FontWeight.bold, color: color),
-        const SizedBox(height: 2),
-        AppText(label, fontSize: 9.5, color: const Color(0xFFC7D2FE)),
-      ],
-    );
-  }
-
-  Widget _buildEmployeeModalDivider() {
-    return Container(height: 20, width: 1, color: const Color(0xFF6366F1));
-  }
-
-  Widget _buildEmployeeLeadProcessCard(AdminLeadItem lead) {
-    // Only show last 2 steps
-    final displaySteps = lead.processSteps.length > 2
-        ? lead.processSteps.sublist(lead.processSteps.length - 2)
-        : lead.processSteps;
-
-    return GestureDetector(
-      onTap: () => Get.to(() => AdminLeadFullDetailScreen(lead: lead)),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: lead.isSelfGenerated ? const Color(0xFFF3E8FF) : const Color(0xFFEFF6FF),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: AppText(
-                      lead.isSelfGenerated ? 'Self Brought' : 'Admin Assigned',
-                      fontSize: 9.5,
-                      fontWeight: FontWeight.bold,
-                      color: lead.isSelfGenerated ? const Color(0xFF7C3AED) : const Color(0xFF2563EB),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  AppText(lead.id, fontSize: 10.5, color: AppColors.textColorHint, fontWeight: FontWeight.w600),
-                ],
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: lead.status == 'Converted'
-                      ? const Color(0xFFDCFCE7)
-                      : lead.status == 'Interested'
-                          ? const Color(0xFFE0F2FE)
-                          : const Color(0xFFFEF3C7),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: AppText(
-                  lead.status,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  color: lead.status == 'Converted'
-                      ? const Color(0xFF16A34A)
-                      : lead.status == 'Interested'
-                          ? const Color(0xFF0369A1)
-                          : const Color(0xFFD97706),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          AppText(lead.customerName, fontSize: 13.5, fontWeight: FontWeight.bold),
-          const SizedBox(height: 2),
-          AppText('${lead.phone} • Requirement: ${lead.requirement}', fontSize: 11, color: AppColors.textColorSecondary),
-          const SizedBox(height: 10),
-          const Divider(height: 1, color: Color(0xFFF1F5F9)),
-          const SizedBox(height: 8),
-
-          // Lead Process Steps History (Last 2 only)
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const AppText('Recent Activity:', fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFF475569)),
-              if (lead.processSteps.length > 2)
-                const AppText('Tap to see full history', fontSize: 9, color: Color(0xFF94A3B8)),
-            ],
-          ),
-          const SizedBox(height: 6),
-          ...displaySteps.map((step) => Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(top: 2),
-                  child: Icon(
-                    step.isCompleted ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
-                    size: 13,
-                    color: step.isCompleted ? const Color(0xFF10B981) : const Color(0xFF94A3B8),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(child: AppText(step.title, fontSize: 10.5, fontWeight: FontWeight.w600)),
-                          AppText('${step.date} ${step.time}'.trim(), fontSize: 9.5, color: AppColors.textColorHint),
-                        ],
-                      ),
-                      const SizedBox(height: 2),
-                      Row(
-                        children: [
-                          Icon(Icons.person_outline_rounded, size: 10, color: const Color(0xFF94A3B8)),
-                          const SizedBox(width: 2),
-                          AppText(step.performedBy.isNotEmpty ? step.performedBy : 'Unknown', fontSize: 9.5, color: const Color(0xFF64748B), fontWeight: FontWeight.w500),
-                        ],
-                      ),
-                      if (step.note.isNotEmpty) ...[
-                        const SizedBox(height: 2),
-                        AppText(step.note, fontSize: 9.5, color: AppColors.textColorSecondary),
-                      ],
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          )),
-        ],
-      ),
-    ));
-  }
 
   // ───────────────────────────────────────────────────────────────────────────
   // 🎯 OPTION 2: MULTI-SOURCE LEADS ALLOCATION & MANAGEMENT HUB VIEW
   // ───────────────────────────────────────────────────────────────────────────
 
   Widget _buildLeadHubOptionView() {
-    final newLeadsCount = _leadsList.where((l) => l.assignedExecutive == 'Unassigned').length;
-    final assignedLeadsCount = _leadsList.where((l) => l.assignedExecutive != 'Unassigned').length;
+    return Obx(() {
+      final summary = _hubController.summary.value;
+      final totalAllCount = summary?.all ?? _hubController.leadsList.length;
+      final unassignedCount = summary?.unassigned ?? _hubController.leadsList.where((l) => !l.isAssigned).length;
+      final assignedCount = summary?.assigned ?? _hubController.leadsList.where((l) => l.isAssigned).length;
+      final currentAssignment = _hubController.selectedAssignment.value;
+      final currentSource = _hubController.selectedSource.value;
+      final currentStatus = _hubController.selectedStatus.value;
+      final isLoading = _hubController.isLoading.value;
+      final isLoadingMore = _hubController.isLoadingMore.value;
+      final errorMessage = _hubController.errorMessage.value;
+      final leads = _hubController.filteredLeads;
 
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      physics: const BouncingScrollPhysics(),
-      children: [
-        // Top Banner Title & Allocation Summary Tabs (All, New, Assigned)
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: CrossAxisAlignment.start,
+      return RefreshIndicator(
+        onRefresh: () => _hubController.fetchLeads(isRefresh: true),
+        color: AppColors.primaryColor,
+        child: ListView(
+          controller: _hubController.scrollController,
+          padding: const EdgeInsets.all(16),
+          physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
           children: [
-            const Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  AppText(
-                    'Multi-Source Leads Hub',
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF0F172A),
-                  ),
-                  SizedBox(height: 2),
-                  AppText(
-                    'View all incoming leads & assign to sales team in 1 click',
-                    fontSize: 11,
-                    color: AppColors.textColorSecondary,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFEF2F2),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFFECACA)),
-              ),
-              child: AppText(
-                '$newLeadsCount New Unassigned',
-                fontSize: 10.5,
-                fontWeight: FontWeight.bold,
-                color: const Color(0xFFDC2626),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-
-        // Allocation Filter Segment (All vs New Unassigned vs Assigned)
-        Row(
-          children: [
-            _buildAllocationSegmentChip('All', _leadsList.length),
-            const SizedBox(width: 8),
-            _buildAllocationSegmentChip('New (Unassigned)', newLeadsCount, isAlert: true),
-            const SizedBox(width: 8),
-            _buildAllocationSegmentChip('Assigned', assignedLeadsCount),
-          ],
-        ),
-        const SizedBox(height: 12),
-
-        // Search Field
-        TextField(
-          controller: _searchController,
-          onChanged: (val) => setState(() {}),
-          decoration: InputDecoration(
-            hintText: 'Search lead by name, phone, requirement...',
-            hintStyle: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
-            prefixIcon: const Icon(Iconsax.search_normal_1, size: 16, color: Color(0xFF64748B)),
-            fillColor: Colors.white,
-            filled: true,
-            isDense: true,
-            contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-
-        // Marketing Source Filter Chips (Google Ads, Facebook Ads, JustDial, Website, Referral)
-        const AppText('Filter by Source Channel:', fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF475569)),
-        const SizedBox(height: 6),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          physics: const BouncingScrollPhysics(),
-          child: Row(
-            children: [
-              _buildSourceFilterChip('All'),
-              _buildSourceFilterChip('Google Ads', const Color(0xFFEA4335)),
-              _buildSourceFilterChip('Facebook Ads', const Color(0xFF1877F2)),
-              _buildSourceFilterChip('JustDial', const Color(0xFFF58220)),
-              _buildSourceFilterChip('Website', const Color(0xFF10B981)),
-              _buildSourceFilterChip('Referral', const Color(0xFF8B5CF6)),
-            ],
-          ),
-        ),
-        const SizedBox(height: 14),
-
-        // Master Leads List
-        if (_filteredLeads.isEmpty)
-          Container(
-            padding: const EdgeInsets.all(32),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
-            ),
-            child: const Column(
+            // Top Banner Title & Allocation Summary Tabs (All, New, Assigned)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Iconsax.folder_open, size: 40, color: AppColors.textColorHint),
-                SizedBox(height: 10),
-                AppText(
-                  'No leads match the selected filter criteria',
-                  color: AppColors.textColorSecondary,
-                  fontSize: 13,
-                  textAlign: TextAlign.center,
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      AppText(
+                        'Multi-Source Leads Hub',
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF0F172A),
+                      ),
+                      SizedBox(height: 2),
+                      AppText(
+                        'View all incoming leads & assign to sales team in 1 click',
+                        fontSize: 11,
+                        color: AppColors.textColorSecondary,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEF2F2),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFFECACA)),
+                  ),
+                  child: AppText(
+                    '$unassignedCount New Unassigned',
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFFDC2626),
+                  ),
                 ),
               ],
             ),
-          )
-        else
-          ..._filteredLeads.map((lead) => _buildAdminLeadCard(lead)),
-      ],
-    );
+            const SizedBox(height: 12),
+
+            // Allocation Filter Segment (All vs New Unassigned vs Assigned)
+            Row(
+              children: [
+                _buildDynamicAllocationChip(
+                  'All',
+                  totalAllCount,
+                  isSelected: currentAssignment == 'all',
+                  onTap: () => _hubController.setAssignmentFilter('all'),
+                ),
+                const SizedBox(width: 8),
+                _buildDynamicAllocationChip(
+                  'New (Unassigned)',
+                  unassignedCount,
+                  isSelected: currentAssignment == 'unassigned',
+                  isAlert: true,
+                  onTap: () => _hubController.setAssignmentFilter('unassigned'),
+                ),
+                const SizedBox(width: 8),
+                _buildDynamicAllocationChip(
+                  'Assigned',
+                  assignedCount,
+                  isSelected: currentAssignment == 'assigned',
+                  onTap: () => _hubController.setAssignmentFilter('assigned'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            // Search Field
+            TextField(
+              controller: _hubController.searchController,
+              onChanged: (val) => _hubController.onSearchChanged(val),
+              decoration: InputDecoration(
+                hintText: 'Search lead by name, phone, code, requirement...',
+                hintStyle: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+                prefixIcon: const Icon(Iconsax.search_normal_1, size: 16, color: Color(0xFF64748B)),
+                suffixIcon: isLoading && _hubController.searchQuery.value.isNotEmpty
+                    ? const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primaryColor),
+                        ),
+                      )
+                    : _hubController.searchQuery.value.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.close, size: 16, color: Color(0xFF64748B)),
+                            onPressed: () => _hubController.clearSearch(),
+                          )
+                        : null,
+                fillColor: Colors.white,
+                filled: true,
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.primaryColor, width: 1.5),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Sleek Filter Bar: [ 🎛️ Filters ▾ ] + Quick/Active Shortcut Pills
+            _buildLeadFiltersBar(context, currentSource, currentStatus, currentAssignment),
+            const SizedBox(height: 14),
+
+            // Error Message Banner with Retry
+            if (errorMessage.isNotEmpty)
+              Container(
+                margin: const EdgeInsets.only(bottom: 14),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF2F2),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFFECACA)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.error_outline_rounded, color: Color(0xFFDC2626), size: 20),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: AppText(
+                        errorMessage,
+                        fontSize: 11.5,
+                        color: const Color(0xFFB91C1C),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => _hubController.fetchLeads(isRefresh: true),
+                      child: const AppText('Retry', fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFFDC2626)),
+                    ),
+                  ],
+                ),
+              ),
+
+            // Leads Content: Loading Skeleton / Empty State / Leads List
+            if (isLoading)
+              _buildLeadsLoadingSkeleton()
+            else if (leads.isEmpty)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Column(
+                  children: [
+                    const Icon(Iconsax.folder_open, size: 44, color: AppColors.textColorHint),
+                    const SizedBox(height: 10),
+                    const AppText(
+                      'No leads match the selected filter criteria',
+                      color: AppColors.textColorSecondary,
+                      fontSize: 13,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 14),
+                    OutlinedButton.icon(
+                      onPressed: () => _hubController.resetAllFilters(),
+                      icon: const Icon(Icons.refresh, size: 14, color: AppColors.primaryColor),
+                      label: const AppText('Reset All Filters', fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primaryColor),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: AppColors.primaryColor),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else
+              ...leads.map((lead) => _buildApiLeadCard(lead)),
+
+            // Pagination Loading Indicator
+            if (isLoadingMore)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 16),
+                child: Center(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primaryColor)),
+                      SizedBox(width: 8),
+                      AppText('Loading more leads...', fontSize: 11.5, color: AppColors.textColorSecondary),
+                    ],
+                  ),
+                ),
+              ),
+
+            // Load More Button
+            if (!isLoading && !isLoadingMore && _hubController.hasMorePages)
+              Padding(
+                padding: const EdgeInsets.only(top: 8, bottom: 20),
+                child: Center(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _hubController.loadMoreLeads(),
+                    icon: const Icon(Icons.arrow_downward_rounded, size: 14, color: AppColors.primaryColor),
+                    label: AppText(
+                      'Load More Leads (${_hubController.pagination.value?.currentPage}/${_hubController.pagination.value?.lastPage})',
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primaryColor,
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      side: const BorderSide(color: AppColors.primaryColor),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      );
+    });
   }
 
-  Widget _buildAllocationSegmentChip(String label, int count, {bool isAlert = false}) {
-    final isSelected = _selectedLeadAllocationCategory == label;
+  Widget _buildDynamicAllocationChip(
+    String label,
+    int count, {
+    bool isAlert = false,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
     return Expanded(
       child: InkWell(
-        onTap: () {
-          setState(() {
-            _selectedLeadAllocationCategory = label;
-          });
-        },
+        onTap: onTap,
         borderRadius: BorderRadius.circular(10),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 8),
@@ -1615,74 +1598,706 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
     );
   }
 
-  Widget _buildSourceFilterChip(String label, [Color? color]) {
-    final isSelected = _selectedSourceFilter == label;
-    final chipColor = color ?? AppColors.primaryColor;
+  // ── FILTER BAR & BOTTOM SHEET MODAL ─────────────────────────────────────────
 
-    return Padding(
-      padding: const EdgeInsets.only(right: 6),
-      child: FilterChip(
-        selected: isSelected,
-        label: AppText(
-          label,
-          fontSize: 11,
-          fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-          color: isSelected ? Colors.white : const Color(0xFF475569),
-        ),
-        backgroundColor: Colors.white,
-        selectedColor: chipColor,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: BorderSide(color: isSelected ? chipColor : const Color(0xFFCBD5E1)),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        onSelected: (val) {
-          setState(() {
-            _selectedSourceFilter = label;
-          });
-        },
+  Widget _buildLeadFiltersBar(
+    BuildContext context,
+    String currentSource,
+    String currentStatus,
+    String currentAssignment,
+  ) {
+    final bool hasStatusFilter = currentStatus != 'all';
+
+    final sourceChannels = [
+      {'key': 'all', 'label': 'All Channels', 'color': null},
+      {'key': 'website', 'label': 'Website', 'color': const Color(0xFF10B981)},
+      {'key': 'google_ads', 'label': 'Google Ads', 'color': const Color(0xFFEA4335)},
+      {'key': 'facebook_ads', 'label': 'Facebook Ads', 'color': const Color(0xFF1877F2)},
+      {'key': 'justdial', 'label': 'JustDial', 'color': const Color(0xFFF58220)},
+      {'key': 'referral', 'label': 'Referral', 'color': const Color(0xFF8B5CF6)},
+    ];
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      physics: const BouncingScrollPhysics(),
+      child: Row(
+        children: [
+          // 1. [ 🎛️ Filters ▾ ] Button (styled exactly like the reference UI)
+          GestureDetector(
+            onTap: () => _showLeadsFilterBottomSheet(context),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7.5),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: hasStatusFilter ? AppColors.primaryColor : const Color(0xFFCBD5E1),
+                  width: hasStatusFilter ? 1.5 : 1.0,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1.5),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.tune_rounded,
+                    size: 15,
+                    color: hasStatusFilter ? AppColors.primaryColor : const Color(0xFF1E293B),
+                  ),
+                  const SizedBox(width: 6),
+                  AppText(
+                    hasStatusFilter ? 'Filters (1)' : 'Filters',
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: hasStatusFilter ? AppColors.primaryColor : const Color(0xFF1E293B),
+                  ),
+                  const SizedBox(width: 3),
+                  Icon(
+                    Icons.arrow_drop_down_rounded,
+                    size: 19,
+                    color: hasStatusFilter ? AppColors.primaryColor : const Color(0xFF475569),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+
+          // 2. Active status pill if status is filtered via BottomSheet
+          if (hasStatusFilter) ...[
+            _buildActiveFilterPill(
+              label: 'Status: ${_getStatusLabel(currentStatus)}',
+              onRemove: () => _hubController.setStatusFilter('all'),
+              accentColor: _getStatusColor(currentStatus),
+            ),
+            const SizedBox(width: 8),
+          ],
+
+          // 3. Source Channel Tabs ONLY
+          ...sourceChannels.map((item) {
+            final key = item['key'] as String;
+            final label = item['label'] as String;
+            final color = item['color'] as Color?;
+            return _buildSourceChannelTab(
+              label: label,
+              key: key,
+              isSelected: currentSource == key,
+              color: color,
+              onTap: () => _hubController.setSourceFilter(key),
+            );
+          }),
+        ],
       ),
     );
   }
 
-  Widget _buildAdminLeadCard(AdminLeadItem lead) {
-    Color statusColor;
-    Color statusBgColor;
+  Widget _buildSourceChannelTab({
+    required String label,
+    required String key,
+    required bool isSelected,
+    required VoidCallback onTap,
+    Color? color,
+  }) {
+    final chipColor = color ?? AppColors.primaryColor;
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7.5),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? (key == 'all' ? AppColors.primaryColor : chipColor.withValues(alpha: 0.12))
+                : Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: isSelected
+                  ? (key == 'all' ? AppColors.primaryColor : chipColor)
+                  : const Color(0xFFCBD5E1),
+              width: isSelected ? 1.5 : 1.0,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.02),
+                blurRadius: 3,
+                offset: const Offset(0, 1),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (key != 'all') ...[
+                Icon(
+                  _getSourceIcon(key),
+                  size: 13,
+                  color: isSelected ? chipColor : const Color(0xFF64748B),
+                ),
+                const SizedBox(width: 5),
+              ],
+              AppText(
+                label,
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                color: isSelected
+                    ? (key == 'all' ? Colors.white : chipColor)
+                    : const Color(0xFF334155),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
-    switch (lead.status) {
-      case 'Interested':
-        statusColor = const Color(0xFF16A34A);
-        statusBgColor = const Color(0xFFDCFCE7);
-        break;
-      case 'Follow-up':
-        statusColor = const Color(0xFFD97706);
-        statusBgColor = const Color(0xFFFEF3C7);
-        break;
-      case 'Converted':
-        statusColor = const Color(0xFF2563EB);
-        statusBgColor = const Color(0xFFDBEAFE);
-        break;
-      case 'Unreachable':
-        statusColor = const Color(0xFF7C3AED);
-        statusBgColor = const Color(0xFFEDE9FE);
-        break;
-      case 'Wrong Number':
-        statusColor = const Color(0xFFDC2626);
-        statusBgColor = const Color(0xFFFEE2E8);
-        break;
+  Widget _buildActiveFilterPill({
+    required String label,
+    required VoidCallback onRemove,
+    Color? accentColor,
+  }) {
+    final color = accentColor ?? AppColors.primaryColor;
+    return Container(
+      padding: const EdgeInsets.only(left: 10, right: 6, top: 5, bottom: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AppText(label, fontSize: 11.5, fontWeight: FontWeight.bold, color: color),
+          const SizedBox(width: 4),
+          InkWell(
+            onTap: onRemove,
+            borderRadius: BorderRadius.circular(10),
+            child: Padding(
+              padding: const EdgeInsets.all(2),
+              child: Icon(Icons.close_rounded, size: 14, color: color),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showLeadsFilterBottomSheet(BuildContext context) {
+    final currentSource = _hubController.selectedSource.value;
+    final currentStatus = _hubController.selectedStatus.value;
+    final currentAssignment = _hubController.selectedAssignment.value;
+
+    String tempSource = currentSource;
+    String tempStatus = currentStatus;
+    String tempAssignment = currentAssignment;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (bottomSheetContext) {
+        return StatefulBuilder(
+          builder: (modalContext, setModalState) {
+            return Container(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.85,
+              ),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Top drag handle
+                  const SizedBox(height: 12),
+                  Center(
+                    child: Container(
+                      width: 44,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFCBD5E1),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Title bar with "Filters" and "Reset"
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(7),
+                              decoration: BoxDecoration(
+                                color: AppColors.primaryColor.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(Icons.tune_rounded, size: 18, color: AppColors.primaryColor),
+                            ),
+                            const SizedBox(width: 10),
+                            const Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                AppText(
+                                  'Filter Leads',
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFF0F172A),
+                                ),
+                                AppText(
+                                  'Refine leads by source channel & pipeline stage',
+                                  fontSize: 11,
+                                  color: Color(0xFF64748B),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            setModalState(() {
+                              tempSource = 'all';
+                              tempStatus = 'all';
+                              tempAssignment = 'all';
+                            });
+                          },
+                          child: const AppText(
+                            'Reset All',
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFFDC2626),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(height: 20, color: Color(0xFFF1F5F9)),
+
+                  // Scrollable filters content
+                  Flexible(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                      physics: const BouncingScrollPhysics(),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // 1. Source Channels Section
+                          Row(
+                            children: [
+                              const Icon(Iconsax.global, size: 16, color: Color(0xFF475569)),
+                              const SizedBox(width: 6),
+                              const AppText(
+                                'Marketing Source Channel',
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF1E293B),
+                              ),
+                              if (tempSource != 'all') ...[
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primaryColor.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: const AppText('Active', fontSize: 9.5, fontWeight: FontWeight.bold, color: AppColors.primaryColor),
+                                ),
+                              ],
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              _buildModalFilterChip(
+                                label: 'All Channels',
+                                icon: Icons.all_inclusive_rounded,
+                                isSelected: tempSource == 'all',
+                                onTap: () => setModalState(() => tempSource = 'all'),
+                              ),
+                              _buildModalFilterChip(
+                                label: 'Website',
+                                icon: Icons.language_rounded,
+                                accentColor: const Color(0xFF10B981),
+                                isSelected: tempSource == 'website',
+                                onTap: () => setModalState(() => tempSource = 'website'),
+                              ),
+                              _buildModalFilterChip(
+                                label: 'Google Ads',
+                                icon: Icons.ads_click_rounded,
+                                accentColor: const Color(0xFFEA4335),
+                                isSelected: tempSource == 'google_ads',
+                                onTap: () => setModalState(() => tempSource = 'google_ads'),
+                              ),
+                              _buildModalFilterChip(
+                                label: 'Facebook Ads',
+                                icon: Icons.campaign_rounded,
+                                accentColor: const Color(0xFF1877F2),
+                                isSelected: tempSource == 'facebook_ads',
+                                onTap: () => setModalState(() => tempSource = 'facebook_ads'),
+                              ),
+                              _buildModalFilterChip(
+                                label: 'JustDial',
+                                icon: Icons.call_rounded,
+                                accentColor: const Color(0xFFF58220),
+                                isSelected: tempSource == 'justdial',
+                                onTap: () => setModalState(() => tempSource = 'justdial'),
+                              ),
+                              _buildModalFilterChip(
+                                label: 'Referral',
+                                icon: Icons.people_outline_rounded,
+                                accentColor: const Color(0xFF8B5CF6),
+                                isSelected: tempSource == 'referral',
+                                onTap: () => setModalState(() => tempSource = 'referral'),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 22),
+
+                          // 2. Pipeline Status Section
+                          Row(
+                            children: [
+                              const Icon(Iconsax.chart_2, size: 16, color: Color(0xFF475569)),
+                              const SizedBox(width: 6),
+                              const AppText(
+                                'Pipeline Status',
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF1E293B),
+                              ),
+                              if (tempStatus != 'all') ...[
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primaryColor.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: const AppText('Active', fontSize: 9.5, fontWeight: FontWeight.bold, color: AppColors.primaryColor),
+                                ),
+                              ],
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              _buildModalFilterChip(
+                                label: 'All Status',
+                                icon: Icons.list_alt_rounded,
+                                isSelected: tempStatus == 'all',
+                                onTap: () => setModalState(() => tempStatus = 'all'),
+                              ),
+                              _buildModalFilterChip(
+                                label: 'New Leads',
+                                icon: Icons.fiber_new_rounded,
+                                accentColor: const Color(0xFF2563EB),
+                                isSelected: tempStatus == 'new',
+                                onTap: () => setModalState(() => tempStatus = 'new'),
+                              ),
+                              _buildModalFilterChip(
+                                label: 'Interested',
+                                icon: Icons.thumb_up_alt_outlined,
+                                accentColor: const Color(0xFF16A34A),
+                                isSelected: tempStatus == 'interested',
+                                onTap: () => setModalState(() => tempStatus = 'interested'),
+                              ),
+                              _buildModalFilterChip(
+                                label: 'Follow-up',
+                                icon: Icons.access_time_rounded,
+                                accentColor: const Color(0xFFD97706),
+                                isSelected: tempStatus == 'follow_up',
+                                onTap: () => setModalState(() => tempStatus = 'follow_up'),
+                              ),
+                              _buildModalFilterChip(
+                                label: 'Converted',
+                                icon: Icons.check_circle_outline_rounded,
+                                accentColor: const Color(0xFF7C3AED),
+                                isSelected: tempStatus == 'converted',
+                                onTap: () => setModalState(() => tempStatus = 'converted'),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 22),
+
+                          // 3. Lead Allocation Section
+                          Row(
+                            children: [
+                              const Icon(Iconsax.profile_2user, size: 16, color: Color(0xFF475569)),
+                              const SizedBox(width: 6),
+                              const AppText(
+                                'Assignment Status',
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF1E293B),
+                              ),
+                              if (tempAssignment != 'all') ...[
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primaryColor.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: const AppText('Active', fontSize: 9.5, fontWeight: FontWeight.bold, color: AppColors.primaryColor),
+                                ),
+                              ],
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              _buildModalFilterChip(
+                                label: 'All Allocation',
+                                icon: Icons.groups_rounded,
+                                isSelected: tempAssignment == 'all',
+                                onTap: () => setModalState(() => tempAssignment = 'all'),
+                              ),
+                              _buildModalFilterChip(
+                                label: 'New (Unassigned)',
+                                icon: Icons.person_add_disabled_rounded,
+                                accentColor: const Color(0xFFDC2626),
+                                isSelected: tempAssignment == 'unassigned',
+                                onTap: () => setModalState(() => tempAssignment = 'unassigned'),
+                              ),
+                              _buildModalFilterChip(
+                                label: 'Assigned',
+                                icon: Icons.assignment_turned_in_rounded,
+                                accentColor: const Color(0xFF0D9488),
+                                isSelected: tempAssignment == 'assigned',
+                                onTap: () => setModalState(() => tempAssignment = 'assigned'),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // Bottom Action Buttons
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, -3),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          flex: 2,
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.pop(modalContext),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 13),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              side: const BorderSide(color: Color(0xFFCBD5E1)),
+                            ),
+                            child: const AppText('Cancel', fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF475569)),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 3,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              Navigator.pop(modalContext);
+                              _hubController.applyFilters(
+                                source: tempSource,
+                                status: tempStatus,
+                                assignment: tempAssignment,
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primaryColor,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 13),
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            child: const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.check_rounded, size: 17, color: Colors.white),
+                                SizedBox(width: 6),
+                                AppText('Apply Filters', fontSize: 13, fontWeight: FontWeight.w800, color: Colors.white),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildModalFilterChip({
+    required String label,
+    required IconData icon,
+    required bool isSelected,
+    required VoidCallback onTap,
+    Color? accentColor,
+  }) {
+    final activeColor = accentColor ?? AppColors.primaryColor;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? activeColor.withValues(alpha: 0.12) : const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isSelected ? activeColor : const Color(0xFFE2E8F0),
+            width: isSelected ? 1.5 : 1.0,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 14,
+              color: isSelected ? activeColor : const Color(0xFF64748B),
+            ),
+            const SizedBox(width: 6),
+            AppText(
+              label,
+              fontSize: 12,
+              fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+              color: isSelected ? activeColor : const Color(0xFF334155),
+            ),
+            if (isSelected) ...[
+              const SizedBox(width: 5),
+              Icon(Icons.check_circle_rounded, size: 14, color: activeColor),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+
+  String _getStatusLabel(String status) {
+    switch (status) {
+      case 'new':
+        return 'New Leads';
+      case 'interested':
+        return 'Interested';
+      case 'follow_up':
+        return 'Follow-up';
+      case 'converted':
+        return 'Converted';
       default:
-        statusColor = const Color(0xFF475569);
-        statusBgColor = const Color(0xFFF1F5F9);
+        return 'All Status';
     }
+  }
 
-    final sourceColor = Color(int.parse(lead.sourceColorHex));
-    final isUnassigned = lead.assignedExecutive == 'Unassigned';
+  Widget _buildLeadsLoadingSkeleton() {
+    return Column(
+      children: List.generate(4, (index) {
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    width: 90,
+                    height: 20,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  Container(
+                    width: 60,
+                    height: 18,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Container(
+                width: 180,
+                height: 16,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                width: 140,
+                height: 12,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ],
+          ),
+        );
+      }),
+    );
+  }
 
-    return GestureDetector(
-      onTap: () => Get.to(() => AdminLeadFullDetailScreen(lead: lead)),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(14),
+  Widget _buildApiLeadCard(AdminLeadDataModel lead) {
+    final isUnassigned = !lead.isAssigned;
+    final sourceColor = _getSourceColor(lead.displaySource);
+    final statusColor = _getStatusColor(lead.displayStatus);
+    final statusBgColor = _getStatusBgColor(lead.displayStatus);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -1690,289 +2305,684 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
           color: isUnassigned ? const Color(0xFFFCA5A5) : const Color(0xFFE2E8F0),
           width: isUnassigned ? 1.5 : 1.0,
         ),
-        boxShadow: isUnassigned
-            ? [
-                BoxShadow(
-                  color: const Color(0xFFEF4444).withValues(alpha: 0.06),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ]
-            : null,
+        boxShadow: [
+          BoxShadow(
+            color: isUnassigned
+                ? const Color(0xFFEF4444).withValues(alpha: 0.06)
+                : const Color(0xFF0F172A).withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: sourceColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: sourceColor.withValues(alpha: 0.3)),
-                    ),
-                    child: Row(
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          onTap: () => Get.to(() => AdminLeadFullDetailScreen(apiLead: lead, leadId: lead.id)),
+          onLongPress: () => _showApiLeadDetailModal(context, lead),
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Top Row: Source, Lead Code, Status Pill
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
                       children: [
-                        Icon(
-                          lead.source == 'Google Ads'
-                              ? Icons.g_mobiledata
-                              : lead.source == 'Facebook Ads'
-                                  ? Icons.facebook
-                                  : lead.source == 'Website'
-                                      ? Icons.language
-                                      : Iconsax.call,
-                          size: 13,
-                          color: sourceColor,
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: sourceColor.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: sourceColor.withValues(alpha: 0.3)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(_getSourceIcon(lead.displaySource), size: 12, color: sourceColor),
+                              const SizedBox(width: 4),
+                              AppText(
+                                lead.displaySource,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: sourceColor,
+                              ),
+                            ],
+                          ),
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: 8),
                         AppText(
-                          lead.source,
-                          fontSize: 10,
+                          lead.displayLeadCode,
+                          fontSize: 11,
                           fontWeight: FontWeight.bold,
-                          color: sourceColor,
+                          color: const Color(0xFF64748B),
                         ),
                       ],
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  AppText(
-                    lead.id,
-                    fontSize: 10.5,
-                    color: AppColors.textColorHint,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ],
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: statusBgColor,
-                  borderRadius: BorderRadius.circular(6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: statusBgColor,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: AppText(
+                        lead.displayStatus.toUpperCase(),
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w800,
+                        color: statusColor,
+                      ),
+                    ),
+                  ],
                 ),
-                child: AppText(
-                  lead.status,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  color: statusColor,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          AppText(
-            lead.customerName,
-            fontSize: 14,
-            fontWeight: FontWeight.w800,
-            color: AppColors.textColorPrimary,
-          ),
-          const SizedBox(height: 4),
-          Row(
-            children: [
-              const Icon(Iconsax.call, size: 12, color: AppColors.textColorSecondary),
-              const SizedBox(width: 4),
-              AppText(lead.phone, fontSize: 11.5, color: AppColors.textColorSecondary),
-              const SizedBox(width: 12),
-              const Icon(Iconsax.directbox_notif, size: 12, color: AppColors.textColorSecondary),
-              const SizedBox(width: 4),
-              Expanded(
-                child: AppText(
-                  lead.email,
-                  fontSize: 11.5,
-                  color: AppColors.textColorSecondary,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF8FAFC),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              children: [
-                const Icon(Iconsax.note_text, size: 13, color: AppColors.primaryColor),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: AppText(
-                    lead.requirement,
-                    fontSize: 11,
-                    color:  const Color(0xFF334155),
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
+                const SizedBox(height: 10),
+
+                // Customer Name & Company
                 AppText(
-                  '₹${(lead.potentialValue / 1000).toStringAsFixed(0)}k',
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.bold,
-                  color: const Color(0xFF16A34A),
+                  lead.displayName,
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w800,
+                  color: const Color(0xFF0F172A),
                 ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          const Divider(height: 1, color: Color(0xFFE2E8F0)),
-          const SizedBox(height: 10),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  CircleAvatar(
-                    radius: 12,
-                    backgroundColor: isUnassigned ? const Color(0xFFFEE2E2) : AppColors.primaryLight,
-                    backgroundImage: lead.assignedExecutiveAvatar.isNotEmpty
-                        ? NetworkImage(lead.assignedExecutiveAvatar)
-                        : null,
-                    child: lead.assignedExecutiveAvatar.isEmpty
-                        ? Icon(
-                            isUnassigned ? Icons.warning_amber_rounded : Iconsax.user,
-                            size: 12,
-                            color: isUnassigned ? const Color(0xFFDC2626) : AppColors.primaryColor,
-                          )
-                        : null,
-                  ),
-                  const SizedBox(width: 6),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                if (lead.displayCompany.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Row(
                     children: [
-                      const AppText('Assigned Executive', fontSize: 8.5, color: AppColors.textColorHint),
-                      AppText(
-                        lead.assignedExecutive,
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: isUnassigned ? const Color(0xFFDC2626) : AppColors.textColorPrimary,
+                      const Icon(Iconsax.buildings, size: 12, color: Color(0xFF64748B)),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: AppText(
+                          lead.displayCompany,
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF475569),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ],
                   ),
                 ],
-              ),
+                const SizedBox(height: 8),
 
-              // Assign / Re-assign Action Button
-              ElevatedButton.icon(
-                onPressed: () => _showAssignLeadModal(context, lead),
-                icon: Icon(
-                  isUnassigned ? Iconsax.user_add : Iconsax.edit,
-                  size: 13,
-                  color: Colors.white,
+                // Contact Row: Phone & Email
+                Row(
+                  children: [
+                    const Icon(Iconsax.call, size: 12, color: Color(0xFF64748B)),
+                    const SizedBox(width: 4),
+                    AppText(lead.displayPhone, fontSize: 11.5, color: const Color(0xFF475569)),
+                    const SizedBox(width: 12),
+                    const Icon(Iconsax.sms, size: 12, color: Color(0xFF64748B)),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: AppText(
+                        lead.displayEmail,
+                        fontSize: 11.5,
+                        color: const Color(0xFF475569),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
-                label: AppText(
-                  isUnassigned ? 'Assign Lead' : 'Re-Assign',
-                  fontSize: 11,
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: isUnassigned ? const Color(0xFFDC2626) : AppColors.primaryColor,
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-              ),
-            ],
-          ),
-         // ),
-        ],
-      ),
-    ));
-  }
+                const SizedBox(height: 8),
 
-  // One-Tap Lead Allocation Bottom Sheet Modal
-  void _showAssignLeadModal(BuildContext context, AdminLeadItem lead) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) {
-        return Container(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
+                // Requirement & Value Box
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFCBD5E1),
-                    borderRadius: BorderRadius.circular(2),
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFF1F5F9)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Iconsax.note_text, size: 13, color: AppColors.primaryColor),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: AppText(
+                          lead.displayRequirement,
+                          fontSize: 11,
+                          color: const Color(0xFF334155),
+                          fontWeight: FontWeight.w600,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (lead.estimatedValue != null)
+                        AppText(
+                          '₹${lead.estimatedValue}',
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF16A34A),
+                        ),
+                    ],
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              AppText(
-                'Assign Lead: ${lead.customerName}',
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-              ),
-              const SizedBox(height: 4),
-              AppText(
-                'Source: ${lead.source} • Potential Value: ₹${lead.potentialValue.round()}',
-                fontSize: 11,
-                color: AppColors.textColorSecondary,
-              ),
-              const SizedBox(height: 16),
-              const AppText('Select Sales Executive to Assign:', fontSize: 12, fontWeight: FontWeight.bold),
-              const SizedBox(height: 10),
-              ..._executives.map((exec) {
-                final isCurrent = lead.assignedExecutive == exec.name;
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  decoration: BoxDecoration(
-                    color: isCurrent ? AppColors.primaryLight : const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: isCurrent ? AppColors.primaryColor : const Color(0xFFE2E8F0),
-                    ),
+
+                // Notes Snippet (2 lines + View more)
+                if (lead.displayNotes.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Iconsax.message_text_1, size: 12, color: Color(0xFF64748B)),
+                      const SizedBox(width: 5),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            AppText(
+                              lead.displayNotes,
+                              fontSize: 10.5,
+                              color: const Color(0xFF64748B),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              height: 1.35,
+                            ),
+                            if (lead.displayNotes.length > 70 || lead.displayNotes.contains('\n')) ...[
+                              const SizedBox(height: 2),
+                              GestureDetector(
+                                onTap: () => Get.to(() => AdminLeadFullDetailScreen(apiLead: lead, leadId: lead.id)),
+                                child: const AppText(
+                                  'View more',
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primaryColor,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                  child: ListTile(
-                    dense: true,
-                    leading: CircleAvatar(
-                      radius: 14,
-                      backgroundColor: AppColors.primaryLight,
-                      backgroundImage: exec.avatar.isNotEmpty ? NetworkImage(exec.avatar) : null,
-                      child: exec.avatar.isEmpty
-                          ? Icon(Iconsax.user, size: 14, color: AppColors.primaryColor)
-                          : null,
+                ],
+
+                const SizedBox(height: 10),
+                const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                const SizedBox(height: 10),
+
+                // Footer Row: Executive Assignment & Action Button
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 12,
+                          backgroundColor: isUnassigned ? const Color(0xFFFEE2E2) : AppColors.primaryLight,
+                          child: Icon(
+                            isUnassigned ? Icons.warning_amber_rounded : Iconsax.user,
+                            size: 12,
+                            color: isUnassigned ? const Color(0xFFDC2626) : AppColors.primaryColor,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const AppText('Assigned Executive', fontSize: 8.5, color: AppColors.textColorHint),
+                            AppText(
+                              lead.assignedExecutiveName,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: isUnassigned ? const Color(0xFFDC2626) : AppColors.textColorPrimary,
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-                    title: AppText(exec.name, fontSize: 13, fontWeight: FontWeight.bold),
-                    subtitle: AppText('${exec.designation} (${exec.convertedLeads} Deals Closed)', fontSize: 10),
-                    trailing: isCurrent
-                        ? const Icon(Icons.check_circle, color: AppColors.primaryColor, size: 18)
-                        : null,
-                    onTap: () {
-                      setState(() {
-                        lead.assignedExecutive = exec.name;
-                        lead.assignedExecutiveAvatar = exec.avatar;
-                      });
-                      Navigator.pop(ctx);
-                      Get.snackbar(
-                        'Lead Assigned Successfully 🎯',
-                        '${lead.customerName} assigned to ${exec.name}',
-                        snackPosition: SnackPosition.BOTTOM,
-                        backgroundColor: const Color(0xFF10B981),
-                        colorText: Colors.white,
-                      );
-                    },
-                  ),
-                );
-              }),
-            ],
+                    ElevatedButton.icon(
+                      onPressed: () => _showAssignApiLeadModal(context, lead),
+                      icon: Icon(
+                        isUnassigned ? Iconsax.user_add : Iconsax.edit,
+                        size: 12,
+                        color: Colors.white,
+                      ),
+                      label: AppText(
+                        isUnassigned ? 'Assign Lead' : 'Re-Assign',
+                        fontSize: 10.5,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isUnassigned ? const Color(0xFFDC2626) : AppColors.primaryColor,
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
+
+  // ── Bottom Sheet: Full Lead Details ─────────────────────────────────────────
+  void _showApiLeadDetailModal(BuildContext context, AdminLeadDataModel lead) {
+    final sourceColor = _getSourceColor(lead.displaySource);
+    final statusColor = _getStatusColor(lead.displayStatus);
+    final statusBgColor = _getStatusBgColor(lead.displayStatus);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        height: MediaQuery.of(context).size.height * 0.88,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          children: [
+            // Drag indicator handle
+            const SizedBox(height: 12),
+            Container(
+              width: 44,
+              height: 4,
+              decoration: BoxDecoration(
+                color: const Color(0xFFCBD5E1),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 14),
+
+            // Modal Header
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: sourceColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: sourceColor.withValues(alpha: 0.3)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(_getSourceIcon(lead.displaySource), size: 14, color: sourceColor),
+                            const SizedBox(width: 4),
+                            AppText(
+                              lead.displaySource,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: sourceColor,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      AppText(
+                        lead.displayLeadCode,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF64748B),
+                      ),
+                    ],
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: statusBgColor,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: AppText(
+                      lead.displayStatus.toUpperCase(),
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w800,
+                      color: statusColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+            const Divider(height: 1, color: Color(0xFFE2E8F0)),
+
+            // Scrollable Content
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.all(20),
+                physics: const BouncingScrollPhysics(),
+                children: [
+                  // Full Customer Name & Company
+                  AppText(
+                    lead.displayName,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFF0F172A),
+                  ),
+                  if (lead.displayCompany.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(Iconsax.buildings, size: 14, color: Color(0xFF64748B)),
+                        const SizedBox(width: 6),
+                        AppText(
+                          lead.displayCompany,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF475569),
+                        ),
+                      ],
+                    ),
+                  ],
+                  const SizedBox(height: 16),
+
+                  // Quick Action Buttons (Call, WhatsApp, Email)
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            if (lead.displayPhone.isNotEmpty && lead.displayPhone != 'N/A') {
+                              launchUrl(Uri.parse('tel:${lead.displayPhone}'));
+                            }
+                          },
+                          icon: const Icon(Iconsax.call, size: 14, color: Colors.white),
+                          label: const AppText('Call', fontSize: 12, color: Colors.white, fontWeight: FontWeight.bold),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF10B981),
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            if (lead.displayEmail.isNotEmpty && lead.displayEmail != 'N/A') {
+                              launchUrl(Uri.parse('mailto:${lead.displayEmail}'));
+                            }
+                          },
+                          icon: const Icon(Iconsax.sms, size: 14, color: Colors.white),
+                          label: const AppText('Email', fontSize: 12, color: Colors.white, fontWeight: FontWeight.bold),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF2563EB),
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+
+                  // Contact Details Card
+                  _buildDetailSectionTitle('Contact Details', Iconsax.user_tag),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Column(
+                      children: [
+                        _buildDetailItem(Iconsax.call, 'Phone Number', lead.displayPhone),
+                        const Divider(height: 16, color: Color(0xFFE2E8F0)),
+                        _buildDetailItem(Iconsax.sms, 'Email Address', lead.displayEmail),
+                        if (lead.location != null && lead.location!.isNotEmpty) ...[
+                          const Divider(height: 16, color: Color(0xFFE2E8F0)),
+                          _buildDetailItem(Iconsax.location, 'Location', lead.location!),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+
+                  // Requirement & Financials Card
+                  _buildDetailSectionTitle('Lead Requirement & Scope', Iconsax.document_text),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildDetailItem(Iconsax.task, 'Requirement', lead.displayRequirement),
+                        if (lead.estimatedValue != null) ...[
+                          const Divider(height: 16, color: Color(0xFFE2E8F0)),
+                          _buildDetailItem(Iconsax.coin, 'Estimated Value', '₹${lead.estimatedValue}'),
+                        ],
+                        if (lead.expectedClosingDate != null) ...[
+                          const Divider(height: 16, color: Color(0xFFE2E8F0)),
+                          _buildDetailItem(Iconsax.calendar_tick, 'Expected Closing Date', _formatDate(lead.expectedClosingDate)),
+                        ],
+                        if (lead.createdAt != null) ...[
+                          const Divider(height: 16, color: Color(0xFFE2E8F0)),
+                          _buildDetailItem(Iconsax.calendar_1, 'Received On', _formatDate(lead.createdAt)),
+                        ],
+                      ],
+                    ),
+                  ),
+
+                  // Inquiry Notes Message Section
+                  if (lead.displayNotes.isNotEmpty) ...[
+                    const SizedBox(height: 18),
+                    _buildDetailSectionTitle('Inquiry Message / Notes', Iconsax.message_favorite),
+                    const SizedBox(height: 8),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF0FDF4),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFBBF7D0)),
+                      ),
+                      child: AppText(
+                        lead.displayNotes,
+                        fontSize: 12,
+                        color: const Color(0xFF14532D),
+                        height: 1.5,
+                      ),
+                    ),
+                  ],
+
+                  const SizedBox(height: 18),
+
+                  // Current Assignment Card
+                  _buildDetailSectionTitle('Sales Team Allocation', Iconsax.user_octagon),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 16,
+                              backgroundColor: lead.isAssigned ? AppColors.primaryLight : const Color(0xFFFEE2E2),
+                              child: Icon(
+                                lead.isAssigned ? Iconsax.user : Icons.warning_amber_rounded,
+                                size: 16,
+                                color: lead.isAssigned ? AppColors.primaryColor : const Color(0xFFDC2626),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const AppText('Assigned Executive', fontSize: 10, color: AppColors.textColorHint),
+                                AppText(
+                                  lead.assignedExecutiveName,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: lead.isAssigned ? AppColors.textColorPrimary : const Color(0xFFDC2626),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.pop(ctx);
+                            _showAssignApiLeadModal(context, lead);
+                          },
+                          icon: Icon(
+                            lead.isAssigned ? Iconsax.edit : Iconsax.user_add,
+                            size: 13,
+                            color: Colors.white,
+                          ),
+                          label: AppText(
+                            lead.isAssigned ? 'Re-Assign' : 'Assign Lead',
+                            fontSize: 11,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: lead.isAssigned ? AppColors.primaryColor : const Color(0xFFDC2626),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 30),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailSectionTitle(String title, IconData icon) {
+    return Row(
+      children: [
+        Icon(icon, size: 14, color: AppColors.primaryColor),
+        const SizedBox(width: 6),
+        AppText(
+          title,
+          fontSize: 12.5,
+          fontWeight: FontWeight.w700,
+          color: const Color(0xFF0F172A),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDetailItem(IconData icon, String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 13, color: const Color(0xFF64748B)),
+        const SizedBox(width: 8),
+        SizedBox(
+          width: 110,
+          child: AppText(label, fontSize: 11, color: const Color(0xFF64748B)),
+        ),
+        Expanded(
+          child: AppText(
+            value,
+            fontSize: 11.5,
+            fontWeight: FontWeight.w600,
+            color: const Color(0xFF1E293B),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ── Bottom Sheet: Assign / Re-Assign Executive to Lead with Notes ────────
+  void _showAssignApiLeadModal(BuildContext context, AdminLeadDataModel lead) {
+    final ctrl = Get.isRegistered<AdminLeadsHubController>()
+        ? Get.find<AdminLeadsHubController>()
+        : null;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _LeadAssignmentBottomSheet(
+        lead: lead,
+        ctrl: ctrl,
+      ),
+    );
+  }
+
+  // ── Helper Color & Icon Mappers ─────────────────────────────────────────────
+  Color _getSourceColor(String source) {
+    final s = source.toLowerCase();
+    if (s.contains('website')) return const Color(0xFF10B981);
+    if (s.contains('google')) return const Color(0xFFEA4335);
+    if (s.contains('facebook')) return const Color(0xFF1877F2);
+    if (s.contains('justdial')) return const Color(0xFFF58220);
+    if (s.contains('referral')) return const Color(0xFF8B5CF6);
+    return AppColors.primaryColor;
+  }
+
+  IconData _getSourceIcon(String source) {
+    final s = source.toLowerCase();
+    if (s.contains('website')) return Icons.language;
+    if (s.contains('google')) return Icons.g_mobiledata;
+    if (s.contains('facebook')) return Icons.facebook;
+    if (s.contains('justdial')) return Iconsax.call;
+    return Iconsax.routing;
+  }
+
+  Color _getStatusColor(String status) {
+    final s = status.toLowerCase();
+    if (s == 'new') return const Color(0xFF2563EB);
+    if (s == 'interested') return const Color(0xFF16A34A);
+    if (s.contains('follow')) return const Color(0xFFD97706);
+    if (s.contains('convert')) return const Color(0xFF7C3AED);
+    if (s.contains('unreach')) return const Color(0xFF9333EA);
+    if (s.contains('wrong')) return const Color(0xFFDC2626);
+    return const Color(0xFF475569);
+  }
+
+  Color _getStatusBgColor(String status) {
+    final s = status.toLowerCase();
+    if (s == 'new') return const Color(0xFFEFF6FF);
+    if (s == 'interested') return const Color(0xFFDCFCE7);
+    if (s.contains('follow')) return const Color(0xFFFEF3C7);
+    if (s.contains('convert')) return const Color(0xFFEDE9FE);
+    if (s.contains('unreach')) return const Color(0xFFF3E8FF);
+    if (s.contains('wrong')) return const Color(0xFFFEE2E8);
+    return const Color(0xFFF1F5F9);
+  }
+
+  String _formatDate(String? raw) {
+    if (raw == null || raw.isEmpty) return 'N/A';
+    try {
+      final dt = DateTime.parse(raw);
+      final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return '${dt.day.toString().padLeft(2, '0')} ${months[dt.month - 1]} ${dt.year}';
+    } catch (_) {
+      return raw;
+    }
+  }
+
   // ───────────────────────────────────────────────────────────────────────────
   // ⚙️ OPTION 3: LEAD SOURCE PRE-SET ASSIGNMENT RULES VIEW
   // ───────────────────────────────────────────────────────────────────────────
@@ -2889,13 +3899,152 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
 // ─────────────────────────────────────────────────────────────────────────────
 // 📱 FULL SCREEN LEAD DETAIL VIEW (TREE FORMAT)
 // ─────────────────────────────────────────────────────────────────────────────
-class AdminLeadFullDetailScreen extends StatelessWidget {
-  final AdminLeadItem lead;
+// ─────────────────────────────────────────────────────────────────────────────
+// 📱 FULL SCREEN LEAD DETAIL VIEW (TREE FORMAT & API BACKED)
+// ─────────────────────────────────────────────────────────────────────────────
+class AdminLeadFullDetailScreen extends StatefulWidget {
+  final AdminLeadItem? lead;
+  final AdminLeadDataModel? apiLead;
+  final dynamic leadId;
 
-  const AdminLeadFullDetailScreen({super.key, required this.lead});
+  const AdminLeadFullDetailScreen({
+    super.key,
+    this.lead,
+    this.apiLead,
+    this.leadId,
+  });
+
+  @override
+  State<AdminLeadFullDetailScreen> createState() => _AdminLeadFullDetailScreenState();
+}
+
+class _AdminLeadFullDetailScreenState extends State<AdminLeadFullDetailScreen> {
+  AdminLeadDataModel? _currentApiLead;
+  bool _isLoading = false;
+  String _errorMessage = '';
+  bool _isNotesExpanded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentApiLead = widget.apiLead;
+    final targetId = widget.leadId ?? widget.apiLead?.id;
+    if (targetId != null) {
+      _loadLeadDetail(targetId);
+    }
+  }
+
+  Future<void> _loadLeadDetail(dynamic id) async {
+    if (_currentApiLead == null) {
+      setState(() => _isLoading = true);
+    }
+    try {
+      final repository = Get.find<AdminLeadsRepositoryInterface>();
+      final response = await repository.getAdminLeadDetail(id);
+      if (response.status && response.data != null) {
+        if (mounted) {
+          setState(() {
+            _currentApiLead = response.data;
+            _isLoading = false;
+            _errorMessage = '';
+          });
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+            if (_currentApiLead == null) {
+              _errorMessage = response.message.isNotEmpty ? response.message : 'Failed to load lead details';
+            }
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          if (_currentApiLead == null) {
+            _errorMessage = 'Error loading details: $e';
+          }
+        });
+      }
+    }
+  }
+
+  String _formatDateTime(String? dateStr) {
+    if (dateStr == null || dateStr.isEmpty) return '';
+    try {
+      final dt = DateTime.parse(dateStr).toLocal();
+      final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      final hour = dt.hour > 12 ? dt.hour - 12 : (dt.hour == 0 ? 12 : dt.hour);
+      final period = dt.hour >= 12 ? 'PM' : 'AM';
+      final minute = dt.minute.toString().padLeft(2, '0');
+      return '${dt.day} ${months[dt.month - 1]} ${dt.year}, $hour:$minute $period';
+    } catch (_) {
+      return dateStr;
+    }
+  }
+
+  Color _getSourceColor(String source) {
+    final s = source.toLowerCase();
+    if (s.contains('website')) return const Color(0xFF10B981);
+    if (s.contains('google')) return const Color(0xFFEA4335);
+    if (s.contains('facebook')) return const Color(0xFF1877F2);
+    if (s.contains('justdial')) return const Color(0xFFF58220);
+    if (s.contains('referral')) return const Color(0xFF8B5CF6);
+    return AppColors.primaryColor;
+  }
+
+  IconData _getSourceIcon(String source) {
+    final s = source.toLowerCase();
+    if (s.contains('website')) return Icons.language_rounded;
+    if (s.contains('google')) return Icons.ads_click_rounded;
+    if (s.contains('facebook')) return Icons.campaign_rounded;
+    if (s.contains('justdial')) return Iconsax.call;
+    return Iconsax.routing;
+  }
+
+  Color _getStatusColor(String status) {
+    final s = status.toLowerCase();
+    if (s == 'new') return const Color(0xFF2563EB);
+    if (s == 'interested') return const Color(0xFF16A34A);
+    if (s.contains('follow')) return const Color(0xFFD97706);
+    if (s.contains('convert')) return const Color(0xFF7C3AED);
+    return const Color(0xFF475569);
+  }
+
+  Color _getStatusBgColor(String status) {
+    final s = status.toLowerCase();
+    if (s == 'new') return const Color(0xFFEFF6FF);
+    if (s == 'interested') return const Color(0xFFDCFCE7);
+    if (s.contains('follow')) return const Color(0xFFFEF3C7);
+    if (s.contains('convert')) return const Color(0xFFEDE9FE);
+    return const Color(0xFFF1F5F9);
+  }
 
   @override
   Widget build(BuildContext context) {
+    final apiLead = _currentApiLead;
+    final legacyLead = widget.lead;
+
+    final customerName = apiLead?.displayName ?? legacyLead?.customerName ?? 'Lead Details';
+    final leadCode = apiLead?.displayLeadCode ?? legacyLead?.id ?? '';
+    final status = apiLead?.displayStatus ?? legacyLead?.status ?? 'new';
+    final phone = apiLead?.displayPhone ?? legacyLead?.phone ?? 'N/A';
+    final email = apiLead?.displayEmail ?? (legacyLead != null ? '${legacyLead.customerName.toLowerCase().replaceAll(' ', '.')}@example.com' : 'N/A');
+    final requirement = apiLead?.displayRequirement ?? legacyLead?.requirement ?? 'General Inquiry';
+    final source = apiLead?.displaySource ?? legacyLead?.source ?? 'Website';
+    final company = apiLead?.displayCompany ?? '';
+    final location = apiLead?.location ?? '';
+    final notes = apiLead?.displayNotes ?? '';
+    final estimatedValue = apiLead?.estimatedValue?.toString() ?? (legacyLead != null ? '₹${(legacyLead.potentialValue / 1000).toStringAsFixed(0)}k' : null);
+    final expectedClosingDate = apiLead?.expectedClosingDate;
+    final createdAt = apiLead?.createdAt;
+
+    final sourceColor = _getSourceColor(source);
+    final statusColor = _getStatusColor(status);
+    final statusBgColor = _getStatusBgColor(status);
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
@@ -2914,216 +4063,1382 @@ class AdminLeadFullDetailScreen extends StatelessWidget {
             ),
           ),
         ),
-        title: const AppText(
-          'Lead Details',
-          fontSize: 18,
+        title: AppText(
+          leadCode.isNotEmpty ? 'Lead Details ($leadCode)' : 'Lead Details',
+          fontSize: 17,
           fontWeight: FontWeight.bold,
-          color: Color(0xFF0F172A),
+          color: const Color(0xFF0F172A),
         ),
         centerTitle: true,
+        actions: [
+          if (widget.leadId != null || apiLead != null)
+            IconButton(
+              icon: const Icon(Icons.refresh_rounded, color: Color(0xFF475569), size: 20),
+              tooltip: 'Refresh',
+              onPressed: () {
+                final id = widget.leadId ?? apiLead?.id;
+                if (id != null) _loadLeadDetail(id);
+              },
+            ),
+        ],
       ),
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 1. Client Info Card
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.03),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 24,
-                        backgroundColor: const Color(0xFFEFF6FF),
-                        child: Text(
-                          lead.customerName.isNotEmpty ? lead.customerName[0].toUpperCase() : 'C',
-                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF2563EB)),
+      body: _isLoading && apiLead == null
+          ? const Center(
+              child: CircularProgressIndicator(color: AppColors.primaryColor),
+            )
+          : _errorMessage.isNotEmpty && apiLead == null
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.error_outline_rounded, color: Color(0xFFDC2626), size: 40),
+                        const SizedBox(height: 12),
+                        AppText(_errorMessage, fontSize: 13, color: const Color(0xFFDC2626), textAlign: TextAlign.center),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: () {
+                            final id = widget.leadId ?? apiLead?.id;
+                            if (id != null) _loadLeadDetail(id);
+                          },
+                          child: const AppText('Retry', color: Colors.white),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
+                      ],
+                    ),
+                  ),
+                )
+              : SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // 1. Client Info Card
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.03),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            AppText(lead.customerName, fontSize: 16, fontWeight: FontWeight.bold),
-                            const SizedBox(height: 4),
-                            AppText('Lead ID: ${lead.id}', fontSize: 12, color: const Color(0xFF64748B)),
+                            // Header Row: Avatar, Name, Lead Code, Status Pill
+                            Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 24,
+                                  backgroundColor: const Color(0xFFEFF6FF),
+                                  child: Text(
+                                    customerName.isNotEmpty ? customerName[0].toUpperCase() : 'L',
+                                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF2563EB)),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      AppText(customerName, fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
+                                      const SizedBox(height: 3),
+                                      if (company.isNotEmpty)
+                                        AppText(company, fontSize: 12, color: const Color(0xFF64748B), fontWeight: FontWeight.w500)
+                                      else
+                                        AppText('Lead ID: $leadCode', fontSize: 12, color: const Color(0xFF64748B)),
+                                    ],
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: statusBgColor,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: AppText(
+                                    status.toUpperCase(),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: statusColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                            const SizedBox(height: 14),
+
+                            // Quick Action Buttons (Call, Email)
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: ElevatedButton.icon(
+                                    onPressed: () {
+                                      if (phone.isNotEmpty && phone != 'N/A') {
+                                        launchUrl(Uri.parse('tel:$phone'));
+                                      }
+                                    },
+                                    icon: const Icon(Iconsax.call, size: 14, color: Colors.white),
+                                    label: const AppText('Call', fontSize: 12, color: Colors.white, fontWeight: FontWeight.bold),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF10B981),
+                                      padding: const EdgeInsets.symmetric(vertical: 9),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                      elevation: 0,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: ElevatedButton.icon(
+                                    onPressed: () {
+                                      if (email.isNotEmpty && email != 'N/A') {
+                                        launchUrl(Uri.parse('mailto:$email'));
+                                      }
+                                    },
+                                    icon: const Icon(Iconsax.sms, size: 14, color: Colors.white),
+                                    label: const AppText('Email', fontSize: 12, color: Colors.white, fontWeight: FontWeight.bold),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF2563EB),
+                                      padding: const EdgeInsets.symmetric(vertical: 9),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                      elevation: 0,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 14),
+
+                            // Phone & Email Rows
+                            _buildInfoDetailRow(Icons.phone_rounded, 'Phone', phone),
+                            const SizedBox(height: 10),
+                            _buildInfoDetailRow(Icons.email_rounded, 'Email', email),
+                            const SizedBox(height: 10),
+                            _buildInfoDetailRow(Icons.assignment_rounded, 'Requirement', requirement),
+                            if (location.isNotEmpty) ...[
+                              const SizedBox(height: 10),
+                              _buildInfoDetailRow(Icons.location_on_rounded, 'Location', location),
+                            ],
+                            if (estimatedValue != null) ...[
+                              const SizedBox(height: 10),
+                              _buildInfoDetailRow(Icons.attach_money_rounded, 'Estimated Value', estimatedValue.startsWith('₹') ? estimatedValue : '₹$estimatedValue', valueColor: const Color(0xFF15803D)),
+                            ],
+                            if (expectedClosingDate != null) ...[
+                              const SizedBox(height: 10),
+                              _buildInfoDetailRow(Icons.event_rounded, 'Closing Date', _formatDateTime(expectedClosingDate)),
+                            ],
+                            const SizedBox(height: 10),
+                            _buildInfoDetailRow(
+                              _getSourceIcon(source),
+                              'Source Channel',
+                              source,
+                              valueColor: sourceColor,
+                            ),
+                            if (createdAt != null) ...[
+                              const SizedBox(height: 10),
+                              _buildInfoDetailRow(Icons.access_time_rounded, 'Received On', _formatDateTime(createdAt)),
+                            ],
                           ],
                         ),
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFDCFCE7),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: AppText(
-                          lead.status,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFF16A34A),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  const Divider(height: 1, color: Color(0xFFF1F5F9)),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      const Icon(Icons.phone_rounded, size: 16, color: Color(0xFF64748B)),
-                      const SizedBox(width: 8),
-                      AppText(lead.phone, fontSize: 13, fontWeight: FontWeight.w600),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      const Icon(Icons.email_rounded, size: 16, color: Color(0xFF64748B)),
-                      const SizedBox(width: 8),
-                      AppText('${lead.customerName.toLowerCase().replaceAll(' ', '.')}@example.com', fontSize: 13, fontWeight: FontWeight.w600),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(Icons.assignment_rounded, size: 16, color: Color(0xFF64748B)),
-                      const SizedBox(width: 8),
-                      Expanded(child: AppText('Requirement: ${lead.requirement}', fontSize: 13, fontWeight: FontWeight.w600, maxLines: 3)),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      const Icon(Icons.attach_money_rounded, size: 16, color: Color(0xFF64748B)),
-                      const SizedBox(width: 8),
-                      AppText('Potential Value: ₹${(lead.potentialValue / 1000).toStringAsFixed(0)}k', fontSize: 13, fontWeight: FontWeight.w800, color: const Color(0xFF15803D)),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      const Icon(Icons.campaign_rounded, size: 16, color: Color(0xFF64748B)),
-                      const SizedBox(width: 8),
-                      AppText('Source: ${lead.source}', fontSize: 13, fontWeight: FontWeight.w600),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            
-            // 2. Process & Interactions History Tree
-            const AppText(
-              'Process & Interactions History',
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
-              color: Color(0xFF0F172A),
-            ),
-            const SizedBox(height: 16),
-            ...List.generate(lead.processSteps.length, (index) {
-              final step = lead.processSteps[index];
-              final isLast = index == lead.processSteps.length - 1;
-              return IntrinsicHeight(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Tree Connector (Line & Dot)
-                    Column(
-                      children: [
+                      const SizedBox(height: 20),
+
+                      // 2. Inquiry Description / Notes (with 2 lines & View more toggle)
+                      if (notes.isNotEmpty) ...[
                         Container(
-                          width: 24,
-                          height: 24,
-                          decoration: BoxDecoration(
-                            color: step.isCompleted ? const Color(0xFF10B981) : Colors.white,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: step.isCompleted ? const Color(0xFF10B981) : const Color(0xFFCBD5E1),
-                              width: 2,
-                            ),
-                          ),
-                          child: step.isCompleted
-                              ? const Icon(Icons.check_rounded, size: 14, color: Colors.white)
-                              : null,
-                        ),
-                        if (!isLast)
-                          Expanded(
-                            child: Container(
-                              width: 2,
-                              color: step.isCompleted ? const Color(0xFF10B981) : const Color(0xFFE2E8F0),
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(width: 12),
-                    // Step Content Card
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.only(bottom: 20),
-                        child: Container(
-                          padding: const EdgeInsets.all(14),
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
                             color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(16),
                             border: Border.all(color: const Color(0xFFE2E8F0)),
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.black.withValues(alpha: 0.02),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
+                                blurRadius: 8,
+                                offset: const Offset(0, 3),
                               ),
                             ],
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              const Row(
                                 children: [
-                                  Expanded(child: AppText(step.title, fontSize: 13.5, fontWeight: FontWeight.bold)),
-                                  AppText('${step.date} ${step.time}'.trim(), fontSize: 11, color: const Color(0xFF64748B)),
+                                  Icon(Iconsax.note_2, size: 16, color: AppColors.primaryColor),
+                                  SizedBox(width: 8),
+                                  AppText(
+                                    'Inquiry Notes / Description',
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w800,
+                                    color: Color(0xFF0F172A),
+                                  ),
                                 ],
                               ),
-                              const SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  const Icon(Icons.person_outline_rounded, size: 12, color: Color(0xFF94A3B8)),
-                                  const SizedBox(width: 4),
-                                  AppText(step.performedBy.isNotEmpty ? step.performedBy : 'Unknown', fontSize: 11, color: const Color(0xFF64748B), fontWeight: FontWeight.w500),
-                                ],
+                              const SizedBox(height: 10),
+                              AppText(
+                                notes,
+                                fontSize: 12.5,
+                                color: const Color(0xFF334155),
+                                height: 1.5,
+                                maxLines: _isNotesExpanded ? null : 2,
+                                overflow: _isNotesExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
                               ),
-                              if (step.note.isNotEmpty) ...[
-                                const SizedBox(height: 6),
-                                AppText(step.note, fontSize: 12, color: const Color(0xFF475569)),
+                              if (notes.length > 70 || notes.contains('\n')) ...[
+                                const SizedBox(height: 8),
+                                GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      _isNotesExpanded = !_isNotesExpanded;
+                                    });
+                                  },
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      AppText(
+                                        _isNotesExpanded ? 'View less' : 'View more',
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.primaryColor,
+                                      ),
+                                      const SizedBox(width: 3),
+                                      Icon(
+                                        _isNotesExpanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                                        size: 16,
+                                        color: AppColors.primaryColor,
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ],
                             ],
                           ),
                         ),
+                        const SizedBox(height: 20),
+                      ],
+
+                      // 3. Source Payload / Form Submission Section (if present)
+                      if (apiLead?.sourcePayload != null && apiLead!.sourcePayload!.isNotEmpty) ...[
+                        _buildSourcePayloadSection(apiLead.sourcePayload!),
+                        const SizedBox(height: 20),
+                      ],
+
+                      // 4. Process & Interactions History Tree
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.02),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Row(
+                                  children: [
+                                    Icon(Iconsax.clock, size: 16, color: AppColors.primaryColor),
+                                    SizedBox(width: 8),
+                                    AppText(
+                                      'Process & Interactions History',
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w800,
+                                      color: Color(0xFF0F172A),
+                                    ),
+                                  ],
+                                ),
+                                if (apiLead?.history.isNotEmpty == true)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFEFF6FF),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: AppText(
+                                      '${apiLead!.history.length} Event${apiLead.history.length > 1 ? 's' : ''}',
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.bold,
+                                      color: const Color(0xFF2563EB),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            _buildHistoryTimeline(apiLead, legacyLead),
+                          ],
+                        ),
                       ),
+                      const SizedBox(height: 20),
+
+                      // 5. Sales Team Allocation Card
+                      if (apiLead != null)
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.02),
+                                blurRadius: 8,
+                                offset: const Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Row(
+                                children: [
+                                  Icon(Iconsax.user_octagon, size: 16, color: AppColors.primaryColor),
+                                  SizedBox(width: 8),
+                                  AppText(
+                                    'Sales Team Allocation',
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w800,
+                                    color: Color(0xFF0F172A),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Row(
+                                    children: [
+                                      CircleAvatar(
+                                        radius: 16,
+                                        backgroundColor: apiLead.isAssigned ? AppColors.primaryLight : const Color(0xFFFEE2E2),
+                                        child: Icon(
+                                          apiLead.isAssigned ? Iconsax.user : Icons.warning_amber_rounded,
+                                          size: 16,
+                                          color: apiLead.isAssigned ? AppColors.primaryColor : const Color(0xFFDC2626),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          const AppText('Assigned Executive', fontSize: 10, color: AppColors.textColorHint),
+                                          AppText(
+                                            apiLead.assignedExecutiveName,
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.bold,
+                                            color: apiLead.isAssigned ? AppColors.textColorPrimary : const Color(0xFFDC2626),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                  ElevatedButton.icon(
+                                    onPressed: () {
+                                      _showAssignModal(context, apiLead);
+                                    },
+                                    icon: Icon(
+                                      apiLead.isAssigned ? Iconsax.edit : Iconsax.user_add,
+                                      size: 13,
+                                      color: Colors.white,
+                                    ),
+                                    label: AppText(
+                                      apiLead.isAssigned ? 'Re-Assign' : 'Assign Lead',
+                                      fontSize: 11,
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: apiLead.isAssigned ? AppColors.primaryColor : const Color(0xFFDC2626),
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                      elevation: 0,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      const SizedBox(height: 20),
+                    ],
+                  ),
+                ),
+    );
+  }
+
+  Widget _buildHistoryTimeline(AdminLeadDataModel? apiLead, AdminLeadItem? legacyLead) {
+    if (apiLead?.history.isNotEmpty == true) {
+      final historyList = apiLead!.history;
+      return Column(
+        children: List.generate(historyList.length, (index) {
+          final item = historyList[index];
+          final isLast = index == historyList.length - 1;
+          return IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Tree Connector (Line & Dot)
+                Column(
+                  children: [
+                    Container(
+                      width: 22,
+                      height: 22,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF10B981),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: const Color(0xFF10B981), width: 2),
+                      ),
+                      child: const Icon(Icons.check_rounded, size: 13, color: Colors.white),
+                    ),
+                    if (!isLast)
+                      Expanded(
+                        child: Container(
+                          width: 2,
+                          color: const Color(0xFF10B981).withValues(alpha: 0.5),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(width: 12),
+                // Step Content Card
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 18),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: AppText(
+                                  item.title ?? 'Lead Event',
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFF0F172A),
+                                ),
+                              ),
+                              if (item.occurredAt != null)
+                                AppText(
+                                  _formatDateTime(item.occurredAt),
+                                  fontSize: 10.5,
+                                  color: const Color(0xFF64748B),
+                                ),
+                            ],
+                          ),
+                          if (item.actorName != null && item.actorName!.isNotEmpty) ...[
+                            const SizedBox(height: 3),
+                            Row(
+                              children: [
+                                const Icon(Icons.person_outline_rounded, size: 12, color: Color(0xFF94A3B8)),
+                                const SizedBox(width: 4),
+                                AppText(
+                                  item.actorName!,
+                                  fontSize: 11,
+                                  color: const Color(0xFF64748B),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ],
+                            ),
+                          ],
+                          if (item.description != null && item.description!.isNotEmpty) ...[
+                            const SizedBox(height: 6),
+                            AppText(
+                              item.description!,
+                              fontSize: 11.5,
+                              color: const Color(0xFF475569),
+                              height: 1.4,
+                            ),
+                          ],
+                          if (item.metadata != null && item.metadata!.isNotEmpty) ...[
+                            const SizedBox(height: 6),
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 4,
+                              children: item.metadata!.entries.map((e) {
+                                return Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(color: const Color(0xFFCBD5E1)),
+                                  ),
+                                  child: AppText(
+                                    '${e.key}: ${e.value}',
+                                    fontSize: 9.5,
+                                    color: const Color(0xFF475569),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }),
+      );
+    } else if (legacyLead != null && legacyLead.processSteps.isNotEmpty) {
+      // Legacy dummy steps fallback
+      final steps = legacyLead.processSteps;
+      return Column(
+        children: List.generate(steps.length, (index) {
+          final step = steps[index];
+          final isLast = index == steps.length - 1;
+          return IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Column(
+                  children: [
+                    Container(
+                      width: 22,
+                      height: 22,
+                      decoration: BoxDecoration(
+                        color: step.isCompleted ? const Color(0xFF10B981) : Colors.white,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: step.isCompleted ? const Color(0xFF10B981) : const Color(0xFFCBD5E1),
+                          width: 2,
+                        ),
+                      ),
+                      child: step.isCompleted
+                          ? const Icon(Icons.check_rounded, size: 13, color: Colors.white)
+                          : null,
+                    ),
+                    if (!isLast)
+                      Expanded(
+                        child: Container(
+                          width: 2,
+                          color: step.isCompleted ? const Color(0xFF10B981) : const Color(0xFFE2E8F0),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 18),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(child: AppText(step.title, fontSize: 13, fontWeight: FontWeight.bold)),
+                              AppText('${step.date} ${step.time}'.trim(), fontSize: 10.5, color: const Color(0xFF64748B)),
+                            ],
+                          ),
+                          const SizedBox(height: 3),
+                          Row(
+                            children: [
+                              const Icon(Icons.person_outline_rounded, size: 12, color: Color(0xFF94A3B8)),
+                              const SizedBox(width: 4),
+                              AppText(step.performedBy.isNotEmpty ? step.performedBy : 'Unknown', fontSize: 11, color: const Color(0xFF64748B)),
+                            ],
+                          ),
+                          if (step.note.isNotEmpty) ...[
+                            const SizedBox(height: 6),
+                            AppText(step.note, fontSize: 11.5, color: const Color(0xFF475569)),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }),
+      );
+    } else {
+      // Default initial lead event
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 22,
+            height: 22,
+            decoration: const BoxDecoration(
+              color: Color(0xFF10B981),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.check_rounded, size: 13, color: Colors.white),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  AppText(
+                    'Lead Captured via ${apiLead?.displaySource ?? 'Inquiry'}',
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  const SizedBox(height: 4),
+                  AppText(
+                    apiLead?.createdAt != null
+                        ? 'Received on ${_formatDateTime(apiLead!.createdAt)}'
+                        : 'Imported into CRM',
+                    fontSize: 11,
+                    color: const Color(0xFF64748B),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+  }
+
+  Widget _buildSourcePayloadSection(Map<String, dynamic> payload) {
+    final submission = payload['submission'] is Map ? payload['submission'] as Map : null;
+    final fields = payload['fields'] is Map ? payload['fields'] as Map : null;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Iconsax.global, size: 16, color: AppColors.primaryColor),
+              SizedBox(width: 8),
+              AppText(
+                'Source Submission Details',
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF0F172A),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (submission != null) ...[
+            if (submission['form_name'] != null)
+              _buildInfoDetailRow(Icons.description_outlined, 'Form Name', submission['form_name'].toString()),
+            if (submission['referer'] != null) ...[
+              const SizedBox(height: 8),
+              _buildInfoDetailRow(Icons.link_rounded, 'Referer Page', submission['referer'].toString()),
+            ],
+            if (submission['user_ip'] != null) ...[
+              const SizedBox(height: 8),
+              _buildInfoDetailRow(Icons.computer_rounded, 'User IP', submission['user_ip'].toString()),
+            ],
+          ],
+          if (fields != null && fields.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            const Divider(height: 1, color: Color(0xFFF1F5F9)),
+            const SizedBox(height: 10),
+            const AppText('Submitted Form Values', fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF475569)),
+            const SizedBox(height: 6),
+            ...fields.entries.where((e) => e.value != null && e.value.toString().isNotEmpty && e.key != 'message').map((e) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: AppText(e.key.toString(), fontSize: 10, fontWeight: FontWeight.w600, color: const Color(0xFF475569)),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: AppText(e.value.toString(), fontSize: 11.5, color: const Color(0xFF1E293B)),
                     ),
                   ],
                 ),
               );
             }),
           ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoDetailRow(dynamic icon, String label, String value, {Color? valueColor}) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (icon is IconData)
+          Icon(icon, size: 15, color: const Color(0xFF64748B))
+        else if (icon is Widget)
+          icon,
+        const SizedBox(width: 8),
+        SizedBox(
+          width: 110,
+          child: AppText(label, fontSize: 12, color: const Color(0xFF64748B)),
         ),
+        Expanded(
+          child: AppText(
+            value,
+            fontSize: 12.5,
+            fontWeight: FontWeight.w600,
+            color: valueColor ?? const Color(0xFF1E293B),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showAssignModal(BuildContext context, AdminLeadDataModel lead) {
+    final ctrl = Get.isRegistered<AdminLeadsHubController>()
+        ? Get.find<AdminLeadsHubController>()
+        : null;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _LeadAssignmentBottomSheet(
+        lead: lead,
+        ctrl: ctrl,
+        onSuccess: (emp, notes, res) {
+          if (res.data != null) {
+            setState(() {
+              _currentApiLead = res.data;
+            });
+          } else {
+            setState(() {
+              _currentApiLead = _currentApiLead?.copyWith(
+                assignedTo: emp.id,
+                assignedEmployee: emp.displayName,
+                notes: notes,
+              );
+            });
+          }
+          // Reload details to get new timeline event
+          _loadLeadDetail(lead.id);
+        },
+      ),
+    );
+  }
+}
+
+// ── Bottom Sheet: Assign / Re-Assign Executive with Custom Notes ────────────
+class _LeadAssignmentBottomSheet extends StatefulWidget {
+  final AdminLeadDataModel lead;
+  final AdminLeadsHubController? ctrl;
+  final void Function(SalesEmployeeModel employee, String notes, AdminLeadDetailResponseModel response)? onSuccess;
+
+  const _LeadAssignmentBottomSheet({
+    required this.lead,
+    this.ctrl,
+    this.onSuccess,
+  });
+
+  @override
+  State<_LeadAssignmentBottomSheet> createState() => _LeadAssignmentBottomSheetState();
+}
+
+class _LeadAssignmentBottomSheetState extends State<_LeadAssignmentBottomSheet> {
+  SalesEmployeeModel? _selectedEmployee;
+  late final TextEditingController _notesController;
+  bool _isSubmitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final defaultNote = widget.lead.isAssigned
+        ? 'Re-assigned for follow-up and deal progress.'
+        : 'Assigned for initial discovery call.';
+    _notesController = TextEditingController(text: defaultNote);
+
+    final ctrl = widget.ctrl;
+    if (ctrl != null) {
+      if (ctrl.salesEmployees.isEmpty) {
+        ctrl.fetchSalesEmployees();
+      } else {
+        _autoSelectAssignedEmployee(ctrl.salesEmployees);
+      }
+    }
+  }
+
+  void _autoSelectAssignedEmployee(List<SalesEmployeeModel> list) {
+    for (final emp in list) {
+      if (emp.id.toString() == widget.lead.assignedTo?.toString() ||
+          emp.displayName.toLowerCase() == widget.lead.assignedExecutiveName.toLowerCase()) {
+        _selectedEmployee = emp;
+        _notesController.text = widget.lead.isAssigned
+            ? 'Re-assigned to ${emp.displayName} for follow-up and deal progress.'
+            : 'Assigned to ${emp.displayName} for initial discovery call.';
+        break;
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _notesController.dispose();
+    super.dispose();
+  }
+
+  void _selectEmployee(SalesEmployeeModel emp) {
+    setState(() {
+      _selectedEmployee = emp;
+      if (_notesController.text.isEmpty ||
+          _notesController.text.contains('discovery call') ||
+          _notesController.text.contains('deal progress')) {
+        _notesController.text = widget.lead.isAssigned
+            ? 'Re-assigned to ${emp.displayName} for follow-up and deal progress.'
+            : 'Assigned to ${emp.displayName} for initial discovery call.';
+      }
+    });
+  }
+
+  Future<void> _handleConfirm() async {
+    if (_selectedEmployee == null) {
+      Get.snackbar(
+        'Executive Required',
+        'Please select a sales executive before confirming.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: const Color(0xFFF59E0B),
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+    final notes = _notesController.text.trim().isNotEmpty
+        ? _notesController.text.trim()
+        : (widget.lead.isAssigned
+            ? 'Re-assigned to ${_selectedEmployee!.displayName} for follow-up.'
+            : 'Assigned to ${_selectedEmployee!.displayName} for initial discovery call.');
+
+    final assignRequest = AssignLeadRequestModel(
+      employeeId: _selectedEmployee!.id,
+      notes: notes,
+    );
+
+    try {
+      AdminLeadDetailResponseModel res;
+      if (widget.ctrl != null) {
+        res = await widget.ctrl!.assignLead(widget.lead.id, assignRequest);
+      } else {
+        final repo = Get.find<AdminLeadsRepositoryInterface>();
+        res = await repo.assignLead(widget.lead.id, assignRequest);
+      }
+
+      if (res.status) {
+        if (mounted) Navigator.pop(context);
+        if (widget.onSuccess != null) {
+          widget.onSuccess!(_selectedEmployee!, notes, res);
+        }
+        Get.snackbar(
+          'Lead Assigned Successfully 🎯',
+          res.message.isNotEmpty
+              ? res.message
+              : '${widget.lead.displayName} assigned to ${_selectedEmployee!.displayName}',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: const Color(0xFF10B981),
+          colorText: Colors.white,
+        );
+      } else {
+        Get.snackbar(
+          'Assignment Failed',
+          res.message.isNotEmpty ? res.message : 'Failed to assign lead',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: const Color(0xFFEF4444),
+          colorText: Colors.white,
+        );
+      }
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Failed to assign lead: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: const Color(0xFFEF4444),
+        colorText: Colors.white,
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
+    }
+  }
+
+  Widget _buildChip(String label) {
+    return InkWell(
+      onTap: () {
+        final empName = _selectedEmployee?.displayName ?? 'executive';
+        setState(() {
+          _notesController.text = widget.lead.isAssigned
+              ? 'Re-assigned to $empName: $label.'
+              : 'Assigned to $empName: $label.';
+        });
+      },
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFCBD5E1)),
+        ),
+        child: AppText(
+          label,
+          fontSize: 11,
+          color: const Color(0xFF475569),
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final isReassign = widget.lead.isAssigned;
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: EdgeInsets.only(
+        top: 14,
+        left: 20,
+        right: 20,
+        bottom: bottomInset + 18,
+      ),
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.88,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Drag handle
+          Center(
+            child: Container(
+              width: 44,
+              height: 4,
+              decoration: BoxDecoration(
+                color: const Color(0xFFCBD5E1),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // Header
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(9),
+                decoration: BoxDecoration(
+                  color: isReassign
+                      ? const Color(0xFFEFF6FF)
+                      : const Color(0xFFECFDF5),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  isReassign ? Iconsax.user_edit : Iconsax.user_add,
+                  color: isReassign
+                      ? const Color(0xFF2563EB)
+                      : const Color(0xFF059669),
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AppText(
+                      isReassign ? 'Re-Assign Lead' : 'Assign Lead',
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    const SizedBox(height: 2),
+                    AppText(
+                      widget.lead.displayName,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textColorSecondary,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: AppText(
+                  widget.lead.displayLeadCode,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF475569),
+                ),
+              ),
+            ],
+          ),
+
+          // Current Assignment Info (if reassignment)
+          if (isReassign) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFFBEB),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFFDE68A)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Iconsax.info_circle, size: 15, color: Color(0xFFD97706)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: AppText(
+                      'Currently assigned to: ${widget.lead.assignedExecutiveName}',
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFFB45309),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
+          const SizedBox(height: 14),
+
+          // Scrollable body
+          Flexible(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Select Executive Header
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const AppText(
+                        'Select Sales Executive *',
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      if (widget.ctrl != null)
+                        InkWell(
+                          onTap: () => widget.ctrl!.fetchSalesEmployees(),
+                          borderRadius: BorderRadius.circular(6),
+                          child: const Padding(
+                            padding: EdgeInsets.all(4),
+                            child: Row(
+                              children: [
+                                Icon(Icons.refresh_rounded, size: 14, color: AppColors.primaryColor),
+                                SizedBox(width: 3),
+                                AppText('Refresh', fontSize: 11, color: AppColors.primaryColor, fontWeight: FontWeight.bold),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Executives List
+                  if (widget.ctrl != null)
+                    Obx(() {
+                      final employees = widget.ctrl!.salesEmployees;
+                      final isLoading = widget.ctrl!.isLoadingSalesEmployees.value;
+
+                      if (isLoading && employees.isEmpty) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 24),
+                          child: Center(child: CircularProgressIndicator()),
+                        );
+                      }
+
+                      if (employees.isEmpty) {
+                        return Container(
+                          padding: const EdgeInsets.all(16),
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                          ),
+                          child: const AppText(
+                            'No sales executives found. Please refresh.',
+                            fontSize: 12,
+                            color: AppColors.textColorSecondary,
+                          ),
+                        );
+                      }
+
+                      return Column(
+                        children: employees.map((emp) {
+                          final isSelected = _selectedEmployee?.id == emp.id;
+                          final isCurrentOwner = widget.lead.assignedTo?.toString() == emp.id.toString() ||
+                              widget.lead.assignedExecutiveName.toLowerCase() == emp.displayName.toLowerCase();
+
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            decoration: BoxDecoration(
+                              color: isSelected ? AppColors.primaryLight : const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: isSelected ? AppColors.primaryColor : const Color(0xFFE2E8F0),
+                                width: isSelected ? 1.5 : 1.0,
+                              ),
+                            ),
+                            child: ListTile(
+                              dense: true,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                              leading: CircleAvatar(
+                                radius: 17,
+                                backgroundColor: isSelected ? AppColors.primaryColor : AppColors.primaryLight,
+                                backgroundImage: (emp.avatar != null && emp.avatar!.isNotEmpty)
+                                    ? NetworkImage(emp.avatar!)
+                                    : null,
+                                child: (emp.avatar == null || emp.avatar!.isEmpty)
+                                    ? Icon(
+                                        Iconsax.user,
+                                        size: 16,
+                                        color: isSelected ? Colors.white : AppColors.primaryColor,
+                                      )
+                                    : null,
+                              ),
+                              title: Row(
+                                children: [
+                                  Expanded(
+                                    child: AppText(
+                                      emp.displayName,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                      color: isSelected ? AppColors.primaryColor : const Color(0xFF1E293B),
+                                    ),
+                                  ),
+                                  if (isCurrentOwner)
+                                    Container(
+                                      margin: const EdgeInsets.only(right: 6),
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFFEF3C7),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: const AppText(
+                                        'Current',
+                                        fontSize: 9.5,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFFB45309),
+                                      ),
+                                    ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFEEF2FF),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: AppText(
+                                      emp.displayEmployeeId,
+                                      fontSize: 9.5,
+                                      fontWeight: FontWeight.w600,
+                                      color: const Color(0xFF4F46E5),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              subtitle: AppText(
+                                '${emp.displayDesignation} • ${emp.dealsClosedCount} Closed • ${emp.assignedLeadsCount} Leads',
+                                fontSize: 10.5,
+                                color: const Color(0xFF64748B),
+                              ),
+                              trailing: Icon(
+                                isSelected ? Icons.check_circle_rounded : Icons.radio_button_off_rounded,
+                                color: isSelected ? AppColors.primaryColor : const Color(0xFFCBD5E1),
+                                size: 20,
+                              ),
+                              onTap: () => _selectEmployee(emp),
+                            ),
+                          );
+                        }).toList(),
+                      );
+                    }),
+
+                  const SizedBox(height: 14),
+
+                  // Assignment Notes Section
+                  Row(
+                    children: [
+                      const Icon(Iconsax.note_text, size: 16, color: AppColors.primaryColor),
+                      const SizedBox(width: 6),
+                      const AppText(
+                        'Assignment Notes',
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEFF6FF),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const AppText(
+                          'Included in API',
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF2563EB),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: _notesController,
+                    maxLines: 3,
+                    minLines: 2,
+                    style: const TextStyle(fontSize: 12.5, color: Color(0xFF1E293B)),
+                    decoration: InputDecoration(
+                      hintText: 'e.g. Assigned to Rahul for initial discovery call.',
+                      hintStyle: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+                      filled: true,
+                      fillColor: const Color(0xFFF8FAFC),
+                      contentPadding: const EdgeInsets.all(12),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: AppColors.primaryColor, width: 1.5),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Quick Suggestion Chips
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _buildChip('Initial discovery call'),
+                        const SizedBox(width: 6),
+                        _buildChip('Urgent follow-up'),
+                        const SizedBox(width: 6),
+                        _buildChip('High priority client'),
+                        const SizedBox(width: 6),
+                        _buildChip('Product demo requested'),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 18),
+                ],
+              ),
+            ),
+          ),
+
+          // Bottom Action Button
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: ElevatedButton(
+              onPressed: (_selectedEmployee == null || _isSubmitting)
+                  ? null
+                  : _handleConfirm,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryColor,
+                disabledBackgroundColor: const Color(0xFFCBD5E1),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 0,
+              ),
+              child: _isSubmitting
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2.2, color: Colors.white),
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          isReassign ? Iconsax.user_edit : Iconsax.user_add,
+                          size: 17,
+                          color: Colors.white,
+                        ),
+                        const SizedBox(width: 8),
+                        AppText(
+                          isReassign ? 'Confirm Re-Assignment' : 'Confirm Assignment',
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ],
+                    ),
+            ),
+          ),
+        ],
       ),
     );
   }

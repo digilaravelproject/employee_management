@@ -14,6 +14,8 @@ import '../../holidays/bindings/holidays_binding.dart';
 import '../../performance/views/performance_dashboard_screen.dart';
 import '../../company_profile/views/company_profile_view_screen.dart';
 import '../../leads/views/leads_dashboard_shell.dart';
+import '../../leads/views/sales_admin_crm_dashboard_screen.dart';
+import '../../leads/views/sales_executive_tele_crm_screen.dart';
 import '../../payroll/views/salary_employee_list_screen.dart';
 import '../../clients/views/client_list_screen.dart';
 import '../../hr/views/hr_portal_dashboard.dart';
@@ -574,6 +576,16 @@ class _ModulesGrid extends StatelessWidget {
         color: Color(0xFFF59E0B), // Amber
       ),
       const _ModuleItem(
+        label: 'Sales CRM',
+        icon: Iconsax.chart_2,
+        color: Color(0xFF312E81), // Indigo
+      ),
+      const _ModuleItem(
+        label: 'Sales Tele-CRM',
+        icon: Iconsax.headphone,
+        color: Color(0xFF10B981), // Emerald
+      ),
+      const _ModuleItem(
         label: 'Hr ',
         icon: Iconsax.briefcase,
         color: Color(0xFF10B981), // Emerald
@@ -640,6 +652,7 @@ class _ModulesGrid extends StatelessWidget {
       //   color: AppColors.primaryColor, // Indigo
       // ),
     ];
+
 
     return Obx(() {
       final filteredModules = modules.where((item) {
@@ -777,6 +790,10 @@ class _ModuleCard extends StatelessWidget {
               Get.to(() => const CompanyProfileViewScreen());
             } else if (item.label == 'Leads') {
               Get.to(() => const LeadsDashboardShell());
+            } else if (item.label == 'Sales CRM') {
+              Get.to(() => const SalesAdminDashboardScreen());
+            } else if (item.label == 'Sales Tele-CRM') {
+              Get.to(() => const SalesExecutiveTeleCrmScreen());
             } else if (item.label == 'Clients') {
               Get.to(() => const ClientListScreen());
             } else if (item.label == 'Payroll / Salary') {

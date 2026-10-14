@@ -49,6 +49,11 @@ class AppConstants {
   static const String adminUpdateProfileUrl = '/api/admin/update-profile';
   static const String adminDocumentsUrl = '/api/admin/documents';
   static String adminDeleteDocumentUrl(dynamic id) => '$adminDocumentsUrl/$id';
+  static const String adminLeadsUrl = '/api/admin/leads';
+  static const String adminLeadsSearchUrl = '/api/admin/leads/search';
+  static String adminLeadDetailUrl(dynamic id) => '$adminLeadsUrl/$id';
+  static String adminAssignLeadUrl(dynamic id) => '$adminLeadsUrl/$id/assign';
+  static const String adminSalesEmployeesUrl = '$adminLeadsUrl/sales-employees';
   static const String adminDashboardUrl = '/api/admin/dashboard';
   static const String adminUpcomingBirthdaysUrl = '/api/admin/birthdays/upcoming';
   static const String adminEmployeesUrl = 'https://yellowgreen-stork-427223.hostingersite.com/public/api/admin/employees';

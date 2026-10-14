@@ -101,9 +101,9 @@ class EmployeeMoreScreen extends StatelessWidget {
                 () => const FollowupDashboardScreen(isEmployeeOnly: true)),
           ));
         }
-        // if (isAdmin ||
-        //     p.isAllowed(PermissionConstant.viewLeads,
-        //         moduleSlug: PermissionConstant.moduleClientsLeadsCrm)) {
+        if (isAdmin ||
+            p.isAllowed(PermissionConstant.viewLeads,
+                moduleSlug: PermissionConstant.moduleClientsLeadsCrm)) {
           workItems.add(_MoreMenuItem(
             icon: Iconsax.briefcase,
             title: 'My Leads & Targets',
@@ -111,6 +111,9 @@ class EmployeeMoreScreen extends StatelessWidget {
             iconColor: AppColors.primaryColor,
             onTap: () => Get.to(() => const BdeLeadsTargetScreen()),
           ));
+        }
+
+        if (isAdmin) {
           workItems.add(_MoreMenuItem(
             icon: Iconsax.chart_2,
             title: 'Sales CRM (Admin View)',
@@ -125,7 +128,7 @@ class EmployeeMoreScreen extends StatelessWidget {
             iconColor: const Color(0xFF10B981),
             onTap: () => Get.to(() => const SalesExecutiveTeleCrmScreen()),
           ));
-      //  }
+        }
 
         // 2. Finance & Communication
         final financeItems = <Widget>[];
