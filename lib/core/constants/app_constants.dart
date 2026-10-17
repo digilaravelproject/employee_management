@@ -3,7 +3,8 @@ import 'app_text_constants.dart';
 
 class AppConstants {
   static String appName = "Office Management";
-  static String baseUrl = "https://yellowgreen-stork-427223.hostingersite.com";
+  //static String baseUrl = "https://yellowgreen-stork-427223.hostingersite.com";
+  static String baseUrl = "https://attendance.digiemperor.com";
   static String imageBaseUrl = "https://beige-stingray-620454.hostingersite.com/storage";
   static String apiToken = "13|DjgMQyQlZyUELVdhjCWuNvZxZHJhD8twF0ovZxDJ877bcfb4"; // Temporarily set for debugging
   static const String googleMapsKey = 'AIzaSyAH2m4kQwGljzCxdDdy7JrnKTDKCgFZU_A';
@@ -40,11 +41,11 @@ class AppConstants {
   static const String profileUrl = '/api/v1/auth/me';
   static const String updateProfileUrl = '/api/v1/auth/profile/update';
   static const String userSignupUrl = '/api/user_signup';
-  static const String adminSignupUrl = 'https://yellowgreen-stork-427223.hostingersite.com/public/api/admin/signup';
-  static const String adminLoginUrl = 'https://yellowgreen-stork-427223.hostingersite.com/public/api/admin/login';
-  static const String adminForgotPasswordUrl = 'https://yellowgreen-stork-427223.hostingersite.com/public/api/admin/forgot-password';
-  static const String adminResetPasswordUrl = 'https://yellowgreen-stork-427223.hostingersite.com/public/api/admin/reset-password';
-  static const String adminUpdatePasswordUrl = 'https://yellowgreen-stork-427223.hostingersite.com/public/api/admin/update-password';
+  static const String adminSignupUrl = '/api/admin/signup';
+  static const String adminLoginUrl = '/api/admin/login';
+  static const String adminForgotPasswordUrl = '/api/admin/forgot-password';
+  static const String adminResetPasswordUrl = '/api/admin/reset-password';
+  static const String adminUpdatePasswordUrl = '/api/admin/update-password';
   static const String adminProfileUrl = '/api/admin/profile';
   static const String adminUpdateProfileUrl = '/api/admin/update-profile';
   static const String adminDocumentsUrl = '/api/admin/documents';
@@ -54,9 +55,10 @@ class AppConstants {
   static String adminLeadDetailUrl(dynamic id) => '$adminLeadsUrl/$id';
   static String adminAssignLeadUrl(dynamic id) => '$adminLeadsUrl/$id/assign';
   static const String adminSalesEmployeesUrl = '$adminLeadsUrl/sales-employees';
+  static const String facebookAuthorizationUrl = '/api/facebook/authorization-url';
   static const String adminDashboardUrl = '/api/admin/dashboard';
   static const String adminUpcomingBirthdaysUrl = '/api/admin/birthdays/upcoming';
-  static const String adminEmployeesUrl = 'https://yellowgreen-stork-427223.hostingersite.com/public/api/admin/employees';
+  static const String adminEmployeesUrl = '/api/admin/employees';
   static const String adminEmployeeSearchUrl = '/api/admin/employees/search';
   static const String adminAllUsersUrl = '/api/admin/employees/all-users';
   static String adminEmployeeUrl(dynamic id) => '$adminEmployeesUrl/$id';

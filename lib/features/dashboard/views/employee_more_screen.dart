@@ -19,6 +19,8 @@ import '../../performance/views/performance_dashboard_screen.dart';
 import '../../leads/views/bde_leads_target_screen.dart';
 import '../../leads/views/sales_admin_crm_dashboard_screen.dart';
 import '../../leads/views/sales_executive_tele_crm_screen.dart';
+import '../../leads/views/lead_connect_bottom_sheet.dart';
+import '../../leads/controllers/lead_integrations_controller.dart';
 
 import '../../../core/services/permission/permission_service.dart';
 import '../../../core/services/permission/permission_constant.dart';
@@ -120,6 +122,14 @@ class EmployeeMoreScreen extends StatelessWidget {
             subtitle: 'Multi-source leads, executive revenue & lead allocation',
             iconColor: const Color(0xFF312E81),
             onTap: () => Get.to(() => const SalesAdminDashboardScreen()),
+          ));
+          workItems.add(_MoreMenuItem(
+            icon: Iconsax.link_21,
+            title: 'Lead & Ad Integrations',
+            subtitle: 'Facebook & Google connection status (Tap to connect)',
+            iconColor: const Color(0xFF1877F2),
+            trailingWidget: _buildIntegrationsStatusBadge(),
+            onTap: () => LeadConnectBottomSheet.showPlatformSelector(context),
           ));
           workItems.add(_MoreMenuItem(
             icon: Iconsax.headphone,
@@ -244,6 +254,50 @@ class EmployeeMoreScreen extends StatelessWidget {
       }),
     );
   }
+
+  Widget _buildIntegrationsStatusBadge() {
+    return Obx(() {
+      final controller = LeadIntegrationsController.to;
+      final isMeta = controller.isMetaConnected;
+      final isGoogle = controller.isGoogleConnected;
+      final totalConnected = controller.totalConnectedCount;
+
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+        decoration: BoxDecoration(
+          color: totalConnected > 0 ? const Color(0xFFECFDF5) : const Color(0xFFFEF2F2),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: totalConnected > 0 ? const Color(0xFFA7F3D0) : const Color(0xFFFECACA),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 6,
+              height: 6,
+              decoration: BoxDecoration(
+                color: totalConnected > 0 ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 4),
+            AppText(
+              isMeta && isGoogle
+                  ? 'FB & Google Active'
+                  : totalConnected > 0
+                      ? '$totalConnected Connected'
+                      : 'Not Connected',
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: totalConnected > 0 ? const Color(0xFF047857) : const Color(0xFFB91C1C),
+            ),
+          ],
+        ),
+      );
+    });
+  }
 }
 
 class _MoreMenuItem extends StatelessWidget {
@@ -252,6 +306,7 @@ class _MoreMenuItem extends StatelessWidget {
   final String subtitle;
   final Color iconColor;
   final VoidCallback onTap;
+  final Widget? trailingWidget;
 
   const _MoreMenuItem({
     required this.icon,
@@ -259,6 +314,7 @@ class _MoreMenuItem extends StatelessWidget {
     required this.subtitle,
     required this.iconColor,
     required this.onTap,
+    this.trailingWidget,
   });
 
   @override
@@ -294,6 +350,10 @@ class _MoreMenuItem extends StatelessWidget {
                 ],
               ),
             ),
+            if (trailingWidget != null) ...[
+              trailingWidget!,
+              const SizedBox(width: 8),
+            ],
             const Icon(Iconsax.arrow_right_3, size: 18, color: AppColors.slate200),
           ],
         ),
@@ -301,3 +361,4 @@ class _MoreMenuItem extends StatelessWidget {
     );
   }
 }
+

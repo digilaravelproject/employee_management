@@ -9,6 +9,11 @@ import '../domain/usecases/get_sales_employees_usecase.dart';
 import '../repositories/admin_leads_repository.dart';
 import '../repositories/admin_leads_repository_interface.dart';
 
+import '../controllers/lead_integrations_controller.dart';
+import '../domain/usecases/get_facebook_authorization_url_usecase.dart';
+import '../repositories/lead_integrations_repository.dart';
+import '../repositories/lead_integrations_repository_interface.dart';
+
 class AdminLeadsHubBinding extends Bindings {
   @override
   void dependencies() {
@@ -47,6 +52,20 @@ class AdminLeadsHubBinding extends Bindings {
         getSalesEmployeesUseCase: Get.find<GetSalesEmployeesUseCase>(),
         createAdminLeadUseCase: Get.find<CreateAdminLeadUseCase>(),
         assignLeadUseCase: Get.find<AssignLeadUseCase>(),
+      ),
+    );
+
+    Get.lazyPut<LeadIntegrationsRepositoryInterface>(
+      () => LeadIntegrationsRepository(apiClient: Get.find<ApiClient>()),
+    );
+
+    Get.lazyPut<GetFacebookAuthorizationUrlUseCase>(
+      () => GetFacebookAuthorizationUrlUseCase(Get.find<LeadIntegrationsRepositoryInterface>()),
+    );
+
+    Get.lazyPut<LeadIntegrationsController>(
+      () => LeadIntegrationsController(
+        getFacebookAuthorizationUrlUseCase: Get.find<GetFacebookAuthorizationUrlUseCase>(),
       ),
     );
   }

@@ -12,6 +12,8 @@ import '../models/admin_leads_response_model.dart';
 import '../models/sales_employee_model.dart';
 import '../repositories/admin_leads_repository_interface.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'lead_connect_bottom_sheet.dart';
+import '../controllers/lead_integrations_controller.dart';
 
 // ── MODELS ───────────────────────────────────────────────────────────────────
 
@@ -707,6 +709,28 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
         ),
         actions: [
           IconButton(
+            icon: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                const Icon(Iconsax.link_21, color: Color(0xFF1877F2), size: 21),
+                Positioned(
+                  right: -1,
+                  top: -1,
+                  child: Container(
+                    width: 7,
+                    height: 7,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF10B981),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            tooltip: 'Ad Integrations (Google & Facebook OAuth)',
+            onPressed: () => LeadConnectBottomSheet.showPlatformSelector(context),
+          ),
+          IconButton(
             icon: const Icon(Iconsax.headphone, color: AppColors.primaryColor, size: 20),
             tooltip: 'Open Sales Executive View',
             onPressed: () => Get.to(() => const SalesExecutiveTeleCrmScreen()),
@@ -839,12 +863,26 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
         'lightColor': const Color(0xFFECFDF5),
         'badge': null,
       },
+      {
+        'index': 4,
+        'title': 'Lead Integrations',
+        'subtitle': 'Google Ads, Meta (Facebook) & Webhooks connection status',
+        'stat': 'Google & Meta Inbound Active',
+        'icon': Iconsax.link_21,
+        'color': const Color(0xFF1877F2),
+        'lightColor': const Color(0xFFEFF6FF),
+        'badge': 'Live',
+      },
     ];
 
     return ListView(
       padding: const EdgeInsets.all(16),
       physics: const BouncingScrollPhysics(),
       children: [
+        // Live Ad Platforms (Google & Facebook) Status Bar
+        _buildAdIntegrationsStatusBar(),
+        const SizedBox(height: 18),
+
         const AppText(
           'CRM Admin Modules',
           fontSize: 16,
@@ -887,6 +925,10 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
               borderRadius: BorderRadius.circular(18),
               child: InkWell(
                 onTap: () {
+                  if (itemIdx == 4) {
+                    LeadConnectBottomSheet.showPlatformSelector(context);
+                    return;
+                  }
                   setState(() {
                     _selectedModuleIndex = itemIdx;
                     _mainTabController.animateTo(itemIdx);
@@ -987,6 +1029,270 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
         }),
       ],
     );
+    });
+  }
+
+  Widget _buildAdIntegrationsStatusBar() {
+    final controller = LeadIntegrationsController.to;
+
+    return Obx(() {
+      final isMeta = controller.isMetaConnected;
+      final isGoogle = controller.isGoogleConnected;
+
+      return Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF1877F2).withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(7),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEEF2FF),
+                    borderRadius: BorderRadius.circular(9),
+                  ),
+                  child: const Icon(Iconsax.link_21, color: AppColors.primaryColor, size: 16),
+                ),
+                const SizedBox(width: 10),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      AppText(
+                        'Ad Platforms Connection Status',
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF0F172A),
+                      ),
+                      AppText(
+                        'Live sync for Facebook & Google inbound leads',
+                        fontSize: 10.5,
+                        color: AppColors.textColorSecondary,
+                      ),
+                    ],
+                  ),
+                ),
+                InkWell(
+                  onTap: () => LeadConnectBottomSheet.showPlatformSelector(context),
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEEF2FF),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        AppText(
+                          'Connect',
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primaryColor,
+                        ),
+                        SizedBox(width: 2),
+                        Icon(Icons.arrow_forward_ios_rounded, size: 9, color: AppColors.primaryColor),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildMiniPlatformStatus(
+                    name: 'Facebook Ads',
+                    icon: Icons.facebook,
+                    color: const Color(0xFF1877F2),
+                    isConnected: isMeta,
+                    onTap: () => LeadConnectBottomSheet.show(context, channelId: 'facebook_ads'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _buildMiniPlatformStatus(
+                    name: 'Google Ads',
+                    icon: Icons.campaign_rounded,
+                    color: const Color(0xFFEA4335),
+                    isConnected: isGoogle,
+                    onTap: () => LeadConnectBottomSheet.show(context, channelId: 'google_ads'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
+  Widget _buildMiniPlatformStatus({
+    required String name,
+    required IconData icon,
+    required Color color,
+    required bool isConnected,
+    VoidCallback? onTap,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isConnected ? const Color(0xFFF0FDF4) : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: isConnected ? const Color(0xFFBBF7D0) : const Color(0xFFE2E8F0),
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(10),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(10),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            child: Row(
+              children: [
+                Icon(icon, size: 16, color: color),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      AppText(
+                        name,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF1E293B),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Row(
+                        children: [
+                          Container(
+                            width: 5,
+                            height: 5,
+                            decoration: BoxDecoration(
+                              color: isConnected ? const Color(0xFF10B981) : const Color(0xFF94A3B8),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          AppText(
+                            isConnected ? 'Connected' : 'Not Connected',
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w600,
+                            color: isConnected ? const Color(0xFF16A34A) : const Color(0xFF64748B),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.edit_note_rounded,
+                  size: 15,
+                  color: isConnected ? const Color(0xFF16A34A) : const Color(0xFF94A3B8),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSourceRulesIntegrationBanner() {
+    final controller = LeadIntegrationsController.to;
+
+    return Obx(() {
+      final isMeta = controller.isMetaConnected;
+      final isGoogle = controller.isGoogleConnected;
+
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF0FDF4),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFBBF7D0)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: const Color(0xFF16A34A).withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Iconsax.link_21, size: 16, color: Color(0xFF16A34A)),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const AppText(
+                    'Ad Integrations Inbound Stream',
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF14532D),
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Icon(Icons.facebook, size: 12, color: isMeta ? const Color(0xFF1877F2) : Colors.grey),
+                      const SizedBox(width: 3),
+                      AppText(
+                        isMeta ? 'FB Connected' : 'FB Offline',
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: isMeta ? const Color(0xFF15803D) : const Color(0xFF64748B),
+                      ),
+                      const SizedBox(width: 8),
+                      Icon(Icons.campaign_rounded, size: 12, color: isGoogle ? const Color(0xFFEA4335) : Colors.grey),
+                      const SizedBox(width: 3),
+                      AppText(
+                        isGoogle ? 'Google Connected' : 'Google Offline',
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: isGoogle ? const Color(0xFF15803D) : const Color(0xFF64748B),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            TextButton(
+              onPressed: () => LeadConnectBottomSheet.showPlatformSelector(context),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AppText('Connect', fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF15803D)),
+                  SizedBox(width: 2),
+                  Icon(Icons.arrow_forward_ios_rounded, size: 9, color: Color(0xFF15803D)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
     });
   }
 
@@ -3101,6 +3407,10 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
         ),
         const SizedBox(height: 16),
 
+        // Live Inbound Ad Integrations Status Strip
+        _buildSourceRulesIntegrationBanner(),
+        const SizedBox(height: 16),
+
         const AppText(
           'Configured Lead Sources & Assigned Employees:',
           fontSize: 13,
@@ -3163,7 +3473,7 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
                           scale: 0.8,
                           child: Switch.adaptive(
                             value: rule.isActive,
-                            activeColor: AppColors.primaryColor,
+                            activeThumbColor: AppColors.primaryColor,
                             onChanged: (val) {
                               setState(() {
                                 rule.isActive = val;
