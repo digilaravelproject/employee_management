@@ -213,15 +213,12 @@ class LeadConnectBottomSheet {
                     child: ElevatedButton(
                       onPressed: () async {
                         if (channelId == 'facebook_ads') {
-                          final success = await controller.connectFacebook(
+                          await controller.connectFacebook(
                             clientId: clientIdCtrl.text,
                             clientSecret: clientSecretCtrl.text,
                             redirectUri: redirectUriCtrl.text,
                             state: stateCtrl.text,
                           );
-                          if (success) {
-                            Get.back();
-                          }
                         } else {
                           await controller.saveOAuthCredentials(
                             id: item.id,

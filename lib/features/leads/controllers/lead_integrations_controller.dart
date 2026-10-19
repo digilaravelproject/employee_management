@@ -1,13 +1,13 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../../core/services/network/api_client.dart';
 import '../../../core/services/storage/shared_prefs.dart';
 import '../domain/usecases/get_facebook_authorization_url_usecase.dart';
 import '../models/facebook_authorization_request_model.dart';
 import '../models/lead_integration_model.dart';
 import '../repositories/lead_integrations_repository.dart';
+import '../views/facebook_oauth_webview_screen.dart';
 
 class LeadIntegrationsController extends GetxController {
   final GetFacebookAuthorizationUrlUseCase getFacebookAuthorizationUrlUseCase;
@@ -152,24 +152,32 @@ class LeadIntegrationsController extends GetxController {
         markConnected: true,
       );
 
-      // If backend returns authorization URL, launch in browser/app
-      if (response.authorizationUrl != null && response.authorizationUrl!.isNotEmpty) {
-        final uri = Uri.tryParse(response.authorizationUrl!);
-        if (uri != null) {
-          await launchUrl(uri, mode: LaunchMode.externalApplication);
-        }
+      // Close bottom sheet if currently displayed
+      if (Get.isBottomSheetOpen ?? false) {
+        Get.back();
       }
 
-      Get.snackbar(
-        'Facebook Connected 🚀',
-        response.message.isNotEmpty
-            ? response.message
-            : 'Facebook authorization URL generated and credentials saved successfully.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: const Color(0xFF10B981),
-        colorText: Colors.white,
-        duration: const Duration(seconds: 4),
-      );
+      // If backend returns authorization URL, open in in-app WebView
+      if (response.authorizationUrl != null && response.authorizationUrl!.isNotEmpty) {
+        Get.to(
+          () => FacebookOAuthWebViewScreen(
+            url: response.authorizationUrl!,
+            redirectUri: redirectUri,
+            title: 'Facebook (Meta) Ads',
+          ),
+        );
+      } else {
+        Get.snackbar(
+          'Facebook Connected 🚀',
+          response.message.isNotEmpty
+              ? response.message
+              : 'Facebook credentials saved successfully.',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: const Color(0xFF10B981),
+          colorText: Colors.white,
+          duration: const Duration(seconds: 4),
+        );
+      }
 
       return true;
     } catch (e) {

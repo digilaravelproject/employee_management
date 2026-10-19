@@ -41,8 +41,8 @@ class AdminLeadsHubController extends GetxController {
   // Filter Observables
   // Assignment: 'all', 'unassigned', 'assigned'
   final RxString selectedAssignment = 'all'.obs;
-  // Source: 'all', 'website', 'google_ads', 'facebook_ads', 'justdial', 'referral', etc.
-  final RxString selectedSource = 'all'.obs;
+  // Source: 'all_channels', 'website', 'google', 'facebook', 'justdial', 'referral'
+  final RxString selectedSource = 'all_channels'.obs;
   // Status: 'all', 'new', 'interested', etc.
   final RxString selectedStatus = 'all'.obs;
   final RxString searchQuery = ''.obs;
@@ -223,7 +223,7 @@ class AdminLeadsHubController extends GetxController {
 
   void resetAllFilters() {
     selectedAssignment.value = 'all';
-    selectedSource.value = 'all';
+    selectedSource.value = 'all_channels';
     selectedStatus.value = 'all';
     searchQuery.value = '';
     searchController.clear();

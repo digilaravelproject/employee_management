@@ -115,22 +115,22 @@ class EmployeeMoreScreen extends StatelessWidget {
           ));
         }
 
-        if (isAdmin) {
-          workItems.add(_MoreMenuItem(
-            icon: Iconsax.chart_2,
-            title: 'Sales CRM (Admin View)',
-            subtitle: 'Multi-source leads, executive revenue & lead allocation',
-            iconColor: const Color(0xFF312E81),
-            onTap: () => Get.to(() => const SalesAdminDashboardScreen()),
-          ));
-          workItems.add(_MoreMenuItem(
-            icon: Iconsax.link_21,
-            title: 'Lead & Ad Integrations',
-            subtitle: 'Facebook & Google connection status (Tap to connect)',
-            iconColor: const Color(0xFF1877F2),
-            trailingWidget: _buildIntegrationsStatusBadge(),
-            onTap: () => LeadConnectBottomSheet.showPlatformSelector(context),
-          ));
+       // if (isAdmin) {
+       //    workItems.add(_MoreMenuItem(
+       //      icon: Iconsax.chart_2,
+       //      title: 'Sales CRM (Admin View)',
+       //      subtitle: 'Multi-source leads, executive revenue & lead allocation',
+       //      iconColor: const Color(0xFF312E81),
+       //      onTap: () => Get.to(() => const SalesAdminDashboardScreen()),
+       //    ));
+       //    workItems.add(_MoreMenuItem(
+       //      icon: Iconsax.link_21,
+       //      title: 'Lead & Ad Integrations',
+       //      subtitle: 'Facebook & Google connection status (Tap to connect)',
+       //      iconColor: const Color(0xFF1877F2),
+       //      trailingWidget: _buildIntegrationsStatusBadge(),
+       //      onTap: () => LeadConnectBottomSheet.showPlatformSelector(context),
+       //    ));
           workItems.add(_MoreMenuItem(
             icon: Iconsax.headphone,
             title: 'Sales Tele-CRM (Executive)',
@@ -138,7 +138,7 @@ class EmployeeMoreScreen extends StatelessWidget {
             iconColor: const Color(0xFF10B981),
             onTap: () => Get.to(() => const SalesExecutiveTeleCrmScreen()),
           ));
-        }
+       // }
 
         // 2. Finance & Communication
         final financeItems = <Widget>[];

@@ -27,10 +27,17 @@ class AdminLeadsRequestModel {
       params['assignment'] = assignment!.trim().toLowerCase();
     }
 
-    if (source != null &&
-        source!.trim().isNotEmpty &&
-        source!.toLowerCase() != 'all') {
-      params['source'] = source!.trim().toLowerCase();
+    if (source != null && source!.trim().isNotEmpty) {
+      final s = source!.trim().toLowerCase();
+      if (s == 'all' || s == 'all_channels') {
+        params['source'] = 'all_channels';
+      } else if (s == 'google_ads') {
+        params['source'] = 'google';
+      } else if (s == 'facebook_ads') {
+        params['source'] = 'facebook';
+      } else {
+        params['source'] = s;
+      }
     }
 
     if (status != null &&
@@ -59,10 +66,17 @@ class AdminLeadsRequestModel {
       params['assignment'] = assignment!.trim().toLowerCase();
     }
 
-    if (source != null &&
-        source!.trim().isNotEmpty &&
-        source!.toLowerCase() != 'all') {
-      params['source'] = source!.trim().toLowerCase();
+    if (source != null && source!.trim().isNotEmpty) {
+      final s = source!.trim().toLowerCase();
+      if (s == 'all' || s == 'all_channels') {
+        params['source'] = 'all_channels';
+      } else if (s == 'google_ads') {
+        params['source'] = 'google';
+      } else if (s == 'facebook_ads') {
+        params['source'] = 'facebook';
+      } else {
+        params['source'] = s;
+      }
     }
 
     if (status != null &&

@@ -1915,10 +1915,10 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
     final bool hasStatusFilter = currentStatus != 'all';
 
     final sourceChannels = [
-      {'key': 'all', 'label': 'All Channels', 'color': null},
+      {'key': 'all_channels', 'label': 'All Channels', 'color': null},
       {'key': 'website', 'label': 'Website', 'color': const Color(0xFF10B981)},
-      {'key': 'google_ads', 'label': 'Google Ads', 'color': const Color(0xFFEA4335)},
-      {'key': 'facebook_ads', 'label': 'Facebook Ads', 'color': const Color(0xFF1877F2)},
+      {'key': 'google', 'label': 'Google Ads', 'color': const Color(0xFFEA4335)},
+      {'key': 'facebook', 'label': 'Facebook Ads', 'color': const Color(0xFF1877F2)},
       {'key': 'justdial', 'label': 'JustDial', 'color': const Color(0xFFF58220)},
       {'key': 'referral', 'label': 'Referral', 'color': const Color(0xFF8B5CF6)},
     ];
@@ -1990,10 +1990,17 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
             final key = item['key'] as String;
             final label = item['label'] as String;
             final color = item['color'] as Color?;
+            final isSelected = currentSource == key ||
+                ((currentSource == 'all' || currentSource == 'all_channels') &&
+                    key == 'all_channels') ||
+                ((currentSource == 'google_ads' || currentSource == 'google') &&
+                    key == 'google') ||
+                ((currentSource == 'facebook_ads' || currentSource == 'facebook') &&
+                    key == 'facebook');
             return _buildSourceChannelTab(
               label: label,
               key: key,
-              isSelected: currentSource == key,
+              isSelected: isSelected,
               color: color,
               onTap: () => _hubController.setSourceFilter(key),
             );
@@ -2011,6 +2018,7 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
     Color? color,
   }) {
     final chipColor = color ?? AppColors.primaryColor;
+    final isAll = key == 'all' || key == 'all_channels';
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: GestureDetector(
@@ -2019,12 +2027,12 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
           padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7.5),
           decoration: BoxDecoration(
             color: isSelected
-                ? (key == 'all' ? AppColors.primaryColor : chipColor.withValues(alpha: 0.12))
+                ? (isAll ? AppColors.primaryColor : chipColor.withValues(alpha: 0.12))
                 : Colors.white,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
               color: isSelected
-                  ? (key == 'all' ? AppColors.primaryColor : chipColor)
+                  ? (isAll ? AppColors.primaryColor : chipColor)
                   : const Color(0xFFCBD5E1),
               width: isSelected ? 1.5 : 1.0,
             ),
@@ -2039,7 +2047,7 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (key != 'all') ...[
+              if (!isAll) ...[
                 Icon(
                   _getSourceIcon(key),
                   size: 13,
@@ -2052,7 +2060,7 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
                 fontSize: 12,
                 fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
                 color: isSelected
-                    ? (key == 'all' ? Colors.white : chipColor)
+                    ? (isAll ? Colors.white : chipColor)
                     : const Color(0xFF334155),
               ),
             ],
@@ -2173,7 +2181,7 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
                         TextButton(
                           onPressed: () {
                             setModalState(() {
-                              tempSource = 'all';
+                              tempSource = 'all_channels';
                               tempStatus = 'all';
                               tempAssignment = 'all';
                             });
@@ -2209,7 +2217,7 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
                                 fontWeight: FontWeight.w800,
                                 color: Color(0xFF1E293B),
                               ),
-                              if (tempSource != 'all') ...[
+                              if (tempSource != 'all_channels' && tempSource != 'all') ...[
                                 const SizedBox(width: 6),
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
@@ -2230,8 +2238,8 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
                               _buildModalFilterChip(
                                 label: 'All Channels',
                                 icon: Icons.all_inclusive_rounded,
-                                isSelected: tempSource == 'all',
-                                onTap: () => setModalState(() => tempSource = 'all'),
+                                isSelected: tempSource == 'all_channels' || tempSource == 'all',
+                                onTap: () => setModalState(() => tempSource = 'all_channels'),
                               ),
                               _buildModalFilterChip(
                                 label: 'Website',
@@ -2244,15 +2252,15 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
                                 label: 'Google Ads',
                                 icon: Icons.ads_click_rounded,
                                 accentColor: const Color(0xFFEA4335),
-                                isSelected: tempSource == 'google_ads',
-                                onTap: () => setModalState(() => tempSource = 'google_ads'),
+                                isSelected: tempSource == 'google' || tempSource == 'google_ads',
+                                onTap: () => setModalState(() => tempSource = 'google'),
                               ),
                               _buildModalFilterChip(
                                 label: 'Facebook Ads',
                                 icon: Icons.campaign_rounded,
                                 accentColor: const Color(0xFF1877F2),
-                                isSelected: tempSource == 'facebook_ads',
-                                onTap: () => setModalState(() => tempSource = 'facebook_ads'),
+                                isSelected: tempSource == 'facebook' || tempSource == 'facebook_ads',
+                                onTap: () => setModalState(() => tempSource = 'facebook'),
                               ),
                               _buildModalFilterChip(
                                 label: 'JustDial',
