@@ -14,6 +14,9 @@ import '../repositories/admin_leads_repository_interface.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'lead_connect_bottom_sheet.dart';
 import '../controllers/lead_integrations_controller.dart';
+import '../controllers/admin_lead_statuses_controller.dart';
+import '../models/lead_status_model.dart';
+import 'lead_status_detail_screen.dart';
 
 // ── MODELS ───────────────────────────────────────────────────────────────────
 
@@ -53,23 +56,7 @@ class SourceAssignRule {
   });
 }
 
-class AdminLeadStatusItem {
-  String id;
-  String name; // Interested, Follow-up, Converted, Unreachable, Wrong Number, New, In Progress
-  String colorHex;
-  String category; // Prospecting, Active Lead, Won, Disqualified
-  String description;
-  bool isDefault;
-
-  AdminLeadStatusItem({
-    required this.id,
-    required this.name,
-    required this.colorHex,
-    required this.category,
-    this.description = '',
-    this.isDefault = false,
-  });
-}
+typedef AdminLeadStatusItem = LeadStatusModel;
 
 class AdminLeadItem {
   final String id;
@@ -107,6 +94,69 @@ class AdminLeadItem {
     this.lastCallDuration = '0m',
     required this.processSteps,
   });
+
+  factory AdminLeadItem.fromAdminLeadData(AdminLeadDataModel item) {
+    String assignedName = 'Unassigned';
+    String assignedAvatar = '';
+    if (item.assignedEmployee != null) {
+      if (item.assignedEmployee is Map) {
+        assignedName = (item.assignedEmployee['name'] ?? item.assignedEmployee['full_name'] ?? 'Assigned').toString();
+        assignedAvatar = (item.assignedEmployee['avatar'] ?? item.assignedEmployee['image'] ?? '').toString();
+      } else {
+        assignedName = item.assignedEmployee.toString();
+      }
+    } else if (item.assignedTo != null) {
+      assignedName = item.assignedTo.toString();
+    }
+
+    String colorHex = '0xFF3B82F6';
+    final s = (item.source ?? '').toLowerCase();
+    if (s.contains('facebook')) {
+      colorHex = '0xFF1877F2';
+    } else if (s.contains('google')) {
+      colorHex = '0xFFEA4335';
+    } else if (s.contains('justdial')) {
+      colorHex = '0xFFF58220';
+    } else if (s.contains('web')) {
+      colorHex = '0xFF10B981';
+    } else if (s.contains('referral')) {
+      colorHex = '0xFF8B5CF6';
+    }
+
+    double pVal = 0.0;
+    if (item.estimatedValue != null) {
+      pVal = double.tryParse(item.estimatedValue.toString()) ?? 0.0;
+    }
+
+    final steps = item.history.map((h) => LeadProcessStep(
+      title: h.title ?? h.eventType ?? 'Activity',
+      date: h.occurredAt ?? '',
+      note: h.description ?? '',
+      performedBy: h.actorName ?? 'System',
+      isCompleted: true,
+    )).toList();
+
+    return AdminLeadItem(
+      id: item.leadCode ?? 'LD-${item.id}',
+      customerName: (item.fullName != null && item.fullName!.isNotEmpty)
+          ? item.fullName!
+          : (item.companyName != null && item.companyName!.isNotEmpty ? item.companyName! : 'Lead #${item.id}'),
+      phone: item.mobileNumber ?? '',
+      email: item.email ?? '',
+      source: item.source ?? 'Website',
+      sourceColorHex: colorHex,
+      assignedExecutive: assignedName,
+      assignedExecutiveAvatar: assignedAvatar,
+      isSelfGenerated: false,
+      status: item.status ?? 'New',
+      dateReceived: item.createdAt ?? '',
+      requirement: item.requirement ?? '',
+      potentialValue: pVal,
+      callAttempts: 0,
+      lastCallDuration: '0m',
+      processSteps: steps,
+    );
+  }
 }
 
 class SalesExecutivePerf {
@@ -178,67 +228,16 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
   late List<SourceAssignRule> _sourceRules;
   int _roundRobinIndex = 0;
 
-  // Lead Statuses Management State
-  late List<AdminLeadStatusItem> _leadStatuses;
+  // Lead Statuses Management Controller (API Driven)
+  late final AdminLeadStatusesController _statusController;
 
-  // Mock Sales Executives
-  final List<SalesExecutivePerf> _executives = [
-    SalesExecutivePerf(
-      name: 'Rahul Sharma',
-      avatar: 'https://yellowgreen-stork-427223.hostingersite.com/storage/avatars/wiS1bnWjQxY81Zkn73BBwSEtNa8tFy6qWT5NpwhU.jpg',
-      designation: 'Sr. Sales Executive',
-      revenue: 650000,
-      target: 800000,
-      callsCount: 340,
-      totalTalkTime: '24h 15m',
-      avgTalkTime: '4m 30s',
-      convertedLeads: 14,
-      totalLeadsAssigned: 30,
-      totalLeadsSelfGenerated: 15,
-    ),
-    SalesExecutivePerf(
-      name: 'Priya Patel',
-      avatar: '',
-      designation: 'Sales Executive',
-      revenue: 420000,
-      target: 500000,
-      callsCount: 280,
-      totalTalkTime: '17h 40m',
-      avgTalkTime: '3m 45s',
-      convertedLeads: 9,
-      totalLeadsAssigned: 22,
-      totalLeadsSelfGenerated: 10,
-    ),
-    SalesExecutivePerf(
-      name: 'Amit Verma',
-      avatar: '',
-      designation: 'Tele-Sales Representative',
-      revenue: 510000,
-      target: 600000,
-      callsCount: 410,
-      totalTalkTime: '32h 10m',
-      avgTalkTime: '5m 10s',
-      convertedLeads: 11,
-      totalLeadsAssigned: 28,
-      totalLeadsSelfGenerated: 12,
-    ),
-    SalesExecutivePerf(
-      name: 'Neha Singh',
-      avatar: '',
-      designation: 'Sales Executive',
-      revenue: 380000,
-      target: 500000,
-      callsCount: 210,
-      totalTalkTime: '11h 20m',
-      avgTalkTime: '3m 15s',
-      convertedLeads: 7,
-      totalLeadsAssigned: 20,
-      totalLeadsSelfGenerated: 8,
-    ),
-  ];
-
-  // Mock Master Leads Database
-  late List<AdminLeadItem> _leadsList;
+  // Master Leads Database (Dynamic from API)
+  List<AdminLeadItem> get _leadsList {
+    if (Get.isRegistered<AdminLeadsHubController>()) {
+      return _hubController.leadsList.map((e) => AdminLeadItem.fromAdminLeadData(e)).toList();
+    }
+    return const [];
+  }
   late final AdminLeadsHubController _hubController;
 
   @override
@@ -248,135 +247,20 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
       AdminLeadsHubBinding().dependencies();
     }
     _hubController = Get.find<AdminLeadsHubController>();
+    _statusController = AdminLeadStatusesController.to;
+    // Call lead integrations status & lead statuses immediately when Sales CRM opens
+    LeadIntegrationsController.to.fetchLeadIntegrationsStatus();
+    _statusController.fetchLeadStatuses(category: 'active_lead');
     _mainTabController = TabController(length: 4, vsync: this);
     _mainTabController.addListener(() {
       if (mounted) setState(() {});
     });
     _initLeadsData();
     _initSourceRules();
-    _initLeadStatuses();
   }
 
   void _initSourceRules() {
-    _sourceRules = [
-      SourceAssignRule(
-        id: 'SR-01',
-        sourceName: 'Google Ads',
-        colorHex: '0xFFEA4335',
-        assignedExecutives: ['Rahul Sharma', 'Neha Singh'],
-        strategy: 'Round-Robin',
-        isActive: true,
-      ),
-      SourceAssignRule(
-        id: 'SR-02',
-        sourceName: 'Facebook Ads',
-        colorHex: '0xFF1877F2',
-        assignedExecutives: ['Priya Patel'],
-        strategy: 'Round-Robin',
-        isActive: true,
-      ),
-      SourceAssignRule(
-        id: 'SR-03',
-        sourceName: 'JustDial',
-        colorHex: '0xFFF58220',
-        assignedExecutives: ['Priya Patel', 'Amit Verma'],
-        strategy: 'Round-Robin',
-        isActive: true,
-      ),
-      SourceAssignRule(
-        id: 'SR-04',
-        sourceName: 'Website',
-        colorHex: '0xFF10B981',
-        assignedExecutives: ['Rahul Sharma'],
-        strategy: 'Primary',
-        isActive: true,
-      ),
-      SourceAssignRule(
-        id: 'SR-05',
-        sourceName: 'Referral',
-        colorHex: '0xFF8B5CF6',
-        assignedExecutives: ['Amit Verma'],
-        strategy: 'Primary',
-        isActive: true,
-      ),
-      SourceAssignRule(
-        id: 'SR-06',
-        sourceName: 'Direct Inquiry',
-        colorHex: '0xFF6366F1',
-        assignedExecutives: ['Rahul Sharma', 'Priya Patel', 'Amit Verma', 'Neha Singh'],
-        strategy: 'Round-Robin',
-        isActive: true,
-      ),
-    ];
-  }
-
-  void _initLeadStatuses() {
-    _leadStatuses = [
-      AdminLeadStatusItem(
-        id: 'ST-01',
-        name: 'New',
-        colorHex: '0xFF3B82F6',
-        category: 'Prospecting',
-        description: 'Fresh lead captured, pending first outreach call.',
-        isDefault: true,
-      ),
-      AdminLeadStatusItem(
-        id: 'ST-02',
-        name: 'Interested',
-        colorHex: '0xFF10B981',
-        category: 'Active Lead',
-        description: 'Client expressed interest & requested proposal/demo.',
-        isDefault: false,
-      ),
-      AdminLeadStatusItem(
-        id: 'ST-03',
-        name: 'Follow-up',
-        colorHex: '0xFFF59E0B',
-        category: 'Active Lead',
-        description: 'Callback scheduled; active discussions ongoing.',
-        isDefault: false,
-      ),
-      AdminLeadStatusItem(
-        id: 'ST-04',
-        name: 'In Progress',
-        colorHex: '0xFF6366F1',
-        category: 'Active Lead',
-        description: 'Technical evaluation or contract review in progress.',
-        isDefault: false,
-      ),
-      AdminLeadStatusItem(
-        id: 'ST-05',
-        name: 'Converted',
-        colorHex: '0xFF059669',
-        category: 'Won',
-        description: 'Deal closed & advance payment received.',
-        isDefault: false,
-      ),
-      AdminLeadStatusItem(
-        id: 'ST-06',
-        name: 'Unreachable',
-        colorHex: '0xFF8B5CF6',
-        category: 'Active Lead',
-        description: 'Call unanswered after 3+ attempts.',
-        isDefault: false,
-      ),
-      AdminLeadStatusItem(
-        id: 'ST-07',
-        name: 'Wrong Number',
-        colorHex: '0xFFEF4444',
-        category: 'Disqualified',
-        description: 'Invalid contact details or spam inquiry.',
-        isDefault: false,
-      ),
-      AdminLeadStatusItem(
-        id: 'ST-08',
-        name: 'Not Interested',
-        colorHex: '0xFF64748B',
-        category: 'Disqualified',
-        description: 'Client declined offer or purchased competitor product.',
-        isDefault: false,
-      ),
-    ];
+    _sourceRules = [];
   }
 
   void _triggerAutoAssignUnassignedLeads() {
@@ -407,9 +291,11 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
               targetExecName = rule.assignedExecutives.first;
             }
 
-            final execObj = _executives.firstWhere(
+            final execList = _effectiveExecutivesList;
+            if (execList.isEmpty) continue;
+            final execObj = execList.firstWhere(
               (e) => e.name == targetExecName,
-              orElse: () => _executives.first,
+              orElse: () => execList.first,
             );
 
             lead.assignedExecutive = execObj.name;
@@ -439,178 +325,7 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
   }
 
   void _initLeadsData() {
-    _leadsList = [
-      AdminLeadItem(
-        id: 'LD-1092',
-        customerName: 'Anil Kumar (TechCorp India)',
-        phone: '+91 98765 43210',
-        email: 'anil@techcorp.in',
-        source: 'Facebook Ads',
-        sourceColorHex: '0xFF1877F2',
-        assignedExecutive: 'Rahul Sharma',
-        assignedExecutiveAvatar: 'https://yellowgreen-stork-427223.hostingersite.com/storage/avatars/wiS1bnWjQxY81Zkn73BBwSEtNa8tFy6qWT5NpwhU.jpg',
-        isSelfGenerated: false,
-        status: 'Interested',
-        dateReceived: '07 Oct 2026',
-        requirement: 'ERP & Attendance Suite - 50 Licenses',
-        potentialValue: 120000,
-        callAttempts: 4,
-        lastCallDuration: '6m 12s',
-        processSteps: [
-          LeadProcessStep(title: 'Lead Captured via Facebook Ads', date: '05 Oct 2026', time: '10:30 AM', note: 'Inbound inquiry from Facebook lead form', performedBy: 'System Auto', isCompleted: true),
-          LeadProcessStep(title: 'Assigned to Rahul Sharma', date: '05 Oct 2026', time: '10:35 AM', note: 'Admin auto-allocated to Rahul', performedBy: 'Admin (Ramesh)', isCompleted: true),
-          LeadProcessStep(title: 'First Intro Call & Needs Analysis', date: '06 Oct 2026', time: '11:15 AM', note: 'Discussed biometric integration and 50 employee licenses', performedBy: 'Rahul Sharma', isCompleted: true),
-          LeadProcessStep(title: 'Product Demo & Proposal Sent', date: '07 Oct 2026', time: '02:00 PM', note: 'Shared quote of ₹1.2L via email and WhatsApp', performedBy: 'Rahul Sharma', isCompleted: true),
-          LeadProcessStep(title: 'Final Deal Closure', date: 'Pending', time: '-', note: 'Awaiting PO approval from Finance team', performedBy: 'Rahul Sharma', isCompleted: false),
-        ],
-      ),
-      AdminLeadItem(
-        id: 'LD-1093',
-        customerName: 'Sanjay Mehta (Apex Logistics)',
-        phone: '+91 98112 33445',
-        email: 'sanjay.m@apexlogistics.com',
-        source: 'JustDial',
-        sourceColorHex: '0xFFF58220',
-        assignedExecutive: 'Priya Patel',
-        assignedExecutiveAvatar: '',
-        isSelfGenerated: false,
-        status: 'Follow-up',
-        dateReceived: '07 Oct 2026',
-        requirement: 'Biometric Hardware & GPS Tracking',
-        potentialValue: 45000,
-        callAttempts: 2,
-        lastCallDuration: '3m 45s',
-        processSteps: [
-          LeadProcessStep(title: 'JustDial Inquiry Received', date: '06 Oct 2026', time: '09:15 AM', note: 'Hardware requirement inquiry', performedBy: 'System Auto', isCompleted: true),
-          LeadProcessStep(title: 'Assigned to Priya Patel', date: '06 Oct 2026', time: '09:20 AM', note: 'Admin allocated lead', performedBy: 'Admin (Ramesh)', isCompleted: true),
-          LeadProcessStep(title: 'Call #1 - Follow-up Scheduled', date: '07 Oct 2026', time: '04:30 PM', note: 'Client requested call back on Friday at 3 PM', performedBy: 'Priya Patel', isCompleted: true),
-        ],
-      ),
-      AdminLeadItem(
-        id: 'LD-1094',
-        customerName: 'Dr. Vikram Shah (HealthClinic)',
-        phone: '+91 97234 56789',
-        email: 'vikram.shah@healthclinic.org',
-        source: 'Website',
-        sourceColorHex: '0xFF10B981',
-        assignedExecutive: 'Amit Verma',
-        assignedExecutiveAvatar: '',
-        isSelfGenerated: true,
-        status: 'Converted',
-        dateReceived: '06 Oct 2026',
-        requirement: 'Custom Clinic Staff Attendance App',
-        potentialValue: 210000,
-        callAttempts: 6,
-        lastCallDuration: '12m 30s',
-        processSteps: [
-          LeadProcessStep(title: 'Self Generated by Executive', date: '02 Oct 2026', time: '11:00 AM', note: 'Cold call outreach by Amit Verma', performedBy: 'Amit Verma', isCompleted: true),
-          LeadProcessStep(title: 'Requirement Finalized', date: '04 Oct 2026', time: '03:45 PM', note: 'Custom doctors shift module agreed', performedBy: 'Amit Verma', isCompleted: true),
-          LeadProcessStep(title: 'Advance Payment Received', date: '06 Oct 2026', time: '10:20 AM', note: '₹2.1L full payment cleared via NetBanking', performedBy: 'Finance (Riya)', isCompleted: true),
-        ],
-      ),
-      AdminLeadItem(
-        id: 'LD-1095',
-        customerName: 'Vikrant Builders (On-Site Staff)',
-        phone: '+91 99887 76655',
-        email: 'info@vikrantbuilders.com',
-        source: 'Google Ads',
-        sourceColorHex: '0xFFEA4335',
-        assignedExecutive: 'Rahul Sharma',
-        assignedExecutiveAvatar: 'https://yellowgreen-stork-427223.hostingersite.com/storage/avatars/wiS1bnWjQxY81Zkn73BBwSEtNa8tFy6qWT5NpwhU.jpg',
-        isSelfGenerated: false,
-        status: 'New',
-        dateReceived: '07 Oct 2026',
-        requirement: 'GPS Field Staff Tracking System',
-        potentialValue: 180000,
-        callAttempts: 0,
-        lastCallDuration: '0m',
-        processSteps: [
-          LeadProcessStep(title: 'Google Ads High-Intent Lead', date: '07 Oct 2026', time: '08:00 AM', note: 'Received from search ad targeting site attendance', performedBy: 'System Auto', isCompleted: true),
-          LeadProcessStep(title: 'Assigned to Rahul Sharma', date: '07 Oct 2026', time: '08:05 AM', note: 'Pending first call outreach', performedBy: 'Admin (Ramesh)', isCompleted: false),
-        ],
-      ),
-      AdminLeadItem(
-        id: 'LD-1096',
-        customerName: 'Rohan Deshmukh (Deshmukh Logistics)',
-        phone: '+91 94220 11223',
-        email: 'rohan@deshmukhlogistics.com',
-        source: 'Referral',
-        sourceColorHex: '0xFF8B5CF6',
-        assignedExecutive: 'Neha Singh',
-        assignedExecutiveAvatar: '',
-        isSelfGenerated: true,
-        status: 'Unreachable',
-        dateReceived: '05 Oct 2026',
-        requirement: 'Payroll Software Module',
-        potentialValue: 60000,
-        callAttempts: 5,
-        lastCallDuration: '0m 40s',
-        processSteps: [
-          LeadProcessStep(title: 'Referral Received', date: '05 Oct 2026', time: '12:30 PM', note: 'Referred by existing customer Apex', performedBy: 'Neha Singh', isCompleted: true),
-          LeadProcessStep(title: '5 Unanswered Calls', date: '07 Oct 2026', time: '05:00 PM', note: 'Switched off / out of coverage', performedBy: 'Neha Singh', isCompleted: false),
-        ],
-      ),
-      AdminLeadItem(
-        id: 'LD-1097',
-        customerName: 'Pooja Enterprises (Retail Chain)',
-        phone: '+91 93211 44556',
-        email: 'contact@poojaent.in',
-        source: 'Facebook Ads',
-        sourceColorHex: '0xFF1877F2',
-        assignedExecutive: 'Unassigned',
-        assignedExecutiveAvatar: '',
-        isSelfGenerated: false,
-        status: 'New',
-        dateReceived: '07 Oct 2026',
-        requirement: 'Shift Scheduling & Overtime Tracker',
-        potentialValue: 95000,
-        callAttempts: 0,
-        lastCallDuration: '0m',
-        processSteps: [
-          LeadProcessStep(title: 'New Facebook Lead Inbound', date: '07 Oct 2026', note: 'Fresh lead awaiting admin allocation', isCompleted: true),
-        ],
-      ),
-      AdminLeadItem(
-        id: 'LD-1098',
-        customerName: 'Global Solutions (Delhi Office)',
-        phone: '+91 91122 33445',
-        email: 'sales@globalsolutions.com',
-        source: 'Google Ads',
-        sourceColorHex: '0xFFEA4335',
-        assignedExecutive: 'Unassigned',
-        assignedExecutiveAvatar: '',
-        isSelfGenerated: false,
-        status: 'New',
-        dateReceived: '07 Oct 2026',
-        requirement: 'Multi-location Attendance Portal',
-        potentialValue: 150000,
-        callAttempts: 0,
-        lastCallDuration: '0m',
-        processSteps: [
-          LeadProcessStep(title: 'Google Ads Contact Form', date: '07 Oct 2026', note: 'High urgency request for 100+ employees', isCompleted: true),
-        ],
-      ),
-      AdminLeadItem(
-        id: 'LD-1099',
-        customerName: 'Karan Malhotra',
-        phone: '+91 90000 00000',
-        email: 'invalid@number.com',
-        source: 'JustDial',
-        sourceColorHex: '0xFFF58220',
-        assignedExecutive: 'Amit Verma',
-        assignedExecutiveAvatar: '',
-        isSelfGenerated: false,
-        status: 'Wrong Number',
-        dateReceived: '04 Oct 2026',
-        requirement: 'General Inquiry',
-        potentialValue: 0,
-        callAttempts: 1,
-        lastCallDuration: '0m 15s',
-        processSteps: [
-          LeadProcessStep(title: 'JustDial Auto Import', date: '04 Oct 2026', note: 'Phone number non-existent', isCompleted: true),
-        ],
-      ),
-    ];
+    // Dynamic leads are obtained directly from AdminLeadsHubController via API
   }
 
   @override
@@ -630,7 +345,7 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
             .toList();
       }
     }
-    return _executives;
+    return const [];
   }
 
   // Filtered Executives for Option 1
@@ -827,7 +542,7 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
           'index': 0,
           'title': 'Sales Team',
           'subtitle': 'Monitor executive performance, talk-time & call logs',
-          'stat': '${_executives.length} Active Executives',
+          'stat': '${_effectiveExecutivesList.length} Active Executives',
           'icon': Iconsax.user_search,
           'color': AppColors.primaryColor,
           'lightColor': const Color(0xFFEEF2FF),
@@ -843,7 +558,7 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
           'lightColor': const Color(0xFFEFF6FF),
           'badge': unassignedLeads > 0 ? '$unassignedLeads New' : null,
         },
-      {
+      /*{
         'index': 2,
         'title': 'Source Rules',
         'subtitle': 'Google, FB Ads & JustDial auto-assignment rules',
@@ -852,12 +567,12 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
         'color': const Color(0xFF7C3AED),
         'lightColor': const Color(0xFFF5F3FF),
         'badge': null,
-      },
+      },*/
       {
         'index': 3,
         'title': 'Lead Statuses',
         'subtitle': 'Manage lead pipeline stage tags & status CRUD',
-        'stat': '${_leadStatuses.length} Active Statuses',
+        'stat': '${_statusController.leadStatuses.length} Active Statuses',
         'icon': Iconsax.category,
         'color': const Color(0xFF059669),
         'lightColor': const Color(0xFFECFDF5),
@@ -1038,6 +753,15 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
     return Obx(() {
       final isMeta = controller.isMetaConnected;
       final isGoogle = controller.isGoogleConnected;
+      final fbData = controller.liveStatus.value?.facebook;
+      final googleData = controller.liveStatus.value?.google;
+
+      final fbSubtitle = (fbData != null && fbData.pageName != null && fbData.pageName!.isNotEmpty)
+          ? fbData.pageName!
+          : null;
+      final googleSubtitle = googleData != null && !googleData.connected
+          ? 'Not configured'
+          : null;
 
       return Container(
         padding: const EdgeInsets.all(14),
@@ -1119,6 +843,7 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
                     icon: Icons.facebook,
                     color: const Color(0xFF1877F2),
                     isConnected: isMeta,
+                    subtitle: fbSubtitle,
                     onTap: () => LeadConnectBottomSheet.show(context, channelId: 'facebook_ads'),
                   ),
                 ),
@@ -1129,6 +854,7 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
                     icon: Icons.campaign_rounded,
                     color: const Color(0xFFEA4335),
                     isConnected: isGoogle,
+                    subtitle: googleSubtitle,
                     onTap: () => LeadConnectBottomSheet.show(context, channelId: 'google_ads'),
                   ),
                 ),
@@ -1145,6 +871,7 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
     required IconData icon,
     required Color color,
     required bool isConnected,
+    String? subtitle,
     VoidCallback? onTap,
   }) {
     return Container(
@@ -1179,6 +906,16 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
+                      if (subtitle != null && subtitle.isNotEmpty) ...[
+                        AppText(
+                          subtitle,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w500,
+                          color: isConnected ? const Color(0xFF15803D) : const Color(0xFF64748B),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
                       Row(
                         children: [
                           Container(
@@ -1359,7 +1096,7 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
                 borderRadius: BorderRadius.circular(12),
               ),
               child: AppText(
-                '${_executives.length} Executives',
+                '${_effectiveExecutivesList.length} Executives',
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
                 color: AppColors.primaryColor,
@@ -2315,34 +2052,48 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
                                 isSelected: tempStatus == 'all',
                                 onTap: () => setModalState(() => tempStatus = 'all'),
                               ),
-                              _buildModalFilterChip(
-                                label: 'New Leads',
-                                icon: Icons.fiber_new_rounded,
-                                accentColor: const Color(0xFF2563EB),
-                                isSelected: tempStatus == 'new',
-                                onTap: () => setModalState(() => tempStatus = 'new'),
-                              ),
-                              _buildModalFilterChip(
-                                label: 'Interested',
-                                icon: Icons.thumb_up_alt_outlined,
-                                accentColor: const Color(0xFF16A34A),
-                                isSelected: tempStatus == 'interested',
-                                onTap: () => setModalState(() => tempStatus = 'interested'),
-                              ),
-                              _buildModalFilterChip(
-                                label: 'Follow-up',
-                                icon: Icons.access_time_rounded,
-                                accentColor: const Color(0xFFD97706),
-                                isSelected: tempStatus == 'follow_up',
-                                onTap: () => setModalState(() => tempStatus = 'follow_up'),
-                              ),
-                              _buildModalFilterChip(
-                                label: 'Converted',
-                                icon: Icons.check_circle_outline_rounded,
-                                accentColor: const Color(0xFF7C3AED),
-                                isSelected: tempStatus == 'converted',
-                                onTap: () => setModalState(() => tempStatus = 'converted'),
-                              ),
+                              if (_statusController.leadStatuses.isNotEmpty)
+                                ..._statusController.leadStatuses.map((st) {
+                                  final slug = st.slug ?? st.name.toLowerCase().replaceAll(' ', '_');
+                                  return _buildModalFilterChip(
+                                    label: st.name,
+                                    icon: Icons.label_outline_rounded,
+                                    accentColor: st.color,
+                                    isSelected: tempStatus.toLowerCase() == slug.toLowerCase() ||
+                                        tempStatus.toLowerCase() == st.name.toLowerCase(),
+                                    onTap: () => setModalState(() => tempStatus = slug),
+                                  );
+                                })
+                              else ...[
+                                _buildModalFilterChip(
+                                  label: 'New Leads',
+                                  icon: Icons.fiber_new_rounded,
+                                  accentColor: const Color(0xFF2563EB),
+                                  isSelected: tempStatus == 'new',
+                                  onTap: () => setModalState(() => tempStatus = 'new'),
+                                ),
+                                _buildModalFilterChip(
+                                  label: 'Interested',
+                                  icon: Icons.thumb_up_alt_outlined,
+                                  accentColor: const Color(0xFF16A34A),
+                                  isSelected: tempStatus == 'interested',
+                                  onTap: () => setModalState(() => tempStatus = 'interested'),
+                                ),
+                                _buildModalFilterChip(
+                                  label: 'Follow-up',
+                                  icon: Icons.access_time_rounded,
+                                  accentColor: const Color(0xFFD97706),
+                                  isSelected: tempStatus == 'follow_up',
+                                  onTap: () => setModalState(() => tempStatus = 'follow_up'),
+                                ),
+                                _buildModalFilterChip(
+                                  label: 'Converted',
+                                  icon: Icons.check_circle_outline_rounded,
+                                  accentColor: const Color(0xFF7C3AED),
+                                  isSelected: tempStatus == 'converted',
+                                  onTap: () => setModalState(() => tempStatus = 'converted'),
+                                ),
+                              ],
                             ],
                           ),
                           const SizedBox(height: 22),
@@ -3521,7 +3272,7 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
                     spacing: 6,
                     runSpacing: 6,
                     children: rule.assignedExecutives.map((execName) {
-                      final exec = _executives.firstWhere(
+                      final exec = _effectiveExecutivesList.firstWhere(
                         (e) => e.name == execName,
                         orElse: () => SalesExecutivePerf(
                           name: execName,
@@ -3638,7 +3389,7 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
                     const AppText('Allocation Strategy:', fontSize: 12, fontWeight: FontWeight.bold),
                     const SizedBox(height: 6),
                     DropdownButtonFormField<String>(
-                      value: selectedStrategy,
+                      initialValue: selectedStrategy,
                       decoration: InputDecoration(
                         fillColor: const Color(0xFFF8FAFC),
                         filled: true,
@@ -3659,7 +3410,7 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
                     // Employees Multi-select Checkboxes
                     const AppText('Select Assigned Employee(s):', fontSize: 12, fontWeight: FontWeight.bold),
                     const SizedBox(height: 8),
-                    ..._executives.map((exec) {
+                    ..._effectiveExecutivesList.map((exec) {
                       final isSelected = selectedExecs.contains(exec.name);
                       return CheckboxListTile(
                         dense: true,
@@ -3755,186 +3506,317 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
   // ───────────────────────────────────────────────────────────────────────────
 
   Widget _buildManageStatusesOptionView() {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      physics: const BouncingScrollPhysics(),
-      children: [
-        // Top Banner Header
-        Container(
+    return Obx(() {
+      final statuses = _statusController.leadStatuses;
+      final isLoading = _statusController.isLoading.value;
+
+      return RefreshIndicator(
+        onRefresh: () => _statusController.fetchLeadStatuses(),
+        child: ListView(
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.15),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
+          physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+          children: [
+            // Top Banner Header
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.15),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
-            ],
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    AppText(
-                      'Lead Status Management (Admin)',
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        AppText(
+                          'Lead Status Management (Admin)',
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                        ),
+                        SizedBox(height: 2),
+                        AppText(
+                          'Add, update, or delete lead status pipeline tags',
+                          fontSize: 11,
+                          color: Color(0xFF94A3B8),
+                        ),
+                      ],
                     ),
-                    SizedBox(height: 2),
-                    AppText(
-                      'Add, update, or delete lead status pipeline tags',
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton.icon(
+                    onPressed: () => _showAddEditStatusModal(),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    icon: const Icon(Iconsax.add, size: 14),
+                    label: const AppText('Add Status', fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Pipeline Stage Category Filter Tabs
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              child: Row(
+                children: [
+                  _buildStatusCategoryTab('active_lead', 'Active Lead'),
+                  const SizedBox(width: 8),
+                  _buildStatusCategoryTab('all', 'All Stages'),
+                  const SizedBox(width: 8),
+                  _buildStatusCategoryTab('prospecting', 'Prospecting'),
+                  const SizedBox(width: 8),
+                  _buildStatusCategoryTab('won', 'Won / Closed'),
+                  const SizedBox(width: 8),
+                  _buildStatusCategoryTab('disqualified', 'Disqualified'),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                AppText(
+                  _statusController.selectedCategory.value == 'active_lead'
+                      ? 'Active Lead Statuses List:'
+                      : _statusController.selectedCategory.value == 'all'
+                          ? 'All Lead Statuses List:'
+                          : '${_statusController.selectedCategory.value.replaceAll('_', ' ').capitalizeFirst} Statuses List:',
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF1E293B),
+                ),
+                if (!isLoading)
+                  AppText(
+                    '${_statusController.totalCount.value > 0 ? _statusController.totalCount.value : statuses.length} tags',
+                    fontSize: 11,
+                    color: const Color(0xFF64748B),
+                    fontWeight: FontWeight.w600,
+                  ),
+              ],
+            ),
+            const SizedBox(height: 10),
+
+            if (isLoading && statuses.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 40),
+                child: Center(
+                  child: CircularProgressIndicator(),
+                ),
+              )
+            else if (statuses.isEmpty)
+              Container(
+                margin: const EdgeInsets.symmetric(vertical: 20),
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFF1F5F9),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Iconsax.category, size: 32, color: Color(0xFF64748B)),
+                    ),
+                    const SizedBox(height: 12),
+                    const AppText(
+                      'No Lead Statuses Found',
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1E293B),
+                    ),
+                    const SizedBox(height: 4),
+                    const AppText(
+                      'Create pipeline stage tags to categorize and track your leads.',
                       fontSize: 11,
-                      color: Color(0xFF94A3B8),
+                      color: Color(0xFF64748B),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 14),
+                    ElevatedButton.icon(
+                      onPressed: () => _showAddEditStatusModal(),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primaryColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      icon: const Icon(Iconsax.add, size: 16),
+                      label: const AppText('Add Lead Status', fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(width: 8),
-              ElevatedButton.icon(
-                onPressed: () => _showAddEditStatusModal(),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryColor,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-                icon: const Icon(Iconsax.add, size: 14),
-                label: const AppText('Add Status', fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
+              )
+            else
+              ...statuses.map((status) {
+                final colorVal = status.color;
 
-        const AppText(
-          'Active Lead Statuses List:',
-          fontSize: 13,
-          fontWeight: FontWeight.bold,
-          color: Color(0xFF1E293B),
-        ),
-        const SizedBox(height: 10),
-
-        ..._leadStatuses.map((status) {
-          final colorVal = Color(int.parse(status.colorHex));
-          final leadsCount = _leadsList.where((l) => l.status == status.name).length;
-
-          return Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.02),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 14,
-                  height: 14,
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 10),
                   decoration: BoxDecoration(
-                    color: colorVal,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 2),
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
                     boxShadow: [
-                      BoxShadow(color: colorVal.withValues(alpha: 0.4), blurRadius: 4),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          AppText(status.name, fontSize: 14, fontWeight: FontWeight.w800),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: colorVal.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: AppText(
-                              status.category,
-                              fontSize: 9.5,
-                              fontWeight: FontWeight.bold,
-                              color: colorVal,
-                            ),
-                          ),
-                        ],
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.02),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
                       ),
-                      if (status.description.isNotEmpty) ...[
-                        const SizedBox(height: 4),
-                        AppText(status.description, fontSize: 11, color: AppColors.textColorSecondary),
-                      ],
                     ],
                   ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF1F5F9),
-                    borderRadius: BorderRadius.circular(8),
+                  child: Material(
+                    color: Colors.transparent,
+                    borderRadius: BorderRadius.circular(14),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(14),
+                      onTap: () => Get.to(() => LeadStatusDetailScreen(statusId: status.id, initialStatus: status)),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        child: Row(
+                          children: [
+                            // Color dot
+                            Container(
+                              width: 12,
+                              height: 12,
+                              decoration: BoxDecoration(
+                                color: colorVal,
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(color: colorVal.withValues(alpha: 0.5), blurRadius: 5),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            // Status name
+                            Expanded(
+                              child: AppText(
+                                status.name,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            // Category badge
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: colorVal.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: AppText(
+                                status.displayCategory,
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.bold,
+                                color: colorVal,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            // Forward arrow
+                            const Icon(
+                              Icons.chevron_right_rounded,
+                              size: 20,
+                              color: Color(0xFF94A3B8),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
-                  child: AppText(
-                    '$leadsCount Leads',
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xFF475569),
+                );
+
+              }),
+          ],
+        ),
+      );
+    });
+  }
+
+  Widget _buildStatusCategoryTab(String categoryKey, String label) {
+    final isSelected = _statusController.selectedCategory.value == categoryKey;
+    return GestureDetector(
+      onTap: () => _statusController.filterByCategory(categoryKey),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primaryColor : const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isSelected ? AppColors.primaryColor : const Color(0xFFE2E8F0),
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppColors.primaryColor.withValues(alpha: 0.25),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
                   ),
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Iconsax.edit_2, size: 16, color: Color(0xFF64748B)),
-                  onPressed: () => _showAddEditStatusModal(existingStatus: status),
-                ),
-                IconButton(
-                  icon: const Icon(Iconsax.trash, size: 16, color: Color(0xFFEF4444)),
-                  onPressed: () => _showDeleteStatusDialog(status),
-                ),
-              ],
-            ),
-          );
-        }),
-      ],
+                ]
+              : null,
+        ),
+        child: AppText(
+          label,
+          fontSize: 11.5,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+          color: isSelected ? Colors.white : const Color(0xFF475569),
+        ),
+      ),
     );
   }
 
-  void _showAddEditStatusModal({AdminLeadStatusItem? existingStatus}) {
+  void _showAddEditStatusModal({LeadStatusModel? existingStatus}) {
     final isEditing = existingStatus != null;
     final nameController = TextEditingController(text: existingStatus?.name ?? '');
     final descController = TextEditingController(text: existingStatus?.description ?? '');
-    String selectedCategory = existingStatus?.category ?? 'Active Lead';
-    String selectedHex = existingStatus?.colorHex ?? '0xFF3B82F6';
+    String selectedCategory = existingStatus?.category ?? 'active_lead';
+    String selectedHex = existingStatus?.badgeColor ?? '#6366F1';
+
+    if (!['active_lead', 'prospecting', 'won', 'disqualified'].contains(selectedCategory.toLowerCase())) {
+      selectedCategory = 'active_lead';
+    } else {
+      selectedCategory = selectedCategory.toLowerCase();
+    }
 
     final presetColors = [
-      '0xFF3B82F6', // Blue
-      '0xFF10B981', // Emerald Green
-      '0xFFF59E0B', // Amber
-      '0xFF6366F1', // Indigo
-      '0xFF8B5CF6', // Purple
-      '0xFF059669', // Dark Green
-      '0xFFEF4444', // Red
-      '0xFF64748B', // Slate
+      '#3B82F6', // Blue
+      '#10B981', // Emerald Green
+      '#F59E0B', // Amber
+      '#6366F1', // Indigo
+      '#8B5CF6', // Purple
+      '#059669', // Dark Green
+      '#EF4444', // Red
+      '#64748B', // Slate
     ];
 
     showModalBottomSheet(
@@ -3999,7 +3881,7 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
                     const AppText('Category:', fontSize: 12, fontWeight: FontWeight.bold),
                     const SizedBox(height: 6),
                     DropdownButtonFormField<String>(
-                      value: selectedCategory,
+                      initialValue: selectedCategory,
                       decoration: InputDecoration(
                         fillColor: const Color(0xFFF8FAFC),
                         filled: true,
@@ -4007,10 +3889,10 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
                       ),
                       items: const [
-                        DropdownMenuItem(value: 'Prospecting', child: Text('Prospecting (Initial stage)')),
-                        DropdownMenuItem(value: 'Active Lead', child: Text('Active Lead (In negotiation)')),
-                        DropdownMenuItem(value: 'Won', child: Text('Won / Closed Deal')),
-                        DropdownMenuItem(value: 'Disqualified', child: Text('Disqualified / Invalid')),
+                        DropdownMenuItem(value: 'active_lead', child: Text('Active Lead (In negotiation)')),
+                        DropdownMenuItem(value: 'prospecting', child: Text('Prospecting (Initial stage)')),
+                        DropdownMenuItem(value: 'won', child: Text('Won / Closed Deal')),
+                        DropdownMenuItem(value: 'disqualified', child: Text('Disqualified / Invalid')),
                       ],
                       onChanged: (val) {
                         if (val != null) setModalState(() => selectedCategory = val);
@@ -4040,8 +3922,8 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: presetColors.map((hex) {
-                        final colorVal = Color(int.parse(hex));
-                        final isSelected = selectedHex == hex;
+                        final colorVal = LeadStatusModel.parseHexColor(hex);
+                        final isSelected = selectedHex.toUpperCase() == hex.toUpperCase();
                         return GestureDetector(
                           onTap: () => setModalState(() => selectedHex = hex),
                           child: Container(
@@ -4062,55 +3944,56 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
                     // Save Button
                     SizedBox(
                       width: double.infinity,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primaryColor,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                        onPressed: () {
-                          final name = nameController.text.trim();
-                          if (name.isEmpty) {
-                            Get.snackbar('Required Field', 'Please enter status name.', backgroundColor: const Color(0xFFEF4444), colorText: Colors.white);
-                            return;
-                          }
-                          setState(() {
-                            if (isEditing) {
-                              final oldName = existingStatus.name;
-                              existingStatus.name = name;
-                              existingStatus.category = selectedCategory;
-                              existingStatus.colorHex = selectedHex;
-                              existingStatus.description = descController.text.trim();
+                      child: Obx(() {
+                        final isSubmitting = _statusController.isSubmitting.value;
+                        return ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primaryColor,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          onPressed: isSubmitting
+                              ? null
+                              : () async {
+                                  final name = nameController.text.trim();
+                                  if (name.isEmpty) {
+                                    Get.snackbar('Required Field', 'Please enter status name.',
+                                        backgroundColor: const Color(0xFFEF4444), colorText: Colors.white);
+                                    return;
+                                  }
 
-                              // Cascade update to matching leads
-                              for (var lead in _leadsList) {
-                                if (lead.status == oldName) {
-                                  lead.status = name;
-                                }
-                              }
-                            } else {
-                              _leadStatuses.add(
-                                AdminLeadStatusItem(
-                                  id: 'ST-0${_leadStatuses.length + 1}',
-                                  name: name,
-                                  colorHex: selectedHex,
-                                  category: selectedCategory,
-                                  description: descController.text.trim(),
-                                ),
-                              );
-                            }
-                          });
-                          Navigator.pop(ctx);
-                          Get.snackbar(
-                            'Status Saved 🏷️',
-                            'Status "$name" has been saved successfully.',
-                            snackPosition: SnackPosition.BOTTOM,
-                            backgroundColor: const Color(0xFF10B981),
-                            colorText: Colors.white,
-                          );
-                        },
-                        child: const AppText('Save Lead Status', color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
-                      ),
+                                  final bool success;
+                                  if (isEditing) {
+                                    success = await _statusController.updateLeadStatus(
+                                      id: existingStatus.id,
+                                      name: name,
+                                      category: selectedCategory,
+                                      description: descController.text.trim(),
+                                      badgeColor: selectedHex,
+                                      orderPosition: existingStatus.orderPosition,
+                                    );
+                                  } else {
+                                    success = await _statusController.createLeadStatus(
+                                      name: name,
+                                      category: selectedCategory,
+                                      description: descController.text.trim(),
+                                      badgeColor: selectedHex,
+                                    );
+                                  }
+
+                                  if (success && ctx.mounted) {
+                                    Navigator.pop(ctx);
+                                  }
+                                },
+                          child: isSubmitting
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                )
+                              : AppText(isEditing ? 'Save Changes' : 'Save Lead Status', color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                        );
+                      }),
                     ),
                   ],
                 ),
@@ -4122,9 +4005,10 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
     );
   }
 
-  void _showDeleteStatusDialog(AdminLeadStatusItem status) {
-    final leadsUsingStatus = _leadsList.where((l) => l.status == status.name).toList();
-    final otherStatuses = _leadStatuses.where((s) => s.id != status.id).toList();
+  // ignore: unused_element
+  void _showDeleteStatusDialog(LeadStatusModel status) {
+    final leadsUsingStatus = _leadsList.where((l) => l.status.toLowerCase() == status.name.toLowerCase()).toList();
+    final otherStatuses = _statusController.leadStatuses.where((s) => s.id != status.id).toList();
     String fallbackStatusName = otherStatuses.isNotEmpty ? otherStatuses.first.name : 'New';
 
     showDialog(
@@ -4139,7 +4023,7 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  AppText(
+                  const AppText(
                     'Are you sure you want to delete this lead status?',
                     fontSize: 13,
                     color: AppColors.textColorSecondary,
@@ -4161,7 +4045,7 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
                     ),
                     const SizedBox(height: 10),
                     DropdownButtonFormField<String>(
-                      value: fallbackStatusName,
+                      initialValue: fallbackStatusName,
                       decoration: InputDecoration(
                         fillColor: const Color(0xFFF8FAFC),
                         filled: true,
@@ -4181,30 +4065,30 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
                   onPressed: () => Navigator.pop(ctx),
                   child: const AppText('Cancel', color: Color(0xFF64748B)),
                 ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFEF4444),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      // Migrate leads if any
-                      for (var lead in leadsUsingStatus) {
-                        lead.status = fallbackStatusName;
-                      }
-                      _leadStatuses.removeWhere((s) => s.id == status.id);
-                    });
-                    Navigator.pop(ctx);
-                    Get.snackbar(
-                      'Status Deleted 🗑️',
-                      'Status removed successfully.',
-                      snackPosition: SnackPosition.BOTTOM,
+                Obx(() {
+                  final isSubmitting = _statusController.isSubmitting.value;
+                  return ElevatedButton(
+                    style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFEF4444),
-                      colorText: Colors.white,
-                    );
-                  },
-                  child: const AppText('Delete Status', color: Colors.white, fontWeight: FontWeight.bold),
-                ),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    onPressed: isSubmitting
+                        ? null
+                        : () async {
+                            final success = await _statusController.deleteLeadStatus(status.id, statusName: status.name);
+                            if (success && ctx.mounted) {
+                              Navigator.pop(ctx);
+                            }
+                          },
+                    child: isSubmitting
+                        ? const SizedBox(
+                            height: 16,
+                            width: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          )
+                        : const AppText('Delete Status', color: Colors.white, fontWeight: FontWeight.bold),
+                  );
+                }),
               ],
             );
           },

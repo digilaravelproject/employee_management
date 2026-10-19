@@ -32,7 +32,8 @@ import '../../employee/management/views/employee_list_screen.dart';
 import '../../../../routes/route_helper.dart';
 import '../../../core/services/permission/permission_service.dart';
 import '../../../core/services/permission/permission_constant.dart';
-
+import '../controllers/dashboard_controller.dart';
+import '../../profile/controllers/profile_controller.dart';
 
 class AllModulesScreen extends StatelessWidget {
   const AllModulesScreen({super.key});
@@ -42,28 +43,40 @@ class AllModulesScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       body: SafeArea(
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // ── Header (Title & Customise Button) ──
-              const _AllModulesHeader(),
-              const SizedBox(height: 20),
+        child: RefreshIndicator(
+          onRefresh: () async {
+            try {
+              if (Get.isRegistered<ProfileController>()) {
+                await Get.find<ProfileController>().fetchProfile();
+              }
+            } catch (_) {}
+            if (Get.isRegistered<DashboardController>()) {
+              await Get.find<DashboardController>().fetchAdminDashboard();
+            }
+          },
+          child: const SingleChildScrollView(
+            physics: AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ── Header (Title & Customise Button) ──
+                _AllModulesHeader(),
+                SizedBox(height: 20),
 
-              // ── Premium Good Morning Banner ──
-              const _GoodMorningBanner(),
-              const SizedBox(height: 24),
+                // ── Premium Good Morning Banner ──
+                _GoodMorningBanner(),
+                SizedBox(height: 24),
 
-              // ── 24 Modules Grid ──
-              const _ModulesGrid(),
-              const SizedBox(height: 28),
+                // ── 24 Modules Grid ──
+                _ModulesGrid(),
+                SizedBox(height: 28),
 
-              // ── Stay on Track Banner ──
-              const _StayOnTrackBanner(),
-              const SizedBox(height: 24),
-            ],
+                // ── Stay on Track Banner ──
+                _StayOnTrackBanner(),
+                SizedBox(height: 24),
+              ],
+            ),
           ),
         ),
       ),
@@ -183,21 +196,27 @@ class _GoodMorningBanner extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Row(
-                  children: [
-                    AppText(
-                      'Good Morning, Admin',
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFFFEF08A), // Warm yellow highlight
-                    ),
-                    SizedBox(width: 5),
-                    Text(
-                      '👋',
-                      style: TextStyle(fontSize: 14),
-                    ),
-                  ],
-                ),
+                Obx(() {
+                  final dashCtrl = Get.isRegistered<DashboardController>()
+                      ? Get.find<DashboardController>()
+                      : null;
+                  final greetingText = dashCtrl?.adminDashboardData.value?.greeting ?? 'Good Morning, Admin';
+                  return Row(
+                    children: [
+                      AppText(
+                        greetingText,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFFFEF08A),
+                      ),
+                      const SizedBox(width: 5),
+                      const Text(
+                        '👋',
+                        style: TextStyle(fontSize: 14),
+                      ),
+                    ],
+                  );
+                }),
                 const SizedBox(height: 8),
                 const SizedBox(
                   width: 200,
@@ -214,27 +233,36 @@ class _GoodMorningBanner extends StatelessWidget {
                 const SizedBox(height: 28),
 
                 // Statistics bottom row
-                const Row(
-                  children: [
-                    _BannerStat(
-                      icon: Iconsax.profile_2user,
-                      value: '128',
-                      label: 'Employees',
-                    ),
-                    _VerticalDivider(),
-                    _BannerStat(
-                      icon: Iconsax.calendar_tick,
-                      value: '26',
-                      label: 'Present Today',
-                    ),
-                    _VerticalDivider(),
-                    _BannerStat(
-                      icon: Iconsax.briefcase,
-                      value: '12',
-                      label: 'Pending Tasks',
-                    ),
-                  ],
-                ),
+                Obx(() {
+                  final dashCtrl = Get.isRegistered<DashboardController>()
+                      ? Get.find<DashboardController>()
+                      : null;
+                  final summary = dashCtrl?.adminDashboardData.value?.todaysSummary;
+                  final totalEmp = summary != null ? '${summary.totalEmployees}' : '128';
+                  final presentCount = summary != null ? '${summary.present}' : '26';
+
+                  return Row(
+                    children: [
+                      _BannerStat(
+                        icon: Iconsax.profile_2user,
+                        value: totalEmp,
+                        label: 'Employees',
+                      ),
+                      const _VerticalDivider(),
+                      _BannerStat(
+                        icon: Iconsax.calendar_tick,
+                        value: presentCount,
+                        label: 'Present Today',
+                      ),
+                      const _VerticalDivider(),
+                      const _BannerStat(
+                        icon: Iconsax.briefcase,
+                        value: '12',
+                        label: 'Pending Tasks',
+                      ),
+                    ],
+                  );
+                }),
               ],
             ),
           ),
@@ -570,21 +598,21 @@ class _ModulesGrid extends StatelessWidget {
         icon: Iconsax.people,
         color: Color(0xFF7C3AED), // Dark Purple
       ),
+      // const _ModuleItem(
+      //   label: 'Leads',
+      //   icon: Iconsax.filter,
+      //   color: Color(0xFFF59E0B), // Amber
+      // ),
       const _ModuleItem(
-        label: 'Leads',
-        icon: Iconsax.filter,
-        color: Color(0xFFF59E0B), // Amber
-      ),
-      const _ModuleItem(
-        label: 'Sales CRM',
+        label: 'Sales',
         icon: Iconsax.chart_2,
         color: Color(0xFF312E81), // Indigo
       ),
-      const _ModuleItem(
-        label: 'Sales Tele-CRM',
-        icon: Iconsax.headphone,
-        color: Color(0xFF10B981), // Emerald
-      ),
+      // const _ModuleItem(
+      //   label: 'Sales Tele-CRM',
+      //   icon: Iconsax.headphone,
+      //   color: Color(0xFF10B981), // Emerald
+      // ),
       const _ModuleItem(
         label: 'Hr ',
         icon: Iconsax.briefcase,
@@ -790,7 +818,7 @@ class _ModuleCard extends StatelessWidget {
               Get.to(() => const CompanyProfileViewScreen());
             } else if (item.label == 'Leads') {
               Get.to(() => const LeadsDashboardShell());
-            } else if (item.label == 'Sales CRM') {
+            } else if (item.label == 'Sales') {
               Get.to(() => const SalesAdminDashboardScreen());
             } else if (item.label == 'Sales Tele-CRM') {
               Get.to(() => const SalesExecutiveTeleCrmScreen());

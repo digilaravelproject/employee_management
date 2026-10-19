@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/app_validators.dart';
 import '../../../core/widgets/app_text.dart';
+import '../../role_permissions/models/role_permission_models.dart';
 import '../controllers/bde_leads_controller.dart';
 import '../models/lead_model.dart';
 import '../models/bde_target_model.dart';
@@ -1832,7 +1833,9 @@ class BdeLeadsTargetScreen extends StatelessWidget {
                     }
 
                     final estVal = double.tryParse(valueCtrl.text.trim()) ?? 50000.0;
-                    final rahul = controller.salesExecutives.first;
+                    final assignedUser = controller.salesExecutives.isNotEmpty
+                        ? controller.salesExecutives.first
+                        : const AppUser(name: 'Unassigned', email: '', avatarUrl: '');
 
                     final newLead = Lead(
                       id: 'BDE-${DateTime.now().millisecondsSinceEpoch}',
@@ -1844,7 +1847,7 @@ class BdeLeadsTargetScreen extends StatelessWidget {
                       leadSource: source,
                       leadStatus: 'New',
                       leadScore: 60,
-                      assignedTo: rahul,
+                      assignedTo: assignedUser,
                       location: 'Delhi NCR',
                       estimatedValue: estVal,
                       expectedClosingDate: DateTime.now().add(const Duration(days: 15)),

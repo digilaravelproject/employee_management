@@ -26,28 +26,7 @@ class LeadsController extends GetxController {
   final List<String> leadSources = ['Website', 'Google Ads', 'Referral', 'Facebook Ads'];
   final List<String> leadStatuses = ['New', 'Contacted', 'Converted'];
 
-  final List<AppUser> salesReps = [
-    const AppUser(
-      name: 'Rahul Sharma',
-      email: 'rahul.sharma@company.com',
-      avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-    ),
-    const AppUser(
-      name: 'Neha Verma',
-      email: 'neha.verma@company.com',
-      avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
-    ),
-    const AppUser(
-      name: 'Aman Khan',
-      email: 'aman.khan@company.com',
-      avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
-    ),
-    const AppUser(
-      name: 'Pooja Singh',
-      email: 'pooja.singh@company.com',
-      avatarUrl: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&auto=format&fit=crop&q=80',
-    ),
-  ];
+  final List<AppUser> salesReps = [];
 
   // Text Editing Controllers for Add / Edit Screen
   late TextEditingController nameController;
@@ -116,154 +95,7 @@ class LeadsController extends GetxController {
 
   // Seed initial high-fidelity mock data matching the Leads completed flow mockup
   void _seedDummyLeads() {
-    final arjun = salesReps[0]; // Rahul Sharma
-    final neha = salesReps[1]; // Neha Verma
-
-    leads.assignAll([
-      Lead(
-        id: 'L001',
-        name: 'Rohit Kumar',
-        companyName: 'R K Enterprises',
-        email: 'rohit.kumar@email.com',
-        mobile: '+91 98765 43210',
-        designation: 'Director',
-        leadSource: 'Website',
-        leadStatus: 'New',
-        leadScore: 75,
-        assignedTo: arjun,
-        location: 'Mumbai, Maharashtra',
-        estimatedValue: 50000.00,
-        expectedClosingDate: DateTime(2024, 5, 31),
-        notes: 'Interested in our premium plan. Looking for demo.',
-        createdOn: DateTime(2024, 5, 15, 10, 30),
-        followUps: [
-          LeadFollowUp(
-            id: 'F001',
-            title: 'Setup Consultation Call',
-            content: 'Client requested pricing quote and system requirement overview.',
-            dateTime: DateTime(2024, 5, 20, 11, 00),
-            representative: 'Rahul Sharma',
-            isCompleted: false,
-            type: 'call',
-          ),
-        ],
-      ),
-      Lead(
-        id: 'L002',
-        name: 'Priya Sharma',
-        companyName: 'PS Services',
-        email: 'priya.sharma@services.com',
-        mobile: '+91 87654 32109',
-        designation: 'Manager',
-        leadSource: 'Facebook Ad',
-        leadStatus: 'Contacted',
-        leadScore: 60,
-        assignedTo: neha,
-        location: 'Delhi, NCR',
-        estimatedValue: 60000.00,
-        expectedClosingDate: DateTime(2024, 6, 15),
-        notes: 'Requested bulk user onboarding proposal.',
-        createdOn: DateTime(2024, 5, 15, 14, 20),
-        followUps: [
-          LeadFollowUp(
-            id: 'F002',
-            title: 'Proposal Callback',
-            content: 'Discuss license model details with Priya.',
-            dateTime: DateTime(2024, 5, 21, 14, 00),
-            representative: 'Neha Verma',
-            isCompleted: false,
-            type: 'call',
-          ),
-        ],
-      ),
-      Lead(
-        id: 'L003',
-        name: 'Amit Singh',
-        companyName: 'AS Technologies',
-        email: 'amit@astech.com',
-        mobile: '+91 76543 21098',
-        designation: 'CEO',
-        leadSource: 'Referral',
-        leadStatus: 'New',
-        leadScore: 40,
-        assignedTo: arjun,
-        location: 'Bengaluru, Karnataka',
-        estimatedValue: 40000.00,
-        expectedClosingDate: DateTime(2024, 5, 25),
-        notes: 'Referred by standard client. Extremely eager to buy.',
-        createdOn: DateTime(2024, 5, 14, 9, 00),
-        followUps: [
-          LeadFollowUp(
-            id: 'F003',
-            title: 'Introductory Call',
-            content: 'Establish initial requirements and schedule platform walkthrough.',
-            dateTime: DateTime(2024, 5, 22, 11, 30),
-            representative: 'Rahul Sharma',
-            isCompleted: false,
-            type: 'call',
-          ),
-        ],
-      ),
-      Lead(
-        id: 'L004',
-        name: 'Neha Joshi',
-        companyName: 'NJ Solutions',
-        email: 'neha.joshi@nj.com',
-        mobile: '+91 65432 10987',
-        designation: 'Director',
-        leadSource: 'Google Ads',
-        leadStatus: 'Converted',
-        leadScore: 100,
-        assignedTo: neha,
-        location: 'Pune, Maharashtra',
-        estimatedValue: 75000.00,
-        expectedClosingDate: DateTime(2024, 5, 18),
-        notes: 'Evaluated bulk features. Converted.',
-        createdOn: DateTime(2024, 5, 12, 16, 45),
-        dealValue: 75000.00,
-        conversionDate: DateTime(2024, 5, 18),
-        conversionNotes: 'Converted after productive product demo.',
-        followUps: [
-          LeadFollowUp(
-            id: 'F004',
-            title: 'Deal Finalization',
-            content: 'Client onboarded successfully on premium features.',
-            dateTime: DateTime(2024, 5, 18, 12, 00),
-            representative: 'Neha Verma',
-            isCompleted: true,
-            type: 'proposal',
-          ),
-        ],
-      ),
-      Lead(
-        id: 'L005',
-        name: 'Vikram Patil',
-        companyName: 'Patil Exports',
-        email: 'vikram@patil.com',
-        mobile: '+91 54321 09876',
-        designation: 'Owner',
-        leadSource: 'Website',
-        leadStatus: 'Contacted',
-        leadScore: 55,
-        assignedTo: arjun,
-        location: 'Ahmedabad, Gujarat',
-        estimatedValue: 30000.00,
-        expectedClosingDate: DateTime(2024, 5, 23),
-        notes: 'Reviewing proposal details.',
-        createdOn: DateTime(2024, 5, 14, 11, 15),
-        followUps: [
-          LeadFollowUp(
-            id: 'F005',
-            title: 'Quote Discussion',
-            content: 'Answer questions regarding standard contract terms.',
-            dateTime: DateTime(2024, 5, 23, 15, 00),
-            representative: 'Rahul Sharma',
-            isCompleted: false,
-            type: 'call',
-          ),
-        ],
-      ),
-    ]);
+    leads.clear();
   }
 
   // Statistics properties
@@ -370,7 +202,7 @@ class LeadsController extends GetxController {
         leadSource: selectedSource.value ?? 'Website',
         leadStatus: selectedStatus.value ?? 'New',
         leadScore: selectedStatus.value == 'Converted' ? 100 : 50,
-        assignedTo: selectedAssignee.value ?? salesReps[0],
+        assignedTo: selectedAssignee.value ?? (salesReps.isNotEmpty ? salesReps[0] : const AppUser(name: 'Unassigned', email: '', avatarUrl: '')),
         location: locationController.text.trim().isNotEmpty ? locationController.text.trim() : 'Unassigned Location',
         estimatedValue: double.tryParse(estimatedValueController.text.trim()) ?? 10000.0,
         expectedClosingDate: expectedClosingDate.value ?? DateTime.now().add(const Duration(days: 30)),

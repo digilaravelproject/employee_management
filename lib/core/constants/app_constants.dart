@@ -62,6 +62,9 @@ class AppConstants {
   static String adminAssignLeadUrl(dynamic id) => '$adminLeadsUrl/$id/assign';
   static const String adminSalesEmployeesUrl = '$adminLeadsUrl/sales-employees';
   static const String facebookAuthorizationUrl = '/api/facebook/authorization-url';
+  static const String leadIntegrationsStatusUrl = '/api/admin/lead-integrations/status';
+  static const String adminLeadStatusesUrl = '/api/admin/lead-statuses';
+  static String adminLeadStatusDetailUrl(dynamic id) => '$adminLeadStatusesUrl/$id';
   static const String adminDashboardUrl = '/api/admin/dashboard';
   static const String adminUpcomingBirthdaysUrl = '/api/admin/birthdays/upcoming';
   static const String adminEmployeesUrl = '/api/admin/employees';

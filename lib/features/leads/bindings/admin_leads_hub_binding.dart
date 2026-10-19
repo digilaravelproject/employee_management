@@ -11,8 +11,16 @@ import '../repositories/admin_leads_repository_interface.dart';
 
 import '../controllers/lead_integrations_controller.dart';
 import '../domain/usecases/get_facebook_authorization_url_usecase.dart';
+import '../domain/usecases/get_lead_integrations_status_usecase.dart';
 import '../repositories/lead_integrations_repository.dart';
 import '../repositories/lead_integrations_repository_interface.dart';
+
+import '../controllers/admin_lead_statuses_controller.dart';
+import '../domain/usecases/create_lead_status_usecase.dart';
+import '../domain/usecases/delete_lead_status_usecase.dart';
+import '../domain/usecases/get_lead_status_detail_usecase.dart';
+import '../domain/usecases/get_lead_statuses_usecase.dart';
+import '../domain/usecases/update_lead_status_usecase.dart';
 
 class AdminLeadsHubBinding extends Bindings {
   @override
@@ -63,9 +71,44 @@ class AdminLeadsHubBinding extends Bindings {
       () => GetFacebookAuthorizationUrlUseCase(Get.find<LeadIntegrationsRepositoryInterface>()),
     );
 
+    Get.lazyPut<GetLeadIntegrationsStatusUseCase>(
+      () => GetLeadIntegrationsStatusUseCase(Get.find<LeadIntegrationsRepositoryInterface>()),
+    );
+
     Get.lazyPut<LeadIntegrationsController>(
       () => LeadIntegrationsController(
         getFacebookAuthorizationUrlUseCase: Get.find<GetFacebookAuthorizationUrlUseCase>(),
+        getLeadIntegrationsStatusUseCase: Get.find<GetLeadIntegrationsStatusUseCase>(),
+      ),
+    );
+
+    Get.lazyPut<GetLeadStatusesUseCase>(
+      () => GetLeadStatusesUseCase(Get.find<AdminLeadsRepositoryInterface>()),
+    );
+
+    Get.lazyPut<CreateLeadStatusUseCase>(
+      () => CreateLeadStatusUseCase(Get.find<AdminLeadsRepositoryInterface>()),
+    );
+
+    Get.lazyPut<DeleteLeadStatusUseCase>(
+      () => DeleteLeadStatusUseCase(Get.find<AdminLeadsRepositoryInterface>()),
+    );
+
+    Get.lazyPut<GetLeadStatusDetailUseCase>(
+      () => GetLeadStatusDetailUseCase(Get.find<AdminLeadsRepositoryInterface>()),
+    );
+
+    Get.lazyPut<UpdateLeadStatusUseCase>(
+      () => UpdateLeadStatusUseCase(Get.find<AdminLeadsRepositoryInterface>()),
+    );
+
+    Get.lazyPut<AdminLeadStatusesController>(
+      () => AdminLeadStatusesController(
+        getLeadStatusesUseCase: Get.find<GetLeadStatusesUseCase>(),
+        createLeadStatusUseCase: Get.find<CreateLeadStatusUseCase>(),
+        deleteLeadStatusUseCase: Get.find<DeleteLeadStatusUseCase>(),
+        getLeadStatusDetailUseCase: Get.find<GetLeadStatusDetailUseCase>(),
+        updateLeadStatusUseCase: Get.find<UpdateLeadStatusUseCase>(),
       ),
     );
   }

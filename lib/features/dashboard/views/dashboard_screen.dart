@@ -149,7 +149,7 @@ class DashboardScreen extends StatelessWidget {
         Widget buildCurrentScreen() {
           switch (controller.currentIndex.value) {
             case 0:
-              return const HomeScreen();
+              return isAdmin ? const AllModulesScreen() : const HomeScreen();
             case 1:
               if (!isAllowedAttendance) {
                 return const Scaffold(
@@ -177,7 +177,7 @@ class DashboardScreen extends StatelessWidget {
               }
               return const ProfileScreen();
             default:
-              return const HomeScreen();
+              return isAdmin ? const AllModulesScreen() : const HomeScreen();
           }
         }
 

@@ -4,16 +4,20 @@ import 'package:get/get.dart';
 import '../../../core/services/network/api_client.dart';
 import '../../../core/services/storage/shared_prefs.dart';
 import '../domain/usecases/get_facebook_authorization_url_usecase.dart';
+import '../domain/usecases/get_lead_integrations_status_usecase.dart';
 import '../models/facebook_authorization_request_model.dart';
 import '../models/lead_integration_model.dart';
+import '../models/lead_integrations_status_response_model.dart';
 import '../repositories/lead_integrations_repository.dart';
 import '../views/facebook_oauth_webview_screen.dart';
 
 class LeadIntegrationsController extends GetxController {
   final GetFacebookAuthorizationUrlUseCase getFacebookAuthorizationUrlUseCase;
+  final GetLeadIntegrationsStatusUseCase? getLeadIntegrationsStatusUseCase;
 
   LeadIntegrationsController({
     required this.getFacebookAuthorizationUrlUseCase,
+    this.getLeadIntegrationsStatusUseCase,
   });
 
   static LeadIntegrationsController get to {
@@ -21,7 +25,13 @@ class LeadIntegrationsController extends GetxController {
       final apiClient = Get.isRegistered<ApiClient>() ? Get.find<ApiClient>() : ApiClient();
       final repository = LeadIntegrationsRepository(apiClient: apiClient);
       final useCase = GetFacebookAuthorizationUrlUseCase(repository);
-      return Get.put(LeadIntegrationsController(getFacebookAuthorizationUrlUseCase: useCase));
+      final statusUseCase = GetLeadIntegrationsStatusUseCase(repository);
+      return Get.put(
+        LeadIntegrationsController(
+          getFacebookAuthorizationUrlUseCase: useCase,
+          getLeadIntegrationsStatusUseCase: statusUseCase,
+        ),
+      );
     }
     return Get.find<LeadIntegrationsController>();
   }
@@ -29,6 +39,8 @@ class LeadIntegrationsController extends GetxController {
   final RxList<LeadIntegrationItem> integrations = <LeadIntegrationItem>[].obs;
   final RxBool isLoading = false.obs;
   final RxBool isConnecting = false.obs;
+  final RxBool isLoadingStatus = false.obs;
+  final Rxn<LeadIntegrationsData> liveStatus = Rxn<LeadIntegrationsData>();
 
   static const String _storageKey = 'crm_lead_integrations_oauth_data';
 
@@ -36,6 +48,7 @@ class LeadIntegrationsController extends GetxController {
   void onInit() {
     super.onInit();
     loadIntegrations();
+    fetchLeadIntegrationsStatus();
   }
 
   void loadIntegrations() {
@@ -100,17 +113,71 @@ class LeadIntegrationsController extends GetxController {
       integrations.where((item) => item.isConnected).length;
 
   bool get isMetaConnected {
+    if (liveStatus.value?.facebook != null) {
+      return liveStatus.value!.facebook!.connected;
+    }
     final item = integrations.firstWhereOrNull((i) => i.id == 'facebook_ads');
     return item?.isConnected ?? false;
   }
 
   bool get isGoogleConnected {
+    if (liveStatus.value?.google != null) {
+      return liveStatus.value!.google!.connected;
+    }
     final item = integrations.firstWhereOrNull((i) => i.id == 'google_ads');
     return item?.isConnected ?? false;
   }
 
   LeadIntegrationItem? getChannel(String id) {
     return integrations.firstWhereOrNull((i) => i.id == id);
+  }
+
+  /// Fetch live connection status for Facebook and Google Ads from backend
+  Future<void> fetchLeadIntegrationsStatus() async {
+    isLoadingStatus.value = true;
+    try {
+      final useCase = getLeadIntegrationsStatusUseCase ??
+          GetLeadIntegrationsStatusUseCase(
+            LeadIntegrationsRepository(
+              apiClient: Get.isRegistered<ApiClient>() ? Get.find<ApiClient>() : ApiClient(),
+            ),
+          );
+
+      final response = await useCase.call();
+      if (response.status && response.data != null) {
+        liveStatus.value = response.data;
+
+        // Synchronize integrations collection
+        if (response.data!.facebook != null) {
+          final fb = response.data!.facebook!;
+          final fbIndex = integrations.indexWhere((i) => i.id == 'facebook_ads');
+          if (fbIndex != -1) {
+            integrations[fbIndex].isConnected = fb.connected;
+            integrations[fbIndex].statusMessage = fb.status;
+            if (fb.lastSyncedAt != null && fb.lastSyncedAt!.isNotEmpty) {
+              integrations[fbIndex].lastSyncTime = fb.lastSyncedAt!;
+            }
+          }
+        }
+
+        if (response.data!.google != null) {
+          final g = response.data!.google!;
+          final gIndex = integrations.indexWhere((i) => i.id == 'google_ads');
+          if (gIndex != -1) {
+            integrations[gIndex].isConnected = g.connected;
+            integrations[gIndex].statusMessage = g.status;
+            if (g.lastSyncedAt != null && g.lastSyncedAt!.isNotEmpty) {
+              integrations[gIndex].lastSyncTime = g.lastSyncedAt!;
+            }
+          }
+        }
+        integrations.refresh();
+      }
+    } catch (_) {
+      // Keep existing status if status fetch fails
+    } finally {
+      isLoadingStatus.value = false;
+    }
   }
 
   /// Call the backend Facebook Authorization URL API

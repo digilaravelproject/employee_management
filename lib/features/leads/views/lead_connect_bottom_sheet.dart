@@ -45,6 +45,7 @@ class LeadConnectBottomSheet {
     final brandColor = isMeta ? const Color(0xFF1877F2) : const Color(0xFFEA4335);
     final brandIcon = isMeta ? Icons.facebook : Icons.campaign_rounded;
     final brandTitle = isMeta ? 'Facebook (Meta) Ads' : 'Google Ads';
+    final isConnected = isMeta ? controller.isMetaConnected : controller.isGoogleConnected;
 
     final RxBool obscureSecret = true.obs;
 
@@ -99,7 +100,7 @@ class LeadConnectBottomSheet {
                               color: const Color(0xFF0F172A),
                             ),
                             const SizedBox(width: 8),
-                            _buildStatusBadge(item.isConnected),
+                            _buildStatusBadge(isConnected),
                           ],
                         ),
                         const SizedBox(height: 2),
@@ -118,9 +119,92 @@ class LeadConnectBottomSheet {
                 ],
               ),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
+
+              // Live Status Card from Backend
+              if (isMeta && controller.liveStatus.value?.facebook != null) ...[
+                Builder(builder: (ctx) {
+                  final fb = controller.liveStatus.value!.facebook!;
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: fb.connected ? const Color(0xFFF0FDF4) : const Color(0xFFFEF2F2),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: fb.connected ? const Color(0xFFBBF7D0) : const Color(0xFFFECACA),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          fb.connected ? Icons.check_circle_rounded : Icons.info_outline_rounded,
+                          color: fb.connected ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                          size: 20,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              AppText(
+                                fb.pageName ?? (fb.connected ? 'Facebook Connected' : 'Not Connected'),
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.bold,
+                                color: fb.connected ? const Color(0xFF14532D) : const Color(0xFF991B1B),
+                              ),
+                              if (fb.pageId != null && fb.pageId!.isNotEmpty) ...[
+                                const SizedBox(height: 2),
+                                AppText(
+                                  'Page ID: ${fb.pageId} • Leads: ${fb.importedLeadsCount}',
+                                  fontSize: 11,
+                                  color: const Color(0xFF475569),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+              ] else if (!isMeta && controller.liveStatus.value?.google != null) ...[
+                Builder(builder: (ctx) {
+                  final g = controller.liveStatus.value!.google!;
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: g.connected ? const Color(0xFFF0FDF4) : const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: g.connected ? const Color(0xFFBBF7D0) : const Color(0xFFE2E8F0),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          g.connected ? Icons.check_circle_rounded : Icons.info_outline_rounded,
+                          color: g.connected ? const Color(0xFF16A34A) : const Color(0xFF64748B),
+                          size: 20,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: AppText(
+                            g.message ?? (g.connected ? 'Google Ads Connected' : 'Not Configured'),
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                            color: g.connected ? const Color(0xFF14532D) : const Color(0xFF475569),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+              ],
+
               const Divider(color: Color(0xFFE2E8F0), height: 1),
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
 
               // 1. Client ID
               _buildField(
@@ -182,34 +266,10 @@ class LeadConnectBottomSheet {
               ),
               const SizedBox(height: 22),
 
-              // Action Buttons
+              // Action Button (Disconnect button removed, full width Connect/Save)
               Row(
                 children: [
-                  if (item.isConnected) ...[
-                    Expanded(
-                      flex: 1,
-                      child: OutlinedButton(
-                        onPressed: () {
-                          Get.back();
-                          controller.disconnectChannel(item.id);
-                        },
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: Color(0xFFEF4444)),
-                          padding: const EdgeInsets.symmetric(vertical: 13),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                        child: const AppText(
-                          'Disconnect',
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFFEF4444),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                  ],
                   Expanded(
-                    flex: 2,
                     child: ElevatedButton(
                       onPressed: () async {
                         if (channelId == 'facebook_ads') {
@@ -265,7 +325,7 @@ class LeadConnectBottomSheet {
                             const Icon(Iconsax.link, size: 16, color: Colors.white),
                             const SizedBox(width: 6),
                             AppText(
-                              item.isConnected ? 'Update & Keep Connected' : 'Connect $brandTitle',
+                              isConnected ? 'Update & Keep Connected' : 'Connect $brandTitle',
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
                               color: Colors.white,
