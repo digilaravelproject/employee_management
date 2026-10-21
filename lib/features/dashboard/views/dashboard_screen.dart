@@ -149,7 +149,7 @@ class DashboardScreen extends StatelessWidget {
         Widget buildCurrentScreen() {
           switch (controller.currentIndex.value) {
             case 0:
-              return isAdmin ? const AllModulesScreen() : const HomeScreen();
+              return const HomeScreen();
             case 1:
               if (!isAllowedAttendance) {
                 return const Scaffold(
@@ -177,7 +177,7 @@ class DashboardScreen extends StatelessWidget {
               }
               return const ProfileScreen();
             default:
-              return isAdmin ? const AllModulesScreen() : const HomeScreen();
+              return const HomeScreen();
           }
         }
 
@@ -233,7 +233,7 @@ class _CustomBottomNavBar extends StatelessWidget {
             _NavItem(
               icon: Iconsax.home_1,
               activeIcon: Iconsax.home5,
-              label: 'Dashboard',
+              label: 'Home',
               isSelected: controller.currentIndex.value == 0,
               onTap: () => controller.changeIndex(0),
             ),

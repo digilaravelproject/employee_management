@@ -12,6 +12,7 @@ class AttendanceHistoryScreen extends StatefulWidget {
   final bool showBackButton;
   final String? employeeName;
   final String? employeeId;
+  final String? employeeCode;
   final String? employeeDesignation;
   final DateTime? initialMonth;
 
@@ -20,6 +21,7 @@ class AttendanceHistoryScreen extends StatefulWidget {
     this.showBackButton = true,
     this.employeeName,
     this.employeeId,
+    this.employeeCode,
     this.employeeDesignation,
     this.initialMonth,
   });
@@ -39,8 +41,14 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
         : Get.put(AttendanceHistoryController());
 
     controller.employeeId.value = widget.employeeId;
-    if (widget.employeeName != null) {
-      controller.employeeName.value = widget.employeeName!;
+    controller.employeeName.value = widget.employeeName;
+
+    if (widget.employeeId != null) {
+      // Clear previous employee data to avoid displaying stale records
+      controller.historyData.value = null;
+      controller.attendanceRecords.clear();
+      controller.recentRecords.clear();
+      controller.selectedRecord.value = null;
     }
 
     if (widget.initialMonth != null) {
@@ -53,6 +61,15 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
     } else {
       controller.resetToCurrentMonth();
     }
+  }
+
+  @override
+  void dispose() {
+    if (widget.employeeId != null && Get.isRegistered<AttendanceHistoryController>()) {
+      controller.employeeId.value = null;
+      controller.employeeName.value = null;
+    }
+    super.dispose();
   }
 
   @override
@@ -78,9 +95,9 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
               fontWeight: FontWeight.w700,
               color: AppColors.textColorPrimary,
             ),
-            if (widget.employeeId != null)
+            if (widget.employeeCode != null || widget.employeeId != null)
               AppText(
-                '${widget.employeeId}${widget.employeeDesignation != null ? ' • ${widget.employeeDesignation}' : ''}',
+                '${widget.employeeCode ?? widget.employeeId}${widget.employeeDesignation != null && widget.employeeDesignation!.isNotEmpty ? ' • ${widget.employeeDesignation}' : ''}',
                 fontSize: 11,
                 color: AppColors.textColorSecondary,
               ),

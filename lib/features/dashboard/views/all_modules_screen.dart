@@ -101,7 +101,7 @@ class _AllModulesHeader extends StatelessWidget {
         ),
 
         // Customise Button
-        GestureDetector(
+        /*GestureDetector(
           onTap: () {
             // Optional: Implement module customisation action
           },
@@ -136,7 +136,7 @@ class _AllModulesHeader extends StatelessWidget {
               ],
             ),
           ),
-        ),
+        ),*/
       ],
     );
   }

@@ -8,6 +8,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_text.dart';
 import '../controllers/attendance_controller.dart';
 import '../models/admin_attendance_model.dart';
+import 'attendance_history_screen.dart';
 
 class AttendanceScreen extends StatefulWidget {
   final int initialTab;
@@ -727,7 +728,10 @@ class _EmployeeList extends StatelessWidget {
             physics: const NeverScrollableScrollPhysics(),
             itemCount: employees.length,
             itemBuilder: (context, index) {
-              return _EmployeeCard(item: employees[index]);
+              return _EmployeeCard(
+                item: employees[index],
+                selectedDate: controller.selectedDate.value,
+              );
             },
           ),
           const SizedBox(height: 12),
@@ -744,11 +748,15 @@ class _EmployeeList extends StatelessWidget {
   }
 }
 
-// ── EMPLOYEE CARD (THIRD ICON REMOVED) ─────────────────────────────────────────
+// ── EMPLOYEE CARD ─────────────────────────────────────────
 class _EmployeeCard extends StatelessWidget {
   final AdminAttendanceEmployeeItem item;
+  final DateTime? selectedDate;
 
-  const _EmployeeCard({required this.item});
+  const _EmployeeCard({
+    required this.item,
+    this.selectedDate,
+  });
 
   String _formatAvatarUrl(String? avatar) {
     if (avatar == null || avatar.isEmpty) return '';
@@ -758,6 +766,27 @@ class _EmployeeCard extends StatelessWidget {
           .replaceFirst('http://localhost:8000', AppConstants.baseUrl);
     }
     return avatar;
+  }
+
+  void _openEmployeeAttendance(BuildContext context) {
+    final emp = item.employee;
+    final name = emp?.name ?? 'Employee';
+    final targetId = emp?.id?.toString() ??
+        item.attendanceId?.toString() ??
+        emp?.employeeId ??
+        '';
+    final targetCode = emp?.employeeId ??
+        (emp?.id != null ? 'EMP-${emp!.id}' : null);
+    final designation = emp?.designation ?? '';
+
+    Get.to(() => AttendanceHistoryScreen(
+          showBackButton: true,
+          employeeName: name,
+          employeeId: targetId.isNotEmpty ? targetId : null,
+          employeeCode: targetCode,
+          employeeDesignation: designation.isNotEmpty ? designation : null,
+          initialMonth: selectedDate ?? DateTime.now(),
+        ));
   }
 
   @override
@@ -805,7 +834,6 @@ class _EmployeeCard extends StatelessWidget {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -818,124 +846,140 @@ class _EmployeeCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 20,
-                backgroundColor: statusColor.withValues(alpha: 0.1),
-                backgroundImage: hasValidAvatar ? NetworkImage(avatarUrl) : null,
-                onBackgroundImageError: hasValidAvatar ? (_, _) {} : null,
-                child: !hasValidAvatar
-                    ? Text(
-                        name.isNotEmpty ? name[0].toUpperCase() : 'E',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: statusColor,
-                        ),
-                      )
-                    : null,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () => _openEmployeeAttendance(context),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                Row(
                   children: [
-                    AppText(name, fontSize: 13, fontWeight: FontWeight.w700),
-                    if (subtitle.isNotEmpty) ...[
-                      const SizedBox(height: 2),
-                      AppText(
-                        subtitle,
-                        fontSize: 11,
-                        color: AppColors.textColorSecondary,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                    CircleAvatar(
+                      radius: 20,
+                      backgroundColor: statusColor.withValues(alpha: 0.1),
+                      backgroundImage: hasValidAvatar ? NetworkImage(avatarUrl) : null,
+                      onBackgroundImageError: hasValidAvatar ? (_, _) {} : null,
+                      child: !hasValidAvatar
+                          ? Text(
+                              name.isNotEmpty ? name[0].toUpperCase() : 'E',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: statusColor,
+                              ),
+                            )
+                          : null,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          AppText(name, fontSize: 13, fontWeight: FontWeight.w700),
+                          if (subtitle.isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            AppText(
+                              subtitle,
+                              fontSize: 11,
+                              color: AppColors.textColorSecondary,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ],
                       ),
-                    ],
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: statusColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: AppText(
+                        status,
+                        fontSize: 10,
+                        color: statusColor,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    const Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      size: 13,
+                      color: AppColors.textColorHint,
+                    ),
                   ],
                 ),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: AppText(
-                  status,
-                  fontSize: 10,
-                  color: statusColor,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              // Third icon (more_vert) removed as requested!
-            ],
-          ),
-          const SizedBox(height: 14),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF8FAFC),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _DetailItem(
-                    label: 'Check-in',
-                    value: item.checkIn != null && item.checkIn!.isNotEmpty ? item.checkIn! : '–',
-                    valueColor: item.checkIn != null && item.checkIn!.isNotEmpty
-                        ? const Color(0xFF10B981)
-                        : AppColors.textColorHint,
+                const SizedBox(height: 14),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _DetailItem(
+                          label: 'Check-in',
+                          value: item.checkIn != null && item.checkIn!.isNotEmpty ? item.checkIn! : '–',
+                          valueColor: item.checkIn != null && item.checkIn!.isNotEmpty
+                              ? const Color(0xFF10B981)
+                              : AppColors.textColorHint,
+                        ),
+                      ),
+                      Expanded(
+                        child: _DetailItem(
+                          label: 'Check-out',
+                          value: item.checkOut != null && item.checkOut!.isNotEmpty ? item.checkOut! : '–',
+                          valueColor: item.checkOut != null && item.checkOut!.isNotEmpty
+                              ? AppColors.primaryColor
+                              : AppColors.textColorHint,
+                        ),
+                      ),
+                      Expanded(
+                        child: _DetailItem(
+                          label: 'Working Hours',
+                          value: item.workingHours.isNotEmpty ? item.workingHours : '00h 00m',
+                          valueColor: AppColors.textColorPrimary,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                Expanded(
-                  child: _DetailItem(
-                    label: 'Check-out',
-                    value: item.checkOut != null && item.checkOut!.isNotEmpty ? item.checkOut! : '–',
-                    valueColor: item.checkOut != null && item.checkOut!.isNotEmpty
-                        ? AppColors.primaryColor
-                        : AppColors.textColorHint,
+                if (item.isLate) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF7ED),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFFDBA74)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Iconsax.timer_1, size: 14, color: Color(0xFFEA580C)),
+                        const SizedBox(width: 6),
+                        AppText(
+                          'Late Check-in${item.lateBy != null && item.lateBy != '--' ? ' • ${item.lateBy}' : ''}',
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFFEA580C),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                Expanded(
-                  child: _DetailItem(
-                    label: 'Working Hours',
-                    value: item.workingHours.isNotEmpty ? item.workingHours : '00h 00m',
-                    valueColor: AppColors.textColorPrimary,
-                  ),
-                ),
+                ],
               ],
             ),
           ),
-          if (item.isLate) ...[
-            const SizedBox(height: 8),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFF7ED),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFFFDBA74)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Iconsax.timer_1, size: 14, color: Color(0xFFEA580C)),
-                  const SizedBox(width: 6),
-                  AppText(
-                    'Late Check-in${item.lateBy != null && item.lateBy != '--' ? ' • ${item.lateBy}' : ''}',
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFFEA580C),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ],
+        ),
       ),
     );
   }

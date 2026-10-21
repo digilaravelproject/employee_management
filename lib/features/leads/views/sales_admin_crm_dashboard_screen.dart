@@ -422,36 +422,36 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
             ),
           ],
         ),
-        actions: [
-          IconButton(
-            icon: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                const Icon(Iconsax.link_21, color: Color(0xFF1877F2), size: 21),
-                Positioned(
-                  right: -1,
-                  top: -1,
-                  child: Container(
-                    width: 7,
-                    height: 7,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF10B981),
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            tooltip: 'Ad Integrations (Google & Facebook OAuth)',
-            onPressed: () => LeadConnectBottomSheet.showPlatformSelector(context),
-          ),
-          IconButton(
-            icon: const Icon(Iconsax.headphone, color: AppColors.primaryColor, size: 20),
-            tooltip: 'Open Sales Executive View',
-            onPressed: () => Get.to(() => const SalesExecutiveTeleCrmScreen()),
-          ),
-          const SizedBox(width: 4),
-        ],
+        // actions: [
+        //   IconButton(
+        //     icon: Stack(
+        //       clipBehavior: Clip.none,
+        //       children: [
+        //         const Icon(Iconsax.link_21, color: Color(0xFF1877F2), size: 21),
+        //         Positioned(
+        //           right: -1,
+        //           top: -1,
+        //           child: Container(
+        //             width: 7,
+        //             height: 7,
+        //             decoration: const BoxDecoration(
+        //               color: Color(0xFF10B981),
+        //               shape: BoxShape.circle,
+        //             ),
+        //           ),
+        //         ),
+        //       ],
+        //     ),
+        //     tooltip: 'Ad Integrations (Google & Facebook OAuth)',
+        //     onPressed: () => LeadConnectBottomSheet.showPlatformSelector(context),
+        //   ),
+        //   IconButton(
+        //     icon: const Icon(Iconsax.headphone, color: AppColors.primaryColor, size: 20),
+        //     tooltip: 'Open Sales Executive View',
+        //     onPressed: () => Get.to(() => const SalesExecutiveTeleCrmScreen()),
+        //   ),
+        //   const SizedBox(width: 4),
+        // ],
       ),
       body: Column(
         children: [
@@ -558,7 +558,7 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
           'lightColor': const Color(0xFFEFF6FF),
           'badge': unassignedLeads > 0 ? '$unassignedLeads New' : null,
         },
-      /*{
+      {
         'index': 2,
         'title': 'Source Rules',
         'subtitle': 'Google, FB Ads & JustDial auto-assignment rules',
@@ -567,7 +567,7 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
         'color': const Color(0xFF7C3AED),
         'lightColor': const Color(0xFFF5F3FF),
         'badge': null,
-      },*/
+      },
       {
         'index': 3,
         'title': 'Lead Statuses',

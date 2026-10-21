@@ -31,11 +31,11 @@ class EmployeeListScreen extends StatelessWidget {
         centerTitle: false,
         actions: [
           // Export Button
-          IconButton(
+         /* IconButton(
             tooltip: 'Export Directory',
             icon: const Icon(Iconsax.document_download, color: AppColors.textColorPrimary, size: 20),
             onPressed: () => _handleExport(context, controller),
-          ),
+          ),*/
           // Add Employee Button
           IconButton(
             tooltip: 'Add Employee',
@@ -263,11 +263,11 @@ class EmployeeListScreen extends StatelessWidget {
                     ),
                   ],
                 )),
-                TextButton.icon(
+                /*TextButton.icon(
                   onPressed: () => _handleExport(context, controller),
                   icon: const Icon(Iconsax.export_1, size: 14, color: AppColors.textColorSecondary),
                   label: const AppText('Export CSV', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textColorSecondary),
-                ),
+                ),*/
               ],
             ),
           ),

@@ -12,10 +12,9 @@ import '../../../../core/widgets/app_text.dart';
 import '../controllers/employee_controller.dart';
 import '../models/employee_model.dart';
 import 'add_employee_screen.dart';
-import '../../../performance/controllers/performance_controller.dart';
+import '../../../attendance/views/attendance_history_screen.dart';
 import '../../../performance/models/performance_model.dart';
 import '../../../performance/views/team_member_performance_screen.dart';
-import '../../../attendance/views/attendance_history_screen.dart';
 
 class EmployeeDetailScreen extends StatefulWidget {
   final EmployeeModel employee;
@@ -40,7 +39,7 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen>
 
     _controller.setEmployeeDetail(widget.employee);
     if (widget.employee.id.isNotEmpty) {
-      _controller.fetchEmployeeDetail(widget.employee.id, showLoader: false);
+      _controller.fetchEmployeeDetail(widget.employee.id, showLoader: true);
     }
   }
 
@@ -598,7 +597,9 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen>
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 6),
-                    Row(
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
                       children: [
                         if (emp.employeeId.isNotEmpty)
                           Container(
@@ -614,8 +615,7 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen>
                               color: AppColors.primaryColor,
                             ),
                           ),
-                        if (emp.department.isNotEmpty) ...[
-                          const SizedBox(width: 6),
+                        if (emp.department.isNotEmpty)
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                             decoration: BoxDecoration(
@@ -629,7 +629,20 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen>
                               color: AppColors.textColorSecondary,
                             ),
                           ),
-                        ],
+                        if (emp.team.isNotEmpty)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF0FDF4),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: AppText(
+                              emp.team,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF15803D),
+                            ),
+                          ),
                       ],
                     ),
                   ],
@@ -641,41 +654,45 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen>
           const Divider(height: 1, color: AppColors.slate100),
           const SizedBox(height: 12),
 
-          // Quick Action Buttons Row
+          // Quick Action Buttons Row (only show buttons if data exists)
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildQuickActionButton(
-                icon: Iconsax.call,
-                label: 'Call',
-                color: const Color(0xFF10B981),
-                bgColor: const Color(0xFFECFDF5),
-                onTap: () => _makePhoneCall(emp.mobile),
-              ),
-              _buildQuickActionButton(
-                icon: Iconsax.message,
-                label: 'Message',
-                color: AppColors.primaryColor,
-                bgColor: AppColors.primaryLight,
-                onTap: () => _sendSms(emp.mobile),
-              ),
-              _buildQuickActionButton(
-                icon: Iconsax.sms,
-                label: 'Email',
-                color: const Color(0xFFF97316),
-                bgColor: const Color(0xFFFFF7ED),
-                onTap: () => _sendEmail(emp.email),
-              ),
-              _buildQuickActionButton(
-                icon: Iconsax.copy,
-                label: 'Copy ID',
-                color: const Color(0xFF8B5CF6),
-                bgColor: const Color(0xFFF5F3FF),
-                onTap: () {
-                  Clipboard.setData(ClipboardData(text: emp.employeeId));
-                  CustomSnackbar.showSuccess('Employee ID copied: ${emp.employeeId}');
-                },
-              ),
+              if (emp.mobile.isNotEmpty) ...[
+                _buildQuickActionButton(
+                  icon: Iconsax.call,
+                  label: 'Call',
+                  color: const Color(0xFF10B981),
+                  bgColor: const Color(0xFFECFDF5),
+                  onTap: () => _makePhoneCall(emp.mobile),
+                ),
+                _buildQuickActionButton(
+                  icon: Iconsax.message,
+                  label: 'Message',
+                  color: AppColors.primaryColor,
+                  bgColor: AppColors.primaryLight,
+                  onTap: () => _sendSms(emp.mobile),
+                ),
+              ],
+              if (emp.email.isNotEmpty)
+                _buildQuickActionButton(
+                  icon: Iconsax.sms,
+                  label: 'Email',
+                  color: const Color(0xFFF97316),
+                  bgColor: const Color(0xFFFFF7ED),
+                  onTap: () => _sendEmail(emp.email),
+                ),
+              if (emp.employeeId.isNotEmpty)
+                _buildQuickActionButton(
+                  icon: Iconsax.copy,
+                  label: 'Copy ID',
+                  color: const Color(0xFF8B5CF6),
+                  bgColor: const Color(0xFFF5F3FF),
+                  onTap: () {
+                    Clipboard.setData(ClipboardData(text: emp.employeeId));
+                    CustomSnackbar.showSuccess('Employee ID copied: ${emp.employeeId}');
+                  },
+                ),
             ],
           ),
         ],
@@ -710,10 +727,16 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen>
     );
   }
 
-  // ── 2. SUMMARY METRICS STRIP ──
+  // ── 2. SUMMARY METRICS STRIP (Only displays metrics present in API) ──
   Widget _buildSummaryStrip(EmployeeModel emp) {
-    return Row(
-      children: [
+    final shiftSubtitle = emp.assignedShift?.timingDisplay.isNotEmpty == true
+        ? emp.assignedShift!.timingDisplay
+        : (emp.shift.isNotEmpty ? 'Schedule' : '');
+
+    final tiles = <Widget>[];
+
+    if (emp.salary > 0) {
+      tiles.add(
         Expanded(
           child: _buildMetricTile(
             title: 'Base Salary',
@@ -726,11 +749,16 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen>
             textColor: const Color(0xFF14532D),
           ),
         ),
-        const SizedBox(width: 8),
+      );
+    }
+
+    if (emp.workMode.isNotEmpty) {
+      if (tiles.isNotEmpty) tiles.add(const SizedBox(width: 8));
+      tiles.add(
         Expanded(
           child: _buildMetricTile(
             title: 'Work Mode',
-            value: emp.workMode.isNotEmpty ? emp.workMode : 'Office',
+            value: emp.workMode,
             subtitle: emp.employeeType.isNotEmpty ? emp.employeeType : 'Full-time',
             icon: Iconsax.briefcase,
             bgColors: [AppColors.primaryLight, AppColors.primaryShade100],
@@ -739,12 +767,17 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen>
             textColor: AppColors.primaryShade900,
           ),
         ),
-        const SizedBox(width: 8),
+      );
+    }
+
+    if (emp.shift.isNotEmpty) {
+      if (tiles.isNotEmpty) tiles.add(const SizedBox(width: 8));
+      tiles.add(
         Expanded(
           child: _buildMetricTile(
             title: 'Assigned Shift',
-            value: emp.shift.isNotEmpty ? emp.shift : 'Default',
-            subtitle: 'Schedule',
+            value: emp.shift,
+            subtitle: shiftSubtitle.isNotEmpty ? shiftSubtitle : 'Schedule',
             icon: Iconsax.clock,
             bgColors: [const Color(0xFFFAF5FF), const Color(0xFFEDE9FE)],
             borderColor: const Color(0xFFC4B5FD),
@@ -752,8 +785,12 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen>
             textColor: const Color(0xFF4C1D95),
           ),
         ),
-      ],
-    );
+      );
+    }
+
+    if (tiles.isEmpty) return const SizedBox.shrink();
+
+    return Row(children: tiles);
   }
 
   Widget _buildMetricTile({
@@ -835,87 +872,98 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen>
 
   // ── TAB 1: OVERVIEW ──
   Widget _buildOverviewTab(BuildContext context, EmployeeModel emp) {
-    final perfController = Get.isRegistered<PerformanceController>()
-        ? Get.find<PerformanceController>()
-        : Get.put(PerformanceController());
+    // Collect Quick Information items that actually have data
+    final quickInfoTiles = <Widget>[];
+    if (emp.joiningDate.isNotEmpty) {
+      quickInfoTiles.add(_buildInfoTile('Date of Joining', _formatDate(emp.joiningDate), icon: Iconsax.calendar));
+    }
+    if (emp.department.isNotEmpty) {
+      quickInfoTiles.add(_buildInfoTile('Department', emp.department, icon: Iconsax.building));
+    }
+    if (emp.team.isNotEmpty) {
+      quickInfoTiles.add(_buildInfoTile('Team', emp.team, icon: Iconsax.people));
+    }
+    if (emp.reportingManager.isNotEmpty) {
+      quickInfoTiles.add(_buildInfoTile('Reporting Manager', emp.reportingManager, icon: Iconsax.user_tag));
+    }
+    if (emp.workMode.isNotEmpty) {
+      quickInfoTiles.add(_buildInfoTile('Work Mode', emp.workMode, icon: Iconsax.buildings));
+    }
+    if (emp.employmentStatus.isNotEmpty) {
+      quickInfoTiles.add(_buildInfoTile('Lifecycle Status', emp.employmentStatus, icon: Iconsax.status_up, isLast: true));
+    }
 
-    final matched = perfController.employees.firstWhereOrNull(
-      (e) => e.name.toLowerCase() == emp.name.toLowerCase() || e.id == emp.id,
-    );
-    final perfScore = matched?.performanceScore ?? 94;
+    final att = emp.summary?.attendance;
+    final attTotal = att?.totalRecords ?? 0;
+    final attPct = emp.attendancePercentageString;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
       physics: const BouncingScrollPhysics(),
       children: [
-        // Performance & Attendance Row
+        // Top Metrics Summary Cards (Attendance & Performance)
         Row(
           children: [
             Expanded(
               child: _buildInteractiveScoreCard(
-                title: 'Performance Score',
-                score: '$perfScore%',
-                badge: 'Rating',
-                icon: Iconsax.chart_21,
-                color: const Color(0xFF8B5CF6),
-                onTap: () => _openEmployeePerformance(context, emp, matched),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildInteractiveScoreCard(
                 title: 'Attendance Record',
-                score: '98%',
-                badge: 'Monthly',
+                score: attPct,
+                badge: '$attTotal Records',
                 icon: Iconsax.user_tick,
                 color: const Color(0xFF0D9488),
                 onTap: () => _openEmployeeAttendance(context, emp),
               ),
             ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildInteractiveScoreCard(
+                title: 'View Scorecard',
+                score: 'Performance',
+                badge: 'Analytics',
+                icon: Iconsax.chart_21,
+                color: const Color(0xFF8B5CF6),
+                onTap: () => _openEmployeePerformance(context, emp),
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 16),
 
-        // Quick Highlights Card
-        _buildCardWrapper(
-          title: 'Quick Information',
-          icon: Iconsax.info_circle,
-          iconColor: AppColors.primaryColor,
-          children: [
-            _buildInfoTile('Date of Joining', _formatDate(emp.joiningDate), icon: Iconsax.calendar),
-            _buildInfoTile('Reporting Manager', emp.reportingManager.isNotEmpty ? emp.reportingManager : '—', icon: Iconsax.user_tag),
-            _buildInfoTile('Work Mode', emp.workMode.isNotEmpty ? emp.workMode : 'Office', icon: Iconsax.buildings),
-            _buildInfoTile('Lifecycle Status', emp.employmentStatus.isNotEmpty ? emp.employmentStatus : 'Active', icon: Iconsax.status_up, isLast: true),
-          ],
-        ),
+        // Attendance Percentage & Summary Breakdown Card
+        _buildAttendanceBreakdownCard(context, emp),
         const SizedBox(height: 16),
 
-        // Technical Skills
-        _buildCardWrapper(
-          title: 'Technical Skills & Expertise',
-          icon: Iconsax.code,
-          iconColor: AppColors.primaryGradientLight,
-          trailing: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(
-              color: AppColors.primaryLight,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: AppText(
-              '${emp.skills.length} listed',
-              fontSize: 10.5,
-              fontWeight: FontWeight.w700,
-              color: AppColors.primaryColor,
-            ),
+        // Quick Highlights Card (only showing fields with data)
+        if (quickInfoTiles.isNotEmpty) ...[
+          _buildCardWrapper(
+            title: 'Quick Information',
+            icon: Iconsax.info_circle,
+            iconColor: AppColors.primaryColor,
+            children: quickInfoTiles,
           ),
-          children: [
-            if (emp.skills.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8),
-                child: AppText('No technical skills added to profile.',
-                    fontSize: 12, color: AppColors.textColorHint),
-              )
-            else
+          const SizedBox(height: 16),
+        ],
+
+        // Technical Skills (only if skills are present)
+        if (emp.skills.isNotEmpty) ...[
+          _buildCardWrapper(
+            title: 'Technical Skills & Expertise',
+            icon: Iconsax.code,
+            iconColor: AppColors.primaryGradientLight,
+            trailing: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: AppColors.primaryLight,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: AppText(
+                '${emp.skills.length} listed',
+                fontSize: 10.5,
+                fontWeight: FontWeight.w700,
+                color: AppColors.primaryColor,
+              ),
+            ),
+            children: [
               Padding(
                 padding: const EdgeInsets.only(top: 4, bottom: 4),
                 child: Wrap(
@@ -927,41 +975,232 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen>
                   ),
                 ),
               ),
-          ],
-        ),
-        const SizedBox(height: 16),
-
-        // Record Audit Timestamps
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.slate200),
+            ],
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          const SizedBox(height: 16),
+        ],
+
+        // Record Audit Timestamps (only if available)
+        if ((emp.createdAt != null && emp.createdAt!.isNotEmpty) ||
+            (emp.updatedAt != null && emp.updatedAt!.isNotEmpty))
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.slate200),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                if (emp.createdAt != null && emp.createdAt!.isNotEmpty)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const AppText('Created At', fontSize: 10, color: AppColors.textColorHint, fontWeight: FontWeight.w600),
+                      const SizedBox(height: 2),
+                      AppText(_formatDateTime(emp.createdAt), fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.textColorSecondary),
+                    ],
+                  ),
+                if (emp.updatedAt != null && emp.updatedAt!.isNotEmpty)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      const AppText('Last Updated', fontSize: 10, color: AppColors.textColorHint, fontWeight: FontWeight.w600),
+                      const SizedBox(height: 2),
+                      AppText(_formatDateTime(emp.updatedAt), fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.textColorSecondary),
+                    ],
+                  ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  // ── ATTENDANCE BREAKDOWN CARD ──
+  Widget _buildAttendanceBreakdownCard(BuildContext context, EmployeeModel emp) {
+    final att = emp.summary?.attendance;
+    final total = att?.totalRecords ?? 0;
+    final present = att?.present ?? 0;
+    final absent = att?.absent ?? 0;
+    final halfDay = att?.halfDay ?? 0;
+    final late = att?.late ?? 0;
+    final pctString = emp.attendancePercentageString;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.slate200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const AppText('Created At', fontSize: 10, color: AppColors.textColorHint, fontWeight: FontWeight.w600),
-                  const SizedBox(height: 2),
-                  AppText(_formatDateTime(emp.createdAt), fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.textColorSecondary),
-                ],
+              Container(
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0D9488).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Iconsax.calendar_2, color: Color(0xFF0D9488), size: 16),
               ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  const AppText('Last Updated', fontSize: 10, color: AppColors.textColorHint, fontWeight: FontWeight.w600),
-                  const SizedBox(height: 2),
-                  AppText(_formatDateTime(emp.updatedAt), fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.textColorSecondary),
-                ],
+              const SizedBox(width: 10),
+              const Expanded(
+                child: AppText(
+                  'Attendance Summary',
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textColorPrimary,
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0D9488).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: AppText(
+                  pctString,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w800,
+                  color: const Color(0xFF0D9488),
+                ),
               ),
             ],
           ),
-        ),
-      ],
+          const SizedBox(height: 16),
+          // Row of stats: Total Records, Present, Absent
+          Row(
+            children: [
+              Expanded(
+                child: _buildAttendanceStatTile(
+                  label: 'Total Days',
+                  value: '$total',
+                  color: AppColors.primaryColor,
+                  bgColor: AppColors.primaryLight,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildAttendanceStatTile(
+                  label: 'Present',
+                  value: '$present',
+                  color: const Color(0xFF16A34A),
+                  bgColor: const Color(0xFFDCFCE7),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildAttendanceStatTile(
+                  label: 'Absent',
+                  value: '$absent',
+                  color: const Color(0xFFDC2626),
+                  bgColor: const Color(0xFFFEE2E2),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          // Row of stats: Half Day, Late, View Log action
+          Row(
+            children: [
+              Expanded(
+                child: _buildAttendanceStatTile(
+                  label: 'Half Day',
+                  value: '$halfDay',
+                  color: const Color(0xFFD97706),
+                  bgColor: const Color(0xFFFEF3C7),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildAttendanceStatTile(
+                  label: 'Late Arrival',
+                  value: '$late',
+                  color: const Color(0xFF9333EA),
+                  bgColor: const Color(0xFFF3E8FF),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: InkWell(
+                  onTap: () => _openEmployeeAttendance(context, emp),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    decoration: BoxDecoration(
+                      color: AppColors.slate100,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.slate200),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: const [
+                        Icon(Icons.arrow_forward_rounded, size: 16, color: AppColors.primaryColor),
+                        SizedBox(height: 2),
+                        AppText(
+                          'View Log',
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primaryColor,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAttendanceStatTile({
+    required String label,
+    required String value,
+    required Color color,
+    required Color bgColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AppText(
+            value,
+            fontSize: 16,
+            fontWeight: FontWeight.w900,
+            color: color,
+          ),
+          const SizedBox(height: 2),
+          AppText(
+            label,
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+            color: color.withValues(alpha: 0.8),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
     );
   }
 
@@ -1008,9 +1247,23 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen>
               ],
             ),
             const SizedBox(height: 12),
-            AppText(score, fontSize: 20, fontWeight: FontWeight.w900, color: AppColors.textColorPrimary),
+            AppText(
+              score,
+              fontSize: score.length > 8 ? 16 : 20,
+              fontWeight: FontWeight.w900,
+              color: AppColors.textColorPrimary,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
             const SizedBox(height: 2),
-            AppText(title, fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textColorSecondary),
+            AppText(
+              title,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textColorSecondary,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ],
         ),
       ),
@@ -1059,38 +1312,152 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen>
 
   // ── TAB 2: JOB & ORG ──
   Widget _buildJobAndOrgTab(EmployeeModel emp) {
+    final orgTiles = <Widget>[];
+    if (emp.employeeId.isNotEmpty) {
+      orgTiles.add(_buildInfoTile('Employee ID', emp.employeeId, icon: Iconsax.personalcard, isHighlight: true));
+    }
+    if (emp.role.isNotEmpty) {
+      orgTiles.add(_buildInfoTile('System Role', emp.role.toUpperCase(), icon: Iconsax.user_tag));
+    }
+    if (emp.department.isNotEmpty) {
+      orgTiles.add(_buildInfoTile('Department', emp.department, icon: Iconsax.building));
+    }
+    if (emp.team.isNotEmpty) {
+      orgTiles.add(_buildInfoTile('Team', emp.team, icon: Iconsax.people));
+    }
+    if (emp.designation.isNotEmpty) {
+      orgTiles.add(_buildInfoTile('Designation', emp.designation, icon: Iconsax.award));
+    }
+    if (emp.designationDetails?.hierarchyLevel.isNotEmpty == true) {
+      orgTiles.add(_buildInfoTile('Hierarchy Level', emp.designationDetails!.hierarchyLevel.toUpperCase(), icon: Iconsax.hierarchy));
+    }
+    if (emp.shift.isNotEmpty) {
+      final shiftDisplay = emp.assignedShift?.timingDisplay.isNotEmpty == true
+          ? '${emp.shift} (${emp.assignedShift!.timingDisplay})'
+          : emp.shift;
+      orgTiles.add(_buildInfoTile('Assigned Shift', shiftDisplay, icon: Iconsax.clock));
+    }
+    if (emp.reportingManager.isNotEmpty) {
+      orgTiles.add(_buildInfoTile('Reporting Manager', emp.reportingManager, icon: Iconsax.user_cirlce_add));
+    }
+
+    final lifecycleTiles = <Widget>[];
+    if (emp.workMode.isNotEmpty) {
+      lifecycleTiles.add(_buildInfoTile('Work Mode', emp.workMode, icon: Iconsax.category));
+    }
+    if (emp.employeeType.isNotEmpty) {
+      lifecycleTiles.add(_buildInfoTile('Employment Type', emp.employeeType, icon: Iconsax.briefcase));
+    }
+    if (emp.joiningDate.isNotEmpty) {
+      lifecycleTiles.add(_buildInfoTile('Date of Joining', _formatDate(emp.joiningDate), icon: Iconsax.calendar_tick));
+    }
+    if (emp.employmentStatus.isNotEmpty) {
+      lifecycleTiles.add(_buildInfoTile('Status', emp.employmentStatus, icon: Iconsax.status_up));
+    }
+    if (emp.probationPeriod.isNotEmpty && emp.probationPeriod.toLowerCase() != 'none') {
+      lifecycleTiles.add(_buildInfoTile('Probation Period', emp.probationPeriod, icon: Iconsax.timer));
+    }
+    if (emp.noticePeriod.isNotEmpty && emp.noticePeriod.toLowerCase() != 'none') {
+      lifecycleTiles.add(_buildInfoTile('Notice Period', emp.noticePeriod, icon: Iconsax.timer_1));
+    }
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
       physics: const BouncingScrollPhysics(),
       children: [
-        _buildCardWrapper(
-          title: 'Organization Details',
-          icon: Iconsax.briefcase,
-          iconColor: AppColors.primaryColor,
-          children: [
-            _buildInfoTile('Employee ID', emp.employeeId.isNotEmpty ? emp.employeeId : '—', icon: Iconsax.personalcard, isHighlight: true),
-            _buildInfoTile('System Role', emp.role.isNotEmpty ? emp.role.toUpperCase() : 'EMPLOYEE', icon: Iconsax.user_tag),
-            _buildInfoTile('Department', emp.department.isNotEmpty ? emp.department : '—', icon: Iconsax.building),
-            _buildInfoTile('Designation', emp.designation.isNotEmpty ? emp.designation : '—', icon: Iconsax.award),
-            _buildInfoTile('Assigned Shift', emp.shift.isNotEmpty ? emp.shift : '—', icon: Iconsax.clock),
-            _buildInfoTile('Reporting Manager', emp.reportingManager.isNotEmpty ? emp.reportingManager : '—', icon: Iconsax.user_cirlce_add, isLast: true),
-          ],
-        ),
-        const SizedBox(height: 16),
+        if (orgTiles.isNotEmpty) ...[
+          _buildCardWrapper(
+            title: 'Organization Details',
+            icon: Iconsax.briefcase,
+            iconColor: AppColors.primaryColor,
+            children: orgTiles,
+          ),
+          const SizedBox(height: 16),
+        ],
 
-        _buildCardWrapper(
-          title: 'Employment Lifecycle',
-          icon: Iconsax.timer,
-          iconColor: const Color(0xFF8B5CF6),
-          children: [
-            _buildInfoTile('Work Mode', emp.workMode.isNotEmpty ? emp.workMode : 'Office', icon: Iconsax.category),
-            _buildInfoTile('Employment Type', emp.employeeType.isNotEmpty ? emp.employeeType : 'Full-time', icon: Iconsax.briefcase),
-            _buildInfoTile('Date of Joining', _formatDate(emp.joiningDate), icon: Iconsax.calendar_tick),
-            _buildInfoTile('Status', emp.employmentStatus.isNotEmpty ? emp.employmentStatus : 'Active', icon: Iconsax.status_up),
-            _buildInfoTile('Probation Period', emp.probationPeriod.isNotEmpty ? emp.probationPeriod : 'None', icon: Iconsax.timer),
-            _buildInfoTile('Notice Period', emp.noticePeriod.isNotEmpty ? emp.noticePeriod : 'None', icon: Iconsax.timer_1, isLast: true),
-          ],
-        ),
+        if (lifecycleTiles.isNotEmpty) ...[
+          _buildCardWrapper(
+            title: 'Employment Lifecycle',
+            icon: Iconsax.timer,
+            iconColor: const Color(0xFF8B5CF6),
+            children: lifecycleTiles,
+          ),
+          const SizedBox(height: 16),
+        ],
+
+        // Roles & Permissions from API
+        if (emp.roles.isNotEmpty || emp.permissions.isNotEmpty) ...[
+          _buildCardWrapper(
+            title: 'Roles & Direct Permissions',
+            icon: Iconsax.shield_tick,
+            iconColor: const Color(0xFF0D9488),
+            children: [
+              if (emp.roles.isNotEmpty) ...[
+                const AppText('Assigned Roles', fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.textColorSecondary),
+                const SizedBox(height: 8),
+                ...emp.roles.map((r) => Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.slate50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.slate200),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryLight,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: AppText(r.name, fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.primaryColor),
+                          ),
+                          if (r.department.isNotEmpty) ...[
+                            const SizedBox(width: 8),
+                            AppText(r.department, fontSize: 11, color: AppColors.textColorHint, fontWeight: FontWeight.w600),
+                          ],
+                        ],
+                      ),
+                      if (r.description.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        AppText(r.description, fontSize: 11.5, color: AppColors.textColorSecondary),
+                      ],
+                    ],
+                  ),
+                )),
+              ],
+              if (emp.permissions.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                const AppText('Assigned Permissions', fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.textColorSecondary),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: emp.permissions.map((p) => Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF0FDF4),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFBBF7D0)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.check_circle_rounded, size: 12, color: Color(0xFF16A34A)),
+                        const SizedBox(width: 4),
+                        AppText(p.name, fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0xFF15803D)),
+                      ],
+                    ),
+                  )).toList(),
+                ),
+              ],
+            ],
+          ),
+        ],
       ],
     );
   }
@@ -1105,120 +1472,167 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen>
       if (emp.country.isNotEmpty) emp.country,
     ].where((s) => s.trim().isNotEmpty).toList();
 
-    final fullAddress = addressParts.isNotEmpty ? addressParts.join(', ') : '—';
+    final fullAddress = addressParts.isNotEmpty ? addressParts.join(', ') : '';
+
+    final contactTiles = <Widget>[];
+    if (emp.email.isNotEmpty) {
+      contactTiles.add(_buildInfoTile(
+        'Work Email',
+        emp.email,
+        icon: Iconsax.sms,
+        onTap: () => _sendEmail(emp.email),
+      ));
+    }
+    if (emp.mobile.isNotEmpty) {
+      contactTiles.add(_buildInfoTile(
+        'Mobile Number',
+        emp.mobile,
+        icon: Iconsax.call,
+        onTap: () => _makePhoneCall(emp.mobile),
+      ));
+    }
+    if (emp.alternateMobile.isNotEmpty) {
+      contactTiles.add(_buildInfoTile(
+        'Alternate Mobile',
+        emp.alternateMobile,
+        icon: Iconsax.call_calling,
+        onTap: () => _makePhoneCall(emp.alternateMobile),
+      ));
+    }
+    if (emp.emergencyContact.isNotEmpty) {
+      contactTiles.add(_buildInfoTile(
+        'Emergency Contact',
+        emp.emergencyContact,
+        icon: Iconsax.security_user,
+        onTap: () => _makePhoneCall(emp.emergencyContact),
+      ));
+    }
+    if (fullAddress.isNotEmpty) {
+      contactTiles.add(_buildInfoTile('Complete Address', fullAddress, icon: Iconsax.location));
+    }
+
+    final personalTiles = <Widget>[];
+    if (emp.gender.isNotEmpty) {
+      personalTiles.add(_buildInfoTile('Gender', emp.gender, icon: Iconsax.man));
+    }
+    if (emp.dob.isNotEmpty) {
+      personalTiles.add(_buildInfoTile('Date of Birth', _formatDate(emp.dob), icon: Iconsax.calendar_1));
+    }
+    if (emp.maritalStatus.isNotEmpty) {
+      personalTiles.add(_buildInfoTile('Marital Status', emp.maritalStatus, icon: Iconsax.heart));
+    }
+    if (emp.bloodGroup.isNotEmpty) {
+      personalTiles.add(_buildInfoTile('Blood Group', emp.bloodGroup, icon: Iconsax.drop));
+    }
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
       physics: const BouncingScrollPhysics(),
       children: [
-        _buildCardWrapper(
-          title: 'Contact Information',
-          icon: Iconsax.call,
-          iconColor: const Color(0xFFF97316),
-          children: [
-            _buildInfoTile(
-              'Work Email',
-              emp.email.isNotEmpty ? emp.email : '—',
-              icon: Iconsax.sms,
-              onTap: emp.email.isNotEmpty ? () => _sendEmail(emp.email) : null,
-            ),
-            _buildInfoTile(
-              'Mobile Number',
-              emp.mobile.isNotEmpty ? emp.mobile : '—',
-              icon: Iconsax.call,
-              onTap: emp.mobile.isNotEmpty ? () => _makePhoneCall(emp.mobile) : null,
-            ),
-            if (emp.alternateMobile.isNotEmpty)
-              _buildInfoTile(
-                'Alternate Mobile',
-                emp.alternateMobile,
-                icon: Iconsax.call_calling,
-                onTap: () => _makePhoneCall(emp.alternateMobile),
-              ),
-            _buildInfoTile(
-              'Emergency Contact',
-              emp.emergencyContact.isNotEmpty ? emp.emergencyContact : '—',
-              icon: Iconsax.security_user,
-              onTap: emp.emergencyContact.isNotEmpty ? () => _makePhoneCall(emp.emergencyContact) : null,
-            ),
-            _buildInfoTile('Complete Address', fullAddress, icon: Iconsax.location, isLast: true),
-          ],
-        ),
-        const SizedBox(height: 16),
+        if (contactTiles.isNotEmpty) ...[
+          _buildCardWrapper(
+            title: 'Contact Information',
+            icon: Iconsax.call,
+            iconColor: const Color(0xFFF97316),
+            children: contactTiles,
+          ),
+          const SizedBox(height: 16),
+        ],
 
-        _buildCardWrapper(
-          title: 'Personal Details',
-          icon: Iconsax.user,
-          iconColor: const Color(0xFF0D9488),
-          children: [
-            _buildInfoTile('Gender', emp.gender.isNotEmpty ? emp.gender : '—', icon: Iconsax.man),
-            _buildInfoTile('Date of Birth', _formatDate(emp.dob), icon: Iconsax.calendar_1),
-            _buildInfoTile('Marital Status', emp.maritalStatus.isNotEmpty ? emp.maritalStatus : '—', icon: Iconsax.heart),
-            _buildInfoTile('Blood Group', emp.bloodGroup.isNotEmpty ? emp.bloodGroup : '—', icon: Iconsax.drop, isLast: true),
-          ],
-        ),
+        if (personalTiles.isNotEmpty) ...[
+          _buildCardWrapper(
+            title: 'Personal Details',
+            icon: Iconsax.user,
+            iconColor: const Color(0xFF0D9488),
+            children: personalTiles,
+          ),
+        ],
       ],
     );
   }
 
   // ── TAB 4: PAYROLL & TARGET ──
   Widget _buildPayrollAndTargetTab(EmployeeModel emp) {
-    final hasBank = emp.accountNumber.isNotEmpty ||
-        emp.bankName.isNotEmpty ||
-        emp.ifscCode.isNotEmpty ||
-        emp.accountHolderName.isNotEmpty;
+    final compTiles = <Widget>[];
+    if (emp.salary > 0) {
+      compTiles.add(_buildInfoTile(
+        'Monthly Base Salary',
+        _formatCurrency(emp.salary),
+        icon: Iconsax.money_recive,
+        isHighlight: true,
+      ));
+    }
+    if (emp.salaryType.isNotEmpty) {
+      compTiles.add(_buildInfoTile('Salary Type', emp.salaryType, icon: Iconsax.calendar));
+    }
+    if (emp.hasSalesTarget) {
+      compTiles.add(_buildInfoTile(
+        'Sales Target Status',
+        'Enabled',
+        icon: Iconsax.chart_2,
+      ));
+      final targetDisplay = emp.targetType == 'Revenue'
+          ? '₹${emp.targetAmount}'
+          : '${emp.targetAmount} ${emp.targetType}';
+      compTiles.add(_buildInfoTile(
+        'Target Metric (${emp.targetPeriod.isNotEmpty ? emp.targetPeriod : "Monthly"})',
+        targetDisplay,
+        icon: Iconsax.radar,
+      ));
+      if (emp.incentivePercent.isNotEmpty && emp.incentivePercent != '0') {
+        compTiles.add(_buildInfoTile(
+          'Incentive Commission',
+          '${emp.incentivePercent}% on achievement',
+          icon: Iconsax.percentage_circle,
+        ));
+      }
+    } else {
+      compTiles.add(_buildInfoTile(
+        'Sales Target Status',
+        'Disabled / Not Applicable',
+        icon: Iconsax.chart_2,
+      ));
+    }
+
+    final bankTiles = <Widget>[];
+    if (emp.accountHolderName.isNotEmpty) {
+      bankTiles.add(_buildInfoTile('Account Holder Name', emp.accountHolderName, icon: Iconsax.user));
+    }
+    if (emp.bankName.isNotEmpty) {
+      bankTiles.add(_buildInfoTile('Bank Name', emp.bankName, icon: Iconsax.bank));
+    }
+    if (emp.accountNumber.isNotEmpty) {
+      bankTiles.add(_buildInfoTile('Account Number', emp.accountNumber, icon: Iconsax.card_pos));
+    }
+    if (emp.ifscCode.isNotEmpty) {
+      bankTiles.add(_buildInfoTile('IFSC Code', emp.ifscCode, icon: Iconsax.code));
+    }
+    if (emp.branchName.isNotEmpty) {
+      bankTiles.add(_buildInfoTile('Branch Name', emp.branchName, icon: Iconsax.buildings));
+    }
+
+    final salaries = emp.summary?.salaries;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
       physics: const BouncingScrollPhysics(),
       children: [
-        _buildCardWrapper(
-          title: 'Compensation & Goals',
-          icon: Iconsax.wallet_money,
-          iconColor: const Color(0xFF10B981),
-          children: [
-            _buildInfoTile(
-              'Monthly Base Salary',
-              _formatCurrency(emp.salary),
-              icon: Iconsax.money_recive,
-              isHighlight: true,
-            ),
-            _buildInfoTile('Salary Type', emp.salaryType.isNotEmpty ? emp.salaryType : 'Monthly', icon: Iconsax.calendar),
-            _buildInfoTile(
-              'Sales Target Status',
-              emp.hasSalesTarget ? 'Enabled' : 'Disabled / Not Applicable',
-              icon: Iconsax.chart_2,
-              isLast: !emp.hasSalesTarget,
-            ),
-            if (emp.hasSalesTarget) ...[
-              _buildInfoTile(
-                'Target Metric (${emp.targetPeriod.isNotEmpty ? emp.targetPeriod : "Monthly"})',
-                emp.targetType == 'Revenue' ? '₹${emp.targetAmount}' : '${emp.targetAmount} ${emp.targetType}',
-                icon: Iconsax.radar,
-              ),
-              _buildInfoTile(
-                'Incentive Commission',
-                '${emp.incentivePercent}% on achievement',
-                icon: Iconsax.percentage_circle,
-                isLast: true,
-              ),
-            ],
-          ],
-        ),
-        const SizedBox(height: 16),
+        if (compTiles.isNotEmpty) ...[
+          _buildCardWrapper(
+            title: 'Compensation & Goals',
+            icon: Iconsax.wallet_money,
+            iconColor: const Color(0xFF10B981),
+            children: compTiles,
+          ),
+          const SizedBox(height: 16),
+        ],
 
         _buildCardWrapper(
           title: 'Bank & Payroll Account',
           icon: Iconsax.bank,
           iconColor: AppColors.primaryColor,
-          children: hasBank
-              ? [
-                  _buildInfoTile('Account Holder Name', emp.accountHolderName.isNotEmpty ? emp.accountHolderName : emp.name, icon: Iconsax.user),
-                  _buildInfoTile('Bank Name', emp.bankName.isNotEmpty ? emp.bankName : '—', icon: Iconsax.bank),
-                  _buildInfoTile('Account Number', emp.accountNumber.isNotEmpty ? emp.accountNumber : '—', icon: Iconsax.card_pos),
-                  _buildInfoTile('IFSC Code', emp.ifscCode.isNotEmpty ? emp.ifscCode : '—', icon: Iconsax.code),
-                  _buildInfoTile('Branch Name', emp.branchName.isNotEmpty ? emp.branchName : '—', icon: Iconsax.buildings, isLast: true),
-                ]
+          children: bankTiles.isNotEmpty
+              ? bankTiles
               : [
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 12),
@@ -1245,6 +1659,19 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen>
                   ),
                 ],
         ),
+
+        if (salaries != null) ...[
+          const SizedBox(height: 16),
+          _buildCardWrapper(
+            title: 'Salaries Summary',
+            icon: Iconsax.receipt_2_1,
+            iconColor: const Color(0xFF059669),
+            children: [
+              _buildInfoTile('Total Salary Records', '${salaries.totalRecords}', icon: Iconsax.document_text),
+              _buildInfoTile('Total Net Paid', _formatCurrency(salaries.totalNetPaid), icon: Iconsax.money_tick, isHighlight: true),
+            ],
+          ),
+        ],
       ],
     );
   }
@@ -1366,33 +1793,30 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen>
     );
   }
 
-  void _openEmployeePerformance(
-    BuildContext context,
-    EmployeeModel emp,
-    EmployeePerformance? matchedPerf,
-  ) {
-    final targetEmp = matchedPerf ??
-        EmployeePerformance(
-          id: emp.id,
-          name: emp.name,
-          designation: emp.designation.isNotEmpty ? emp.designation : 'Executive',
-          department: emp.department.isNotEmpty ? emp.department : 'Engineering',
-          performanceScore: 94,
-          ratingLabel: 'Excellent',
-          imageUrl: emp.profilePic != null && emp.profilePic!.isNotEmpty
-              ? emp.profilePic!
-              : 'https://i.pravatar.cc/150?u=${emp.name.replaceAll(' ', '')}',
-          rank: 1,
-        );
-
-    Get.to(() => TeamMemberPerformanceScreen(emp: targetEmp));
+  void _openEmployeePerformance(BuildContext context, EmployeeModel emp) {
+    Get.to(() => TeamMemberPerformanceScreen(
+      employeeId: emp.id,
+      emp: EmployeePerformance(
+        id: emp.id,
+        name: emp.name,
+        designation: emp.designation.isNotEmpty ? emp.designation : 'Executive',
+        department: emp.department.isNotEmpty ? emp.department : 'Engineering',
+        performanceScore: 0,
+        ratingLabel: 'Performance',
+        rank: 1,
+        imageUrl: emp.profilePic != null && emp.profilePic!.isNotEmpty
+            ? emp.profilePic!
+            : 'https://i.pravatar.cc/150?u=${emp.name.replaceAll(' ', '')}',
+      ),
+    ));
   }
 
   void _openEmployeeAttendance(BuildContext context, EmployeeModel emp) {
     Get.to(() => AttendanceHistoryScreen(
       showBackButton: true,
       employeeName: emp.name,
-      employeeId: emp.employeeId,
+      employeeId: emp.id,
+      employeeCode: emp.employeeId,
       employeeDesignation: emp.designation,
     ));
   }

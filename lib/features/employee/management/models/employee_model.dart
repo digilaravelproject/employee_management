@@ -134,6 +134,13 @@ class EmployeeModel {
   final String ifscCode;
   final String branchName;
 
+  // Additional API Details & Summary
+  final EmployeeSummaryModel? summary;
+  final AssignedShiftModel? assignedShift;
+  final DesignationDetailsModel? designationDetails;
+  final List<EmployeeRoleModel> roles;
+  final List<EmployeePermissionModel> permissions;
+
   // Timestamps
   final String? createdAt;
   final String? updatedAt;
@@ -186,9 +193,17 @@ class EmployeeModel {
     this.accountNumber = '',
     this.ifscCode = '',
     this.branchName = '',
+    this.summary,
+    this.assignedShift,
+    this.designationDetails,
+    this.roles = const [],
+    this.permissions = const [],
     this.createdAt,
     this.updatedAt,
   });
+
+  double get attendancePercentage => summary?.attendance.attendancePercentage ?? 0.0;
+  String get attendancePercentageString => summary?.attendance.attendancePercentageString ?? '0%';
 
   factory EmployeeModel.fromJson(Map<String, dynamic> json) {
     // Parse skills
@@ -208,9 +223,38 @@ class EmployeeModel {
           .toList();
     }
 
+    // Parse shift model
+    AssignedShiftModel? shiftModel;
+    if (json['assigned_shift'] is Map<String, dynamic>) {
+      shiftModel = AssignedShiftModel.fromJson(json['assigned_shift'] as Map<String, dynamic>);
+    } else if (json['assigned_shift'] is Map) {
+      shiftModel = AssignedShiftModel.fromJson(Map<String, dynamic>.from(json['assigned_shift'] as Map));
+    }
+
+    // Parse shift name
+    String parsedShift = '';
+    if (shiftModel != null && shiftModel.name.isNotEmpty) {
+      parsedShift = shiftModel.name;
+    } else if (json['shift'] != null && json['shift'].toString().isNotEmpty) {
+      parsedShift = json['shift'].toString();
+    }
+
+    // Parse designation details model
+    DesignationDetailsModel? desigDetails;
+    if (json['designation_details'] is Map<String, dynamic>) {
+      desigDetails = DesignationDetailsModel.fromJson(json['designation_details'] as Map<String, dynamic>);
+    } else if (json['designation_details'] is Map) {
+      desigDetails = DesignationDetailsModel.fromJson(Map<String, dynamic>.from(json['designation_details'] as Map));
+    }
+
+    // Fallback skills from designation if skills list was empty
+    if (parsedSkills.isEmpty && desigDetails != null && desigDetails.skills.isNotEmpty) {
+      parsedSkills = List.from(desigDetails.skills);
+    }
+
     // Parse department
     String parsedDept = '';
-    if (json['department'] != null && json['department'].toString().isNotEmpty) {
+    if (json['department'] != null && json['department'].toString().isNotEmpty && json['department'].toString().toLowerCase() != 'null') {
       parsedDept = json['department'].toString();
     } else if (json['department_details'] is Map && json['department_details']['name'] != null) {
       parsedDept = json['department_details']['name'].toString();
@@ -218,25 +262,19 @@ class EmployeeModel {
 
     // Parse designation
     String parsedDesig = '';
-    if (json['designation'] != null && json['designation'].toString().isNotEmpty) {
+    if (json['designation'] != null && json['designation'].toString().isNotEmpty && json['designation'].toString().toLowerCase() != 'null') {
       parsedDesig = json['designation'].toString();
-    } else if (json['designation_details'] is Map && json['designation_details']['name'] != null) {
-      parsedDesig = json['designation_details']['name'].toString();
-    }
-
-    // Parse shift
-    String parsedShift = '';
-    if (json['assigned_shift'] is Map && json['assigned_shift']['name'] != null) {
-      parsedShift = json['assigned_shift']['name'].toString();
-    } else if (json['shift'] != null && json['shift'].toString().isNotEmpty) {
-      parsedShift = json['shift'].toString();
+    } else if (desigDetails != null && desigDetails.name.isNotEmpty) {
+      parsedDesig = desigDetails.name;
     }
 
     // Parse reporting manager
     String parsedManager = '';
     if (json['reporting_manager'] is Map && json['reporting_manager']['name'] != null) {
       parsedManager = json['reporting_manager']['name'].toString();
-    } else if (json['reporting_manager'] != null && json['reporting_manager'].toString().isNotEmpty) {
+    } else if (json['reporting_manager'] != null &&
+        json['reporting_manager'].toString().isNotEmpty &&
+        json['reporting_manager'].toString().toLowerCase() != 'null') {
       parsedManager = json['reporting_manager'].toString();
     }
 
@@ -263,6 +301,32 @@ class EmployeeModel {
 
     // Mobile fallback
     String parsedMobile = json['mobile_number']?.toString() ?? json['phone']?.toString() ?? '';
+
+    // Parse summary
+    EmployeeSummaryModel? summaryModel;
+    if (json['summary'] is Map<String, dynamic>) {
+      summaryModel = EmployeeSummaryModel.fromJson(json['summary'] as Map<String, dynamic>);
+    } else if (json['summary'] is Map) {
+      summaryModel = EmployeeSummaryModel.fromJson(Map<String, dynamic>.from(json['summary'] as Map));
+    }
+
+    // Parse roles
+    List<EmployeeRoleModel> parsedRoles = [];
+    if (json['roles'] is List) {
+      parsedRoles = (json['roles'] as List)
+          .whereType<Map>()
+          .map((r) => EmployeeRoleModel.fromJson(Map<String, dynamic>.from(r)))
+          .toList();
+    }
+
+    // Parse permissions
+    List<EmployeePermissionModel> parsedPermissions = [];
+    if (json['permissions'] is List) {
+      parsedPermissions = (json['permissions'] as List)
+          .whereType<Map>()
+          .map((p) => EmployeePermissionModel.fromJson(Map<String, dynamic>.from(p)))
+          .toList();
+    }
 
     return EmployeeModel(
       id: json['id']?.toString() ?? '',
@@ -312,6 +376,11 @@ class EmployeeModel {
       accountNumber: json['account_number']?.toString() ?? '',
       ifscCode: json['ifsc_code']?.toString() ?? '',
       branchName: json['branch_name']?.toString() ?? '',
+      summary: summaryModel,
+      assignedShift: shiftModel,
+      designationDetails: desigDetails,
+      roles: parsedRoles,
+      permissions: parsedPermissions,
       createdAt: json['created_at']?.toString(),
       updatedAt: json['updated_at']?.toString(),
     );
@@ -369,6 +438,11 @@ class EmployeeModel {
       'account_number': accountNumber,
       'ifsc_code': ifscCode,
       'branch_name': branchName,
+      'summary': summary?.toJson(),
+      'assigned_shift': assignedShift?.toJson(),
+      'designation_details': designationDetails?.toJson(),
+      'roles': roles.map((r) => r.toJson()).toList(),
+      'permissions': permissions.map((p) => p.toJson()).toList(),
       'created_at': createdAt,
       'updated_at': updatedAt,
     };
@@ -422,6 +496,11 @@ class EmployeeModel {
     String? branchName,
     String? maritalStatus,
     String? bloodGroup,
+    EmployeeSummaryModel? summary,
+    AssignedShiftModel? assignedShift,
+    DesignationDetailsModel? designationDetails,
+    List<EmployeeRoleModel>? roles,
+    List<EmployeePermissionModel>? permissions,
     String? createdAt,
     String? updatedAt,
   }) {
@@ -473,8 +552,372 @@ class EmployeeModel {
       branchName: branchName ?? this.branchName,
       maritalStatus: maritalStatus ?? this.maritalStatus,
       bloodGroup: bloodGroup ?? this.bloodGroup,
+      summary: summary ?? this.summary,
+      assignedShift: assignedShift ?? this.assignedShift,
+      designationDetails: designationDetails ?? this.designationDetails,
+      roles: roles ?? this.roles,
+      permissions: permissions ?? this.permissions,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 }
+
+// ──────────────────────────────────────────
+// ADDITIONAL MODELS FOR EMPLOYEE DETAILS API
+// ──────────────────────────────────────────
+
+class EmployeeSummaryModel {
+  final EmployeeLeaveSummary leaveRequests;
+  final EmployeeAttendanceSummary attendance;
+  final EmployeeSalarySummary salaries;
+  final EmployeeNotificationSummary notifications;
+
+  EmployeeSummaryModel({
+    required this.leaveRequests,
+    required this.attendance,
+    required this.salaries,
+    required this.notifications,
+  });
+
+  factory EmployeeSummaryModel.fromJson(Map<String, dynamic> json) {
+    return EmployeeSummaryModel(
+      leaveRequests: EmployeeLeaveSummary.fromJson(
+        json['leave_requests'] is Map<String, dynamic>
+            ? json['leave_requests'] as Map<String, dynamic>
+            : (json['leave_requests'] is Map ? Map<String, dynamic>.from(json['leave_requests'] as Map) : {}),
+      ),
+      attendance: EmployeeAttendanceSummary.fromJson(
+        json['attendance'] is Map<String, dynamic>
+            ? json['attendance'] as Map<String, dynamic>
+            : (json['attendance'] is Map ? Map<String, dynamic>.from(json['attendance'] as Map) : {}),
+      ),
+      salaries: EmployeeSalarySummary.fromJson(
+        json['salaries'] is Map<String, dynamic>
+            ? json['salaries'] as Map<String, dynamic>
+            : (json['salaries'] is Map ? Map<String, dynamic>.from(json['salaries'] as Map) : {}),
+      ),
+      notifications: EmployeeNotificationSummary.fromJson(
+        json['notifications'] is Map<String, dynamic>
+            ? json['notifications'] as Map<String, dynamic>
+            : (json['notifications'] is Map ? Map<String, dynamic>.from(json['notifications'] as Map) : {}),
+      ),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'leave_requests': leaveRequests.toJson(),
+      'attendance': attendance.toJson(),
+      'salaries': salaries.toJson(),
+      'notifications': notifications.toJson(),
+    };
+  }
+}
+
+class EmployeeAttendanceSummary {
+  final int totalRecords;
+  final int present;
+  final int absent;
+  final int halfDay;
+  final int late;
+
+  EmployeeAttendanceSummary({
+    this.totalRecords = 0,
+    this.present = 0,
+    this.absent = 0,
+    this.halfDay = 0,
+    this.late = 0,
+  });
+
+  factory EmployeeAttendanceSummary.fromJson(Map<String, dynamic> json) {
+    return EmployeeAttendanceSummary(
+      totalRecords: int.tryParse(json['total_records']?.toString() ?? '0') ?? 0,
+      present: int.tryParse(json['present']?.toString() ?? '0') ?? 0,
+      absent: int.tryParse(json['absent']?.toString() ?? '0') ?? 0,
+      halfDay: int.tryParse(json['half_day']?.toString() ?? '0') ?? 0,
+      late: int.tryParse(json['late']?.toString() ?? '0') ?? 0,
+    );
+  }
+
+  double get attendancePercentage {
+    if (totalRecords <= 0) return 0.0;
+    final attended = present + (halfDay * 0.5);
+    final pct = (attended / totalRecords) * 100;
+    return pct.clamp(0.0, 100.0);
+  }
+
+  String get attendancePercentageString {
+    final pct = attendancePercentage;
+    if (pct == 0.0) return '0%';
+    if (pct == pct.roundToDouble()) {
+      return '${pct.toInt()}%';
+    }
+    return '${pct.toStringAsFixed(1)}%';
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'total_records': totalRecords,
+      'present': present,
+      'absent': absent,
+      'half_day': halfDay,
+      'late': late,
+    };
+  }
+}
+
+class EmployeeLeaveSummary {
+  final int total;
+  final int pending;
+  final int approved;
+  final int rejected;
+  final int cancelled;
+
+  EmployeeLeaveSummary({
+    this.total = 0,
+    this.pending = 0,
+    this.approved = 0,
+    this.rejected = 0,
+    this.cancelled = 0,
+  });
+
+  factory EmployeeLeaveSummary.fromJson(Map<String, dynamic> json) {
+    return EmployeeLeaveSummary(
+      total: int.tryParse(json['total']?.toString() ?? '0') ?? 0,
+      pending: int.tryParse(json['pending']?.toString() ?? '0') ?? 0,
+      approved: int.tryParse(json['approved']?.toString() ?? '0') ?? 0,
+      rejected: int.tryParse(json['rejected']?.toString() ?? '0') ?? 0,
+      cancelled: int.tryParse(json['cancelled']?.toString() ?? '0') ?? 0,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'total': total,
+      'pending': pending,
+      'approved': approved,
+      'rejected': rejected,
+      'cancelled': cancelled,
+    };
+  }
+}
+
+class EmployeeSalarySummary {
+  final int totalRecords;
+  final double totalNetPaid;
+
+  EmployeeSalarySummary({
+    this.totalRecords = 0,
+    this.totalNetPaid = 0.0,
+  });
+
+  factory EmployeeSalarySummary.fromJson(Map<String, dynamic> json) {
+    return EmployeeSalarySummary(
+      totalRecords: int.tryParse(json['total_records']?.toString() ?? '0') ?? 0,
+      totalNetPaid: double.tryParse(json['total_net_paid']?.toString() ?? '0.0') ?? 0.0,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'total_records': totalRecords,
+      'total_net_paid': totalNetPaid,
+    };
+  }
+}
+
+class EmployeeNotificationSummary {
+  final int total;
+  final int unread;
+
+  EmployeeNotificationSummary({
+    this.total = 0,
+    this.unread = 0,
+  });
+
+  factory EmployeeNotificationSummary.fromJson(Map<String, dynamic> json) {
+    return EmployeeNotificationSummary(
+      total: int.tryParse(json['total']?.toString() ?? '0') ?? 0,
+      unread: int.tryParse(json['unread']?.toString() ?? '0') ?? 0,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'total': total,
+      'unread': unread,
+    };
+  }
+}
+
+class AssignedShiftModel {
+  final int? id;
+  final String name;
+  final String code;
+  final String startTime;
+  final String endTime;
+
+  AssignedShiftModel({
+    this.id,
+    this.name = '',
+    this.code = '',
+    this.startTime = '',
+    this.endTime = '',
+  });
+
+  factory AssignedShiftModel.fromJson(Map<String, dynamic> json) {
+    return AssignedShiftModel(
+      id: int.tryParse(json['id']?.toString() ?? ''),
+      name: json['name']?.toString() ?? '',
+      code: json['code']?.toString() ?? '',
+      startTime: json['start_time']?.toString() ?? '',
+      endTime: json['end_time']?.toString() ?? '',
+    );
+  }
+
+  String get timingDisplay {
+    if (startTime.isNotEmpty && endTime.isNotEmpty) {
+      return '$startTime - $endTime';
+    }
+    return '';
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'code': code,
+      'start_time': startTime,
+      'end_time': endTime,
+    };
+  }
+}
+
+class DesignationDetailsModel {
+  final int? id;
+  final String name;
+  final String hierarchyLevel;
+  final List<String> skills;
+
+  DesignationDetailsModel({
+    this.id,
+    this.name = '',
+    this.hierarchyLevel = '',
+    this.skills = const [],
+  });
+
+  factory DesignationDetailsModel.fromJson(Map<String, dynamic> json) {
+    List<String> parsedSkills = [];
+    if (json['skills'] is List) {
+      parsedSkills = (json['skills'] as List)
+          .where((s) => s != null)
+          .map((s) => s.toString().trim())
+          .where((s) => s.isNotEmpty)
+          .toList();
+    }
+    return DesignationDetailsModel(
+      id: int.tryParse(json['id']?.toString() ?? ''),
+      name: json['name']?.toString() ?? '',
+      hierarchyLevel: json['hierarchy_level']?.toString() ?? '',
+      skills: parsedSkills,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'hierarchy_level': hierarchyLevel,
+      'skills': skills,
+    };
+  }
+}
+
+class EmployeeRoleModel {
+  final int? id;
+  final String name;
+  final String department;
+  final String description;
+  final bool status;
+  final List<int> permissionIds;
+
+  EmployeeRoleModel({
+    this.id,
+    this.name = '',
+    this.department = '',
+    this.description = '',
+    this.status = true,
+    this.permissionIds = const [],
+  });
+
+  factory EmployeeRoleModel.fromJson(Map<String, dynamic> json) {
+    List<int> ids = [];
+    if (json['permission_ids'] is List) {
+      ids = (json['permission_ids'] as List)
+          .map((p) => int.tryParse(p.toString()) ?? 0)
+          .where((p) => p > 0)
+          .toList();
+    }
+    return EmployeeRoleModel(
+      id: int.tryParse(json['id']?.toString() ?? ''),
+      name: json['name']?.toString() ?? '',
+      department: json['department']?.toString() ?? '',
+      description: json['description']?.toString() ?? '',
+      status: json['status'] == true || json['status']?.toString() == '1' || json['status']?.toString().toLowerCase() == 'true',
+      permissionIds: ids,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'department': department,
+      'description': description,
+      'status': status,
+      'permission_ids': permissionIds,
+    };
+  }
+}
+
+class EmployeePermissionModel {
+  final int? id;
+  final String module;
+  final String moduleSlug;
+  final String name;
+  final String action;
+  final String description;
+
+  EmployeePermissionModel({
+    this.id,
+    this.module = '',
+    this.moduleSlug = '',
+    this.name = '',
+    this.action = '',
+    this.description = '',
+  });
+
+  factory EmployeePermissionModel.fromJson(Map<String, dynamic> json) {
+    return EmployeePermissionModel(
+      id: int.tryParse(json['id']?.toString() ?? ''),
+      module: json['module']?.toString() ?? '',
+      moduleSlug: json['module_slug']?.toString() ?? '',
+      name: json['name']?.toString() ?? '',
+      action: json['action']?.toString() ?? '',
+      description: json['description']?.toString() ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'module': module,
+      'module_slug': moduleSlug,
+      'name': name,
+      'action': action,
+      'description': description,
+    };
+  }
+}
+
