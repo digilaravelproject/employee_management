@@ -1295,8 +1295,14 @@ class EmployeeShiftAttendanceCard extends StatelessWidget {
                                     final success = await controller.checkIn(
                                       notes: notesController.text,
                                     );
-                                    if (success && Get.isBottomSheetOpen == true) {
-                                      Get.back();
+                                    if (success) {
+                                      if (bottomSheetContext.mounted) {
+                                        Navigator.of(bottomSheetContext).pop();
+                                      } else if (context.mounted && Navigator.canPop(context)) {
+                                        Navigator.of(context).pop();
+                                      } else if (Get.isBottomSheetOpen == true) {
+                                        Get.back();
+                                      }
                                     }
                                   },
                           );
@@ -1508,8 +1514,14 @@ class EmployeeShiftAttendanceCard extends StatelessWidget {
                                     final success = await controller.checkOut(
                                       notes: notesController.text,
                                     );
-                                    if (success && Get.isBottomSheetOpen == true) {
-                                      Get.back();
+                                    if (success) {
+                                      if (bottomSheetContext.mounted) {
+                                        Navigator.of(bottomSheetContext).pop();
+                                      } else if (context.mounted && Navigator.canPop(context)) {
+                                        Navigator.of(context).pop();
+                                      } else if (Get.isBottomSheetOpen == true) {
+                                        Get.back();
+                                      }
                                     }
                                   },
                           );

@@ -3,7 +3,6 @@ import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_text.dart';
-import 'sales_executive_tele_crm_screen.dart';
 import 'sales_executive_create_lead_screen.dart';
 import '../bindings/admin_leads_hub_binding.dart';
 import '../controllers/admin_leads_hub_controller.dart';
@@ -260,7 +259,56 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
   }
 
   void _initSourceRules() {
-    _sourceRules = [];
+    _sourceRules = [
+      SourceAssignRule(
+        id: 'SR-01',
+        sourceName: 'Google Ads',
+        colorHex: '0xFFEA4335',
+        assignedExecutives: ['Rahul Sharma', 'Neha Singh'],
+        strategy: 'Round-Robin',
+        isActive: true,
+      ),
+      SourceAssignRule(
+        id: 'SR-02',
+        sourceName: 'Facebook Ads',
+        colorHex: '0xFF1877F2',
+        assignedExecutives: ['Priya Patel'],
+        strategy: 'Round-Robin',
+        isActive: true,
+      ),
+      SourceAssignRule(
+        id: 'SR-03',
+        sourceName: 'JustDial',
+        colorHex: '0xFFF58220',
+        assignedExecutives: ['Priya Patel', 'Amit Verma'],
+        strategy: 'Round-Robin',
+        isActive: true,
+      ),
+      SourceAssignRule(
+        id: 'SR-04',
+        sourceName: 'Website',
+        colorHex: '0xFF10B981',
+        assignedExecutives: ['Rahul Sharma'],
+        strategy: 'Primary',
+        isActive: true,
+      ),
+      SourceAssignRule(
+        id: 'SR-05',
+        sourceName: 'Referral',
+        colorHex: '0xFF8B5CF6',
+        assignedExecutives: ['Amit Verma'],
+        strategy: 'Primary',
+        isActive: true,
+      ),
+      SourceAssignRule(
+        id: 'SR-06',
+        sourceName: 'Direct Inquiry',
+        colorHex: '0xFF6366F1',
+        assignedExecutives: ['Rahul Sharma', 'Priya Patel', 'Amit Verma', 'Neha Singh'],
+        strategy: 'Round-Robin',
+        isActive: true,
+      ),
+    ];
   }
 
   void _triggerAutoAssignUnassignedLeads() {
@@ -335,6 +383,61 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
     super.dispose();
   }
 
+  static final List<SalesExecutivePerf> _fallbackExecutives = [
+    SalesExecutivePerf(
+      name: 'Rahul Sharma',
+      avatar: 'https://yellowgreen-stork-427223.hostingersite.com/storage/avatars/wiS1bnWjQxY81Zkn73BBwSEtNa8tFy6qWT5NpwhU.jpg',
+      designation: 'Sr. Sales Executive',
+      revenue: 650000,
+      target: 800000,
+      callsCount: 340,
+      totalTalkTime: '24h 15m',
+      avgTalkTime: '4m 30s',
+      convertedLeads: 14,
+      totalLeadsAssigned: 30,
+      totalLeadsSelfGenerated: 15,
+    ),
+    SalesExecutivePerf(
+      name: 'Priya Patel',
+      avatar: 'https://i.pravatar.cc/150?u=priyapatel',
+      designation: 'Sales Executive',
+      revenue: 480000,
+      target: 600000,
+      callsCount: 290,
+      totalTalkTime: '18h 40m',
+      avgTalkTime: '3m 50s',
+      convertedLeads: 10,
+      totalLeadsAssigned: 25,
+      totalLeadsSelfGenerated: 12,
+    ),
+    SalesExecutivePerf(
+      name: 'Amit Verma',
+      avatar: 'https://i.pravatar.cc/150?u=amitverma',
+      designation: 'Junior Executive',
+      revenue: 290000,
+      target: 500000,
+      callsCount: 180,
+      totalTalkTime: '12h 10m',
+      avgTalkTime: '4m 00s',
+      convertedLeads: 6,
+      totalLeadsAssigned: 20,
+      totalLeadsSelfGenerated: 8,
+    ),
+    SalesExecutivePerf(
+      name: 'Neha Singh',
+      avatar: 'https://i.pravatar.cc/150?u=nehasingh',
+      designation: 'Sales Trainee',
+      revenue: 150000,
+      target: 400000,
+      callsCount: 120,
+      totalTalkTime: '8h 30m',
+      avgTalkTime: '4m 15s',
+      convertedLeads: 3,
+      totalLeadsAssigned: 15,
+      totalLeadsSelfGenerated: 5,
+    ),
+  ];
+
   // Dynamic or fallback executives list
   List<SalesExecutivePerf> get _effectiveExecutivesList {
     if (Get.isRegistered<AdminLeadsHubController>()) {
@@ -345,7 +448,7 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
             .toList();
       }
     }
-    return const [];
+    return _fallbackExecutives;
   }
 
   // Filtered Executives for Option 1

@@ -1,15 +1,20 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../core/services/storage/shared_prefs.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_text.dart';
 import '../controllers/employee_tele_crm_controller.dart';
 import '../models/employee_leads_response_model.dart';
+import '../models/lead_status_model.dart';
 import '../models/sales_employee_model.dart';
 import 'sales_executive_create_lead_screen.dart';
+import 'sales_convert_to_project_screen.dart';
+import '../../projects/views/project_details_screen.dart';
 
 Future<void> _makePhoneCall(String phoneNumber) async {
   final cleanNumber = phoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
@@ -40,6 +45,176 @@ Future<void> _makePhoneCall(String phoneNumber) async {
       colorText: Colors.white,
     );
   }
+}
+
+Future<void> _sendWhatsAppMessage(String phoneNumber, {String? message}) async {
+  final cleanNumber = phoneNumber.replaceAll(RegExp(r'[^\d]'), '');
+  if (cleanNumber.isEmpty) {
+    Get.snackbar(
+      'Invalid Phone',
+      'Phone number is not valid for WhatsApp.',
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: const Color(0xFFEF4444),
+      colorText: Colors.white,
+    );
+    return;
+  }
+  final text = message ?? 'Hello, following up regarding your requirement.';
+  final uri = Uri.parse('https://wa.me/$cleanNumber?text=${Uri.encodeComponent(text)}');
+  try {
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      await launchUrl(uri);
+    }
+  } catch (e) {
+    Get.snackbar(
+      'WhatsApp Error',
+      'Could not open WhatsApp: $e',
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: const Color(0xFFEF4444),
+      colorText: Colors.white,
+    );
+  }
+}
+
+Future<void> _sendSmsMessage(String phoneNumber, {String? message}) async {
+  final cleanNumber = phoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
+  if (cleanNumber.isEmpty) return;
+  final text = message ?? 'Hello, following up regarding your requirement.';
+  final uri = Uri.parse('sms:$cleanNumber?body=${Uri.encodeComponent(text)}');
+  try {
+    await launchUrl(uri);
+  } catch (_) {}
+}
+
+// ── LEAD REMINDER MODEL & PERSISTENT MANAGER ────────────────────────────────
+class LeadReminderModel {
+  final int leadId;
+  final String leadCode;
+  final String customerName;
+  final String phone;
+  final DateTime scheduledAt;
+  final String reminderType; // 'Call', 'WhatsApp', 'SMS', 'Meeting'
+  final String note;
+  final bool isCompleted;
+
+  LeadReminderModel({
+    required this.leadId,
+    required this.leadCode,
+    required this.customerName,
+    required this.phone,
+    required this.scheduledAt,
+    this.reminderType = 'Call',
+    this.note = '',
+    this.isCompleted = false,
+  });
+
+  bool get isDueToday {
+    final now = DateTime.now();
+    return scheduledAt.year == now.year &&
+        scheduledAt.month == now.month &&
+        scheduledAt.day == now.day;
+  }
+
+  bool get isOverdue {
+    return !isCompleted && scheduledAt.isBefore(DateTime.now());
+  }
+
+  Map<String, dynamic> toJson() => {
+    'leadId': leadId,
+    'leadCode': leadCode,
+    'customerName': customerName,
+    'phone': phone,
+    'scheduledAt': scheduledAt.toIso8601String(),
+    'reminderType': reminderType,
+    'note': note,
+    'isCompleted': isCompleted,
+  };
+
+  factory LeadReminderModel.fromJson(Map<String, dynamic> json) => LeadReminderModel(
+    leadId: int.tryParse(json['leadId']?.toString() ?? '') ?? 0,
+    leadCode: json['leadCode']?.toString() ?? '',
+    customerName: json['customerName']?.toString() ?? '',
+    phone: json['phone']?.toString() ?? '',
+    scheduledAt: DateTime.tryParse(json['scheduledAt']?.toString() ?? '') ?? DateTime.now(),
+    reminderType: json['reminderType']?.toString() ?? 'Call',
+    note: json['note']?.toString() ?? '',
+    isCompleted: json['isCompleted'] == true,
+  );
+}
+
+class LeadReminderManager {
+  static const String _storageKey = 'employee_lead_reminders_map_v1';
+  static final RxMap<int, LeadReminderModel> reminders = <int, LeadReminderModel>{}.obs;
+
+  static void init() {
+    loadReminders();
+  }
+
+  static void loadReminders() {
+    try {
+      final jsonStr = SharedPrefs.getString(_storageKey);
+      if (jsonStr != null && jsonStr.isNotEmpty) {
+        final decoded = jsonDecode(jsonStr);
+        if (decoded is Map<String, dynamic>) {
+          final Map<int, LeadReminderModel> map = {};
+          decoded.forEach((key, val) {
+            final id = int.tryParse(key);
+            if (id != null && val is Map<String, dynamic>) {
+              map[id] = LeadReminderModel.fromJson(val);
+            }
+          });
+          reminders.assignAll(map);
+        }
+      }
+    } catch (_) {}
+  }
+
+  static Future<void> saveReminder(LeadReminderModel reminder) async {
+    reminders[reminder.leadId] = reminder;
+    await _persist();
+  }
+
+  static Future<void> removeReminder(int leadId) async {
+    reminders.remove(leadId);
+    await _persist();
+  }
+
+  static Future<void> toggleComplete(int leadId) async {
+    final current = reminders[leadId];
+    if (current != null) {
+      reminders[leadId] = LeadReminderModel(
+        leadId: current.leadId,
+        leadCode: current.leadCode,
+        customerName: current.customerName,
+        phone: current.phone,
+        scheduledAt: current.scheduledAt,
+        reminderType: current.reminderType,
+        note: current.note,
+        isCompleted: !current.isCompleted,
+      );
+      await _persist();
+    }
+  }
+
+  static Future<void> _persist() async {
+    try {
+      final mapToSave = <String, dynamic>{};
+      reminders.forEach((id, rem) {
+        mapToSave[id.toString()] = rem.toJson();
+      });
+      await SharedPrefs.setString(_storageKey, jsonEncode(mapToSave));
+    } catch (_) {}
+  }
+
+  static LeadReminderModel? getReminder(int leadId) => reminders[leadId];
+
+  static int get activeRemindersCount =>
+      reminders.values.where((r) => !r.isCompleted).length;
+
+  static int get todayRemindersCount =>
+      reminders.values.where((r) => !r.isCompleted && (r.isDueToday || r.isOverdue)).length;
 }
 
 // ── MODELS ───────────────────────────────────────────────────────────────────
@@ -250,6 +425,8 @@ class _SalesExecutiveTeleCrmScreenState extends State<SalesExecutiveTeleCrmScree
   @override
   void initState() {
     super.initState();
+    LeadReminderManager.init();
+    LeadProjectHandoverManager.init();
     _controller = EmployeeTeleCrmController.to;
     _scrollController.addListener(_onScroll);
   }
@@ -271,7 +448,14 @@ class _SalesExecutiveTeleCrmScreenState extends State<SalesExecutiveTeleCrmScree
 
   List<EmployeeLeadItemModel> get _displayedLeads {
     final query = _searchController.text.trim().toLowerCase();
-    final leads = _controller.leads;
+    List<EmployeeLeadItemModel> leads = _controller.leads;
+
+    // Filter leads if Reminders tab is active
+    if (_controller.selectedStatus.value == '__reminders__' || _controller.selectedTab.value == 'Reminders ⏰') {
+      final activeReminderIds = LeadReminderManager.reminders.keys.toSet();
+      leads = leads.where((item) => activeReminderIds.contains(item.id)).toList();
+    }
+
     if (query.isEmpty) {
       return leads;
     }
@@ -482,7 +666,102 @@ class _SalesExecutiveTeleCrmScreenState extends State<SalesExecutiveTeleCrmScree
                 ),
               );
             }),
-            const SizedBox(height: 20),
+            const SizedBox(height: 14),
+
+            // ── Follow-up Reminders Notification Alert (if any due today or overdue) ──
+            Obx(() {
+              final dueCount = LeadReminderManager.todayRemindersCount;
+              final overdueCount = LeadReminderManager.reminders.values.where((r) => !r.isCompleted && r.isOverdue).length;
+              if (dueCount == 0 && overdueCount == 0) return const SizedBox.shrink();
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 14),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFFFFBEB), Color(0xFFFEF3C7)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFFDE68A), width: 1.2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFF59E0B).withValues(alpha: 0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF59E0B),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.alarm_on_rounded, color: Colors.white, size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Text(
+                                "Today's Follow-up Schedule",
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF92400E),
+                                ),
+                              ),
+                              if (overdueCount > 0) ...[
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFEE2E2),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    '$overdueCount Overdue',
+                                    style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Color(0xFFDC2626)),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            overdueCount > 0
+                                ? '$dueCount follow-up(s) need attention today. Call/Message clients on time!'
+                                : 'You have $dueCount client follow-up reminder(s) due today.',
+                            style: const TextStyle(fontSize: 11, color: Color(0xFFB45309)),
+                          ),
+                        ],
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        _controller.changeTab('Reminders ⏰', status: '__reminders__');
+                      },
+                      style: TextButton.styleFrom(
+                        backgroundColor: const Color(0xFFD97706),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      child: const Text('View All', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                ),
+              );
+            }),
 
             // ── 2. Search & Segregation Tabs ──
             TextField(
@@ -537,6 +816,7 @@ class _SalesExecutiveTeleCrmScreenState extends State<SalesExecutiveTeleCrmScree
               final convertedCount = summary?.converted ?? 0;
               final unreachableCount = summary?.unreachable ?? 0;
               final wrongNumberCount = summary?.wrongNumber ?? 0;
+              final remindersCount = LeadReminderManager.activeRemindersCount;
 
               return SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
@@ -544,6 +824,7 @@ class _SalesExecutiveTeleCrmScreenState extends State<SalesExecutiveTeleCrmScree
                 child: Row(
                   children: [
                     _buildTabChip('All Leads', statusKey: '', count: allCount),
+                    _buildTabChip('Reminders ⏰', statusKey: '__reminders__', count: remindersCount),
                     _buildTabChip('Follow-up', statusKey: 'follow_up', count: followupsCount),
                     _buildTabChip('Interested', statusKey: 'interested', count: interestedCount),
                     _buildTabChip('Pending Call', statusKey: 'pending_call', count: pendingCallCount),
@@ -742,47 +1023,57 @@ class _SalesExecutiveTeleCrmScreenState extends State<SalesExecutiveTeleCrmScree
 
 
   Widget _buildTeleCrmLeadCard(TeleCrmLeadItem lead) {
+    final reminder = LeadReminderManager.getReminder(lead.rawId);
     Color statusColor;
     Color statusBgColor;
 
-    switch (lead.status) {
-      case 'Interested':
-      case 'interested':
-        statusColor = const Color(0xFF16A34A);
-        statusBgColor = const Color(0xFFDCFCE7);
-        break;
-      case 'Follow-up':
-      case 'Follow-ups Today':
-      case 'follow_up':
-      case 'follow-up':
-        statusColor = const Color(0xFFD97706);
-        statusBgColor = const Color(0xFFFEF3C7);
-        break;
-      case 'Pending Call':
-      case 'pending_call':
-      case 'pending call':
-        statusColor = const Color(0xFF0284C7);
-        statusBgColor = const Color(0xFFE0F2FE);
-        break;
-      case 'Converted':
-      case 'converted':
-        statusColor = const Color(0xFF2563EB);
-        statusBgColor = const Color(0xFFDBEAFE);
-        break;
-      case 'Unreachable':
-      case 'unreachable':
-        statusColor = const Color(0xFF7C3AED);
-        statusBgColor = const Color(0xFFEDE9FE);
-        break;
-      case 'Wrong Number':
-      case 'wrong_number':
-      case 'wrong number':
-        statusColor = const Color(0xFFDC2626);
-        statusBgColor = const Color(0xFFFEE2E2);
-        break;
-      default:
-        statusColor = const Color(0xFF475569);
-        statusBgColor = const Color(0xFFF1F5F9);
+    final matchingStatus = _controller.leadStatuses.firstWhereOrNull(
+      (s) => s.name.toLowerCase() == lead.status.toLowerCase() ||
+             (s.slug != null && s.slug!.toLowerCase() == lead.status.toLowerCase()),
+    );
+    if (matchingStatus != null) {
+      statusColor = matchingStatus.color;
+      statusBgColor = matchingStatus.color.withValues(alpha: 0.12);
+    } else {
+      switch (lead.status) {
+        case 'Interested':
+        case 'interested':
+          statusColor = const Color(0xFF16A34A);
+          statusBgColor = const Color(0xFFDCFCE7);
+          break;
+        case 'Follow-up':
+        case 'Follow-ups Today':
+        case 'follow_up':
+        case 'follow-up':
+          statusColor = const Color(0xFFD97706);
+          statusBgColor = const Color(0xFFFEF3C7);
+          break;
+        case 'Pending Call':
+        case 'pending_call':
+        case 'pending call':
+          statusColor = const Color(0xFF0284C7);
+          statusBgColor = const Color(0xFFE0F2FE);
+          break;
+        case 'Converted':
+        case 'converted':
+          statusColor = const Color(0xFF2563EB);
+          statusBgColor = const Color(0xFFDBEAFE);
+          break;
+        case 'Unreachable':
+        case 'unreachable':
+          statusColor = const Color(0xFF7C3AED);
+          statusBgColor = const Color(0xFFEDE9FE);
+          break;
+        case 'Wrong Number':
+        case 'wrong_number':
+        case 'wrong number':
+          statusColor = const Color(0xFFDC2626);
+          statusBgColor = const Color(0xFFFEE2E2);
+          break;
+        default:
+          statusColor = const Color(0xFF475569);
+          statusBgColor = const Color(0xFFF1F5F9);
+      }
     }
 
     return GestureDetector(
@@ -958,9 +1249,175 @@ class _SalesExecutiveTeleCrmScreenState extends State<SalesExecutiveTeleCrmScree
             ),
             const SizedBox(height: 8),
 
-            // Follow-up Timer Alert Bar (if follow-up date set)
-            if (lead.nextFollowupDateTime != null) ...[
+            // Follow-up Reminder Banner (if reminder set or follow-up date set)
+            if (reminder != null) ...[
               Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: reminder.isCompleted
+                      ? const Color(0xFFF0FDF4)
+                      : reminder.isOverdue
+                          ? const Color(0xFFFEF2F2)
+                          : reminder.isDueToday
+                              ? const Color(0xFFFFFBEB)
+                              : const Color(0xFFEFF6FF),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: reminder.isCompleted
+                        ? const Color(0xFFBBF7D0)
+                        : reminder.isOverdue
+                            ? const Color(0xFFFECACA)
+                            : reminder.isDueToday
+                                ? const Color(0xFFFDE68A)
+                                : const Color(0xFFBFDBFE),
+                    width: 1.2,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          reminder.isCompleted
+                              ? Icons.check_circle_rounded
+                              : reminder.isOverdue
+                                  ? Icons.error_outline_rounded
+                                  : Iconsax.timer_1,
+                          size: 16,
+                          color: reminder.isCompleted
+                              ? const Color(0xFF16A34A)
+                              : reminder.isOverdue
+                                  ? const Color(0xFFDC2626)
+                                  : reminder.isDueToday
+                                      ? const Color(0xFFD97706)
+                                      : const Color(0xFF2563EB),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            reminder.isCompleted
+                                ? 'Follow-up Reminder Completed'
+                                : reminder.isOverdue
+                                    ? 'Overdue Follow-up ${reminder.reminderType}: ${DateFormat('dd MMM, hh:mm a').format(reminder.scheduledAt)}'
+                                    : reminder.isDueToday
+                                        ? 'Due Today: ${DateFormat('hh:mm a').format(reminder.scheduledAt)} • ${reminder.reminderType}'
+                                        : 'Follow-up ${reminder.reminderType}: ${DateFormat('EEE, dd MMM • hh:mm a').format(reminder.scheduledAt)}',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.bold,
+                              color: reminder.isCompleted
+                                  ? const Color(0xFF15803D)
+                                  : reminder.isOverdue
+                                      ? const Color(0xFFB91C1C)
+                                      : reminder.isDueToday
+                                          ? const Color(0xFFB45309)
+                                          : const Color(0xFF1D4ED8),
+                            ),
+                          ),
+                        ),
+                        InkWell(
+                          onTap: () => showLeadReminderModal(
+                            context: context,
+                            lead: lead,
+                            onUpdated: () => setState(() {}),
+                          ),
+                          child: const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                            child: Icon(Icons.more_vert_rounded, size: 16, color: Color(0xFF64748B)),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (reminder.note.isNotEmpty) ...[
+                      const SizedBox(height: 5),
+                      Text(
+                        '"${reminder.note}"',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontStyle: FontStyle.italic,
+                          color: Color(0xFF475569),
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 8),
+                    // Quick Action Buttons on Reminder Banner
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        if (reminder.reminderType == 'Call')
+                          TextButton.icon(
+                            onPressed: () => _makePhoneCall(lead.phone),
+                            icon: const Icon(Icons.phone_rounded, size: 13, color: Color(0xFF059669)),
+                            label: const Text('Call Client', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF059669))),
+                            style: TextButton.styleFrom(
+                              backgroundColor: const Color(0xFFDCFCE7),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                          ),
+                        if (reminder.reminderType == 'WhatsApp') ...[
+                          TextButton.icon(
+                            onPressed: () => _sendWhatsAppMessage(lead.phone, message: reminder.note.isNotEmpty ? reminder.note : null),
+                            icon: const Icon(Icons.chat_rounded, size: 13, color: Color(0xFF16A34A)),
+                            label: const Text('WhatsApp', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF16A34A))),
+                            style: TextButton.styleFrom(
+                              backgroundColor: const Color(0xFFDCFCE7),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                          ),
+                        ],
+                        if (reminder.reminderType == 'SMS') ...[
+                          TextButton.icon(
+                            onPressed: () => _sendSmsMessage(lead.phone, message: reminder.note.isNotEmpty ? reminder.note : null),
+                            icon: const Icon(Icons.message_rounded, size: 13, color: Color(0xFF2563EB)),
+                            label: const Text('Send SMS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF2563EB))),
+                            style: TextButton.styleFrom(
+                              backgroundColor: const Color(0xFFEFF6FF),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                          ),
+                        ],
+                        const SizedBox(width: 8),
+                        TextButton.icon(
+                          onPressed: () async {
+                            await LeadReminderManager.toggleComplete(lead.rawId);
+                            setState(() {});
+                          },
+                          icon: Icon(
+                            reminder.isCompleted ? Icons.undo_rounded : Icons.check_circle_outline_rounded,
+                            size: 13,
+                            color: const Color(0xFF64748B),
+                          ),
+                          label: Text(
+                            reminder.isCompleted ? 'Reopen' : 'Mark Done',
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
+                          ),
+                          style: TextButton.styleFrom(
+                            backgroundColor: const Color(0xFFF1F5F9),
+                            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ] else if (lead.nextFollowupDateTime != null) ...[
+              Container(
+                margin: const EdgeInsets.only(bottom: 8),
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
                   color: const Color(0xFFFFFBEB),
@@ -971,16 +1428,119 @@ class _SalesExecutiveTeleCrmScreenState extends State<SalesExecutiveTeleCrmScree
                   children: [
                     const Icon(Iconsax.timer_1, size: 14, color: Color(0xFFD97706)),
                     const SizedBox(width: 6),
-                    AppText(
-                      'Next Follow-up Call: ${DateFormat('dd MMM, hh:mm a').format(lead.nextFollowupDateTime!)}',
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFFB45309),
+                    Expanded(
+                      child: AppText(
+                        'Next Follow-up Call: ${DateFormat('dd MMM, hh:mm a').format(lead.nextFollowupDateTime!)}',
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFFB45309),
+                      ),
+                    ),
+                    InkWell(
+                      onTap: () => showLeadReminderModal(context: context, lead: lead, onUpdated: () => setState(() {})),
+                      child: const AppText('Configure', fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFFD97706)),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 8),
+            ],
+
+            // 🚀 Converted Lead: Project Handover Banner
+            if (lead.status == 'Converted') ...[
+              Builder(
+                builder: (context) {
+                  final handover = LeadProjectHandoverManager.getHandover(lead.rawId);
+                  final hasProject = handover != null;
+
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: hasProject
+                            ? [const Color(0xFFF0FDF4), const Color(0xFFDCFCE7)]
+                            : [const Color(0xFFEFF6FF), const Color(0xFFEEF2FF)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: hasProject ? const Color(0xFF86EFAC) : const Color(0xFFC7D2FE),
+                        width: 1.2,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: hasProject ? const Color(0xFF16A34A) : AppColors.primaryColor,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(
+                            hasProject ? Icons.folder_special_rounded : Icons.rocket_launch_rounded,
+                            color: Colors.white,
+                            size: 18,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                hasProject ? 'Project Handover Active 🚀' : 'Deal Converted! Project Handover',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: hasProject ? const Color(0xFF15803D) : const Color(0xFF1E1B4B),
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                hasProject
+                                    ? '${handover.projectName} • ${handover.durationDays} Days target'
+                                    : 'Create active project & attach client documents',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 10.5,
+                                  color: hasProject ? const Color(0xFF166534) : const Color(0xFF4338CA),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            if (hasProject && handover.createdProjectId != null) {
+                              Get.to(() => ProjectDetailsScreen(projectId: handover.createdProjectId));
+                            } else {
+                              Get.to(() => SalesConvertToProjectScreen(
+                                    lead: lead,
+                                    onProjectCreated: () => setState(() {}),
+                                  ));
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: hasProject ? const Color(0xFF16A34A) : AppColors.primaryColor,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            elevation: 0,
+                          ),
+                          child: Text(
+                            hasProject ? 'View' : 'Create 🚀',
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
             ],
 
             // Last Discussion Note
@@ -1020,7 +1580,7 @@ class _SalesExecutiveTeleCrmScreenState extends State<SalesExecutiveTeleCrmScree
             const Divider(height: 1, color: Color(0xFFF1F5F9)),
             const SizedBox(height: 12),
 
-            // ── Modern Unified Action Toolbar (3 Professional Balanced Buttons) ──
+            // ── Modern Unified Action Toolbar (4 Professional Balanced Buttons) ──
             Row(
               children: [
                 // 1. Call Action (Emerald Tonal)
@@ -1040,16 +1600,16 @@ class _SalesExecutiveTeleCrmScreenState extends State<SalesExecutiveTeleCrmScree
                         child: const Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.phone_rounded, size: 14, color: Color(0xFF059669)),
-                            SizedBox(width: 5),
-                            AppText('Call', fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFF059669)),
+                            Icon(Icons.phone_rounded, size: 13, color: Color(0xFF059669)),
+                            SizedBox(width: 3),
+                            AppText('Call', fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF059669)),
                           ],
                         ),
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 6),
 
                 // 2. Status Action (Slate Tonal)
                 Expanded(
@@ -1068,72 +1628,141 @@ class _SalesExecutiveTeleCrmScreenState extends State<SalesExecutiveTeleCrmScree
                         child: const Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.edit_note_rounded, size: 16, color: Color(0xFF334155)),
-                            SizedBox(width: 4),
-                            AppText('Status', fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFF334155)),
+                            Icon(Icons.edit_note_rounded, size: 15, color: Color(0xFF334155)),
+                            SizedBox(width: 3),
+                            AppText('Status', fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF334155)),
                           ],
                         ),
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 6),
 
-                // 3. Assign Action (Royal Blue Tonal / Grey Locked if Converted)
+                // 3. Reminder Action (Purple/Amber Tonal with active badge)
                 Expanded(
                   child: Material(
-                    color: lead.status == 'Converted' ? const Color(0xFFF1F5F9) : const Color(0xFFEFF6FF),
+                    color: reminder != null
+                        ? (reminder.isCompleted ? const Color(0xFFF0FDF4) : const Color(0xFFFFFBEB))
+                        : const Color(0xFFFAF5FF),
                     borderRadius: BorderRadius.circular(12),
                     child: InkWell(
-                      onTap: () {
-                        if (lead.status == 'Converted') {
-                          Get.snackbar(
-                            'Reassignment Locked',
-                            'This lead is already converted and cannot be reassigned to another employee.',
-                            snackPosition: SnackPosition.BOTTOM,
-                            backgroundColor: const Color(0xFF475569),
-                            colorText: Colors.white,
-                            icon: const Icon(Icons.lock_rounded, color: Colors.white),
-                            margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                            borderRadius: 14,
-                          );
-                        } else {
-                          showAssignLeadToColleagueModal(
-                            context: context,
-                            lead: lead,
-                            onAssigned: () => _controller.fetchLeads(isRefresh: true),
-                          );
-                        }
-                      },
+                      onTap: () => showLeadReminderModal(
+                        context: context,
+                        lead: lead,
+                        onUpdated: () => setState(() {}),
+                      ),
                       borderRadius: BorderRadius.circular(12),
                       child: Container(
                         height: 38,
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: lead.status == 'Converted' ? const Color(0xFFE2E8F0) : const Color(0xFFBFDBFE),
+                            color: reminder != null
+                                ? (reminder.isCompleted ? const Color(0xFF86EFAC) : const Color(0xFFFDE68A))
+                                : const Color(0xFFE9D5FF),
                           ),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(
-                              lead.status == 'Converted' ? Icons.lock_outline_rounded : Icons.swap_horiz_rounded,
-                              size: 15,
-                              color: lead.status == 'Converted' ? const Color(0xFF94A3B8) : const Color(0xFF2563EB),
+                              Iconsax.timer_1,
+                              size: 13,
+                              color: reminder != null
+                                  ? (reminder.isCompleted ? const Color(0xFF16A34A) : const Color(0xFFD97706))
+                                  : const Color(0xFF7C3AED),
                             ),
-                            const SizedBox(width: 4),
+                            const SizedBox(width: 3),
                             AppText(
-                              lead.status == 'Converted' ? 'Locked' : 'Assign',
-                              fontSize: 11.5,
+                              reminder != null ? (reminder.isCompleted ? 'Done' : 'Remind') : 'Remind',
+                              fontSize: 11,
                               fontWeight: FontWeight.bold,
-                              color: lead.status == 'Converted' ? const Color(0xFF94A3B8) : const Color(0xFF2563EB),
+                              color: reminder != null
+                                  ? (reminder.isCompleted ? const Color(0xFF16A34A) : const Color(0xFFD97706))
+                                  : const Color(0xFF7C3AED),
                             ),
                           ],
                         ),
                       ),
                     ),
                   ),
+                ),
+                const SizedBox(width: 6),
+
+                // 4. Assign / Project Action (Dynamic for Converted Leads)
+                Builder(
+                  builder: (context) {
+                    final isConverted = lead.status == 'Converted';
+                    final handover = isConverted ? LeadProjectHandoverManager.getHandover(lead.rawId) : null;
+                    final hasProject = handover != null;
+
+                    return Expanded(
+                      child: Material(
+                        color: isConverted
+                            ? (hasProject ? const Color(0xFFECFDF5) : const Color(0xFFEFF6FF))
+                            : const Color(0xFFEFF6FF),
+                        borderRadius: BorderRadius.circular(12),
+                        child: InkWell(
+                          onTap: () {
+                            if (isConverted) {
+                              if (hasProject && handover.createdProjectId != null) {
+                                Get.to(() => ProjectDetailsScreen(projectId: handover.createdProjectId));
+                              } else {
+                                Get.to(() => SalesConvertToProjectScreen(
+                                      lead: lead,
+                                      onProjectCreated: () => setState(() {}),
+                                    ));
+                              }
+                            } else {
+                              showAssignLeadToColleagueModal(
+                                context: context,
+                                lead: lead,
+                                onAssigned: () => _controller.fetchLeads(isRefresh: true),
+                              );
+                            }
+                          },
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            height: 38,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: isConverted
+                                    ? (hasProject ? const Color(0xFFA7F3D0) : const Color(0xFFBFDBFE))
+                                    : const Color(0xFFBFDBFE),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  isConverted
+                                      ? (hasProject ? Icons.folder_special_rounded : Icons.rocket_launch_rounded)
+                                      : Icons.swap_horiz_rounded,
+                                  size: 14,
+                                  color: isConverted
+                                      ? (hasProject ? const Color(0xFF059669) : const Color(0xFF2563EB))
+                                      : const Color(0xFF2563EB),
+                                ),
+                                const SizedBox(width: 3),
+                                AppText(
+                                  isConverted
+                                      ? (hasProject ? 'Project' : 'Create Proj')
+                                      : 'Assign',
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: isConverted
+                                      ? (hasProject ? const Color(0xFF059669) : const Color(0xFF2563EB))
+                                      : const Color(0xFF2563EB),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ],
             ),
@@ -1156,6 +1785,124 @@ class _SalesExecutiveTeleCrmScreenState extends State<SalesExecutiveTeleCrmScree
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 🎉 IMMEDIATE PROJECT HANDOVER PROMPT AFTER CONVERSION
+// ─────────────────────────────────────────────────────────────────────────────
+void _showConvertedLeadHandoverPrompt(TeleCrmLeadItem lead, VoidCallback onUpdated) {
+  Get.bottomSheet(
+    Container(
+      padding: const EdgeInsets.all(22),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE2E8F0),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                color: const Color(0xFFDCFCE7),
+                borderRadius: BorderRadius.circular(30),
+              ),
+              child: const Icon(Icons.rocket_launch_rounded, color: Color(0xFF16A34A), size: 30),
+            ),
+            const SizedBox(height: 14),
+            const Text(
+              'Lead Converted to Customer! 🎉',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFF0F172A),
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '${lead.customerName} (${lead.id}) is now converted with deal value ₹${(lead.potentialValue / 1000).toStringAsFixed(0)}k.',
+              style: const TextStyle(
+                fontSize: 12.5,
+                color: Color(0xFF64748B),
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.info_outline_rounded, color: Color(0xFF2563EB), size: 18),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Sales handover: You can create the active project now, set completion duration, and attach all client documents.',
+                      style: TextStyle(fontSize: 11.5, color: Color(0xFF334155), height: 1.3),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Get.back(); // close sheet
+                  Get.to(() => SalesConvertToProjectScreen(
+                        lead: lead,
+                        onProjectCreated: onUpdated,
+                      ));
+                },
+                icon: const Icon(Icons.rocket_launch_rounded, color: Colors.white, size: 18),
+                label: const Text(
+                  'Create Project Handover Now 🚀',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryColor,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  elevation: 0,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: TextButton(
+                onPressed: () => Get.back(),
+                child: const Text(
+                  'I Will Create Project Later',
+                  style: TextStyle(fontSize: 12.5, color: Color(0xFF64748B), fontWeight: FontWeight.w600),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // 🚀 UPDATE LEAD STATUS MODAL (PATCH /api/employee/leads/{id}/status)
 // ─────────────────────────────────────────────────────────────────────────────
 void showUpdateLeadStatusModal({
@@ -1164,18 +1911,27 @@ void showUpdateLeadStatusModal({
   required VoidCallback onUpdated,
 }) {
   final controller = EmployeeTeleCrmController.to;
-  String selectedStatus = lead.status;
+  if (controller.leadStatuses.isEmpty) {
+    controller.fetchLeadStatuses();
+  }
+
+  // Find initial status model matching current lead.status
+  LeadStatusModel? initialMatched;
+  final currentStatusLower = lead.status.trim().toLowerCase();
+  for (final s in controller.leadStatuses) {
+    if (s.name.toLowerCase() == currentStatusLower ||
+        (s.slug != null && s.slug!.toLowerCase() == currentStatusLower) ||
+        (s.slug != null && s.slug!.replaceAll('_', ' ').toLowerCase() == currentStatusLower)) {
+      initialMatched = s;
+      break;
+    }
+  }
+
+  LeadStatusModel? selectedStatus = initialMatched ??
+      (controller.leadStatuses.isNotEmpty ? controller.leadStatuses.first : null);
+
   final noteController = TextEditingController();
   bool isSubmitting = false;
-
-  final statusColors = {
-    'Interested': const Color(0xFF2563EB),
-    'Follow-up': const Color(0xFFD97706),
-    'Pending Call': const Color(0xFF0284C7),
-    'Converted': const Color(0xFF10B981),
-    'Unreachable': const Color(0xFFDC2626),
-    'Wrong Number': const Color(0xFF475569),
-  };
 
   showModalBottomSheet(
     context: context,
@@ -1187,7 +1943,14 @@ void showUpdateLeadStatusModal({
     builder: (modalCtx) {
       return StatefulBuilder(
         builder: (context, setModalState) {
-          final currentColor = statusColors[selectedStatus] ?? AppColors.primaryColor;
+          final currentColor = selectedStatus?.color ?? AppColors.primaryColor;
+          final statusNameLower = selectedStatus?.name.toLowerCase() ?? '';
+          final statusSlugLower = selectedStatus?.slug?.toLowerCase() ?? '';
+          final isConverted = statusNameLower == 'converted' ||
+              statusSlugLower == 'converted' ||
+              (selectedStatus?.category.toLowerCase() == 'won');
+          final isFollowUp = statusNameLower.contains('follow') || statusSlugLower.contains('follow');
+          final isPendingCall = statusNameLower.contains('pending') || statusSlugLower.contains('pending');
 
           return Padding(
             padding: EdgeInsets.only(
@@ -1245,53 +2008,116 @@ void showUpdateLeadStatusModal({
                   ),
                   const SizedBox(height: 16),
 
-                  // Status Chips
-                  const AppText(
-                    'Select Status *',
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF334155),
+                  // Status Chips (Loaded dynamically from GET /api/admin/lead-statuses)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const AppText(
+                        'Select Status *',
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF334155),
+                      ),
+                      Obx(() {
+                        if (controller.isLoadingStatuses.value) {
+                          return const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF64748B)),
+                          );
+                        }
+                        return Text(
+                          '${controller.leadStatuses.length} statuses',
+                          style: const TextStyle(fontSize: 10.5, color: Color(0xFF94A3B8), fontWeight: FontWeight.w500),
+                        );
+                      }),
+                    ],
                   ),
                   const SizedBox(height: 10),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      'Interested',
-                      'Follow-up',
-                      'Pending Call',
-                      'Converted',
-                      'Unreachable',
-                      'Wrong Number',
-                    ].map((s) {
-                      final isSelected = selectedStatus == s;
-                      final chipColor = statusColors[s] ?? AppColors.primaryColor;
-                      return ChoiceChip(
-                        label: Text(
-                          s,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isSelected ? Colors.white : const Color(0xFF334155),
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                  Obx(() {
+                    final statuses = controller.leadStatuses;
+                    if (statuses.isEmpty && controller.isLoadingStatuses.value) {
+                      return const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        child: Center(
+                          child: SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(strokeWidth: 2),
                           ),
                         ),
-                        selected: isSelected,
-                        selectedColor: chipColor,
-                        backgroundColor: const Color(0xFFF8FAFC),
-                        side: BorderSide(
-                          color: isSelected ? chipColor : const Color(0xFFE2E8F0),
-                          width: isSelected ? 1.5 : 1,
-                        ),
-                        onSelected: (bool selected) {
-                          setModalState(() {
-                            selectedStatus = s;
-                          });
-                        },
                       );
-                    }).toList(),
-                  ),
+                    }
 
-                  if (selectedStatus == 'Converted') ...[
+                    return Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: statuses.map((statusItem) {
+                        final isSelected = selectedStatus?.id == statusItem.id ||
+                            (selectedStatus?.name.toLowerCase() == statusItem.name.toLowerCase());
+                        final chipColor = statusItem.color;
+
+                        return InkWell(
+                          onTap: () {
+                            setModalState(() {
+                              selectedStatus = statusItem;
+                            });
+                          },
+                          borderRadius: BorderRadius.circular(10),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 180),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7.5),
+                            decoration: BoxDecoration(
+                              color: isSelected ? chipColor : const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: isSelected ? chipColor : const Color(0xFFE2E8F0),
+                                width: isSelected ? 1.5 : 1,
+                              ),
+                              boxShadow: isSelected
+                                  ? [
+                                      BoxShadow(
+                                        color: chipColor.withValues(alpha: 0.25),
+                                        blurRadius: 6,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ]
+                                  : null,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (isSelected) ...[
+                                  const Icon(Icons.check_rounded, size: 14, color: Colors.white),
+                                  const SizedBox(width: 5),
+                                ] else ...[
+                                  Container(
+                                    width: 7,
+                                    height: 7,
+                                    decoration: BoxDecoration(
+                                      color: chipColor,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                ],
+                                Text(
+                                  statusItem.name,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: isSelected ? Colors.white : const Color(0xFF334155),
+                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    );
+                  }),
+
+                  if (isConverted) ...[
                     const SizedBox(height: 12),
                     Container(
                       padding: const EdgeInsets.all(12),
@@ -1342,13 +2168,55 @@ void showUpdateLeadStatusModal({
                       contentPadding: const EdgeInsets.all(12),
                     ),
                   ),
+                  if (isFollowUp || isPendingCall) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFFBEB),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFFDE68A)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Iconsax.timer_1, color: Color(0xFFD97706), size: 20),
+                          const SizedBox(width: 10),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Set Follow-up Reminder', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF92400E))),
+                                SizedBox(height: 1),
+                                Text('Schedule next call or message alert for this client', style: TextStyle(fontSize: 10.5, color: Color(0xFFB45309))),
+                              ],
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.pop(modalCtx);
+                              showLeadReminderModal(context: context, lead: lead, onUpdated: onUpdated);
+                            },
+                            style: TextButton.styleFrom(
+                              backgroundColor: const Color(0xFFFBBF24),
+                              foregroundColor: const Color(0xFF78350F),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                            child: const Text('Set ⏰', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 20),
 
                   // Submit Button calling PATCH /api/employee/leads/{id}/status
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: isSubmitting
+                      onPressed: isSubmitting || selectedStatus == null
                           ? null
                           : () async {
                               setModalState(() {
@@ -1356,28 +2224,31 @@ void showUpdateLeadStatusModal({
                               });
 
                               final callNote = noteController.text.trim();
+                              final statusNameToSet = selectedStatus!.name;
 
                               // Call PATCH /api/employee/leads/{id}/status
                               final result = await controller.updateLeadStatus(
                                 lead.rawId,
-                                status: selectedStatus,
+                                status: statusNameToSet,
+                                statusId: selectedStatus!.id,
+                                slug: selectedStatus!.slug,
                                 callNote: callNote.isNotEmpty ? callNote : null,
                               );
 
                               if (result.success) {
                                 final prevStatus = lead.status;
-                                lead.status = selectedStatus;
+                                lead.status = statusNameToSet;
                                 lead.processSteps.insert(
                                   0,
                                   ExecLeadProcessStep(
-                                    title: selectedStatus == 'Converted'
+                                    title: isConverted
                                         ? 'Converted to Customer 🎉'
-                                        : 'Status updated from $prevStatus to $selectedStatus',
+                                        : 'Status updated from $prevStatus to $statusNameToSet',
                                     date: DateFormat('dd MMM yyyy').format(DateTime.now()),
                                     time: DateFormat('hh:mm a').format(DateTime.now()),
                                     note: callNote.isNotEmpty
                                         ? callNote
-                                        : (selectedStatus == 'Converted'
+                                        : (isConverted
                                             ? 'Lead closed & converted successfully.'
                                             : 'Updated via Executive App'),
                                     performedBy: 'You',
@@ -1390,22 +2261,28 @@ void showUpdateLeadStatusModal({
                                 }
                                 onUpdated();
 
+                                if (isConverted) {
+                                  Future.delayed(const Duration(milliseconds: 350), () {
+                                    _showConvertedLeadHandoverPrompt(lead, onUpdated);
+                                  });
+                                }
+
                                 Get.snackbar(
-                                  selectedStatus == 'Converted'
+                                  isConverted
                                       ? 'Lead Converted 🎉'
                                       : 'Status Updated',
                                   result.message.isNotEmpty
                                       ? result.message
-                                      : (selectedStatus == 'Converted'
+                                      : (isConverted
                                           ? 'Congratulations! Deal successfully closed.'
-                                          : 'Lead status has been updated to $selectedStatus.'),
-                                  backgroundColor: selectedStatus == 'Converted'
+                                          : 'Lead status has been updated to $statusNameToSet.'),
+                                  backgroundColor: isConverted
                                       ? const Color(0xFF10B981)
-                                      : const Color(0xFF2563EB),
+                                      : currentColor,
                                   colorText: Colors.white,
                                   snackPosition: SnackPosition.BOTTOM,
                                   icon: Icon(
-                                    selectedStatus == 'Converted'
+                                    isConverted
                                         ? Icons.celebration_rounded
                                         : Icons.check_circle_rounded,
                                     color: Colors.white,
@@ -1464,10 +2341,14 @@ void showUpdateLeadStatusModal({
                           : Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                const Icon(Icons.save_rounded, color: Colors.white, size: 18),
+                                Icon(
+                                  isConverted ? Icons.celebration_rounded : Icons.save_rounded,
+                                  color: Colors.white,
+                                  size: 18,
+                                ),
                                 const SizedBox(width: 8),
                                 Text(
-                                  'Update Status to $selectedStatus',
+                                  'Update Status to ${selectedStatus?.name ?? lead.status}',
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 14,
@@ -1486,6 +2367,546 @@ void showUpdateLeadStatusModal({
         },
       );
     },
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ⏰ SET / MANAGE FOLLOW-UP REMINDER MODAL
+// ─────────────────────────────────────────────────────────────────────────────
+void showLeadReminderModal({
+  required BuildContext context,
+  required TeleCrmLeadItem lead,
+  VoidCallback? onUpdated,
+}) {
+  final existingReminder = LeadReminderManager.getReminder(lead.rawId);
+  String selectedType = existingReminder?.reminderType ?? 'Call';
+  DateTime selectedDateTime = existingReminder?.scheduledAt ?? DateTime.now().add(const Duration(hours: 2));
+  final noteController = TextEditingController(text: existingReminder?.note ?? '');
+  bool isCompleted = existingReminder?.isCompleted ?? false;
+
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (modalCtx) {
+      return StatefulBuilder(
+        builder: (ctx, setModalState) {
+          final isOverdue = !isCompleted && selectedDateTime.isBefore(DateTime.now());
+          final isToday = !isCompleted &&
+              selectedDateTime.year == DateTime.now().year &&
+              selectedDateTime.month == DateTime.now().month &&
+              selectedDateTime.day == DateTime.now().day;
+
+          return Container(
+            padding: EdgeInsets.only(
+              left: 20,
+              right: 20,
+              top: 20,
+              bottom: MediaQuery.of(modalCtx).viewInsets.bottom + 24,
+            ),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Handle bar
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE2E8F0),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Header with Client Info & Action Icon
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFEF3C7),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Iconsax.timer_1, color: Color(0xFFD97706), size: 22),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              existingReminder != null ? 'Manage Follow-up Reminder' : 'Set Follow-up Reminder',
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '${lead.customerName} (${lead.id})',
+                              style: const TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(modalCtx),
+                        icon: const Icon(Icons.close_rounded, color: Color(0xFF64748B)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                  const SizedBox(height: 16),
+
+                  // Reminder Type selector: Call, WhatsApp, SMS, Meeting
+                  const Text(
+                    'Reminder Type / Action',
+                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: Color(0xFF334155)),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      _buildReminderTypeBtn(
+                        label: 'Call',
+                        icon: Icons.phone_rounded,
+                        activeColor: const Color(0xFF059669),
+                        isSelected: selectedType == 'Call',
+                        onTap: () => setModalState(() => selectedType = 'Call'),
+                      ),
+                      const SizedBox(width: 8),
+                      _buildReminderTypeBtn(
+                        label: 'WhatsApp',
+                        icon: Icons.chat_rounded,
+                        activeColor: const Color(0xFF16A34A),
+                        isSelected: selectedType == 'WhatsApp',
+                        onTap: () => setModalState(() => selectedType = 'WhatsApp'),
+                      ),
+                      const SizedBox(width: 8),
+                      _buildReminderTypeBtn(
+                        label: 'SMS',
+                        icon: Icons.sms_rounded,
+                        activeColor: const Color(0xFF2563EB),
+                        isSelected: selectedType == 'SMS',
+                        onTap: () => setModalState(() => selectedType = 'SMS'),
+                      ),
+                      const SizedBox(width: 8),
+                      _buildReminderTypeBtn(
+                        label: 'Meeting',
+                        icon: Icons.video_call_rounded,
+                        activeColor: const Color(0xFF7C3AED),
+                        isSelected: selectedType == 'Meeting',
+                        onTap: () => setModalState(() => selectedType = 'Meeting'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+
+                  // Quick Schedule Presets
+                  const Text(
+                    'Quick Presets',
+                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: Color(0xFF334155)),
+                  ),
+                  const SizedBox(height: 8),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _buildPresetChip('+1 Hour', () {
+                          setModalState(() {
+                            selectedDateTime = DateTime.now().add(const Duration(hours: 1));
+                          });
+                        }),
+                        const SizedBox(width: 8),
+                        _buildPresetChip('+3 Hours', () {
+                          setModalState(() {
+                            selectedDateTime = DateTime.now().add(const Duration(hours: 3));
+                          });
+                        }),
+                        const SizedBox(width: 8),
+                        _buildPresetChip('Today 4:00 PM', () {
+                          final now = DateTime.now();
+                          setModalState(() {
+                            selectedDateTime = DateTime(now.year, now.month, now.day, 16, 0);
+                          });
+                        }),
+                        const SizedBox(width: 8),
+                        _buildPresetChip('Tomorrow 10:00 AM', () {
+                          final tmrw = DateTime.now().add(const Duration(days: 1));
+                          setModalState(() {
+                            selectedDateTime = DateTime(tmrw.year, tmrw.month, tmrw.day, 10, 0);
+                          });
+                        }),
+                        const SizedBox(width: 8),
+                        _buildPresetChip('Tomorrow 3:00 PM', () {
+                          final tmrw = DateTime.now().add(const Duration(days: 1));
+                          setModalState(() {
+                            selectedDateTime = DateTime(tmrw.year, tmrw.month, tmrw.day, 15, 0);
+                          });
+                        }),
+                        const SizedBox(width: 8),
+                        _buildPresetChip('In 2 Days', () {
+                          final inTwoDays = DateTime.now().add(const Duration(days: 2));
+                          setModalState(() {
+                            selectedDateTime = DateTime(inTwoDays.year, inTwoDays.month, inTwoDays.day, 11, 0);
+                          });
+                        }),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+
+                  // Scheduled Date & Time Display + Pickers
+                  const Text(
+                    'Scheduled Date & Time',
+                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: Color(0xFF334155)),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                DateFormat('EEEE, dd MMM yyyy').format(selectedDateTime),
+                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                              ),
+                              const SizedBox(height: 2),
+                              Row(
+                                children: [
+                                  const Icon(Icons.access_time_filled_rounded, size: 13, color: AppColors.primaryColor),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    DateFormat('hh:mm a').format(selectedDateTime),
+                                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primaryColor),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  if (isToday)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFFEF3C7),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: const Text('Today', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Color(0xFFB45309))),
+                                    ),
+                                  if (isOverdue)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFFEE2E2),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: const Text('Overdue', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Color(0xFFDC2626))),
+                                    ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Date picker button
+                        OutlinedButton.icon(
+                          onPressed: () async {
+                            final pickedDate = await showDatePicker(
+                              context: modalCtx,
+                              initialDate: selectedDateTime,
+                              firstDate: DateTime.now().subtract(const Duration(days: 1)),
+                              lastDate: DateTime.now().add(const Duration(days: 365)),
+                            );
+                            if (pickedDate != null) {
+                              setModalState(() {
+                                selectedDateTime = DateTime(
+                                  pickedDate.year,
+                                  pickedDate.month,
+                                  pickedDate.day,
+                                  selectedDateTime.hour,
+                                  selectedDateTime.minute,
+                                );
+                              });
+                            }
+                          },
+                          icon: const Icon(Icons.calendar_today_rounded, size: 14),
+                          label: const Text('Date', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold)),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFF334155),
+                            side: const BorderSide(color: Color(0xFFCBD5E1)),
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        // Time picker button
+                        OutlinedButton.icon(
+                          onPressed: () async {
+                            final pickedTime = await showTimePicker(
+                              context: modalCtx,
+                              initialTime: TimeOfDay.fromDateTime(selectedDateTime),
+                            );
+                            if (pickedTime != null) {
+                              setModalState(() {
+                                selectedDateTime = DateTime(
+                                  selectedDateTime.year,
+                                  selectedDateTime.month,
+                                  selectedDateTime.day,
+                                  pickedTime.hour,
+                                  pickedTime.minute,
+                                );
+                              });
+                            }
+                          },
+                          icon: const Icon(Icons.schedule_rounded, size: 14),
+                          label: const Text('Time', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold)),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFF334155),
+                            side: const BorderSide(color: Color(0xFFCBD5E1)),
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+
+                  // Reminder Note / Agenda
+                  const Text(
+                    'Follow-up Note / Discussion Agenda',
+                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: Color(0xFF334155)),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: noteController,
+                    maxLines: 2,
+                    decoration: InputDecoration(
+                      hintText: 'e.g. Call client for price quotation and demo follow-up...',
+                      hintStyle: const TextStyle(fontSize: 12.5, color: Color(0xFF94A3B8)),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                      ),
+                      contentPadding: const EdgeInsets.all(12),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // If existing, complete toggle
+                  if (existingReminder != null) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: isCompleted ? const Color(0xFFF0FDF4) : const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: isCompleted ? const Color(0xFFBBF7D0) : const Color(0xFFE2E8F0)),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            isCompleted ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                            color: isCompleted ? const Color(0xFF16A34A) : const Color(0xFF64748B),
+                            size: 20,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              isCompleted ? 'Marked as Completed' : 'Pending Follow-up Action',
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w600,
+                                color: isCompleted ? const Color(0xFF15803D) : const Color(0xFF334155),
+                              ),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              setModalState(() {
+                                isCompleted = !isCompleted;
+                              });
+                            },
+                            child: Text(
+                              isCompleted ? 'Reopen' : 'Mark Done',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: isCompleted ? const Color(0xFF64748B) : const Color(0xFF16A34A),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // Action Buttons: Delete (if exists) & Save Reminder
+                  Row(
+                    children: [
+                      if (existingReminder != null) ...[
+                        OutlinedButton(
+                          onPressed: () async {
+                            await LeadReminderManager.removeReminder(lead.rawId);
+                            if (modalCtx.mounted) Navigator.pop(modalCtx);
+                            onUpdated?.call();
+                            Get.snackbar(
+                              'Reminder Removed',
+                              'Follow-up reminder has been removed for ${lead.customerName}.',
+                              snackPosition: SnackPosition.BOTTOM,
+                              backgroundColor: const Color(0xFF475569),
+                              colorText: Colors.white,
+                              margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                              borderRadius: 14,
+                            );
+                          },
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFFDC2626),
+                            side: const BorderSide(color: Color(0xFFFCA5A5)),
+                            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          ),
+                          child: const Icon(Icons.delete_outline_rounded, size: 20, color: Color(0xFFDC2626)),
+                        ),
+                        const SizedBox(width: 10),
+                      ],
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () async {
+                            final note = noteController.text.trim();
+                            final reminder = LeadReminderModel(
+                              leadId: lead.rawId,
+                              leadCode: lead.id,
+                              customerName: lead.customerName,
+                              phone: lead.phone,
+                              scheduledAt: selectedDateTime,
+                              reminderType: selectedType,
+                              note: note,
+                              isCompleted: isCompleted,
+                            );
+
+                            await LeadReminderManager.saveReminder(reminder);
+
+                            // Also append step to timeline
+                            lead.nextFollowupDateTime = selectedDateTime;
+                            lead.processSteps.insert(
+                              0,
+                              ExecLeadProcessStep(
+                                title: '⏰ Reminder Set: $selectedType',
+                                date: DateFormat('dd MMM yyyy').format(selectedDateTime),
+                                time: DateFormat('hh:mm a').format(selectedDateTime),
+                                note: note.isNotEmpty
+                                    ? note
+                                    : 'Scheduled $selectedType follow-up with client.',
+                                performedBy: 'You',
+                                isCompleted: isCompleted,
+                              ),
+                            );
+
+                            if (modalCtx.mounted) Navigator.pop(modalCtx);
+                            onUpdated?.call();
+
+                            Get.snackbar(
+                              'Reminder Set ⏰',
+                              'Scheduled $selectedType with ${lead.customerName} on ${DateFormat('EEE, dd MMM • hh:mm a').format(selectedDateTime)}',
+                              snackPosition: SnackPosition.BOTTOM,
+                              backgroundColor: const Color(0xFF0F172A),
+                              colorText: Colors.white,
+                              icon: const Icon(Iconsax.timer_1, color: Color(0xFFFBBF24)),
+                              margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                              borderRadius: 14,
+                            );
+                          },
+                          icon: const Icon(Icons.alarm_on_rounded, color: Colors.white, size: 18),
+                          label: Text(
+                            existingReminder != null ? 'Update Reminder' : 'Set Reminder',
+                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primaryColor,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            elevation: 0,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    },
+  );
+}
+
+Widget _buildReminderTypeBtn({
+  required String label,
+  required IconData icon,
+  required Color activeColor,
+  required bool isSelected,
+  required VoidCallback onTap,
+}) {
+  return Expanded(
+    child: InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? activeColor.withValues(alpha: 0.12) : const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? activeColor : const Color(0xFFE2E8F0),
+            width: isSelected ? 1.6 : 1.0,
+          ),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, size: 18, color: isSelected ? activeColor : const Color(0xFF64748B)),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                color: isSelected ? activeColor : const Color(0xFF475569),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+Widget _buildPresetChip(String label, VoidCallback onTap) {
+  return InkWell(
+    onTap: onTap,
+    borderRadius: BorderRadius.circular(18),
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF1F5F9),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFCBD5E1)),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF334155)),
+      ),
+    ),
   );
 }
 
@@ -2373,6 +3794,18 @@ class _ExecLeadFullDetailScreenState extends State<ExecLeadFullDetailScreen> {
         centerTitle: true,
         actions: [
           IconButton(
+            icon: const Icon(Iconsax.timer_1, color: Color(0xFFD97706)),
+            tooltip: 'Set Reminder',
+            onPressed: () => showLeadReminderModal(
+              context: context,
+              lead: lead,
+              onUpdated: () {
+                setState(() {});
+                widget.onStatusUpdated();
+              },
+            ),
+          ),
+          IconButton(
             icon: const Icon(Icons.edit_note_rounded, color: Color(0xFF0F172A)),
             tooltip: 'Update Status',
             onPressed: () => showUpdateLeadStatusModal(
@@ -2384,6 +3817,25 @@ class _ExecLeadFullDetailScreenState extends State<ExecLeadFullDetailScreen> {
               },
             ),
           ),
+          if (isConverted)
+            IconButton(
+              icon: const Icon(Icons.rocket_launch_rounded, color: Color(0xFF16A34A)),
+              tooltip: 'Project Handover',
+              onPressed: () {
+                final handover = LeadProjectHandoverManager.getHandover(lead.rawId);
+                if (handover?.createdProjectId != null) {
+                  Get.to(() => ProjectDetailsScreen(projectId: handover!.createdProjectId));
+                } else {
+                  Get.to(() => SalesConvertToProjectScreen(
+                        lead: lead,
+                        onProjectCreated: () {
+                          setState(() {});
+                          widget.onStatusUpdated();
+                        },
+                      ));
+                }
+              },
+            ),
           if (!isConverted)
             IconButton(
               icon: const Icon(Icons.swap_horiz_rounded, color: Color(0xFF2563EB)),
@@ -2436,6 +3888,51 @@ class _ExecLeadFullDetailScreenState extends State<ExecLeadFullDetailScreen> {
                 ),
               ),
               const SizedBox(width: 12),
+            ] else ...[
+              Expanded(
+                child: Builder(
+                  builder: (context) {
+                    final handover = LeadProjectHandoverManager.getHandover(lead.rawId);
+                    final hasProject = handover != null;
+
+                    return OutlinedButton.icon(
+                      onPressed: () {
+                        if (hasProject && handover.createdProjectId != null) {
+                          Get.to(() => ProjectDetailsScreen(projectId: handover.createdProjectId));
+                        } else {
+                          Get.to(() => SalesConvertToProjectScreen(
+                                lead: lead,
+                                onProjectCreated: () {
+                                  setState(() {});
+                                  widget.onStatusUpdated();
+                                },
+                              ));
+                        }
+                      },
+                      icon: Icon(
+                        hasProject ? Icons.folder_special_rounded : Icons.rocket_launch_rounded,
+                        size: 16,
+                        color: hasProject ? const Color(0xFF059669) : const Color(0xFF2563EB),
+                      ),
+                      label: AppText(
+                        hasProject ? 'View Project' : 'Create Project',
+                        color: hasProject ? const Color(0xFF059669) : const Color(0xFF2563EB),
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(
+                          color: hasProject ? const Color(0xFFA7F3D0) : const Color(0xFFBFDBFE),
+                        ),
+                        backgroundColor: hasProject ? const Color(0xFFECFDF5) : const Color(0xFFEFF6FF),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(width: 12),
             ],
             Expanded(
               flex: isConverted ? 1 : 2,
@@ -2468,6 +3965,398 @@ class _ExecLeadFullDetailScreenState extends State<ExecLeadFullDetailScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // ⏰ Follow-up Reminder Banner (if scheduled)
+              Builder(
+                builder: (ctx) {
+                  final reminder = LeadReminderManager.getReminder(lead.rawId);
+                  if (reminder == null) return const SizedBox.shrink();
+
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: reminder.isCompleted
+                          ? const Color(0xFFF0FDF4)
+                          : reminder.isOverdue
+                              ? const Color(0xFFFEF2F2)
+                              : reminder.isDueToday
+                                  ? const Color(0xFFFFFBEB)
+                                  : const Color(0xFFEFF6FF),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: reminder.isCompleted
+                            ? const Color(0xFF86EFAC)
+                            : reminder.isOverdue
+                                ? const Color(0xFFFECACA)
+                                : reminder.isDueToday
+                                    ? const Color(0xFFFDE68A)
+                                    : const Color(0xFFBFDBFE),
+                        width: 1.2,
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: reminder.isCompleted
+                                    ? const Color(0xFF16A34A)
+                                    : reminder.isOverdue
+                                        ? const Color(0xFFDC2626)
+                                        : reminder.isDueToday
+                                            ? const Color(0xFFD97706)
+                                            : const Color(0xFF2563EB),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Icon(
+                                reminder.reminderType == 'WhatsApp'
+                                    ? Icons.chat_rounded
+                                    : reminder.reminderType == 'SMS'
+                                        ? Icons.sms_rounded
+                                        : Icons.phone_rounded,
+                                color: Colors.white,
+                                size: 16,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    reminder.isCompleted
+                                        ? 'Follow-up Reminder Completed'
+                                        : reminder.isOverdue
+                                            ? 'Overdue Follow-up Reminder'
+                                            : reminder.isDueToday
+                                                ? 'Follow-up Due Today!'
+                                                : 'Scheduled Follow-up Reminder',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                      color: reminder.isCompleted
+                                          ? const Color(0xFF15803D)
+                                          : reminder.isOverdue
+                                              ? const Color(0xFFB91C1C)
+                                              : reminder.isDueToday
+                                                  ? const Color(0xFFB45309)
+                                                  : const Color(0xFF1D4ED8),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    '${reminder.reminderType} scheduled for ${DateFormat('EEE, dd MMM yyyy • hh:mm a').format(reminder.scheduledAt)}',
+                                    style: const TextStyle(fontSize: 11.5, color: Color(0xFF475569)),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.edit_calendar_rounded, size: 20, color: Color(0xFF475569)),
+                              tooltip: 'Edit Reminder',
+                              onPressed: () => showLeadReminderModal(
+                                context: context,
+                                lead: lead,
+                                onUpdated: () {
+                                  setState(() {});
+                                  widget.onStatusUpdated();
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (reminder.note.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.7),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              'Agenda: "${reminder.note}"',
+                              style: const TextStyle(fontSize: 11.5, fontStyle: FontStyle.italic, color: Color(0xFF334155)),
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 10),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            if (reminder.reminderType == 'Call')
+                              ElevatedButton.icon(
+                                onPressed: () => _makePhoneCall(lead.phone),
+                                icon: const Icon(Icons.phone_rounded, size: 14, color: Colors.white),
+                                label: const Text('Call Client', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Colors.white)),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF059669),
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                  minimumSize: Size.zero,
+                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                              ),
+                            if (reminder.reminderType == 'WhatsApp') ...[
+                              ElevatedButton.icon(
+                                onPressed: () => _sendWhatsAppMessage(lead.phone, message: reminder.note.isNotEmpty ? reminder.note : null),
+                                icon: const Icon(Icons.chat_rounded, size: 14, color: Colors.white),
+                                label: const Text('WhatsApp', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Colors.white)),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF16A34A),
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                  minimumSize: Size.zero,
+                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                              ),
+                            ],
+                            if (reminder.reminderType == 'SMS') ...[
+                              ElevatedButton.icon(
+                                onPressed: () => _sendSmsMessage(lead.phone, message: reminder.note.isNotEmpty ? reminder.note : null),
+                                icon: const Icon(Icons.message_rounded, size: 14, color: Colors.white),
+                                label: const Text('Send SMS', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Colors.white)),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF2563EB),
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                  minimumSize: Size.zero,
+                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                              ),
+                            ],
+                            const SizedBox(width: 8),
+                            OutlinedButton.icon(
+                              onPressed: () async {
+                                await LeadReminderManager.toggleComplete(lead.rawId);
+                                setState(() {});
+                                widget.onStatusUpdated();
+                              },
+                              icon: Icon(
+                                reminder.isCompleted ? Icons.undo_rounded : Icons.check_circle_outline_rounded,
+                                size: 14,
+                                color: const Color(0xFF475569),
+                              ),
+                              label: Text(
+                                reminder.isCompleted ? 'Reopen' : 'Mark Done',
+                                style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(color: Color(0xFFCBD5E1)),
+                                backgroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                minimumSize: Size.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+
+              // 🚀 Project Handover Card (if converted)
+              if (lead.status == 'Converted') ...[
+                Builder(
+                  builder: (context) {
+                    final handover = LeadProjectHandoverManager.getHandover(lead.rawId);
+                    final hasProject = handover != null;
+
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: hasProject
+                              ? [const Color(0xFFF0FDF4), const Color(0xFFDCFCE7)]
+                              : [const Color(0xFFEFF6FF), const Color(0xFFDBEAFE)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: hasProject ? const Color(0xFF86EFAC) : const Color(0xFF93C5FD),
+                          width: 1.2,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: (hasProject ? const Color(0xFF16A34A) : AppColors.primaryColor)
+                                .withValues(alpha: 0.08),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: hasProject ? const Color(0xFF16A34A) : AppColors.primaryColor,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Icon(
+                                  hasProject ? Icons.folder_special_rounded : Icons.rocket_launch_rounded,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Text(
+                                          hasProject ? 'Project Handover Active 🚀' : 'Deal Converted to Project',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                            color: hasProject ? const Color(0xFF15803D) : const Color(0xFF1E3A8A),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                          decoration: BoxDecoration(
+                                            color: hasProject ? const Color(0xFFBBF7D0) : const Color(0xFFBFDBFE),
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: Text(
+                                            hasProject ? 'Created' : 'Pending Handover',
+                                            style: TextStyle(
+                                              fontSize: 9.5,
+                                              fontWeight: FontWeight.bold,
+                                              color: hasProject ? const Color(0xFF166534) : const Color(0xFF1D4ED8),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      hasProject
+                                          ? '${handover.projectName} • ${handover.durationDays} Days committed'
+                                          : 'Create operational project and attach client documents/brief.',
+                                      style: TextStyle(
+                                        fontSize: 11.5,
+                                        color: hasProject ? const Color(0xFF166534) : const Color(0xFF3B82F6),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (hasProject) ...[
+                            const SizedBox(height: 12),
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.8),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                children: [
+                                  Column(
+                                    children: [
+                                      const Text('Deal Budget', style: TextStyle(fontSize: 10, color: Color(0xFF64748B))),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        '₹${(handover.agreedBudget / 1000).toStringAsFixed(0)}k',
+                                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF15803D)),
+                                      ),
+                                    ],
+                                  ),
+                                  Container(width: 1, height: 24, color: const Color(0xFFE2E8F0)),
+                                  Column(
+                                    children: [
+                                      const Text('Advance', style: TextStyle(fontSize: 10, color: Color(0xFF64748B))),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        '₹${(handover.advanceReceived / 1000).toStringAsFixed(0)}k',
+                                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF2563EB)),
+                                      ),
+                                    ],
+                                  ),
+                                  Container(width: 1, height: 24, color: const Color(0xFFE2E8F0)),
+                                  Column(
+                                    children: [
+                                      const Text('Duration', style: TextStyle(fontSize: 10, color: Color(0xFF64748B))),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        '${handover.durationDays} Days',
+                                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFFD97706)),
+                                      ),
+                                    ],
+                                  ),
+                                  Container(width: 1, height: 24, color: const Color(0xFFE2E8F0)),
+                                  Column(
+                                    children: [
+                                      const Text('Docs Attached', style: TextStyle(fontSize: 10, color: Color(0xFF64748B))),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        '${handover.attachments.length} files',
+                                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF7C3AED)),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                if (hasProject && handover.createdProjectId != null) {
+                                  Get.to(() => ProjectDetailsScreen(projectId: handover.createdProjectId));
+                                } else {
+                                  Get.to(() => SalesConvertToProjectScreen(
+                                        lead: lead,
+                                        onProjectCreated: () {
+                                          setState(() {});
+                                          widget.onStatusUpdated();
+                                        },
+                                      ));
+                                }
+                              },
+                              icon: Icon(
+                                hasProject ? Icons.folder_special_rounded : Icons.rocket_launch_rounded,
+                                size: 16,
+                                color: Colors.white,
+                              ),
+                              label: Text(
+                                hasProject ? 'Open Project Workspace' : 'Create Project Handover 🚀',
+                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: hasProject ? const Color(0xFF16A34A) : AppColors.primaryColor,
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                elevation: 0,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ],
+
               // 1. Client Info Card
               Container(
                 padding: const EdgeInsets.all(16),

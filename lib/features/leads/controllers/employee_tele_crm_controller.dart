@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'package:get/get.dart';
 import '../../../core/services/network/api_client.dart';
+import '../../../core/utils/logger.dart';
 import '../models/employee_leads_response_model.dart';
+import '../models/lead_status_model.dart';
 import '../models/sales_employee_model.dart';
 import '../repositories/employee_leads_repository.dart';
 
@@ -41,12 +43,169 @@ class EmployeeTeleCrmController extends GetxController {
   final RxBool isLoadingSalesEmployees = false.obs;
   final RxList<SalesEmployeeModel> salesEmployees = <SalesEmployeeModel>[].obs;
 
+  // ── Lead Statuses from GET /api/admin/lead-statuses ──────────────────────
+  static final List<LeadStatusModel> defaultLeadStatuses = [
+    LeadStatusModel(
+      id: 1,
+      name: 'New',
+      slug: 'new',
+      category: 'prospecting',
+      categoryLabel: 'Prospecting',
+      description: 'Fresh lead captured, pending first outreach call.',
+      badgeColor: '#3B82F6',
+      orderPosition: 1,
+      isSystem: true,
+      leadsCount: 217,
+    ),
+    LeadStatusModel(
+      id: 3,
+      name: 'Follow-up',
+      slug: 'follow_up',
+      category: 'active_lead',
+      categoryLabel: 'Active Lead (In negotiation)',
+      description: 'Callback scheduled; active discussions are ongoing.',
+      badgeColor: '#F59E0B',
+      orderPosition: 3,
+      isSystem: false,
+      leadsCount: 1,
+    ),
+    LeadStatusModel(
+      id: 4,
+      name: 'Pending Call',
+      slug: 'pending_call',
+      category: 'active_lead',
+      categoryLabel: 'Active Lead (In negotiation)',
+      description: 'Lead is waiting for the next call.',
+      badgeColor: '#8B5CF6',
+      orderPosition: 4,
+      isSystem: false,
+      leadsCount: 0,
+    ),
+    LeadStatusModel(
+      id: 13,
+      name: 'In Progress',
+      slug: 'in_progress',
+      category: 'active_lead',
+      categoryLabel: 'Active Lead (In negotiation)',
+      description: 'Technical evaluation or contract review is in progress.',
+      badgeColor: '#6366F1',
+      orderPosition: 4,
+      isSystem: false,
+      leadsCount: 0,
+    ),
+    LeadStatusModel(
+      id: 5,
+      name: 'Contacted',
+      slug: 'contacted',
+      category: 'won',
+      categoryLabel: 'Won',
+      description: 'Initial contact has been completed.',
+      badgeColor: '#6366F1',
+      orderPosition: 5,
+      isSystem: false,
+      leadsCount: 0,
+    ),
+    LeadStatusModel(
+      id: 6,
+      name: 'Qualified',
+      slug: 'qualified',
+      category: 'active_lead',
+      categoryLabel: 'Active Lead (In negotiation)',
+      description: 'Lead meets the qualification criteria.',
+      badgeColor: '#0D9488',
+      orderPosition: 6,
+      isSystem: false,
+      leadsCount: 0,
+    ),
+    LeadStatusModel(
+      id: 7,
+      name: 'Proposal Sent',
+      slug: 'proposal_sent',
+      category: 'active_lead',
+      categoryLabel: 'Active Lead (In negotiation)',
+      description: 'Proposal or quotation has been sent.',
+      badgeColor: '#7C3AED',
+      orderPosition: 7,
+      isSystem: false,
+      leadsCount: 0,
+    ),
+    LeadStatusModel(
+      id: 8,
+      name: 'Converted',
+      slug: 'converted',
+      category: 'won',
+      categoryLabel: 'Won',
+      description: 'Deal closed and advance payment received.',
+      badgeColor: '#059669',
+      orderPosition: 8,
+      isSystem: false,
+      leadsCount: 1,
+    ),
+    LeadStatusModel(
+      id: 9,
+      name: 'Unreachable',
+      slug: 'unreachable',
+      category: 'lost',
+      categoryLabel: 'Lost',
+      description: 'The lead could not be reached after repeated attempts.',
+      badgeColor: '#EF4444',
+      orderPosition: 9,
+      isSystem: false,
+      leadsCount: 0,
+    ),
+    LeadStatusModel(
+      id: 10,
+      name: 'Wrong Number',
+      slug: 'wrong_number',
+      category: 'lost',
+      categoryLabel: 'Lost',
+      description: 'The supplied contact number is invalid.',
+      badgeColor: '#64748B',
+      orderPosition: 10,
+      isSystem: false,
+      leadsCount: 0,
+    ),
+    LeadStatusModel(
+      id: 11,
+      name: 'Lost',
+      slug: 'lost',
+      category: 'lost',
+      categoryLabel: 'Lost',
+      description: 'The opportunity has been closed as lost.',
+      badgeColor: '#DC2626',
+      orderPosition: 11,
+      isSystem: false,
+      leadsCount: 0,
+    ),
+  ];
+
+  final RxBool isLoadingStatuses = false.obs;
+  final RxList<LeadStatusModel> leadStatuses = RxList<LeadStatusModel>(List.from(defaultLeadStatuses));
+
   Timer? _searchDebounce;
 
   @override
   void onInit() {
     super.onInit();
     fetchLeads(isRefresh: true);
+    fetchLeadStatuses();
+  }
+
+  /// Fetch dynamic lead statuses from GET /api/admin/lead-statuses
+  Future<void> fetchLeadStatuses() async {
+    isLoadingStatuses.value = true;
+    try {
+      final res = await repository.getLeadStatuses();
+      if (res.data.isNotEmpty) {
+        final sorted = List<LeadStatusModel>.from(res.data)
+          ..sort((a, b) => (a.orderPosition ?? 99).compareTo(b.orderPosition ?? 99));
+        leadStatuses.assignAll(sorted);
+      }
+    } catch (e) {
+      Logger.e('EmployeeTeleCrmController => Failed to fetch statuses: $e');
+    } finally {
+      isLoadingStatuses.value = false;
+    }
   }
 
   @override
@@ -88,8 +247,10 @@ class EmployeeTeleCrmController extends GetxController {
   }
 
   String? get activeStatusParam {
-    if (selectedStatus.value.trim().isNotEmpty) {
-      return selectedStatus.value.trim();
+    final s = selectedStatus.value.trim();
+    if (s == '__reminders__') return null;
+    if (s.isNotEmpty) {
+      return s;
     }
     return _mapTabToStatus(selectedTab.value);
   }
@@ -331,6 +492,8 @@ class EmployeeTeleCrmController extends GetxController {
     dynamic leadId, {
     required String status,
     String? callNote,
+    dynamic statusId,
+    String? slug,
   }) async {
     isUpdatingStatus.value = true;
     try {
@@ -338,6 +501,8 @@ class EmployeeTeleCrmController extends GetxController {
         leadId,
         status: status,
         callNote: callNote,
+        statusId: statusId,
+        slug: slug,
       );
 
       if (response.isSuccess) {

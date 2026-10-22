@@ -3,6 +3,7 @@ import '../../../core/services/network/api_client.dart';
 import '../../../core/services/network/response_model.dart';
 import '../../../core/utils/logger.dart';
 import '../models/employee_leads_response_model.dart';
+import '../models/lead_status_model.dart';
 import '../models/sales_employee_model.dart';
 
 abstract class EmployeeLeadsRepositoryInterface {
@@ -24,10 +25,14 @@ abstract class EmployeeLeadsRepositoryInterface {
     String? notes,
   });
 
+  Future<LeadStatusesResponseModel> getLeadStatuses();
+
   Future<ResponseModel> updateLeadStatus(
     dynamic leadId, {
     required String status,
     String? callNote,
+    dynamic statusId,
+    String? slug,
   });
 }
 
@@ -182,16 +187,52 @@ class EmployeeLeadsRepository implements EmployeeLeadsRepositoryInterface {
   }
 
   @override
+  Future<LeadStatusesResponseModel> getLeadStatuses() async {
+    try {
+      final response = await apiClient.get(AppConstants.adminLeadStatusesUrl);
+
+      if (response.isSuccess && response.json != null) {
+        return LeadStatusesResponseModel.fromJson(response.json!);
+      }
+
+      return LeadStatusesResponseModel(
+        status: false,
+        message: response.message.isNotEmpty
+            ? response.message
+            : 'Failed to retrieve lead statuses',
+        data: [],
+      );
+    } catch (e) {
+      Logger.e('EmployeeLeadsRepository => Failed to retrieve lead statuses: $e');
+      return LeadStatusesResponseModel(
+        status: false,
+        message: e.toString(),
+        data: [],
+      );
+    }
+  }
+
+  @override
   Future<ResponseModel> updateLeadStatus(
     dynamic leadId, {
     required String status,
     String? callNote,
+    dynamic statusId,
+    String? slug,
   }) async {
     try {
       final endpoint = AppConstants.employeeLeadStatusUrl(leadId);
       final data = <String, dynamic>{
         'status': status,
       };
+      if (statusId != null) {
+        data['status_id'] = statusId;
+        data['lead_status_id'] = statusId;
+      }
+      if (slug != null && slug.isNotEmpty) {
+        data['status_slug'] = slug;
+        data['slug'] = slug;
+      }
       if (callNote != null && callNote.trim().isNotEmpty) {
         data['call_note'] = callNote.trim();
       }
