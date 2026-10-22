@@ -60,6 +60,7 @@ class AdminLeadsHubBinding extends Bindings {
         getSalesEmployeesUseCase: Get.find<GetSalesEmployeesUseCase>(),
         createAdminLeadUseCase: Get.find<CreateAdminLeadUseCase>(),
         assignLeadUseCase: Get.find<AssignLeadUseCase>(),
+        repository: Get.find<AdminLeadsRepositoryInterface>(),
       ),
     );
 

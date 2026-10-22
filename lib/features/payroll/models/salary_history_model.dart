@@ -107,6 +107,7 @@ class RecentPayslipModel {
   final String? remarks;
   final String status;
   final String? payslipUrl;
+  final String? payslipDownloadUrl;
 
   RecentPayslipModel({
     required this.id,
@@ -126,6 +127,7 @@ class RecentPayslipModel {
     this.remarks,
     required this.status,
     this.payslipUrl,
+    this.payslipDownloadUrl,
   });
 
   factory RecentPayslipModel.fromJson(Map<String, dynamic> json) {
@@ -162,6 +164,7 @@ class RecentPayslipModel {
       remarks: json['remarks']?.toString(),
       status: json['status']?.toString() ?? 'Pending',
       payslipUrl: json['payslip_url']?.toString(),
+      payslipDownloadUrl: json['payslip_download_url']?.toString(),
     );
   }
 
@@ -183,6 +186,7 @@ class RecentPayslipModel {
         'remarks': remarks,
         'status': status,
         'payslip_url': payslipUrl,
+        'payslip_download_url': payslipDownloadUrl,
       };
 }
 

@@ -7,6 +7,11 @@ abstract class AdminLeadsRepositoryInterface {
   Future<AdminLeadsResponseModel> getAdminLeads(AdminLeadsRequestModel request);
   Future<AdminLeadDetailResponseModel> getAdminLeadDetail(dynamic id);
   Future<SalesEmployeesResponseModel> getSalesEmployees();
+  Future<SalesEmployeeLeadDetailsResponseModel> getSalesEmployeeLeadDetails(
+    dynamic employeeId, {
+    int page = 1,
+    int perPage = 20,
+  });
   Future<AdminLeadDetailResponseModel> createAdminLead(CreateAdminLeadRequestModel request);
   Future<AdminLeadDetailResponseModel> assignLead(dynamic leadId, AssignLeadRequestModel request);
   Future<LeadStatusesResponseModel> getLeadStatuses({String? category});

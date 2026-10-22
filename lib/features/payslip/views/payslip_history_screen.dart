@@ -9,7 +9,7 @@ import '../../payroll/controllers/salary_history_controller.dart';
 import '../../payroll/models/salary_history_model.dart';
 import '../../payroll/repositories/payroll_repository.dart';
 import '../../payroll/repositories/payroll_repository_interface.dart';
-import 'payslip_detail_screen.dart';
+import '../../payroll/views/payslip_breakdown_detail_screen.dart';
 
 class PayslipHistoryScreen extends StatelessWidget {
   const PayslipHistoryScreen({super.key});
@@ -467,7 +467,7 @@ class PayslipHistoryScreen extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
-          onTap: () => Get.to(() => PayslipDetailScreen(record: record)),
+          onTap: () => Get.to(() => PayslipBreakdownDetailScreen(payslip: record)),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(

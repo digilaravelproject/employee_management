@@ -67,10 +67,24 @@ class PayslipBreakdownDetailScreen extends StatelessWidget {
         ),
         actions: [
           IconButton(
-            tooltip: 'Download PDF',
-            icon: const Icon(Iconsax.document_download, color: AppColors.primaryColor),
-            onPressed: () => controller.openPayslip(payslip),
+            tooltip: 'View Slip',
+            icon: const Icon(Iconsax.eye, color: AppColors.primaryColor),
+            onPressed: () => controller.viewPayslip(payslip),
           ),
+          Obx(() {
+            final isDownloading = controller.isDownloadingPayslip.value;
+            return IconButton(
+              tooltip: 'Download PDF',
+              icon: isDownloading
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primaryColor),
+                    )
+                  : const Icon(Iconsax.document_download, color: AppColors.textColorSecondary),
+              onPressed: isDownloading ? null : () => controller.downloadPayslip(payslip),
+            );
+          }),
           const SizedBox(width: 8),
         ],
       ),
@@ -146,23 +160,57 @@ class PayslipBreakdownDetailScreen extends StatelessWidget {
             ),
           ],
         ),
-        child: SizedBox(
-          width: double.infinity,
-          height: 50,
-          child: ElevatedButton.icon(
-            onPressed: () => controller.openPayslip(payslip),
-            icon: const Icon(Iconsax.document_download, size: 20),
-            label: const Text(
-              'Download Payslip (PDF)',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+        child: Row(
+          children: [
+            Expanded(
+              flex: 2,
+              child: Obx(() {
+                final isDownloading = controller.isDownloadingPayslip.value;
+                return OutlinedButton.icon(
+                  onPressed: isDownloading ? null : () => controller.downloadPayslip(payslip),
+                  icon: isDownloading
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.primaryColor,
+                          ),
+                        )
+                      : const Icon(Iconsax.document_download, size: 18),
+                  label: Text(
+                    isDownloading ? 'Saving...' : 'Download',
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primaryColor,
+                    side: const BorderSide(color: AppColors.primaryColor),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                );
+              }),
             ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primaryColor,
-              foregroundColor: Colors.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            const SizedBox(width: 12),
+            Expanded(
+              flex: 3,
+              child: ElevatedButton.icon(
+                onPressed: () => controller.viewPayslip(payslip),
+                icon: const Icon(Iconsax.eye, size: 18),
+                label: const Text(
+                  'View Slip (PDF)',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryColor,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );

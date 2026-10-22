@@ -126,6 +126,8 @@ class AdminLeadDataModel {
   final String? sourceCreatedAt;
   final String? createdAt;
   final String? updatedAt;
+  final String? assignmentOrigin;
+  final Map<String, dynamic>? recentActivity;
   final Map<String, dynamic>? sourcePayload;
   final List<AdminLeadHistoryItemModel> history;
 
@@ -149,6 +151,8 @@ class AdminLeadDataModel {
     this.sourceCreatedAt,
     this.createdAt,
     this.updatedAt,
+    this.assignmentOrigin,
+    this.recentActivity,
     this.sourcePayload,
     this.history = const [],
   });
@@ -174,6 +178,10 @@ class AdminLeadDataModel {
       sourceCreatedAt: json['source_created_at']?.toString(),
       createdAt: json['created_at']?.toString(),
       updatedAt: json['updated_at']?.toString(),
+      assignmentOrigin: json['assignment_origin']?.toString(),
+      recentActivity: json['recent_activity'] is Map
+          ? Map<String, dynamic>.from(json['recent_activity'] as Map)
+          : null,
       sourcePayload: json['source_payload'] is Map<String, dynamic>
           ? json['source_payload'] as Map<String, dynamic>
           : null,
@@ -181,7 +189,20 @@ class AdminLeadDataModel {
           ? (json['history'] as List)
               .map((h) => AdminLeadHistoryItemModel.fromJson(h as Map<String, dynamic>))
               .toList()
-          : const [],
+          : (json['activities'] is List
+              ? (json['activities'] as List)
+                  .map((h) => AdminLeadHistoryItemModel.fromJson(h as Map<String, dynamic>))
+                  .toList()
+              : (json['timeline'] is List
+                  ? (json['timeline'] as List)
+                      .map((h) => AdminLeadHistoryItemModel.fromJson(h as Map<String, dynamic>))
+                      .toList()
+                  : (json['recent_activity'] is Map
+                      ? [
+                          AdminLeadHistoryItemModel.fromJson(
+                              Map<String, dynamic>.from(json['recent_activity'] as Map))
+                        ]
+                      : const []))),
     );
   }
 
@@ -210,15 +231,15 @@ class AdminLeadDataModel {
   }
 
   // Presentation Getters
-  String get displayName => (fullName != null && fullName!.trim().isNotEmpty) ? fullName!.trim() : 'Unnamed Lead';
+  String get displayName => (fullName != null && fullName!.trim().isNotEmpty) ? fullName!.trim() : '';
   String get displayCompany => (companyName != null && companyName!.trim().isNotEmpty) ? companyName!.trim() : '';
-  String get displayPhone => (mobileNumber != null && mobileNumber!.trim().isNotEmpty) ? mobileNumber!.trim() : 'N/A';
-  String get displayEmail => (email != null && email!.trim().isNotEmpty) ? email!.trim() : 'N/A';
-  String get displaySource => (source != null && source!.trim().isNotEmpty) ? source!.trim() : 'Website';
-  String get displayStatus => (status != null && status!.trim().isNotEmpty) ? status!.trim() : 'new';
-  String get displayRequirement => (requirement != null && requirement!.trim().isNotEmpty) ? requirement!.trim() : 'General Inquiry';
+  String get displayPhone => (mobileNumber != null && mobileNumber!.trim().isNotEmpty) ? mobileNumber!.trim() : '';
+  String get displayEmail => (email != null && email!.trim().isNotEmpty) ? email!.trim() : '';
+  String get displaySource => (source != null && source!.trim().isNotEmpty) ? source!.trim() : '';
+  String get displayStatus => (status != null && status!.trim().isNotEmpty) ? status!.trim() : '';
+  String get displayRequirement => (requirement != null && requirement!.trim().isNotEmpty) ? requirement!.trim() : '';
   String get displayNotes => (notes != null && notes!.trim().isNotEmpty) ? notes!.trim() : '';
-  String get displayLeadCode => (leadCode != null && leadCode!.isNotEmpty) ? leadCode! : 'LD-$id';
+  String get displayLeadCode => (leadCode != null && leadCode!.isNotEmpty) ? leadCode! : (id > 0 ? 'LD-$id' : '');
 
   bool get isAssigned {
     if (assignedTo != null && assignedTo.toString() != 'null' && assignedTo.toString().isNotEmpty) {
@@ -344,15 +365,23 @@ class AdminLeadHistoryItemModel {
   });
 
   factory AdminLeadHistoryItemModel.fromJson(Map<String, dynamic> json) {
+    String? actorName = json['actor_name']?.toString();
+    if (actorName == null && json['actor'] is Map) {
+      actorName = (json['actor']['name'] ?? json['actor']['full_name'])?.toString();
+    }
+    if (actorName == null && json['created_by'] is Map) {
+      actorName = (json['created_by']['name'] ?? json['created_by']['full_name'])?.toString();
+    }
+
     return AdminLeadHistoryItemModel(
       id: int.tryParse(json['id']?.toString() ?? '') ?? 0,
       eventType: json['event_type']?.toString(),
-      title: json['title']?.toString(),
-      description: json['description']?.toString(),
-      actor: json['actor'],
-      actorName: json['actor_name']?.toString(),
+      title: json['title']?.toString() ?? json['event_name']?.toString() ?? json['action']?.toString(),
+      description: json['description']?.toString() ?? json['note']?.toString() ?? json['agenda']?.toString(),
+      actor: json['actor'] ?? json['created_by'] ?? json['user'],
+      actorName: actorName,
       metadata: json['metadata'] is Map ? Map<String, dynamic>.from(json['metadata']) : null,
-      occurredAt: json['occurred_at']?.toString(),
+      occurredAt: json['occurred_at']?.toString() ?? json['created_at']?.toString() ?? json['remind_at']?.toString(),
     );
   }
 

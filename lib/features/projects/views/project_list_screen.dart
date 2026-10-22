@@ -6,7 +6,7 @@ import '../../../core/widgets/app_text.dart';
 import '../controllers/projects_controller.dart';
 import '../models/project_model.dart';
 import 'create_project_screen.dart';
-import 'project_details_screen.dart';
+import 'admin_project_work_tracking_screen.dart';
 import '../../../core/services/permission/permission_service.dart';
 import '../../../core/services/permission/permission_constant.dart';
 
@@ -56,6 +56,19 @@ class ProjectListScreen extends StatelessWidget {
           ],
         ),
         actions: [
+          IconButton(
+            tooltip: 'Live Work Tracker',
+            icon: Container(
+              padding: const EdgeInsets.all(7),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEFF6FF),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFBFDBFE)),
+              ),
+              child: const Icon(Iconsax.activity, color: AppColors.primaryColor, size: 18),
+            ),
+            onPressed: () => Get.to(() => const AdminProjectWorkTrackingScreen()),
+          ),
           Obx(() {
             final canCreateProject =
                 PermissionService.to.isAllowed(PermissionConstant.createProject);
@@ -142,6 +155,82 @@ class ProjectListScreen extends StatelessWidget {
                       ),
                     ),
                   ),
+                ),
+              ],
+            ),
+          ),
+
+          // ── Admin Work Tracking & Handover Banner ──
+          Container(
+            margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Iconsax.hierarchy_2, color: Color(0xFF38BDF8), size: 22),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            'Live Work & Handover Tracker',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                            ),
+                          ),
+                          SizedBox(width: 6),
+                          Icon(Icons.bolt_rounded, color: Color(0xFFFBBF24), size: 16),
+                        ],
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        'Track modules, allocated vs spent time & task handovers',
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          color: Color(0xFF94A3B8),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: () => Get.to(() => const AdminProjectWorkTrackingScreen()),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF38BDF8),
+                    foregroundColor: const Color(0xFF0F172A),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    elevation: 0,
+                  ),
+                  child: const Text('Open Hub', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800)),
                 ),
               ],
             ),
@@ -341,7 +430,11 @@ class _ProjectCard extends StatelessWidget {
             controller.selectedProject.value = project;
             controller.selectedDetailsTabIdx.value = 0;
             controller.fetchProjectDetails(project.id);
-            Get.to(() => ProjectDetailsScreen(projectId: project.id));
+            Get.to(() => AdminProjectWorkTrackingScreen(
+              initialProject: project,
+              initialProjectId: project.id,
+              initialProjectName: project.name,
+            ));
           },
           borderRadius: BorderRadius.circular(20),
           child: Padding(
@@ -502,6 +595,44 @@ class _ProjectCard extends StatelessWidget {
                       color: AppColors.textColorPrimary,
                     ),
                   ],
+                ),
+                const SizedBox(height: 14),
+
+                // Visual Work Operations & Handover Bar
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Icon(Iconsax.hierarchy_2, size: 12, color: AppColors.primaryColor),
+                          ),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'Modules, Tasks & Handover Operations',
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primaryColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const Icon(Icons.arrow_forward_ios_rounded, size: 11, color: Color(0xFF94A3B8)),
+                    ],
+                  ),
                 ),
               ],
             ),

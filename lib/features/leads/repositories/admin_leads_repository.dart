@@ -98,6 +98,41 @@ class AdminLeadsRepository implements AdminLeadsRepositoryInterface {
   }
 
   @override
+  Future<SalesEmployeeLeadDetailsResponseModel> getSalesEmployeeLeadDetails(
+    dynamic employeeId, {
+    int page = 1,
+    int perPage = 20,
+  }) async {
+    try {
+      final endpoint = AppConstants.adminSalesEmployeeLeadDetailsUrl(employeeId);
+      final response = await apiClient.get(
+        endpoint,
+        queryParameters: {
+          'page': page,
+          'per_page': perPage,
+        },
+      );
+
+      if (response.isSuccess && response.json != null) {
+        return SalesEmployeeLeadDetailsResponseModel.fromJson(response.json!);
+      }
+
+      return SalesEmployeeLeadDetailsResponseModel(
+        status: false,
+        message: response.message.isNotEmpty
+            ? response.message
+            : 'Failed to retrieve sales employee lead details',
+      );
+    } catch (e) {
+      Logger.e('AdminLeadsRepository => Failed to retrieve sales employee lead details ($employeeId): $e');
+      return SalesEmployeeLeadDetailsResponseModel(
+        status: false,
+        message: e.toString(),
+      );
+    }
+  }
+
+  @override
   Future<AdminLeadDetailResponseModel> createAdminLead(CreateAdminLeadRequestModel request) async {
     try {
       final response = await apiClient.post(

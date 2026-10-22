@@ -45,6 +45,7 @@ class SalaryDetailDataModel {
   final num netPayable;
   final SalaryPaymentDetails? paymentDetails;
   final String? payslipUrl;
+  final String? payslipDownloadUrl;
 
   SalaryDetailDataModel({
     required this.employee,
@@ -60,6 +61,7 @@ class SalaryDetailDataModel {
     required this.netPayable,
     this.paymentDetails,
     this.payslipUrl,
+    this.payslipDownloadUrl,
   });
 
   factory SalaryDetailDataModel.fromJson(Map<String, dynamic> json) {
@@ -97,6 +99,7 @@ class SalaryDetailDataModel {
               Map<String, dynamic>.from(json['payment_details']))
           : null,
       payslipUrl: json['payslip_url']?.toString(),
+      payslipDownloadUrl: json['payslip_download_url']?.toString(),
     );
   }
 
@@ -114,6 +117,7 @@ class SalaryDetailDataModel {
         'net_payable': netPayable,
         if (paymentDetails != null) 'payment_details': paymentDetails!.toJson(),
         'payslip_url': payslipUrl,
+        'payslip_download_url': payslipDownloadUrl,
       };
 
   static num _parseNum(dynamic val) {

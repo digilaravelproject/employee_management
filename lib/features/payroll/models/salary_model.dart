@@ -106,6 +106,7 @@ class SalaryEmployeeRecord {
   final String status;
   final String? paymentStatus;
   final String? payslipUrl;
+  final String? payslipDownloadUrl;
 
   SalaryEmployeeRecord({
     required this.employee,
@@ -115,6 +116,7 @@ class SalaryEmployeeRecord {
     required this.status,
     this.paymentStatus,
     this.payslipUrl,
+    this.payslipDownloadUrl,
   });
 
   factory SalaryEmployeeRecord.fromJson(Map<String, dynamic> json) {
@@ -134,6 +136,7 @@ class SalaryEmployeeRecord {
       status: json['status']?.toString() ?? 'Pending',
       paymentStatus: json['payment_status']?.toString(),
       payslipUrl: json['payslip_url']?.toString(),
+      payslipDownloadUrl: json['payslip_download_url']?.toString(),
     );
   }
 
@@ -145,6 +148,7 @@ class SalaryEmployeeRecord {
         'status': status,
         'payment_status': paymentStatus,
         'payslip_url': payslipUrl,
+        'payslip_download_url': payslipDownloadUrl,
       };
 
   /// Convert to [PayrollRecord] for seamless integration with existing detail & calculation screens

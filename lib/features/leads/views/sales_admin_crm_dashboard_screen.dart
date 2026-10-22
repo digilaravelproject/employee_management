@@ -10,6 +10,8 @@ import '../models/admin_leads_request_model.dart';
 import '../models/admin_leads_response_model.dart';
 import '../models/sales_employee_model.dart';
 import '../repositories/admin_leads_repository_interface.dart';
+import '../repositories/admin_leads_repository.dart';
+import '../../../core/services/network/api_client.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'lead_connect_bottom_sheet.dart';
 import '../controllers/lead_integrations_controller.dart';
@@ -58,6 +60,8 @@ class SourceAssignRule {
 typedef AdminLeadStatusItem = LeadStatusModel;
 
 class AdminLeadItem {
+  final int? rawId;
+  final AdminLeadDataModel? rawModel;
   final String id;
   final String customerName;
   final String phone;
@@ -76,6 +80,8 @@ class AdminLeadItem {
   final List<LeadProcessStep> processSteps;
 
   AdminLeadItem({
+    this.rawId,
+    this.rawModel,
     required this.id,
     required this.customerName,
     required this.phone,
@@ -135,10 +141,40 @@ class AdminLeadItem {
       isCompleted: true,
     )).toList();
 
+    if (item.recentActivity != null && item.recentActivity!.isNotEmpty) {
+      final ra = item.recentActivity!;
+      steps.insert(0, LeadProcessStep(
+        title: ra['title']?.toString() ?? ra['event_type']?.toString() ?? 'Recent Activity',
+        date: ra['occurred_at']?.toString() ?? '',
+        note: ra['description']?.toString() ?? '',
+        performedBy: 'System',
+        isCompleted: true,
+      ));
+    }
+
+    final isSelfBrought = item.assignmentOrigin == 'self_brought';
+    String displayStatus = item.status ?? 'New';
+    final sLower = displayStatus.toLowerCase().replaceAll('_', ' ');
+    if (sLower == 'converted') {
+      displayStatus = 'Converted';
+    } else if (sLower == 'follow up') {
+      displayStatus = 'Follow Up';
+    } else if (sLower == 'interested') {
+      displayStatus = 'Interested';
+    } else if (sLower == 'new') {
+      displayStatus = 'New';
+    } else {
+      displayStatus = sLower.split(' ').map((w) => w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : '').join(' ');
+    }
+
     return AdminLeadItem(
+      rawId: item.id,
+      rawModel: item,
       id: item.leadCode ?? 'LD-${item.id}',
       customerName: (item.fullName != null && item.fullName!.isNotEmpty)
-          ? item.fullName!
+          ? (item.companyName != null && item.companyName!.isNotEmpty && item.companyName != item.fullName
+              ? '${item.fullName} (${item.companyName})'
+              : item.fullName!)
           : (item.companyName != null && item.companyName!.isNotEmpty ? item.companyName! : 'Lead #${item.id}'),
       phone: item.mobileNumber ?? '',
       email: item.email ?? '',
@@ -146,8 +182,8 @@ class AdminLeadItem {
       sourceColorHex: colorHex,
       assignedExecutive: assignedName,
       assignedExecutiveAvatar: assignedAvatar,
-      isSelfGenerated: false,
-      status: item.status ?? 'New',
+      isSelfGenerated: isSelfBrought,
+      status: displayStatus,
       dateReceived: item.createdAt ?? '',
       requirement: item.requirement ?? '',
       potentialValue: pVal,
@@ -159,9 +195,15 @@ class AdminLeadItem {
 }
 
 class SalesExecutivePerf {
+  final int id;
   final String name;
   final String avatar;
   final String designation;
+  final String employeeId;
+  final String department;
+  final String team;
+  final String phone;
+  final String email;
   final double revenue;
   final double target;
   final int callsCount;
@@ -170,11 +212,18 @@ class SalesExecutivePerf {
   final int convertedLeads;
   final int totalLeadsAssigned;
   final int totalLeadsSelfGenerated;
+  final SalesEmployeeModel? rawEmployee;
 
   SalesExecutivePerf({
+    this.id = 0,
     required this.name,
     required this.avatar,
     required this.designation,
+    this.employeeId = '',
+    this.department = '',
+    this.team = '',
+    this.phone = '',
+    this.email = '',
     required this.revenue,
     required this.target,
     required this.callsCount,
@@ -183,17 +232,26 @@ class SalesExecutivePerf {
     required this.convertedLeads,
     required this.totalLeadsAssigned,
     required this.totalLeadsSelfGenerated,
+    this.rawEmployee,
   });
 
-  int get totalLeads => totalLeadsAssigned + totalLeadsSelfGenerated;
+  int get totalLeads => (totalLeadsAssigned + totalLeadsSelfGenerated) > 0
+      ? (totalLeadsAssigned + totalLeadsSelfGenerated)
+      : 0;
   double get targetPercentage => target > 0 ? (revenue / target * 100).clamp(0, 100) : 0;
   double get conversionRate => totalLeads > 0 ? (convertedLeads / totalLeads * 100).clamp(0, 100) : 0;
 
   factory SalesExecutivePerf.fromSalesEmployee(SalesEmployeeModel emp) {
     return SalesExecutivePerf(
+      id: emp.id,
       name: emp.displayName,
       avatar: emp.avatar ?? '',
       designation: emp.displayDesignation,
+      employeeId: emp.displayEmployeeId,
+      department: emp.department ?? '',
+      team: emp.team ?? '',
+      phone: emp.displayPhone,
+      email: emp.email ?? '',
       revenue: 0.0,
       target: emp.salesTarget > 0 ? emp.salesTarget : 500000.0,
       callsCount: 0,
@@ -202,6 +260,7 @@ class SalesExecutivePerf {
       convertedLeads: emp.dealsClosedCount,
       totalLeadsAssigned: emp.assignedLeadsCount,
       totalLeadsSelfGenerated: 0,
+      rawEmployee: emp,
     );
   }
 }
@@ -246,6 +305,7 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
       AdminLeadsHubBinding().dependencies();
     }
     _hubController = Get.find<AdminLeadsHubController>();
+    _hubController.fetchSalesEmployees();
     _statusController = AdminLeadStatusesController.to;
     // Call lead integrations status & lead statuses immediately when Sales CRM opens
     LeadIntegrationsController.to.fetchLeadIntegrationsStatus();
@@ -383,62 +443,7 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
     super.dispose();
   }
 
-  static final List<SalesExecutivePerf> _fallbackExecutives = [
-    SalesExecutivePerf(
-      name: 'Rahul Sharma',
-      avatar: 'https://yellowgreen-stork-427223.hostingersite.com/storage/avatars/wiS1bnWjQxY81Zkn73BBwSEtNa8tFy6qWT5NpwhU.jpg',
-      designation: 'Sr. Sales Executive',
-      revenue: 650000,
-      target: 800000,
-      callsCount: 340,
-      totalTalkTime: '24h 15m',
-      avgTalkTime: '4m 30s',
-      convertedLeads: 14,
-      totalLeadsAssigned: 30,
-      totalLeadsSelfGenerated: 15,
-    ),
-    SalesExecutivePerf(
-      name: 'Priya Patel',
-      avatar: 'https://i.pravatar.cc/150?u=priyapatel',
-      designation: 'Sales Executive',
-      revenue: 480000,
-      target: 600000,
-      callsCount: 290,
-      totalTalkTime: '18h 40m',
-      avgTalkTime: '3m 50s',
-      convertedLeads: 10,
-      totalLeadsAssigned: 25,
-      totalLeadsSelfGenerated: 12,
-    ),
-    SalesExecutivePerf(
-      name: 'Amit Verma',
-      avatar: 'https://i.pravatar.cc/150?u=amitverma',
-      designation: 'Junior Executive',
-      revenue: 290000,
-      target: 500000,
-      callsCount: 180,
-      totalTalkTime: '12h 10m',
-      avgTalkTime: '4m 00s',
-      convertedLeads: 6,
-      totalLeadsAssigned: 20,
-      totalLeadsSelfGenerated: 8,
-    ),
-    SalesExecutivePerf(
-      name: 'Neha Singh',
-      avatar: 'https://i.pravatar.cc/150?u=nehasingh',
-      designation: 'Sales Trainee',
-      revenue: 150000,
-      target: 400000,
-      callsCount: 120,
-      totalTalkTime: '8h 30m',
-      avgTalkTime: '4m 15s',
-      convertedLeads: 3,
-      totalLeadsAssigned: 15,
-      totalLeadsSelfGenerated: 5,
-    ),
-  ];
-
-  // Dynamic or fallback executives list
+  // Dynamic sales executives list from API
   List<SalesExecutivePerf> get _effectiveExecutivesList {
     if (Get.isRegistered<AdminLeadsHubController>()) {
       final ctrl = Get.find<AdminLeadsHubController>();
@@ -448,7 +453,7 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
             .toList();
       }
     }
-    return _fallbackExecutives;
+    return const [];
   }
 
   // Filtered Executives for Option 1
@@ -559,7 +564,15 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
       body: Column(
         children: [
           // Global Performance Summary Banner
-          _buildGlobalPerformanceBanner(totalRevenue, overallProgress.toDouble(), totalCalls, totalConverted),
+          Obx(() {
+            final execs = _effectiveExecutivesList;
+            final totalRevenue = execs.fold<double>(0, (sum, item) => sum + item.revenue);
+            final totalTarget = execs.fold<double>(0, (sum, item) => sum + item.target);
+            final overallProgress = totalTarget > 0 ? (totalRevenue / totalTarget * 100) : 0;
+            final totalCalls = execs.fold<int>(0, (sum, item) => sum + item.callsCount);
+            final totalConverted = execs.fold<int>(0, (sum, item) => sum + item.convertedLeads);
+            return _buildGlobalPerformanceBanner(totalRevenue, overallProgress.toDouble(), totalCalls, totalConverted);
+          }),
 
           // Main Screen Content: 4 Vertical Cards Overview OR Module View
           if (_selectedModuleIndex == null)
@@ -1163,88 +1176,156 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
   // ───────────────────────────────────────────────────────────────────────────
 
   Widget _buildSalesTeamOptionView(double overallProgress, int totalCalls, int totalConverted) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      physics: const BouncingScrollPhysics(),
-      children: [
-        // Section Header
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return Obx(() {
+      final isLoading = _hubController.isLoadingSalesEmployees.value;
+      final execs = _filteredExecutives;
+      final totalExecsCount = _effectiveExecutivesList.length;
+
+      return RefreshIndicator(
+        onRefresh: () async {
+          await _hubController.fetchSalesEmployees();
+          await _hubController.fetchLeads(isRefresh: false);
+        },
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
           children: [
-            const Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  AppText(
-                    'Sales Team Overview',
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF0F172A),
+            // Section Header
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      AppText(
+                        'Sales Team Overview',
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF0F172A),
+                      ),
+                      SizedBox(height: 2),
+                      AppText(
+                        'Tap on any employee card to view their complete work, leads & call logs',
+                        fontSize: 11,
+                        color: AppColors.textColorSecondary,
+                      ),
+                    ],
                   ),
-                  SizedBox(height: 2),
-                  AppText(
-                    'Tap on any employee card to view their complete work, leads & call logs',
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryLight,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: AppText(
+                    '$totalExecsCount Executives',
                     fontSize: 11,
-                    color: AppColors.textColorSecondary,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primaryColor,
                   ),
-                ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            // Team Search
+            TextField(
+              controller: _teamSearchController,
+              onChanged: (val) => setState(() {}),
+              decoration: InputDecoration(
+                hintText: 'Search sales executive by name or role...',
+                hintStyle: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+                prefixIcon: const Icon(Iconsax.search_normal_1, size: 16, color: Color(0xFF64748B)),
+                fillColor: Colors.white,
+                filled: true,
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                ),
               ),
             ),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppColors.primaryLight,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: AppText(
-                '${_effectiveExecutivesList.length} Executives',
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                color: AppColors.primaryColor,
-              ),
-            ),
+            const SizedBox(height: 14),
+
+            if (isLoading && execs.isEmpty)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 40),
+                  child: CircularProgressIndicator(),
+                ),
+              )
+            else if (execs.isEmpty)
+              Container(
+                padding: const EdgeInsets.all(32),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Column(
+                  children: [
+                    const Icon(Iconsax.profile_2user, size: 40, color: Color(0xFF94A3B8)),
+                    const SizedBox(height: 10),
+                    const AppText(
+                      'No sales executives found',
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF475569),
+                    ),
+                    const SizedBox(height: 4),
+                    const AppText(
+                      'Pull down to refresh or check search query.',
+                      fontSize: 11,
+                      color: Color(0xFF94A3B8),
+                    ),
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      onPressed: () => _hubController.fetchSalesEmployees(),
+                      icon: const Icon(Icons.refresh_rounded, size: 16),
+                      label: const Text('Refresh List'),
+                    ),
+                  ],
+                ),
+              )
+            else
+              ...execs.map((exec) => _buildEmployeeListCard(exec)),
           ],
         ),
-        const SizedBox(height: 12),
-
-        // Team Search
-        TextField(
-          controller: _teamSearchController,
-          onChanged: (val) => setState(() {}),
-          decoration: InputDecoration(
-            hintText: 'Search sales executive by name or role...',
-            hintStyle: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
-            prefixIcon: const Icon(Iconsax.search_normal_1, size: 16, color: Color(0xFF64748B)),
-            fillColor: Colors.white,
-            filled: true,
-            isDense: true,
-            contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-            ),
-          ),
-        ),
-        const SizedBox(height: 14),
-
-        // Employees List Cards
-        ..._filteredExecutives.map((exec) => _buildEmployeeListCard(exec)),
-      ],
-    );
+      );
+    });
   }
 
   Widget _buildEmployeeListCard(SalesExecutivePerf exec) {
-    // Calculate leads assigned vs self brought for this employee from database
+    // Calculate leads assigned vs self brought for this employee
     final execLeads = _leadsList.where((l) => l.assignedExecutive == exec.name).toList();
-    final assignedCount = execLeads.where((l) => !l.isSelfGenerated).length;
-    final selfBroughtCount = execLeads.where((l) => l.isSelfGenerated).length;
-    final convertedCount = execLeads.where((l) => l.status == 'Converted').length;
+    
+    // Set data directly from sales-employees API attributes with fallback
+    final assignedCount = exec.totalLeadsAssigned > 0
+        ? exec.totalLeadsAssigned
+        : execLeads.where((l) => !l.isSelfGenerated).length;
+    final selfBroughtCount = exec.totalLeadsSelfGenerated > 0
+        ? exec.totalLeadsSelfGenerated
+        : execLeads.where((l) => l.isSelfGenerated).length;
+    final convertedCount = exec.convertedLeads > 0
+        ? exec.convertedLeads
+        : execLeads.where((l) => l.status == 'Converted').length;
+    final totalLeadsCount = exec.totalLeads > 0
+        ? exec.totalLeads
+        : (assignedCount + selfBroughtCount);
+
+    final callsCount = exec.callsCount > 0
+        ? exec.callsCount
+        : execLeads.fold<int>(0, (sum, l) => sum + l.callAttempts);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -1276,7 +1357,7 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
                     backgroundColor: AppColors.primaryLight,
                     backgroundImage: exec.avatar.isNotEmpty ? NetworkImage(exec.avatar) : null,
                     child: exec.avatar.isEmpty
-                        ? Icon(Iconsax.user, size: 20, color: AppColors.primaryColor)
+                        ? const Icon(Iconsax.user, size: 20, color: AppColors.primaryColor)
                         : null,
                   ),
                   const SizedBox(width: 12),
@@ -1342,7 +1423,7 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
                           const Icon(Iconsax.call_calling, size: 12, color: AppColors.primaryColor),
                           const SizedBox(width: 4),
                           AppText(
-                            '${exec.callsCount} calls (${exec.totalTalkTime})',
+                            '$callsCount calls (${exec.totalTalkTime})',
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
                             color: AppColors.textColorPrimary,
@@ -1362,7 +1443,7 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      AppText('Target Progress', fontSize: 10, color: AppColors.textColorSecondary),
+                      const AppText('Target Progress', fontSize: 10, color: AppColors.textColorSecondary),
                       AppText('${exec.targetPercentage.round()}% Achieved', fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.primaryColor),
                     ],
                   ),
@@ -1370,7 +1451,7 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
                   ClipRRect(
                     borderRadius: BorderRadius.circular(4),
                     child: LinearProgressIndicator(
-                      value: exec.targetPercentage / 100.0,
+                      value: (exec.targetPercentage / 100.0).clamp(0.0, 1.0),
                       backgroundColor: const Color(0xFFE2E8F0),
                       valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primaryColor),
                       minHeight: 6,
@@ -1400,7 +1481,7 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
                         const Icon(Iconsax.folder_2, size: 14, color: Color(0xFF64748B)),
                         const SizedBox(width: 6),
                         AppText(
-                          'Total Leads: ${execLeads.length}',
+                          'Total Leads: $totalLeadsCount',
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
                         ),
@@ -4233,7 +4314,10 @@ class _AdminLeadFullDetailScreenState extends State<AdminLeadFullDetailScreen> {
   void initState() {
     super.initState();
     _currentApiLead = widget.apiLead;
-    final targetId = widget.leadId ?? widget.apiLead?.id;
+    final targetId = widget.leadId ??
+        widget.apiLead?.id ??
+        widget.lead?.rawId ??
+        int.tryParse(widget.lead?.id.replaceAll(RegExp(r'[^0-9]'), '') ?? '');
     if (targetId != null) {
       _loadLeadDetail(targetId);
     }
@@ -4244,7 +4328,12 @@ class _AdminLeadFullDetailScreenState extends State<AdminLeadFullDetailScreen> {
       setState(() => _isLoading = true);
     }
     try {
-      final repository = Get.find<AdminLeadsRepositoryInterface>();
+      AdminLeadsRepositoryInterface repository;
+      if (Get.isRegistered<AdminLeadsRepositoryInterface>()) {
+        repository = Get.find<AdminLeadsRepositoryInterface>();
+      } else {
+        repository = AdminLeadsRepository(apiClient: Get.find<ApiClient>());
+      }
       final response = await repository.getAdminLeadDetail(id);
       if (response.status && response.data != null) {
         if (mounted) {
@@ -4258,7 +4347,7 @@ class _AdminLeadFullDetailScreenState extends State<AdminLeadFullDetailScreen> {
         if (mounted) {
           setState(() {
             _isLoading = false;
-            if (_currentApiLead == null) {
+            if (_currentApiLead == null && widget.lead == null) {
               _errorMessage = response.message.isNotEmpty ? response.message : 'Failed to load lead details';
             }
           });
@@ -4268,7 +4357,7 @@ class _AdminLeadFullDetailScreenState extends State<AdminLeadFullDetailScreen> {
       if (mounted) {
         setState(() {
           _isLoading = false;
-          if (_currentApiLead == null) {
+          if (_currentApiLead == null && widget.lead == null) {
             _errorMessage = 'Error loading details: $e';
           }
         });
@@ -4332,17 +4421,35 @@ class _AdminLeadFullDetailScreenState extends State<AdminLeadFullDetailScreen> {
     final apiLead = _currentApiLead;
     final legacyLead = widget.lead;
 
-    final customerName = apiLead?.displayName ?? legacyLead?.customerName ?? 'Lead Details';
-    final leadCode = apiLead?.displayLeadCode ?? legacyLead?.id ?? '';
-    final status = apiLead?.displayStatus ?? legacyLead?.status ?? 'new';
-    final phone = apiLead?.displayPhone ?? legacyLead?.phone ?? 'N/A';
-    final email = apiLead?.displayEmail ?? (legacyLead != null ? '${legacyLead.customerName.toLowerCase().replaceAll(' ', '.')}@example.com' : 'N/A');
-    final requirement = apiLead?.displayRequirement ?? legacyLead?.requirement ?? 'General Inquiry';
-    final source = apiLead?.displaySource ?? legacyLead?.source ?? 'Website';
+    final customerName = apiLead?.displayName.isNotEmpty == true
+        ? apiLead!.displayName
+        : (legacyLead?.customerName ?? 'Lead Details');
+    final leadCode = apiLead?.displayLeadCode.isNotEmpty == true
+        ? apiLead!.displayLeadCode
+        : (legacyLead?.id ?? '');
+    final status = apiLead?.displayStatus.isNotEmpty == true
+        ? apiLead!.displayStatus
+        : (legacyLead?.status ?? 'New');
+    final phone = apiLead?.displayPhone.isNotEmpty == true
+        ? apiLead!.displayPhone
+        : (legacyLead?.phone ?? '');
+    final email = (apiLead?.email != null && apiLead!.email!.trim().isNotEmpty)
+        ? apiLead.email!.trim()
+        : (legacyLead != null && legacyLead.email.isNotEmpty && !legacyLead.email.contains('@example.com')
+            ? legacyLead.email
+            : '');
+    final requirement = apiLead?.displayRequirement.isNotEmpty == true
+        ? apiLead!.displayRequirement
+        : (legacyLead?.requirement ?? '');
+    final source = apiLead?.displaySource.isNotEmpty == true
+        ? apiLead!.displaySource
+        : (legacyLead?.source ?? '');
     final company = apiLead?.displayCompany ?? '';
     final location = apiLead?.location ?? '';
     final notes = apiLead?.displayNotes ?? '';
-    final estimatedValue = apiLead?.estimatedValue?.toString() ?? (legacyLead != null ? '₹${(legacyLead.potentialValue / 1000).toStringAsFixed(0)}k' : null);
+    final estimatedValue = (apiLead?.estimatedValue != null && apiLead!.estimatedValue.toString() != 'null' && apiLead.estimatedValue.toString().isNotEmpty)
+        ? apiLead.estimatedValue.toString()
+        : null;
     final expectedClosingDate = apiLead?.expectedClosingDate;
     final createdAt = apiLead?.createdAt;
 
@@ -4376,12 +4483,15 @@ class _AdminLeadFullDetailScreenState extends State<AdminLeadFullDetailScreen> {
         ),
         centerTitle: true,
         actions: [
-          if (widget.leadId != null || apiLead != null)
+          if (widget.leadId != null || apiLead != null || widget.lead != null)
             IconButton(
               icon: const Icon(Icons.refresh_rounded, color: Color(0xFF475569), size: 20),
               tooltip: 'Refresh',
               onPressed: () {
-                final id = widget.leadId ?? apiLead?.id;
+                final id = widget.leadId ??
+                    apiLead?.id ??
+                    widget.lead?.rawId ??
+                    int.tryParse(widget.lead?.id.replaceAll(RegExp(r'[^0-9]'), '') ?? '');
                 if (id != null) _loadLeadDetail(id);
               },
             ),
@@ -4404,7 +4514,10 @@ class _AdminLeadFullDetailScreenState extends State<AdminLeadFullDetailScreen> {
                         const SizedBox(height: 16),
                         ElevatedButton(
                           onPressed: () {
-                            final id = widget.leadId ?? apiLead?.id;
+                            final id = widget.leadId ??
+                                apiLead?.id ??
+                                widget.lead?.rawId ??
+                                int.tryParse(widget.lead?.id.replaceAll(RegExp(r'[^0-9]'), '') ?? '');
                             if (id != null) _loadLeadDetail(id);
                           },
                           child: const AppText('Retry', color: Colors.white),
@@ -4413,9 +4526,17 @@ class _AdminLeadFullDetailScreenState extends State<AdminLeadFullDetailScreen> {
                     ),
                   ),
                 )
-              : SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.all(16),
+              : RefreshIndicator(
+                  onRefresh: () async {
+                    final id = widget.leadId ??
+                        apiLead?.id ??
+                        widget.lead?.rawId ??
+                        int.tryParse(widget.lead?.id.replaceAll(RegExp(r'[^0-9]'), '') ?? '');
+                    if (id != null) await _loadLeadDetail(id);
+                  },
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                    padding: const EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -4523,35 +4644,42 @@ class _AdminLeadFullDetailScreenState extends State<AdminLeadFullDetailScreen> {
                             ),
                             const SizedBox(height: 14),
 
-                            // Phone & Email Rows
-                            _buildInfoDetailRow(Icons.phone_rounded, 'Phone', phone),
-                            const SizedBox(height: 10),
-                            _buildInfoDetailRow(Icons.email_rounded, 'Email', email),
-                            const SizedBox(height: 10),
-                            _buildInfoDetailRow(Icons.assignment_rounded, 'Requirement', requirement),
-                            if (location.isNotEmpty) ...[
+                            // Phone & Email & Details Rows (Only show if present)
+                            if (phone.isNotEmpty) ...[
+                              _buildInfoDetailRow(Icons.phone_rounded, 'Phone', phone),
                               const SizedBox(height: 10),
+                            ],
+                            if (email.isNotEmpty) ...[
+                              _buildInfoDetailRow(Icons.email_rounded, 'Email', email),
+                              const SizedBox(height: 10),
+                            ],
+                            if (requirement.isNotEmpty) ...[
+                              _buildInfoDetailRow(Icons.assignment_rounded, 'Requirement', requirement),
+                              const SizedBox(height: 10),
+                            ],
+                            if (location.isNotEmpty) ...[
                               _buildInfoDetailRow(Icons.location_on_rounded, 'Location', location),
+                              const SizedBox(height: 10),
                             ],
                             if (estimatedValue != null) ...[
-                              const SizedBox(height: 10),
                               _buildInfoDetailRow(Icons.attach_money_rounded, 'Estimated Value', estimatedValue.startsWith('₹') ? estimatedValue : '₹$estimatedValue', valueColor: const Color(0xFF15803D)),
-                            ],
-                            if (expectedClosingDate != null) ...[
                               const SizedBox(height: 10),
+                            ],
+                            if (expectedClosingDate != null && expectedClosingDate.isNotEmpty) ...[
                               _buildInfoDetailRow(Icons.event_rounded, 'Closing Date', _formatDateTime(expectedClosingDate)),
-                            ],
-                            const SizedBox(height: 10),
-                            _buildInfoDetailRow(
-                              _getSourceIcon(source),
-                              'Source Channel',
-                              source,
-                              valueColor: sourceColor,
-                            ),
-                            if (createdAt != null) ...[
                               const SizedBox(height: 10),
-                              _buildInfoDetailRow(Icons.access_time_rounded, 'Received On', _formatDateTime(createdAt)),
                             ],
+                            if (source.isNotEmpty) ...[
+                              _buildInfoDetailRow(
+                                _getSourceIcon(source),
+                                'Source Channel',
+                                source,
+                                valueColor: sourceColor,
+                              ),
+                              const SizedBox(height: 10),
+                            ],
+                            if (createdAt != null && createdAt.isNotEmpty)
+                              _buildInfoDetailRow(Icons.access_time_rounded, 'Received On', _formatDateTime(createdAt)),
                           ],
                         ),
                       ),
@@ -4786,6 +4914,7 @@ class _AdminLeadFullDetailScreenState extends State<AdminLeadFullDetailScreen> {
                     ],
                   ),
                 ),
+              ),
     );
   }
 
@@ -4912,130 +5041,35 @@ class _AdminLeadFullDetailScreenState extends State<AdminLeadFullDetailScreen> {
           );
         }),
       );
-    } else if (legacyLead != null && legacyLead.processSteps.isNotEmpty) {
-      // Legacy dummy steps fallback
-      final steps = legacyLead.processSteps;
-      return Column(
-        children: List.generate(steps.length, (index) {
-          final step = steps[index];
-          final isLast = index == steps.length - 1;
-          return IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Column(
-                  children: [
-                    Container(
-                      width: 22,
-                      height: 22,
-                      decoration: BoxDecoration(
-                        color: step.isCompleted ? const Color(0xFF10B981) : Colors.white,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: step.isCompleted ? const Color(0xFF10B981) : const Color(0xFFCBD5E1),
-                          width: 2,
-                        ),
-                      ),
-                      child: step.isCompleted
-                          ? const Icon(Icons.check_rounded, size: 13, color: Colors.white)
-                          : null,
-                    ),
-                    if (!isLast)
-                      Expanded(
-                        child: Container(
-                          width: 2,
-                          color: step.isCompleted ? const Color(0xFF10B981) : const Color(0xFFE2E8F0),
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 18),
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF8FAFC),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFE2E8F0)),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(child: AppText(step.title, fontSize: 13, fontWeight: FontWeight.bold)),
-                              AppText('${step.date} ${step.time}'.trim(), fontSize: 10.5, color: const Color(0xFF64748B)),
-                            ],
-                          ),
-                          const SizedBox(height: 3),
-                          Row(
-                            children: [
-                              const Icon(Icons.person_outline_rounded, size: 12, color: Color(0xFF94A3B8)),
-                              const SizedBox(width: 4),
-                              AppText(step.performedBy.isNotEmpty ? step.performedBy : 'Unknown', fontSize: 11, color: const Color(0xFF64748B)),
-                            ],
-                          ),
-                          if (step.note.isNotEmpty) ...[
-                            const SizedBox(height: 6),
-                            AppText(step.note, fontSize: 11.5, color: const Color(0xFF475569)),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
-        }),
-      );
     } else {
-      // Default initial lead event
-      return Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 22,
-            height: 22,
-            decoration: const BoxDecoration(
-              color: Color(0xFF10B981),
-              shape: BoxShape.circle,
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+        ),
+        child: Column(
+          children: [
+            const Icon(Icons.history_toggle_off_rounded, size: 32, color: Color(0xFF94A3B8)),
+            const SizedBox(height: 8),
+            const AppText(
+              'No interaction history recorded yet',
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF64748B),
             ),
-            child: const Icon(Icons.check_rounded, size: 13, color: Colors.white),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF8FAFC),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
+            if (apiLead?.createdAt != null && apiLead!.createdAt!.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              AppText(
+                'Lead created on ${_formatDateTime(apiLead.createdAt)}',
+                fontSize: 10.5,
+                color: const Color(0xFF94A3B8),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  AppText(
-                    'Lead Captured via ${apiLead?.displaySource ?? 'Inquiry'}',
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  const SizedBox(height: 4),
-                  AppText(
-                    apiLead?.createdAt != null
-                        ? 'Received on ${_formatDateTime(apiLead!.createdAt)}'
-                        : 'Imported into CRM',
-                    fontSize: 11,
-                    color: const Color(0xFF64748B),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
+            ],
+          ],
+        ),
       );
     }
   }
@@ -5749,182 +5783,351 @@ class _LeadAssignmentBottomSheetState extends State<_LeadAssignmentBottomSheet> 
   }
 }
 
-class EmployeeLeadDetailScreen extends StatelessWidget {
+class EmployeeLeadDetailScreen extends StatefulWidget {
   final SalesExecutivePerf exec;
   final List<AdminLeadItem> leadsList;
 
   const EmployeeLeadDetailScreen({super.key, required this.exec, required this.leadsList});
 
   @override
+  State<EmployeeLeadDetailScreen> createState() => _EmployeeLeadDetailScreenState();
+}
+
+class _EmployeeLeadDetailScreenState extends State<EmployeeLeadDetailScreen> {
+  late final AdminLeadsHubController _hubController;
+
+  @override
+  void initState() {
+    super.initState();
+    if (Get.isRegistered<AdminLeadsHubController>()) {
+      _hubController = Get.find<AdminLeadsHubController>();
+    } else {
+      AdminLeadsHubBinding().dependencies();
+      _hubController = Get.find<AdminLeadsHubController>();
+    }
+    _fetchDetails();
+  }
+
+  int get _employeeId {
+    if (widget.exec.id > 0) return widget.exec.id;
+    if (widget.exec.rawEmployee != null && widget.exec.rawEmployee!.id > 0) {
+      return widget.exec.rawEmployee!.id;
+    }
+    return int.tryParse(widget.exec.employeeId.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+  }
+
+  Future<void> _fetchDetails() async {
+    final id = _employeeId;
+    if (id > 0) {
+      await _hubController.fetchSalesEmployeeLeadDetails(id, perPage: 20);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final execLeads = leadsList.where((l) => l.assignedExecutive == exec.name).toList();
-    final assignedLeads = execLeads.where((l) => !l.isSelfGenerated).toList();
-    final selfBroughtLeads = execLeads.where((l) => l.isSelfGenerated).toList();
+    return Obx(() {
+      final isLoading = _hubController.isLoadingEmployeeDetails.value;
+      final details = _hubController.currentEmployeeLeadDetails.value;
+      final summary = details?.summary;
+      final emp = details?.employee ?? widget.exec.rawEmployee;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Container(
-            decoration: BoxDecoration(
-              color: const Color(0xFFF1F5F9),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF0F172A), size: 20),
-              onPressed: () => Get.back(),
-            ),
-          ),
-        ),
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircleAvatar(
-              radius: 16,
-              backgroundColor: AppColors.primaryLight,
-              backgroundImage: exec.avatar.isNotEmpty ? NetworkImage(exec.avatar) : null,
-              child: exec.avatar.isEmpty
-                  ? Icon(Iconsax.user, size: 16, color: AppColors.primaryColor)
-                  : null,
-            ),
-            const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                AppText(exec.name, fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
-                AppText(exec.designation, fontSize: 11, color: const Color(0xFF64748B)),
-              ],
-            ),
-          ],
-        ),
-        centerTitle: false,
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        physics: const BouncingScrollPhysics(),
-        children: [
-          // Stats Overview Banner
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF312E81), Color(0xFF4338CA)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildEmployeeModalStat('Revenue', '₹${(exec.revenue / 1000).toStringAsFixed(0)}k', Colors.white),
-                _buildEmployeeModalDivider(),
-                _buildEmployeeModalStat('Target', '${exec.targetPercentage.round()}%', const Color(0xFF34D399)),
-                _buildEmployeeModalDivider(),
-                _buildEmployeeModalStat('Avg Talk', exec.avgTalkTime, const Color(0xFFC7D2FE)),
-                _buildEmployeeModalDivider(),
-                _buildEmployeeModalStat('Total Talk', exec.totalTalkTime, Colors.white),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
+      // Map dynamic leads strictly from API
+      final List<AdminLeadItem> leads;
+      if (details != null) {
+        leads = details.leads.map((e) => AdminLeadItem.fromAdminLeadData(e)).toList();
+      } else {
+        leads = const [];
+      }
 
-          // Lead Source Breakdown Cards (Assigned vs Self Brought)
-          Row(
-            children: [
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFBFDBFE)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Row(
-                        children: [
-                          Icon(Iconsax.card_send, size: 14, color: Color(0xFF2563EB)),
-                          SizedBox(width: 4),
-                          AppText('Admin Assigned', fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF1E3A8A)),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      AppText('${assignedLeads.length} Leads', fontSize: 15, fontWeight: FontWeight.w900, color: const Color(0xFF2563EB)),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFDDD6FE)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Row(
-                        children: [
-                          Icon(Iconsax.user_edit, size: 14, color: Color(0xFF7C3AED)),
-                          SizedBox(width: 4),
-                          AppText('Self Brought', fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF5B21B6)),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      AppText('${selfBroughtLeads.length} Leads', fontSize: 15, fontWeight: FontWeight.w900, color: const Color(0xFF7C3AED)),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
+      final assignedCount = summary?.adminAssignedLeads ?? 0;
+      final selfBroughtCount = summary?.selfBroughtLeads ?? 0;
+      final totalActiveLeads = summary?.activeLeads ?? 0;
+      final totalLeadsCount = summary?.totalLeads ?? 0;
 
-          // Detailed Leads Process Section Title
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const AppText(
-                'Assigned & Managed Leads Process',
-                fontSize: 14,
-                fontWeight: FontWeight.w800,
-              ),
-              AppText(
-                '${execLeads.length} Active Leads',
-                fontSize: 11,
-                color: AppColors.textColorSecondary,
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
+      final revenue = summary?.revenue ?? 0.0;
+      final target = summary?.target ?? 0.0;
+      final targetProgress = summary?.targetAchievedPercentage ?? 0.0;
 
-          if (execLeads.isEmpty)
-            Container(
-              padding: const EdgeInsets.all(24),
+      final dealsClosed = leads.where((l) => l.status.toLowerCase() == 'converted').length;
+      final convertedCount = dealsClosed;
+
+      final displayName = emp?.displayName ?? widget.exec.name;
+      final displayDesignation = emp?.displayDesignation ?? widget.exec.designation;
+      final displayAvatar = emp?.avatar ?? widget.exec.avatar;
+      final displayEmployeeId = emp?.displayEmployeeId ?? widget.exec.employeeId;
+      final displayPhone = emp?.displayPhone ?? widget.exec.phone;
+      final displayEmail = emp?.email ?? widget.exec.email;
+      final displayDepartment = emp?.department ?? widget.exec.department;
+      final displayTeam = emp?.team ?? widget.exec.team;
+      final displayIncentive = emp?.incentiveCommissionPercent ?? '';
+      final skills = emp?.skills ?? const <String>[];
+
+      return Scaffold(
+        backgroundColor: const Color(0xFFF8FAFC),
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          leading: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: const Color(0xFFF1F5F9),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Center(
-                child: AppText(
-                  'No leads currently assigned to this executive',
-                  fontSize: 12,
-                  color: AppColors.textColorSecondary,
+              child: IconButton(
+                icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF0F172A), size: 20),
+                onPressed: () => Get.back(),
+              ),
+            ),
+          ),
+          title: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircleAvatar(
+                radius: 16,
+                backgroundColor: AppColors.primaryLight,
+                backgroundImage: displayAvatar.isNotEmpty ? NetworkImage(displayAvatar) : null,
+                child: displayAvatar.isEmpty
+                    ? const Icon(Iconsax.user, size: 16, color: AppColors.primaryColor)
+                    : null,
+              ),
+              const SizedBox(width: 10),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  AppText(displayName, fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
+                  AppText(displayDesignation, fontSize: 11, color: const Color(0xFF64748B)),
+                ],
+              ),
+            ],
+          ),
+          centerTitle: false,
+        ),
+        body: RefreshIndicator(
+          onRefresh: _fetchDetails,
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+            children: [
+              // Stats Overview Banner
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF312E81), Color(0xFF4338CA)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildEmployeeModalStat('Revenue', '₹${(revenue / 1000).toStringAsFixed(0)}k', Colors.white),
+                    _buildEmployeeModalDivider(),
+                    _buildEmployeeModalStat('Target', '${targetProgress.round()}%', const Color(0xFF34D399)),
+                    _buildEmployeeModalDivider(),
+                    _buildEmployeeModalStat('Deals Closed', '$convertedCount', const Color(0xFFFBBF24)),
+                    _buildEmployeeModalDivider(),
+                    _buildEmployeeModalStat('Total Leads', '$totalLeadsCount', Colors.white),
+                  ],
                 ),
               ),
-            )
-          else
-            ...execLeads.map((lead) => _EmployeeLeadProcessCard(lead: lead)),
-        ],
-      ),
+              const SizedBox(height: 14),
+
+              // Employee Profile & API Attributes Card
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEFF6FF),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Iconsax.user_tag, size: 16, color: Color(0xFF2563EB)),
+                        ),
+                        const SizedBox(width: 8),
+                        const AppText('Executive Details', fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                        const Spacer(),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF1F5F9),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: AppText(
+                            displayEmployeeId,
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF475569),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 16,
+                      runSpacing: 8,
+                      children: [
+                        if (displayDepartment.isNotEmpty)
+                          _buildInfoRow(Iconsax.building, 'Department', displayDepartment),
+                        if (displayTeam.isNotEmpty)
+                          _buildInfoRow(Iconsax.people, 'Team', displayTeam),
+                        if (displayPhone.isNotEmpty)
+                          _buildInfoRow(Iconsax.call, 'Phone', displayPhone),
+                        if (displayEmail.isNotEmpty)
+                          _buildInfoRow(Iconsax.sms, 'Email', displayEmail),
+                        if (target > 0)
+                          _buildInfoRow(Iconsax.chart_success, 'Sales Target', '₹${(target / 1000).toStringAsFixed(0)}k'),
+                        if (displayIncentive.isNotEmpty)
+                          _buildInfoRow(Iconsax.percentage_circle, 'Incentive', '$displayIncentive%'),
+                      ],
+                    ),
+                    if (skills.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: skills.map((s) => Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                          ),
+                          child: AppText(s, fontSize: 10, color: const Color(0xFF475569)),
+                        )).toList(),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              // Lead Source Breakdown Cards (Assigned vs Self Brought)
+              Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFBFDBFE)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Row(
+                            children: [
+                              Icon(Iconsax.card_send, size: 14, color: Color(0xFF2563EB)),
+                              SizedBox(width: 4),
+                              AppText('Admin Assigned', fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF1E3A8A)),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          AppText('$assignedCount Leads', fontSize: 15, fontWeight: FontWeight.w900, color: const Color(0xFF2563EB)),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFDDD6FE)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Row(
+                            children: [
+                              Icon(Iconsax.user_edit, size: 14, color: Color(0xFF7C3AED)),
+                              SizedBox(width: 4),
+                              AppText('Self Brought', fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF5B21B6)),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          AppText('$selfBroughtCount Leads', fontSize: 15, fontWeight: FontWeight.w900, color: const Color(0xFF7C3AED)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+
+              // Detailed Leads Process Section Title
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const AppText(
+                    'Assigned & Managed Leads Process',
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                  ),
+                  AppText(
+                    '$totalActiveLeads Active Leads',
+                    fontSize: 11,
+                    color: AppColors.textColorSecondary,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+
+              if (isLoading && details == null)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 40),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else if (leads.isEmpty)
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Center(
+                    child: AppText(
+                      'No leads currently assigned to this executive',
+                      fontSize: 12,
+                      color: AppColors.textColorSecondary,
+                    ),
+                  ),
+                )
+              else
+                ...leads.map((lead) => _EmployeeLeadProcessCard(lead: lead)),
+            ],
+          ),
+        ),
+      );
+    });
+  }
+
+  Widget _buildInfoRow(IconData icon, String label, String value) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 12, color: const Color(0xFF64748B)),
+        const SizedBox(width: 4),
+        AppText('$label: ', fontSize: 11, color: const Color(0xFF64748B)),
+        AppText(value, fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
+      ],
     );
   }
 
@@ -5955,7 +6158,11 @@ class _EmployeeLeadProcessCard extends StatelessWidget {
         : lead.processSteps;
 
     return GestureDetector(
-      onTap: () => Get.to(() => AdminLeadFullDetailScreen(lead: lead)),
+      onTap: () => Get.to(() => AdminLeadFullDetailScreen(
+        lead: lead,
+        leadId: lead.rawId ?? int.tryParse(lead.id.replaceAll(RegExp(r'[^0-9]'), '')),
+        apiLead: lead.rawModel,
+      )),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(14),

@@ -1,3 +1,5 @@
+import 'admin_leads_response_model.dart';
+
 class SalesEmployeesResponseModel {
   final bool status;
   final String message;
@@ -56,6 +58,7 @@ class SalesEmployeeModel {
   final String? incentiveCommissionPercent;
   final int assignedLeadsCount;
   final int dealsClosedCount;
+  final List<String> skills;
 
   SalesEmployeeModel({
     required this.id,
@@ -83,6 +86,7 @@ class SalesEmployeeModel {
     this.incentiveCommissionPercent,
     this.assignedLeadsCount = 0,
     this.dealsClosedCount = 0,
+    this.skills = const [],
   });
 
   factory SalesEmployeeModel.fromJson(Map<String, dynamic> json) {
@@ -112,6 +116,9 @@ class SalesEmployeeModel {
       incentiveCommissionPercent: json['incentive_commission_percent']?.toString(),
       assignedLeadsCount: int.tryParse(json['assigned_leads_count']?.toString() ?? '') ?? 0,
       dealsClosedCount: int.tryParse(json['deals_closed_count']?.toString() ?? '') ?? 0,
+      skills: json['skills'] is List
+          ? (json['skills'] as List).map((e) => e.toString()).toList()
+          : [],
     );
   }
 
@@ -142,6 +149,7 @@ class SalesEmployeeModel {
       'incentive_commission_percent': incentiveCommissionPercent,
       'assigned_leads_count': assignedLeadsCount,
       'deals_closed_count': dealsClosedCount,
+      'skills': skills,
     };
   }
 
@@ -150,4 +158,109 @@ class SalesEmployeeModel {
   String get displayDesignation => (designation != null && designation!.isNotEmpty) ? designation! : 'Sales Representative';
   String get displayEmployeeId => (employeeId != null && employeeId!.isNotEmpty) ? employeeId! : 'EMP-$id';
   String get displayPhone => (mobileNumber != null && mobileNumber!.isNotEmpty) ? mobileNumber! : (phone ?? '');
+}
+
+class SalesEmployeeLeadDetailsResponseModel {
+  final bool status;
+  final String message;
+  final SalesEmployeeLeadDetailsData? data;
+
+  SalesEmployeeLeadDetailsResponseModel({
+    required this.status,
+    required this.message,
+    this.data,
+  });
+
+  factory SalesEmployeeLeadDetailsResponseModel.fromJson(Map<String, dynamic> json) {
+    return SalesEmployeeLeadDetailsResponseModel(
+      status: json['status'] == true,
+      message: json['message']?.toString() ?? '',
+      data: json['data'] != null && json['data'] is Map<String, dynamic>
+          ? SalesEmployeeLeadDetailsData.fromJson(json['data'] as Map<String, dynamic>)
+          : null,
+    );
+  }
+}
+
+class SalesEmployeeLeadDetailsData {
+  final SalesEmployeeModel? employee;
+  final SalesEmployeeLeadSummary? summary;
+  final List<AdminLeadDataModel> leads;
+  final AdminLeadsPaginationModel? pagination;
+
+  SalesEmployeeLeadDetailsData({
+    this.employee,
+    this.summary,
+    this.leads = const [],
+    this.pagination,
+  });
+
+  factory SalesEmployeeLeadDetailsData.fromJson(Map<String, dynamic> json) {
+    return SalesEmployeeLeadDetailsData(
+      employee: json['employee'] != null && json['employee'] is Map<String, dynamic>
+          ? SalesEmployeeModel.fromJson(json['employee'] as Map<String, dynamic>)
+          : null,
+      summary: json['summary'] != null && json['summary'] is Map<String, dynamic>
+          ? SalesEmployeeLeadSummary.fromJson(json['summary'] as Map<String, dynamic>)
+          : null,
+      leads: json['leads'] is List
+          ? (json['leads'] as List)
+              .map((item) => AdminLeadDataModel.fromJson(item as Map<String, dynamic>))
+              .toList()
+          : [],
+      pagination: json['pagination'] != null && json['pagination'] is Map<String, dynamic>
+          ? AdminLeadsPaginationModel.fromJson(json['pagination'] as Map<String, dynamic>)
+          : null,
+    );
+  }
+}
+
+class SalesEmployeeLeadSummary {
+  final double revenue;
+  final double target;
+  final double targetAchievedPercentage;
+  final int averageTalkSeconds;
+  final int totalTalkSeconds;
+  final int adminAssignedLeads;
+  final int selfBroughtLeads;
+  final int activeLeads;
+  final int totalLeads;
+
+  SalesEmployeeLeadSummary({
+    this.revenue = 0.0,
+    this.target = 0.0,
+    this.targetAchievedPercentage = 0.0,
+    this.averageTalkSeconds = 0,
+    this.totalTalkSeconds = 0,
+    this.adminAssignedLeads = 0,
+    this.selfBroughtLeads = 0,
+    this.activeLeads = 0,
+    this.totalLeads = 0,
+  });
+
+  factory SalesEmployeeLeadSummary.fromJson(Map<String, dynamic> json) {
+    return SalesEmployeeLeadSummary(
+      revenue: double.tryParse(json['revenue']?.toString() ?? '') ?? 0.0,
+      target: double.tryParse(json['target']?.toString() ?? '') ?? 0.0,
+      targetAchievedPercentage: double.tryParse(json['target_achieved_percentage']?.toString() ?? '') ?? 0.0,
+      averageTalkSeconds: int.tryParse(json['average_talk_seconds']?.toString() ?? '') ?? 0,
+      totalTalkSeconds: int.tryParse(json['total_talk_seconds']?.toString() ?? '') ?? 0,
+      adminAssignedLeads: int.tryParse(json['admin_assigned_leads']?.toString() ?? '') ?? 0,
+      selfBroughtLeads: int.tryParse(json['self_brought_leads']?.toString() ?? '') ?? 0,
+      activeLeads: int.tryParse(json['active_leads']?.toString() ?? '') ?? 0,
+      totalLeads: int.tryParse(json['total_leads']?.toString() ?? '') ?? 0,
+    );
+  }
+
+  String get totalTalkFormatted {
+    final hours = totalTalkSeconds ~/ 3600;
+    final minutes = (totalTalkSeconds % 3600) ~/ 60;
+    return '${hours}h ${minutes}m';
+  }
+
+  String get avgTalkFormatted {
+    final minutes = averageTalkSeconds ~/ 60;
+    final seconds = averageTalkSeconds % 60;
+    return '${minutes}m ${seconds}s';
+  }
 }

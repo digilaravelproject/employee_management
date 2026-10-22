@@ -2383,6 +2383,7 @@ void showLeadReminderModal({
   DateTime selectedDateTime = existingReminder?.scheduledAt ?? DateTime.now().add(const Duration(hours: 2));
   final noteController = TextEditingController(text: existingReminder?.note ?? '');
   bool isCompleted = existingReminder?.isCompleted ?? false;
+  bool isSubmitting = false;
 
   showModalBottomSheet(
     context: context,
@@ -2780,63 +2781,131 @@ void showLeadReminderModal({
                         const SizedBox(width: 10),
                       ],
                       Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () async {
-                            final note = noteController.text.trim();
-                            final reminder = LeadReminderModel(
-                              leadId: lead.rawId,
-                              leadCode: lead.id,
-                              customerName: lead.customerName,
-                              phone: lead.phone,
-                              scheduledAt: selectedDateTime,
-                              reminderType: selectedType,
-                              note: note,
-                              isCompleted: isCompleted,
-                            );
+                        child: ElevatedButton(
+                          onPressed: isSubmitting
+                              ? null
+                              : () async {
+                                  final note = noteController.text.trim();
+                                  final action = selectedType.toLowerCase();
+                                  final agenda = note.isNotEmpty
+                                      ? note
+                                      : 'Scheduled $selectedType follow-up with client.';
 
-                            await LeadReminderManager.saveReminder(reminder);
+                                  // Format scheduled_at with timezone offset (e.g. 2026-10-23T16:00:00+05:30)
+                                  final offset = selectedDateTime.timeZoneOffset;
+                                  final sign = offset.isNegative ? '-' : '+';
+                                  final hours = offset.inHours.abs().toString().padLeft(2, '0');
+                                  final minutes = (offset.inMinutes.abs() % 60).toString().padLeft(2, '0');
+                                  final formattedScheduledAt =
+                                      '${DateFormat('yyyy-MM-ddTHH:mm:ss').format(selectedDateTime)}$sign$hours:$minutes';
 
-                            // Also append step to timeline
-                            lead.nextFollowupDateTime = selectedDateTime;
-                            lead.processSteps.insert(
-                              0,
-                              ExecLeadProcessStep(
-                                title: '⏰ Reminder Set: $selectedType',
-                                date: DateFormat('dd MMM yyyy').format(selectedDateTime),
-                                time: DateFormat('hh:mm a').format(selectedDateTime),
-                                note: note.isNotEmpty
-                                    ? note
-                                    : 'Scheduled $selectedType follow-up with client.',
-                                performedBy: 'You',
-                                isCompleted: isCompleted,
-                              ),
-                            );
+                                  final targetLeadId = lead.rawId != 0
+                                      ? lead.rawId
+                                      : (int.tryParse(lead.id.replaceAll(RegExp(r'[^0-9]'), '')) ?? lead.rawId);
 
-                            if (modalCtx.mounted) Navigator.pop(modalCtx);
-                            onUpdated?.call();
+                                  setModalState(() {
+                                    isSubmitting = true;
+                                  });
 
-                            Get.snackbar(
-                              'Reminder Set ⏰',
-                              'Scheduled $selectedType with ${lead.customerName} on ${DateFormat('EEE, dd MMM • hh:mm a').format(selectedDateTime)}',
-                              snackPosition: SnackPosition.BOTTOM,
-                              backgroundColor: const Color(0xFF0F172A),
-                              colorText: Colors.white,
-                              icon: const Icon(Iconsax.timer_1, color: Color(0xFFFBBF24)),
-                              margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                              borderRadius: 14,
-                            );
-                          },
-                          icon: const Icon(Icons.alarm_on_rounded, color: Colors.white, size: 18),
-                          label: Text(
-                            existingReminder != null ? 'Update Reminder' : 'Set Reminder',
-                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
-                          ),
+                                  final controller = EmployeeTeleCrmController.to;
+                                  final res = await controller.createLeadReminder(
+                                    targetLeadId,
+                                    action: action,
+                                    scheduledAt: formattedScheduledAt,
+                                    agenda: agenda,
+                                  );
+
+                                  if (!modalCtx.mounted) return;
+
+                                  if (res.success) {
+                                    final reminder = LeadReminderModel(
+                                      leadId: lead.rawId,
+                                      leadCode: lead.id,
+                                      customerName: lead.customerName,
+                                      phone: lead.phone,
+                                      scheduledAt: selectedDateTime,
+                                      reminderType: selectedType,
+                                      note: note,
+                                      isCompleted: isCompleted,
+                                    );
+
+                                    await LeadReminderManager.saveReminder(reminder);
+
+                                    // Also append step to timeline
+                                    lead.nextFollowupDateTime = selectedDateTime;
+                                    lead.processSteps.insert(
+                                      0,
+                                      ExecLeadProcessStep(
+                                        title: '⏰ Reminder Set: $selectedType',
+                                        date: DateFormat('dd MMM yyyy').format(selectedDateTime),
+                                        time: DateFormat('hh:mm a').format(selectedDateTime),
+                                        note: agenda,
+                                        performedBy: 'You',
+                                        isCompleted: isCompleted,
+                                      ),
+                                    );
+
+                                    if (modalCtx.mounted) Navigator.pop(modalCtx);
+                                    onUpdated?.call();
+
+                                    Get.snackbar(
+                                      'Reminder Set ⏰',
+                                      res.message.isNotEmpty
+                                          ? res.message
+                                          : 'Scheduled $selectedType with ${lead.customerName} on ${DateFormat('EEE, dd MMM • hh:mm a').format(selectedDateTime)}',
+                                      snackPosition: SnackPosition.BOTTOM,
+                                      backgroundColor: const Color(0xFF0F172A),
+                                      colorText: Colors.white,
+                                      icon: const Icon(Iconsax.timer_1, color: Color(0xFFFBBF24)),
+                                      margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                                      borderRadius: 14,
+                                    );
+                                  } else {
+                                    setModalState(() {
+                                      isSubmitting = false;
+                                    });
+                                    Get.snackbar(
+                                      'Failed to Set Reminder',
+                                      res.message.isNotEmpty
+                                          ? res.message
+                                          : 'Please check your details and try again.',
+                                      snackPosition: SnackPosition.BOTTOM,
+                                      backgroundColor: const Color(0xFFDC2626),
+                                      colorText: Colors.white,
+                                      icon: const Icon(Icons.error_outline_rounded, color: Colors.white),
+                                      margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                                      borderRadius: 14,
+                                    );
+                                  }
+                                },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primaryColor,
+                            disabledBackgroundColor: AppColors.primaryColor.withValues(alpha: 0.6),
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                             elevation: 0,
                           ),
+                          child: isSubmitting
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  ),
+                                )
+                              : Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.alarm_on_rounded, color: Colors.white, size: 18),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      existingReminder != null ? 'Update Reminder' : 'Set Reminder',
+                                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+                                    ),
+                                  ],
+                                ),
                         ),
                       ),
                     ],

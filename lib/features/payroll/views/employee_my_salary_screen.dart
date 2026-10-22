@@ -486,205 +486,186 @@ class _SalaryHistoryCard extends StatelessWidget {
           ),
         ],
       ),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header: Month & Status
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryLight,
-                      borderRadius: BorderRadius.circular(10),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: () => Get.to(() => PayslipBreakdownDetailScreen(payslip: payslip)),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header: Month & Status
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryLight,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Iconsax.receipt_2_1, size: 18, color: AppColors.primaryColor),
+                        ),
+                        const SizedBox(width: 10),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            AppText(
+                              payslip.monthLabel.isNotEmpty ? payslip.monthLabel : payslip.salaryMonth,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textColorPrimary,
+                            ),
+                            if (payslip.salaryMonth.isNotEmpty)
+                              AppText(
+                                'Month Code: ${payslip.salaryMonth}',
+                                fontSize: 11,
+                                color: AppColors.textColorHint,
+                              ),
+                          ],
+                        ),
+                      ],
                     ),
-                    child: const Icon(Iconsax.receipt_2_1, size: 18, color: AppColors.primaryColor),
-                  ),
-                  const SizedBox(width: 10),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      AppText(
-                        payslip.monthLabel.isNotEmpty ? payslip.monthLabel : payslip.salaryMonth,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textColorPrimary,
-                      ),
-                      if (payslip.salaryMonth.isNotEmpty)
-                        AppText(
-                          'Month Code: ${payslip.salaryMonth}',
-                          fontSize: 11,
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: statusColor.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: AppText(
+                            payslip.status,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: statusColor,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        const Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          size: 14,
                           color: AppColors.textColorHint,
                         ),
-                    ],
-                  ),
-                ],
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: AppText(
-                  payslip.status,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: statusColor,
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 14),
-          const Divider(color: AppColors.slate100, height: 1),
-          const SizedBox(height: 14),
-
-          // Net Payable & Deductions
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const AppText(
-                    'Net Payable',
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.textColorSecondary,
-                  ),
-                  const SizedBox(height: 4),
-                  AppText(
-                    _currencyFormat.format(payslip.netPayable),
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.primaryColor,
-                  ),
-                ],
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  const AppText(
-                    'Gross Earnings',
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.textColorSecondary,
-                  ),
-                  const SizedBox(height: 4),
-                  AppText(
-                    _currencyFormat.format(payslip.grossEarnings),
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textColorPrimary,
-                  ),
-                ],
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 10),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  const Icon(Icons.remove_circle_outline_rounded, size: 13, color: AppColors.errorColor),
-                  const SizedBox(width: 4),
-                  const AppText(
-                    'Total Deductions: ',
-                    fontSize: 11,
-                    color: AppColors.textColorSecondary,
-                  ),
-                  AppText(
-                    _currencyFormat.format(payslip.totalDeductions),
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: payslip.totalDeductions > 0 ? AppColors.errorColor : AppColors.successColor,
-                  ),
-                ],
-              ),
-              if (payslip.paymentDate != null && payslip.paymentDate!.isNotEmpty)
-                Row(
-                  children: [
-                    const Icon(Iconsax.calendar_1, size: 12, color: AppColors.textColorHint),
-                    const SizedBox(width: 4),
-                    AppText(
-                      'Paid on ${payslip.paymentDate}',
-                      fontSize: 11,
-                      color: AppColors.textColorSecondary,
+                      ],
                     ),
                   ],
                 ),
-            ],
-          ),
 
-          // Attendance Summary Chips Preview
-          if (payslip.attendanceSummary.totalWorkingDays > 0) ...[
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              decoration: BoxDecoration(
-                color: AppColors.slate100.withValues(alpha: 0.6),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildMiniStat('Working', '${payslip.attendanceSummary.totalWorkingDays}d'),
-                  _buildMiniStat('Present', '${payslip.attendanceSummary.presentDays}d'),
-                  _buildMiniStat('Absent', '${payslip.attendanceSummary.absentDays}d'),
-                  _buildMiniStat('Half Day', '${payslip.attendanceSummary.halfDays}d'),
-                  if (payslip.attendanceSummary.paidLeaves > 0)
-                    _buildMiniStat('Leaves', '${payslip.attendanceSummary.paidLeaves}d'),
+                const SizedBox(height: 14),
+                const Divider(color: AppColors.slate100, height: 1),
+                const SizedBox(height: 14),
+
+                // Net Payable & Deductions
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const AppText(
+                          'Net Payable',
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.textColorSecondary,
+                        ),
+                        const SizedBox(height: 4),
+                        AppText(
+                          _currencyFormat.format(payslip.netPayable),
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.primaryColor,
+                        ),
+                      ],
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        const AppText(
+                          'Gross Earnings',
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.textColorSecondary,
+                        ),
+                        const SizedBox(height: 4),
+                        AppText(
+                          _currencyFormat.format(payslip.grossEarnings),
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textColorPrimary,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.remove_circle_outline_rounded, size: 13, color: AppColors.errorColor),
+                        const SizedBox(width: 4),
+                        const AppText(
+                          'Total Deductions: ',
+                          fontSize: 11,
+                          color: AppColors.textColorSecondary,
+                        ),
+                        AppText(
+                          _currencyFormat.format(payslip.totalDeductions),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: payslip.totalDeductions > 0 ? AppColors.errorColor : AppColors.successColor,
+                        ),
+                      ],
+                    ),
+                    if (payslip.paymentDate != null && payslip.paymentDate!.isNotEmpty)
+                      Row(
+                        children: [
+                          const Icon(Iconsax.calendar_1, size: 12, color: AppColors.textColorHint),
+                          const SizedBox(width: 4),
+                          AppText(
+                            'Paid on ${payslip.paymentDate}',
+                            fontSize: 11,
+                            color: AppColors.textColorSecondary,
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+
+                // Attendance Summary Chips Preview
+                if (payslip.attendanceSummary.totalWorkingDays > 0) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppColors.slate100.withValues(alpha: 0.6),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _buildMiniStat('Working', '${payslip.attendanceSummary.totalWorkingDays}d'),
+                        _buildMiniStat('Present', '${payslip.attendanceSummary.presentDays}d'),
+                        _buildMiniStat('Absent', '${payslip.attendanceSummary.absentDays}d'),
+                        _buildMiniStat('Half Day', '${payslip.attendanceSummary.halfDays}d'),
+                        if (payslip.attendanceSummary.paidLeaves > 0)
+                          _buildMiniStat('Leaves', '${payslip.attendanceSummary.paidLeaves}d'),
+                      ],
+                    ),
+                  ),
                 ],
-              ),
+              ],
             ),
-          ],
-
-          const SizedBox(height: 14),
-          const Divider(color: AppColors.slate100, height: 1),
-          const SizedBox(height: 10),
-
-          // Actions: View Breakdown & Download Payslip
-          Row(
-            children: [
-              OutlinedButton.icon(
-                onPressed: () => Get.to(() => PayslipBreakdownDetailScreen(payslip: payslip)),
-                icon: const Icon(Iconsax.eye, size: 14),
-                label: const Text('Breakdown'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.primaryColor,
-                  side: const BorderSide(color: AppColors.primaryColor),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-              ),
-              const Spacer(),
-              ElevatedButton.icon(
-                onPressed: () => controller.openPayslip(payslip),
-                icon: const Icon(Iconsax.document_download, size: 14),
-                label: const Text('Download Payslip'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryColor,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-              ),
-            ],
           ),
-        ],
+        ),
       ),
     );
   }

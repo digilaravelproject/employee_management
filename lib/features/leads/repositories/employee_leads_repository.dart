@@ -34,6 +34,13 @@ abstract class EmployeeLeadsRepositoryInterface {
     dynamic statusId,
     String? slug,
   });
+
+  Future<ResponseModel> createLeadReminder(
+    dynamic leadId, {
+    required String action,
+    required String scheduledAt,
+    required String agenda,
+  });
 }
 
 class EmployeeLeadsRepository implements EmployeeLeadsRepositoryInterface {
@@ -245,6 +252,36 @@ class EmployeeLeadsRepository implements EmployeeLeadsRepositoryInterface {
       return response;
     } catch (e) {
       Logger.e('EmployeeLeadsRepository => Failed to update lead status ($leadId): $e');
+      return ResponseModel(
+        isSuccess: false,
+        message: e.toString(),
+      );
+    }
+  }
+
+  @override
+  Future<ResponseModel> createLeadReminder(
+    dynamic leadId, {
+    required String action,
+    required String scheduledAt,
+    required String agenda,
+  }) async {
+    try {
+      final endpoint = AppConstants.employeeLeadReminderUrl(leadId);
+      final data = <String, dynamic>{
+        'action': action,
+        'scheduled_at': scheduledAt,
+        'agenda': agenda,
+      };
+
+      final response = await apiClient.post(
+        endpoint,
+        data: data,
+      );
+
+      return response;
+    } catch (e) {
+      Logger.e('EmployeeLeadsRepository => Failed to create lead reminder ($leadId): $e');
       return ResponseModel(
         isSuccess: false,
         message: e.toString(),

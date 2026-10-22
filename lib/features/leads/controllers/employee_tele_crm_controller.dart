@@ -530,5 +530,48 @@ class EmployeeTeleCrmController extends GetxController {
       isUpdatingStatus.value = false;
     }
   }
+
+  final RxBool isCreatingReminder = false.obs;
+
+  /// Create lead reminder (POST /api/employee/leads/{id}/reminder)
+  Future<({bool success, String message, dynamic data})> createLeadReminder(
+    dynamic leadId, {
+    required String action,
+    required String scheduledAt,
+    required String agenda,
+  }) async {
+    isCreatingReminder.value = true;
+    try {
+      final response = await repository.createLeadReminder(
+        leadId,
+        action: action,
+        scheduledAt: scheduledAt,
+        agenda: agenda,
+      );
+
+      if (response.isSuccess) {
+        return (
+          success: true,
+          message: response.message.isNotEmpty
+              ? response.message
+              : 'Lead reminder created successfully.',
+          data: response.body,
+        );
+      } else {
+        return (
+          success: false,
+          message: response.message.isNotEmpty
+              ? response.message
+              : 'Failed to create lead reminder.',
+          data: null,
+        );
+      }
+    } catch (e) {
+      return (success: false, message: e.toString(), data: null);
+    } finally {
+      isCreatingReminder.value = false;
+    }
+  }
 }
+
 

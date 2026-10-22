@@ -12,6 +12,7 @@ import '../../tasks/views/task_details_screen.dart';
 import '../controllers/projects_controller.dart';
 import '../models/project_model.dart';
 import 'create_project_screen.dart';
+import 'admin_project_work_tracking_screen.dart';
 import 'project_file_viewer_screen.dart';
 import 'project_list_screen.dart';
 import '../../../core/services/permission/permission_service.dart';
@@ -87,6 +88,22 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
           );
         }),
         actions: [
+          IconButton(
+            tooltip: 'Live Work & Handover Tracker',
+            icon: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEFF6FF),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFBFDBFE)),
+              ),
+              child: const Icon(Iconsax.activity, color: AppColors.primaryColor, size: 18),
+            ),
+            onPressed: () {
+              final p = controller.selectedProject.value;
+              Get.to(() => AdminProjectWorkTrackingScreen(initialProjectId: p?.id));
+            },
+          ),
           Obx(() {
             final project = controller.selectedProject.value;
             if (project == null) return const SizedBox();

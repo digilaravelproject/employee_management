@@ -9,8 +9,10 @@ import '../domain/usecases/get_sales_employees_usecase.dart';
 import '../models/admin_leads_request_model.dart';
 import '../models/admin_leads_response_model.dart';
 import '../models/sales_employee_model.dart';
+import '../repositories/admin_leads_repository_interface.dart';
 
 class AdminLeadsHubController extends GetxController {
+  final AdminLeadsRepositoryInterface? repository;
   final GetAdminLeadsUseCase getAdminLeadsUseCase;
   final GetAdminLeadDetailUseCase getAdminLeadDetailUseCase;
   final GetSalesEmployeesUseCase getSalesEmployeesUseCase;
@@ -23,7 +25,11 @@ class AdminLeadsHubController extends GetxController {
     required this.getSalesEmployeesUseCase,
     required this.createAdminLeadUseCase,
     required this.assignLeadUseCase,
+    this.repository,
   });
+
+  AdminLeadsRepositoryInterface get _repo =>
+      repository ?? Get.find<AdminLeadsRepositoryInterface>();
 
   // State Observables
   final RxBool isLoading = false.obs;
@@ -37,6 +43,11 @@ class AdminLeadsHubController extends GetxController {
   // Sales Employees Observable
   final RxList<SalesEmployeeModel> salesEmployees = <SalesEmployeeModel>[].obs;
   final RxBool isLoadingSalesEmployees = false.obs;
+
+  // Single Sales Employee Lead Details Observable
+  final RxBool isLoadingEmployeeDetails = false.obs;
+  final Rx<SalesEmployeeLeadDetailsData?> currentEmployeeLeadDetails =
+      Rx<SalesEmployeeLeadDetailsData?>(null);
 
   // Filter Observables
   // Assignment: 'all', 'unassigned', 'assigned'
@@ -283,5 +294,29 @@ class AdminLeadsHubController extends GetxController {
       fetchLeads(isRefresh: false);
     }
     return response;
+  }
+
+  // Fetch Single Sales Employee Lead Details (GET /api/admin/leads/sales-employees/{id}?per_page=20)
+  Future<SalesEmployeeLeadDetailsResponseModel?> fetchSalesEmployeeLeadDetails(
+    dynamic employeeId, {
+    int page = 1,
+    int perPage = 20,
+  }) async {
+    isLoadingEmployeeDetails.value = true;
+    try {
+      final response = await _repo.getSalesEmployeeLeadDetails(
+        employeeId,
+        page: page,
+        perPage: perPage,
+      );
+      if (response.status && response.data != null) {
+        currentEmployeeLeadDetails.value = response.data;
+      }
+      return response;
+    } catch (_) {
+      return null;
+    } finally {
+      isLoadingEmployeeDetails.value = false;
+    }
   }
 }
