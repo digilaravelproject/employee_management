@@ -60,6 +60,9 @@ class MockPerformanceRepository implements PerformanceRepositoryInterface {
           }),
         );
   }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 void main() {

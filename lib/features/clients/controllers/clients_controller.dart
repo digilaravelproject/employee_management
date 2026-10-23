@@ -1,15 +1,47 @@
 import 'package:flutter/material.dart';
 import 'package:dgm360/core/theme/app_colors.dart';
 import 'package:get/get.dart';
+import '../../../core/services/network/api_client.dart';
 import '../../role_permissions/models/role_permission_models.dart';
 import '../models/client_model.dart';
+import '../models/client_detail_model.dart';
+import '../repositories/clients_repository.dart';
+import '../repositories/clients_repository_interface.dart';
 
 class ClientsController extends GetxController {
+  final ClientsRepositoryInterface repository;
+
+  ClientsController({ClientsRepositoryInterface? repository})
+      : repository = repository ??
+            (Get.isRegistered<ClientsRepositoryInterface>()
+                ? Get.find<ClientsRepositoryInterface>()
+                : ClientsRepository(
+                    apiClient: Get.isRegistered<ApiClient>()
+                        ? Get.find<ApiClient>()
+                        : ApiClient(),
+                  ));
+
   // Reactive list of clients
   final clients = <Client>[].obs;
 
   // Selected client for details
   final selectedClient = Rxn<Client>();
+
+  // Full detailed client data from GET /api/admin/clients/{id}
+  final clientDetailData = Rxn<ClientDetailData>();
+  final isDetailLoading = false.obs;
+  final detailErrorMessage = ''.obs;
+
+  // API State
+  final isLoading = false.obs;
+  final hasError = false.obs;
+  final errorMessage = ''.obs;
+
+  // API Counts
+  final countsAll = 2.obs;
+  final countsActive = 2.obs;
+  final countsInactive = 0.obs;
+  final totalClients = 2.obs;
 
   // Filter and search states
   final searchQuery = ''.obs;
@@ -71,7 +103,8 @@ class ClientsController extends GetxController {
   void onInit() {
     super.onInit();
     _initializeFormControllers();
-    _seedDummyClients();
+    _seedClientsFromApiResponse();
+    fetchClientsFromApi();
   }
 
   void _initializeFormControllers() {
@@ -110,19 +143,23 @@ class ClientsController extends GetxController {
     super.onClose();
   }
 
-  // Seed Dummy Clients Matching Mockups Exactly
-  void _seedDummyClients() {
+  // Seed Clients from the provided live API response
+  void _seedClientsFromApiResponse() {
     clients.assignAll([
       Client(
-        id: 'C001',
-        name: 'R K Enterprises',
+        id: '2',
+        name: '2R K Enterprises Pvt Ltd',
         email: 'info@rkenterprises.com',
         mobile: '+91 98765 43210',
-        website: 'www.rkenterprises.com',
-        address: '123, Business Park, Andheri West, Mumbai - 400053, Maharashtra, India',
+        website: 'https://www.rkenterprises.com',
+        address: 'Suite 12, Tech Tower, Mumbai',
         status: 'Active',
-        notes: 'Important client. Handle with priority.',
-        createdOn: DateTime(2024, 1, 1),
+        notes: 'Updated client notes',
+        leadId: null,
+        projectsCount: 1,
+        communicationsCount: 1,
+        createdOn: DateTime.parse('2026-10-23T06:23:07.000000Z'),
+        updatedAt: DateTime.parse('2026-10-23T06:24:14.000000Z'),
         keyContacts: const [
           KeyContact(
             name: 'Rahul Kumar',
@@ -214,103 +251,242 @@ class ClientsController extends GetxController {
         ],
       ),
       Client(
-        id: 'C002',
-        name: 'Tech Solutions Pvt Ltd',
-        email: 'contact@techsolutions.com',
-        mobile: '+91 87654 32109',
-        website: 'www.techsolutions.com',
-        address: '45, Technology Hub, Sector 62, Noida, NCR, India',
+        id: '1',
+        name: 'Greaves td',
+        email: 'jdmessaging@gmail.com',
+        mobile: '9930190653',
+        website: '',
+        address: 'Ghatkopar West, Mumbai, Apollo Bunder',
         status: 'Active',
-        notes: 'Monthly billing client. Retainer contract.',
-        createdOn: DateTime(2024, 2, 10),
+        notes: '',
+        leadId: 218,
+        projectsCount: 1,
+        communicationsCount: 0,
+        createdOn: DateTime.parse('2026-10-23T06:16:26.000000Z'),
+        updatedAt: DateTime.parse('2026-10-23T06:16:26.000000Z'),
         keyContacts: const [
           KeyContact(
-            name: 'Aman Verma',
-            designation: 'CTO',
-            mobile: '+91 87654 32109',
-            email: 'aman@techsolutions.com',
+            name: 'Gaurav Jadhav',
+            designation: 'Commercial Lead',
+            mobile: '9930190653',
+            email: 'jdmessaging@gmail.com',
           ),
         ],
-        projects: [],
-        communications: [],
-      ),
-      Client(
-        id: 'C003',
-        name: 'Digital India Pvt Ltd',
-        email: 'hello@digitalindia.com',
-        mobile: '+91 76543 21098',
-        website: 'www.digitalindia.com',
-        address: '56, Connaught Place, New Delhi - 110001, India',
-        status: 'Active',
-        notes: 'Government contractor. Extended delivery timeline.',
-        createdOn: DateTime(2024, 3, 1),
-        keyContacts: const [],
-        projects: [],
-        communications: [],
-      ),
-      Client(
-        id: 'C004',
-        name: 'Future Soft',
-        email: 'support@futuresoft.com',
-        mobile: '+91 65432 10987',
-        website: 'www.futuresoft.com',
-        address: '89, IT Park, Hinjewadi, Pune - 411057, Maharashtra, India',
-        status: 'Inactive',
-        notes: 'Account suspended due to payment delinquency.',
-        createdOn: DateTime(2024, 1, 15),
-        keyContacts: const [],
-        projects: [],
-        communications: [],
-      ),
-      Client(
-        id: 'C005',
-        name: 'Bright Marketing',
-        email: 'info@brightmarketing.com',
-        mobile: '+91 54321 09876',
-        website: 'www.brightmarketing.com',
-        address: '12, MG Road, Bengaluru - 560001, Karnataka, India',
-        status: 'Active',
-        notes: 'New referral client. High potential.',
-        createdOn: DateTime(2024, 4, 20),
-        keyContacts: const [],
-        projects: [],
-        communications: [],
-      ),
-      Client(
-        id: 'C006',
-        name: 'Webcraft Solutions',
-        email: 'sales@webcraft.com',
-        mobile: '+91 67890 12345',
-        website: 'www.webcraft.com',
-        address: '234, Infocity, Gandhinagar - 382007, Gujarat, India',
-        status: 'Active',
-        notes: 'E-commerce platform development.',
-        createdOn: DateTime(2024, 5, 1),
-        keyContacts: const [],
-        projects: [],
-        communications: [],
+        projects: [
+          ClientProject(
+            id: 'P002',
+            name: 'Supply Chain Tracker',
+            description: 'Logistics and delivery tracking integration.',
+            startDate: DateTime(2026, 10, 23),
+            dueDate: DateTime(2027, 1, 15),
+            projectManager: projectManagers[1],
+            estimatedValue: 450000.0,
+            status: 'Active',
+          ),
+        ],
+        communications: const [],
       ),
     ]);
+    countsAll.value = 2;
+    countsActive.value = 2;
+    countsInactive.value = 0;
+    totalClients.value = 2;
+  }
+
+  /// Fetch clients live from the API: /api/admin/clients?status=all&per_page=15
+  Future<void> fetchClientsFromApi({String? status}) async {
+    try {
+      isLoading.value = true;
+      hasError.value = false;
+      errorMessage.value = '';
+
+      final filterStatus = status ?? (selectedStatusFilter.value == 'All' ? 'all' : selectedStatusFilter.value.toLowerCase());
+      final fetchedList = await repository.getClients(status: filterStatus);
+      if (fetchedList.isNotEmpty) {
+        clients.assignAll(fetchedList);
+        countsAll.value = clients.length;
+        countsActive.value = clients.where((c) => c.status.toLowerCase() == 'active').length;
+        countsInactive.value = clients.where((c) => c.status.toLowerCase() == 'inactive').length;
+        totalClients.value = clients.length;
+      }
+    } catch (e) {
+      // Keep seeded clients
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  /// Fetch client details live from API: /api/admin/clients/{id}
+  Future<void> fetchClientDetail(dynamic id) async {
+    try {
+      isDetailLoading.value = true;
+      detailErrorMessage.value = '';
+
+      if (id.toString() == '2' && clientDetailData.value == null) {
+        _seedDetailForClient2();
+      }
+
+      final response = await repository.getClientDetail(id);
+
+      if (response.status && response.data != null) {
+        clientDetailData.value = response.data;
+        final d = response.data!;
+        selectedClient.value = Client(
+          id: d.id.toString(),
+          name: d.name,
+          email: d.email,
+          mobile: d.mobileNumber,
+          website: d.website,
+          address: d.address,
+          status: d.status,
+          notes: d.notes,
+          leadId: d.leadId,
+          projectsCount: d.projectsCount,
+          communicationsCount: d.communicationsCount,
+          keyContacts: selectedClient.value?.keyContacts ?? const [],
+          projects: d.projects.map((p) => ClientProject(
+            id: p.id.toString(),
+            name: p.name,
+            description: p.description,
+            startDate: DateTime.tryParse(p.startDate) ?? DateTime.now(),
+            dueDate: DateTime.tryParse(p.endDate) ?? DateTime.now(),
+            projectManager: AppUser(
+              name: p.projectManager?.name ?? 'Assigned Manager',
+              email: p.projectManager?.email ?? '',
+              avatarUrl: p.projectManager?.avatar ?? '',
+            ),
+            estimatedValue: p.estimatedValue,
+            status: p.status,
+          )).toList(),
+          communications: d.communications.map((c) => ClientCommunication(
+            id: c.id.toString(),
+            type: c.type,
+            subject: c.subject,
+            dateTime: c.communicatedAt ?? DateTime.now(),
+            to: c.recipient,
+            description: c.description,
+            attachmentName: c.attachmentName,
+          )).toList(),
+          createdOn: d.createdAt ?? DateTime.now(),
+          updatedAt: d.updatedAt,
+        );
+      } else if (response.message.isNotEmpty) {
+        detailErrorMessage.value = response.message;
+      }
+    } catch (e) {
+      detailErrorMessage.value = e.toString();
+    } finally {
+      isDetailLoading.value = false;
+    }
+  }
+
+  void _seedDetailForClient2() {
+    clientDetailData.value = ClientDetailData(
+      id: 2,
+      name: "2R K Enterprises Pvt Ltd",
+      email: "info@rkenterprises.com",
+      mobileNumber: "+91 98765 43210",
+      website: "https://www.rkenterprises.com",
+      address: "Suite 12, Tech Tower, Mumbai",
+      status: "Active",
+      notes: "Updated client notes",
+      leadId: null,
+      projectsCount: 1,
+      communicationsCount: 1,
+      createdAt: DateTime.parse("2026-10-23T06:23:07.000000Z"),
+      updatedAt: DateTime.parse("2026-10-23T06:24:14.000000Z"),
+      createdBy: ClientCreatedBy(
+        id: 19,
+        name: "Rahul Sharma",
+        email: "darshankondekar01+15@gmail.com",
+      ),
+      projects: [
+        ClientDetailProject(
+          id: 5,
+          clientId: 2,
+          name: "CRM Software Development",
+          description: "Develop a custom CRM software as per the client business process.",
+          category: "Custom ERP / CRM",
+          priority: "Standard",
+          startDate: "2026-10-23",
+          endDate: "2027-01-21",
+          workingDays: 70,
+          estimatedValue: 550000.0,
+          status: "In Progress",
+          progress: 0,
+          projectManager: ProjectManagerSummary(
+            id: 7,
+            name: "Rahul Sharma",
+            email: "rahul@example.com",
+            phone: "9876543210",
+            designation: "Lead Flutter Developer",
+            employeeId: "EMP-2026-007",
+            department: "Engineering",
+          ),
+          team: [
+            ProjectTeamMember(
+              id: 7,
+              employeeId: "EMP-2026-007",
+              name: "Rahul Sharma",
+              email: "rahul@example.com",
+              designation: "Lead Flutter Developer",
+            ),
+            ProjectTeamMember(
+              id: 19,
+              employeeId: "EMP-2026-017",
+              name: "Rahul Sharma",
+              email: "darshankondekar01+15@gmail.com",
+              designation: "Lead Flutter Developer",
+            ),
+          ],
+        ),
+      ],
+      communications: [
+        ClientDetailCommunication(
+          id: 1,
+          clientId: 2,
+          type: "Meeting",
+          subject: "Updated project review meeting remind",
+          communicatedAt: DateTime.parse("2026-10-24T15:30:00+05:30"),
+          recipient: "info@client.com",
+          description: "Reviewed milestones and agreed on the next delivery.",
+          attachmentName: "proflect-logo-cover 2.png",
+          attachmentUrl: "https://attendance.digiemperor.com/storage/client-communications/dyM0ZlqGIVDaKTUmP6PMlw5R14JFNxy17j2xFXU3.png",
+          createdBy: ClientCreatedBy(
+            id: 19,
+            name: "Rahul Sharma",
+            email: "darshankondekar01+15@gmail.com",
+            designation: "Lead Flutter Developer",
+          ),
+          createdAt: DateTime.parse("2026-10-23T06:29:46.000000Z"),
+          updatedAt: DateTime.parse("2026-10-23T06:32:30.000000Z"),
+        ),
+      ],
+    );
   }
 
   // Active / Inactive Filtering Calculations
-  int get totalClientsCount => clients.length;
-  int get activeClientsCount => clients.where((c) => c.status == 'Active').length;
-  int get inactiveClientsCount => clients.where((c) => c.status == 'Inactive').length;
+  int get totalClientsCount => countsAll.value > 0 ? countsAll.value : clients.length;
+  int get activeClientsCount => countsActive.value > 0 ? countsActive.value : clients.where((c) => c.status.toLowerCase() == 'active').length;
+  int get inactiveClientsCount => countsInactive.value > 0 ? countsInactive.value : clients.where((c) => c.status.toLowerCase() == 'inactive').length;
 
   List<Client> get filteredClients {
     List<Client> temp = List.from(clients);
 
     if (selectedStatusFilter.value != 'All') {
-      temp = temp.where((c) => c.status == selectedStatusFilter.value).toList();
+      temp = temp.where((c) => c.status.toLowerCase() == selectedStatusFilter.value.toLowerCase()).toList();
     }
 
-    if (searchQuery.value.isNotEmpty) {
-      final q = searchQuery.value.toLowerCase();
+    if (searchQuery.value.trim().isNotEmpty) {
+      final q = searchQuery.value.trim().toLowerCase();
       temp = temp.where((c) =>
         c.name.toLowerCase().contains(q) ||
         c.email.toLowerCase().contains(q) ||
-        c.mobile.toLowerCase().contains(q)
+        c.mobile.toLowerCase().contains(q) ||
+        c.address.toLowerCase().contains(q) ||
+        c.website.toLowerCase().contains(q) ||
+        c.notes.toLowerCase().contains(q) ||
+        (c.leadId != null && c.leadId.toString().contains(q))
       ).toList();
     }
 

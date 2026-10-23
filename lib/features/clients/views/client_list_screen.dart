@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
-import '../../../core/theme/app_colors.dart';
-import '../../../core/widgets/app_text.dart';
+import 'package:intl/intl.dart';
 import '../controllers/clients_controller.dart';
 import '../models/client_model.dart';
 import 'client_details_screen.dart';
@@ -13,45 +12,59 @@ class ClientListScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Put controller in memory
-    final controller = Get.put(ClientsController());
+    // Put or find controller in memory
+    final controller = Get.isRegistered<ClientsController>()
+        ? Get.find<ClientsController>()
+        : Get.put(ClientsController());
 
     return Scaffold(
-      backgroundColor: AppColors.scaffoldBackgroundColor,
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
+        surfaceTintColor: Colors.transparent,
         leading: Padding(
           padding: const EdgeInsets.all(8.0),
           child: Container(
             decoration: BoxDecoration(
-              color: AppColors.slate100,
+              color: const Color(0xFFF1F5F9),
               borderRadius: BorderRadius.circular(12),
             ),
             child: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textColorPrimary, size: 20),
+              icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF0F172A), size: 18),
               onPressed: () => Get.back(),
             ),
           ),
         ),
-        title: const AppText(
-          'Clients',
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-          color: AppColors.textColorPrimary,
+        title: const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Clients Management',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF0F172A),
+              ),
+            ),
+            SizedBox(height: 2),
+            Text(
+              'Active accounts & client directory',
+              style: TextStyle(fontSize: 11.5, color: Color(0xFF64748B)),
+            ),
+          ],
         ),
         centerTitle: false,
         actions: [
+          // Refresh Button
           IconButton(
-            icon: const Icon(Iconsax.edit, color: AppColors.textColorSecondary, size: 22),
-            onPressed: () {
-              // Quick clear and add client
-              controller.clearForm();
-              Get.to(() => const AddEditClientScreen(isEditMode: false));
-            },
+            tooltip: 'Refresh Clients',
+            icon: const Icon(Iconsax.refresh, color: Color(0xFF3B206A), size: 20),
+            onPressed: () => controller.fetchClientsFromApi(),
           ),
+          // Add Client Button
           Padding(
-            padding: const EdgeInsets.only(right: 16.0, left: 8.0, top: 8.0, bottom: 8.0),
+            padding: const EdgeInsets.only(right: 14.0, left: 4.0),
             child: GestureDetector(
               onTap: () {
                 controller.clearForm();
@@ -60,10 +73,10 @@ class ClientListScreen extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: const BoxDecoration(
-                  color: AppColors.primaryColor,
+                  color: Color(0xFF3B206A),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.add, color: Colors.white, size: 20),
+                child: const Icon(Icons.add, color: Colors.white, size: 18),
               ),
             ),
           ),
@@ -75,33 +88,27 @@ class ClientListScreen extends StatelessWidget {
           Container(
             color: Colors.white,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: AppColors.slate50,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: AppColors.slate100),
-                    ),
-                    child: TextField(
-                      onChanged: (value) => controller.searchQuery.value = value,
-                      decoration: const InputDecoration(
-                        hintText: 'Search clients...',
-                        hintStyle: TextStyle(color: AppColors.textColorHint, fontSize: 14),
-                        prefixIcon: Icon(Iconsax.search_normal, color: AppColors.textColorHint, size: 20),
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(vertical: 14),
-                      ),
-                    ),
-                  ),
+            child: Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: TextField(
+                onChanged: (value) => controller.searchQuery.value = value,
+                decoration: const InputDecoration(
+                  hintText: 'Search by client name, email, phone, city...',
+                  hintStyle: TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
+                  prefixIcon: Icon(Iconsax.search_normal, color: Color(0xFF3B206A), size: 18),
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.symmetric(vertical: 13, horizontal: 10),
                 ),
-              ],
+              ),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
 
-          // ── Symmetrical Horizontal Status Filter deck ──
+          // ── Horizontal Status Filter Deck (All, Active, Inactive) ──
           SizedBox(
             height: 42,
             child: Obx(() {
@@ -115,55 +122,111 @@ class ClientListScreen extends StatelessWidget {
                     label: 'All',
                     count: controller.totalClientsCount,
                     isSelected: controller.selectedStatusFilter.value == 'All',
-                    onTap: () => controller.selectedStatusFilter.value = 'All',
+                    onTap: () {
+                      controller.selectedStatusFilter.value = 'All';
+                      controller.fetchClientsFromApi(status: 'all');
+                    },
                   ),
                   _buildFilterTab(
                     controller,
                     label: 'Active',
                     count: controller.activeClientsCount,
                     isSelected: controller.selectedStatusFilter.value == 'Active',
-                    onTap: () => controller.selectedStatusFilter.value = 'Active',
+                    onTap: () {
+                      controller.selectedStatusFilter.value = 'Active';
+                      controller.fetchClientsFromApi(status: 'active');
+                    },
                   ),
                   _buildFilterTab(
                     controller,
                     label: 'Inactive',
                     count: controller.inactiveClientsCount,
                     isSelected: controller.selectedStatusFilter.value == 'Inactive',
-                    onTap: () => controller.selectedStatusFilter.value = 'Inactive',
+                    onTap: () {
+                      controller.selectedStatusFilter.value = 'Inactive';
+                      controller.fetchClientsFromApi(status: 'inactive');
+                    },
                   ),
                 ],
               );
             }),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
 
-          // ── Client List Feed ──
+          // ── Client List Feed with Pull-to-Refresh ──
           Expanded(
             child: Obx(() {
+              if (controller.isLoading.value && controller.clients.isEmpty) {
+                return const Center(
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    color: Color(0xFF3B206A),
+                  ),
+                );
+              }
+
               final list = controller.filteredClients;
               if (list.isEmpty) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                return RefreshIndicator(
+                  color: const Color(0xFF3B206A),
+                  onRefresh: () => controller.fetchClientsFromApi(),
+                  child: ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
                     children: [
-                      Icon(Iconsax.people, size: 64, color: AppColors.textColorHint.withValues(alpha: 0.3)),
-                      const SizedBox(height: 16),
-                      const AppText('No Clients Found', fontSize: 16, fontWeight: FontWeight.bold),
-                      const SizedBox(height: 4),
-                      const AppText('Add a new client to get started.', fontSize: 12, color: AppColors.textColorHint),
+                      SizedBox(height: MediaQuery.of(context).size.height * 0.2),
+                      Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              width: 64,
+                              height: 64,
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFF1F5F9),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Iconsax.profile_2user, size: 30, color: Color(0xFF94A3B8)),
+                            ),
+                            const SizedBox(height: 14),
+                            const Text(
+                              'No Clients Found',
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                            ),
+                            const SizedBox(height: 4),
+                            const Text(
+                              'No clients match the selected criteria or search.',
+                              style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                            ),
+                            const SizedBox(height: 14),
+                            ElevatedButton.icon(
+                              onPressed: () => controller.fetchClientsFromApi(),
+                              icon: const Icon(Iconsax.refresh, size: 16, color: Colors.white),
+                              label: const Text('Refresh Directory', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF3B206A),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 );
               }
 
-              return ListView.builder(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                physics: const BouncingScrollPhysics(),
-                itemCount: list.length,
-                itemBuilder: (context, index) {
-                  final client = list[index];
-                  return _ClientCardItem(client: client);
-                },
+              return RefreshIndicator(
+                color: const Color(0xFF3B206A),
+                onRefresh: () => controller.fetchClientsFromApi(),
+                child: ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                  physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+                  itemCount: list.length,
+                  itemBuilder: (context, index) {
+                    final client = list[index];
+                    return _ClientCardItem(client: client);
+                  },
+                ),
               );
             }),
           ),
@@ -180,44 +243,48 @@ class ClientListScreen extends StatelessWidget {
     required VoidCallback onTap,
   }) {
     final activeColor = label == 'Inactive' 
-        ? AppColors.errorColor 
-        : (label == 'Active' ? AppColors.successColor : AppColors.primaryColor);
+        ? const Color(0xFFDC2626) 
+        : (label == 'Active' ? const Color(0xFF16A34A) : const Color(0xFF3B206A));
 
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         margin: const EdgeInsets.only(right: 10),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? activeColor.withValues(alpha: 0.08) : Colors.white,
+          color: isSelected ? activeColor.withValues(alpha: 0.1) : Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected ? activeColor : AppColors.slate200,
+            color: isSelected ? activeColor : const Color(0xFFE2E8F0),
             width: isSelected ? 1.5 : 1.0,
           ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            AppText(
+            Text(
               label,
-              fontSize: 13,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-              color: isSelected ? activeColor : AppColors.textColorSecondary,
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                color: isSelected ? activeColor : const Color(0xFF64748B),
+              ),
             ),
             const SizedBox(width: 6),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: isSelected ? activeColor : AppColors.slate100,
+                color: isSelected ? activeColor : const Color(0xFFF1F5F9),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: AppText(
+              child: Text(
                 '$count',
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                color: isSelected ? Colors.white : AppColors.textColorSecondary,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: isSelected ? Colors.white : const Color(0xFF64748B),
+                ),
               ),
             ),
           ],
@@ -234,17 +301,23 @@ class _ClientCardItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = Get.find<ClientsController>();
-    final statusColor = client.status == 'Active' ? AppColors.successColor : AppColors.errorColor;
+    final isActive = client.status.toLowerCase() == 'active';
+    final statusColor = isActive ? const Color(0xFF16A34A) : const Color(0xFFDC2626);
+    final statusBg = isActive ? const Color(0xFFDCFCE7) : const Color(0xFFFEE2E2);
+
+    final initials = client.name.trim().isNotEmpty
+        ? client.name.trim().split(' ').where((e) => e.isNotEmpty).map((e) => e[0]).take(2).join().toUpperCase()
+        : 'CL';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.slate200),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.015),
+            color: Colors.black.withValues(alpha: 0.025),
             blurRadius: 8,
             offset: const Offset(0, 3),
           ),
@@ -252,94 +325,236 @@ class _ClientCardItem extends StatelessWidget {
       ),
       child: Material(
         color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
         child: InkWell(
           onTap: () {
             controller.selectedClient.value = client;
+            controller.fetchClientDetail(client.id);
             Get.to(() => const ClientDetailsScreen());
           },
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            child: Row(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Symmetrical Initials Avatar Box
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      colors: [
-                        AppColors.primaryColor.withValues(alpha: 0.15),
-                        AppColors.indigo500.withValues(alpha: 0.15),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+                // Top Row: Avatar, Title, Status
+                Row(
+                  children: [
+                    // Avatar Box
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF3B206A), Color(0xFF5B349A)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Center(
+                        child: Text(
+                          initials,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
                     ),
-                    border: Border.all(color: AppColors.slate100, width: 1.5),
-                  ),
-                  child: Center(
-                    child: AppText(
-                      client.name.isNotEmpty 
-                          ? client.name.split(' ').map((e) => e[0]).take(2).join().toUpperCase()
-                          : 'CL',
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primaryColor,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            client.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF0F172A),
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Row(
+                            children: [
+                              Text(
+                                'ID: #${client.id}',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF64748B),
+                                ),
+                              ),
+                              if (client.leadId != null) ...[
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFEFF6FF),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    'Lead #${client.leadId}',
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                      color: Color(0xFF2563EB),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: 8),
+                    // Status Badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: statusBg,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: BoxDecoration(
+                              color: statusColor,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            client.status,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: statusColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 14),
 
-                // Core Info Block
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      AppText(
-                        client.name,
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textColorPrimary,
-                      ),
-                      const SizedBox(height: 2),
-                      AppText(
-                        client.email,
-                        fontSize: 12,
-                        color: AppColors.textColorSecondary,
-                      ),
-                      const SizedBox(height: 2),
-                      AppText(
-                        client.mobile,
-                        fontSize: 11,
-                        color: AppColors.textColorHint,
+                const SizedBox(height: 10),
+                const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                const SizedBox(height: 10),
+
+                // Compact Contact Line: Mobile & Email
+                Row(
+                  children: [
+                    if (client.mobile.isNotEmpty) ...[
+                      const Icon(Iconsax.call, size: 13, color: Color(0xFF10B981)),
+                      const SizedBox(width: 5),
+                      Expanded(
+                        child: Text(
+                          client.mobile,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF334155),
+                          ),
+                        ),
                       ),
                     ],
-                  ),
+                    if (client.mobile.isNotEmpty && client.email.isNotEmpty)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 8),
+                        child: Text('•', style: TextStyle(color: Color(0xFFCBD5E1))),
+                      ),
+                    if (client.email.isNotEmpty) ...[
+                      const Icon(Iconsax.sms, size: 13, color: Color(0xFF3B206A)),
+                      const SizedBox(width: 5),
+                      Expanded(
+                        child: Text(
+                          client.email,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF334155),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
 
-                // Status Badge & Chevron Action Right
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
+                const SizedBox(height: 10),
+
+                // Clean Summary Metrics Bar
+                Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                       decoration: BoxDecoration(
-                        color: statusColor.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(8),
+                        color: const Color(0xFFF5F0FB),
+                        borderRadius: BorderRadius.circular(6),
                       ),
-                      child: AppText(
-                        client.status,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w800,
-                        color: statusColor,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Iconsax.folder_2, size: 12, color: Color(0xFF3B206A)),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${client.projectsCount} ${client.projectsCount == 1 ? 'Project' : 'Projects'}',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF3B206A),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    const Icon(
-                      Icons.arrow_forward_ios_rounded,
-                      color: AppColors.textColorHint,
-                      size: 14,
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFECFDF5),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Iconsax.messages_2, size: 12, color: Color(0xFF059669)),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${client.communicationsCount} ${client.communicationsCount == 1 ? 'Log' : 'Logs'}',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF059669),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Spacer(),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          DateFormat('dd MMM yyyy').format(client.createdOn),
+                          style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+                        ),
+                        const SizedBox(width: 4),
+                        const Icon(Icons.arrow_forward_ios_rounded, size: 10, color: Color(0xFF3B206A)),
+                      ],
                     ),
                   ],
                 ),

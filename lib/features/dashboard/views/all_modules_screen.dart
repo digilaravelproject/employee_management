@@ -18,6 +18,7 @@ import '../../leads/views/sales_admin_crm_dashboard_screen.dart';
 import '../../leads/views/sales_executive_tele_crm_screen.dart';
 import '../../payroll/views/salary_employee_list_screen.dart';
 import '../../clients/views/client_list_screen.dart';
+import '../../clients/bindings/clients_binding.dart';
 import '../../hr/views/hr_portal_dashboard.dart';
 import '../../compliance/views/compliance_dashboard_screen.dart';
 import '../../hr/views/announcements_screen.dart';
@@ -823,7 +824,7 @@ class _ModuleCard extends StatelessWidget {
             } else if (item.label == 'Sales Tele-CRM') {
               Get.to(() => const SalesExecutiveTeleCrmScreen());
             } else if (item.label == 'Clients') {
-              Get.to(() => const ClientListScreen());
+              Get.to(() => const ClientListScreen(), binding: ClientsBinding());
             } else if (item.label == 'Payroll / Salary') {
               Get.to(() => const SalaryEmployeeListScreen(), binding: PayrollBinding());
             } else if (item.label.trim() == 'Hr') {

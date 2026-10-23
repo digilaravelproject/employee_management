@@ -50,6 +50,8 @@ class AppConstants {
   static const String adminUpdateProfileUrl = '/api/admin/update-profile';
   static const String adminDocumentsUrl = '/api/admin/documents';
   static String adminDeleteDocumentUrl(dynamic id) => '$adminDocumentsUrl/$id';
+  static const String adminClientsUrl = '/api/admin/clients';
+  static String adminClientDetailUrl(dynamic id) => '$adminClientsUrl/$id';
   static const String adminLeadsUrl = '/api/admin/leads';
   static const String adminLeadsSearchUrl = '/api/admin/leads/search';
   static const String employeeLeadsUrl = '/api/employee/leads';

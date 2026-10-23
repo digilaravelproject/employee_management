@@ -121,10 +121,14 @@ class Client {
   final String address;
   final String status; // Active, Inactive
   final String notes;
+  final int? leadId;
+  final int projectsCount;
+  final int communicationsCount;
   final List<KeyContact> keyContacts;
   final List<ClientProject> projects;
   final List<ClientCommunication> communications;
   final DateTime createdOn;
+  final DateTime? updatedAt;
 
   const Client({
     required this.id,
@@ -135,11 +139,75 @@ class Client {
     required this.address,
     required this.status,
     required this.notes,
+    this.leadId,
+    this.projectsCount = 0,
+    this.communicationsCount = 0,
     required this.keyContacts,
     required this.projects,
     required this.communications,
     required this.createdOn,
+    this.updatedAt,
   });
+
+  factory Client.fromJson(Map<String, dynamic> json) {
+    DateTime parsedCreated = DateTime.now();
+    if (json['created_at'] != null) {
+      try {
+        parsedCreated = DateTime.parse(json['created_at'].toString());
+      } catch (_) {}
+    } else if (json['created_on'] != null) {
+      try {
+        parsedCreated = DateTime.parse(json['created_on'].toString());
+      } catch (_) {}
+    }
+
+    DateTime? parsedUpdated;
+    if (json['updated_at'] != null) {
+      try {
+        parsedUpdated = DateTime.parse(json['updated_at'].toString());
+      } catch (_) {}
+    }
+
+    final pCount = (json['projects_count'] as num?)?.toInt() ?? 0;
+    final cCount = (json['communications_count'] as num?)?.toInt() ?? 0;
+
+    return Client(
+      id: json['id']?.toString() ?? '',
+      name: json['name']?.toString() ?? '',
+      email: json['email']?.toString() ?? '',
+      mobile: (json['mobile_number'] ?? json['mobile'])?.toString() ?? '',
+      website: json['website']?.toString() ?? '',
+      address: json['address']?.toString() ?? '',
+      status: json['status']?.toString() ?? 'Active',
+      notes: json['notes']?.toString() ?? '',
+      leadId: (json['lead_id'] as num?)?.toInt(),
+      projectsCount: pCount,
+      communicationsCount: cCount,
+      keyContacts: const [],
+      projects: const [],
+      communications: const [],
+      createdOn: parsedCreated,
+      updatedAt: parsedUpdated,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'email': email,
+      'mobile_number': mobile,
+      'website': website,
+      'address': address,
+      'status': status,
+      'notes': notes,
+      'lead_id': leadId,
+      'projects_count': projectsCount,
+      'communications_count': communicationsCount,
+      'created_at': createdOn.toIso8601String(),
+      'updated_at': updatedAt?.toIso8601String(),
+    };
+  }
 
   Client copyWith({
     String? id,
@@ -150,10 +218,14 @@ class Client {
     String? address,
     String? status,
     String? notes,
+    int? leadId,
+    int? projectsCount,
+    int? communicationsCount,
     List<KeyContact>? keyContacts,
     List<ClientProject>? projects,
     List<ClientCommunication>? communications,
     DateTime? createdOn,
+    DateTime? updatedAt,
   }) {
     return Client(
       id: id ?? this.id,
@@ -164,10 +236,14 @@ class Client {
       address: address ?? this.address,
       status: status ?? this.status,
       notes: notes ?? this.notes,
+      leadId: leadId ?? this.leadId,
+      projectsCount: projectsCount ?? this.projectsCount,
+      communicationsCount: communicationsCount ?? this.communicationsCount,
       keyContacts: keyContacts ?? this.keyContacts,
       projects: projects ?? this.projects,
       communications: communications ?? this.communications,
       createdOn: createdOn ?? this.createdOn,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 }
