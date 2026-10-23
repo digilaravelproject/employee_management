@@ -22,6 +22,12 @@ import '../domain/usecases/get_lead_status_detail_usecase.dart';
 import '../domain/usecases/get_lead_statuses_usecase.dart';
 import '../domain/usecases/update_lead_status_usecase.dart';
 
+import '../controllers/admin_lead_sources_controller.dart';
+import '../domain/usecases/create_lead_source_usecase.dart';
+import '../domain/usecases/get_lead_sources_usecase.dart';
+import '../domain/usecases/get_lead_source_detail_usecase.dart';
+import '../domain/usecases/update_lead_source_usecase.dart';
+
 class AdminLeadsHubBinding extends Bindings {
   @override
   void dependencies() {
@@ -110,6 +116,31 @@ class AdminLeadsHubBinding extends Bindings {
         deleteLeadStatusUseCase: Get.find<DeleteLeadStatusUseCase>(),
         getLeadStatusDetailUseCase: Get.find<GetLeadStatusDetailUseCase>(),
         updateLeadStatusUseCase: Get.find<UpdateLeadStatusUseCase>(),
+      ),
+    );
+
+    Get.lazyPut<GetLeadSourcesUseCase>(
+      () => GetLeadSourcesUseCase(Get.find<AdminLeadsRepositoryInterface>()),
+    );
+
+    Get.lazyPut<GetLeadSourceDetailUseCase>(
+      () => GetLeadSourceDetailUseCase(Get.find<AdminLeadsRepositoryInterface>()),
+    );
+
+    Get.lazyPut<UpdateLeadSourceUseCase>(
+      () => UpdateLeadSourceUseCase(Get.find<AdminLeadsRepositoryInterface>()),
+    );
+
+    Get.lazyPut<CreateLeadSourceUseCase>(
+      () => CreateLeadSourceUseCase(Get.find<AdminLeadsRepositoryInterface>()),
+    );
+
+    Get.lazyPut<AdminLeadSourcesController>(
+      () => AdminLeadSourcesController(
+        getLeadSourcesUseCase: Get.find<GetLeadSourcesUseCase>(),
+        getLeadSourceDetailUseCase: Get.find<GetLeadSourceDetailUseCase>(),
+        updateLeadSourceUseCase: Get.find<UpdateLeadSourceUseCase>(),
+        createLeadSourceUseCase: Get.find<CreateLeadSourceUseCase>(),
       ),
     );
   }

@@ -3,6 +3,7 @@ import '../../../core/services/network/api_client.dart';
 import '../../../core/utils/logger.dart';
 import '../models/admin_leads_request_model.dart';
 import '../models/admin_leads_response_model.dart';
+import '../models/lead_source_model.dart';
 import '../models/lead_status_model.dart';
 import '../models/sales_employee_model.dart';
 import 'admin_leads_repository_interface.dart';
@@ -306,6 +307,118 @@ class AdminLeadsRepository implements AdminLeadsRepositoryInterface {
     } catch (e) {
       Logger.e('AdminLeadsRepository => Failed to delete lead status: $e');
       return false;
+    }
+  }
+
+  @override
+  Future<LeadSourcesResponseModel> getLeadSources({String status = 'all'}) async {
+    try {
+      final response = await apiClient.get(
+        AppConstants.adminLeadSourcesUrl,
+        queryParameters: {'status': status},
+      );
+
+      if (response.isSuccess && response.json != null) {
+        return LeadSourcesResponseModel.fromJson(response.json!);
+      }
+
+      return LeadSourcesResponseModel(
+        status: false,
+        message: response.message.isNotEmpty
+            ? response.message
+            : 'Failed to retrieve lead sources',
+      );
+    } catch (e) {
+      Logger.e('AdminLeadsRepository => Failed to retrieve lead sources: $e');
+      return LeadSourcesResponseModel(
+        status: false,
+        message: e.toString(),
+      );
+    }
+  }
+
+  @override
+  Future<LeadSourceDetailResponseModel> getLeadSourceDetail(dynamic id) async {
+    try {
+      final response = await apiClient.get(
+        AppConstants.adminLeadSourceDetailUrl(id),
+      );
+
+      if (response.isSuccess && response.json != null) {
+        return LeadSourceDetailResponseModel.fromJson(response.json!);
+      }
+
+      return LeadSourceDetailResponseModel(
+        status: false,
+        message: response.message.isNotEmpty
+            ? response.message
+            : 'Failed to retrieve lead source details',
+      );
+    } catch (e) {
+      Logger.e('AdminLeadsRepository => Failed to retrieve lead source details ($id): $e');
+      return LeadSourceDetailResponseModel(
+        status: false,
+        message: e.toString(),
+      );
+    }
+  }
+
+  @override
+  Future<LeadSourceDetailResponseModel> createLeadSource(
+    CreateLeadSourceRequestModel request,
+  ) async {
+    try {
+      final response = await apiClient.post(
+        AppConstants.adminLeadSourcesUrl,
+        data: request.toJson(),
+      );
+
+      if (response.json != null) {
+        return LeadSourceDetailResponseModel.fromJson(response.json!);
+      }
+
+      return LeadSourceDetailResponseModel(
+        status: false,
+        message: response.message.isNotEmpty
+            ? response.message
+            : 'Failed to create lead source',
+      );
+    } catch (e) {
+      Logger.e('AdminLeadsRepository => Failed to create lead source: $e');
+      return LeadSourceDetailResponseModel(
+        status: false,
+        message: e.toString(),
+      );
+    }
+  }
+
+  @override
+  Future<LeadSourceDetailResponseModel> updateLeadSource(
+    dynamic id,
+    UpdateLeadSourceRequestModel request,
+  ) async {
+    try {
+      final response = await apiClient.patch(
+        AppConstants.adminLeadSourceDetailUrl(id),
+        data: request.toJson(),
+      );
+
+      if (response.isSuccess && response.json != null) {
+        return LeadSourceDetailResponseModel.fromJson(response.json!);
+      }
+
+      return LeadSourceDetailResponseModel(
+        status: false,
+        message: response.message.isNotEmpty
+            ? response.message
+            : 'Failed to update lead source',
+      );
+    } catch (e) {
+      Logger.e('AdminLeadsRepository => Failed to update lead source ($id): $e');
+      return LeadSourceDetailResponseModel(
+        status: false,
+        message: e.toString(),
+      );
     }
   }
 }

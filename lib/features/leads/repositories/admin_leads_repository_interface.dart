@@ -1,5 +1,6 @@
 import '../models/admin_leads_request_model.dart';
 import '../models/admin_leads_response_model.dart';
+import '../models/lead_source_model.dart';
 import '../models/lead_status_model.dart';
 import '../models/sales_employee_model.dart';
 
@@ -19,4 +20,8 @@ abstract class AdminLeadsRepositoryInterface {
   Future<LeadStatusDetailResponseModel> createLeadStatus(CreateLeadStatusRequestModel request);
   Future<LeadStatusDetailResponseModel> updateLeadStatus(dynamic id, CreateLeadStatusRequestModel request);
   Future<bool> deleteLeadStatus(dynamic id);
+  Future<LeadSourcesResponseModel> getLeadSources({String status = 'all'});
+  Future<LeadSourceDetailResponseModel> getLeadSourceDetail(dynamic id);
+  Future<LeadSourceDetailResponseModel> createLeadSource(CreateLeadSourceRequestModel request);
+  Future<LeadSourceDetailResponseModel> updateLeadSource(dynamic id, UpdateLeadSourceRequestModel request);
 }

@@ -18,6 +18,9 @@ import '../controllers/lead_integrations_controller.dart';
 import '../controllers/admin_lead_statuses_controller.dart';
 import '../models/lead_status_model.dart';
 import 'lead_status_detail_screen.dart';
+import 'lead_source_detail_screen.dart';
+import '../controllers/admin_lead_sources_controller.dart';
+import '../models/lead_source_model.dart';
 
 // ── MODELS ───────────────────────────────────────────────────────────────────
 
@@ -39,23 +42,7 @@ class LeadProcessStep {
   });
 }
 
-class SourceAssignRule {
-  String id;
-  String sourceName; // Google Ads, Facebook Ads, JustDial, Website, Referral, Direct Inquiry
-  String colorHex;
-  List<String> assignedExecutives; // Employee names allocated for this source
-  String strategy; // Round-Robin, Multi-Executive, Primary
-  bool isActive;
-
-  SourceAssignRule({
-    required this.id,
-    required this.sourceName,
-    required this.colorHex,
-    required this.assignedExecutives,
-    this.strategy = 'Round-Robin',
-    this.isActive = true,
-  });
-}
+typedef SourceAssignRule = LeadSourceModel;
 
 typedef AdminLeadStatusItem = LeadStatusModel;
 
@@ -282,8 +269,8 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
   // Search for Option 1 (Sales Team)
   final TextEditingController _teamSearchController = TextEditingController();
 
-  // Lead Source Auto-Assignment Rules State
-  late List<SourceAssignRule> _sourceRules;
+  // Lead Source Auto-Assignment Rules Controller (API Driven)
+  late final AdminLeadSourcesController _sourcesController;
   int _roundRobinIndex = 0;
 
   // Lead Statuses Management Controller (API Driven)
@@ -307,68 +294,16 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
     _hubController = Get.find<AdminLeadsHubController>();
     _hubController.fetchSalesEmployees();
     _statusController = AdminLeadStatusesController.to;
-    // Call lead integrations status & lead statuses immediately when Sales CRM opens
+    _sourcesController = AdminLeadSourcesController.to;
+    // Call lead integrations status, lead statuses, & lead sources immediately when Sales CRM opens
     LeadIntegrationsController.to.fetchLeadIntegrationsStatus();
     _statusController.fetchLeadStatuses(category: 'active_lead');
+    _sourcesController.fetchLeadSources(status: 'all');
     _mainTabController = TabController(length: 4, vsync: this);
     _mainTabController.addListener(() {
       if (mounted) setState(() {});
     });
     _initLeadsData();
-    _initSourceRules();
-  }
-
-  void _initSourceRules() {
-    _sourceRules = [
-      SourceAssignRule(
-        id: 'SR-01',
-        sourceName: 'Google Ads',
-        colorHex: '0xFFEA4335',
-        assignedExecutives: ['Rahul Sharma', 'Neha Singh'],
-        strategy: 'Round-Robin',
-        isActive: true,
-      ),
-      SourceAssignRule(
-        id: 'SR-02',
-        sourceName: 'Facebook Ads',
-        colorHex: '0xFF1877F2',
-        assignedExecutives: ['Priya Patel'],
-        strategy: 'Round-Robin',
-        isActive: true,
-      ),
-      SourceAssignRule(
-        id: 'SR-03',
-        sourceName: 'JustDial',
-        colorHex: '0xFFF58220',
-        assignedExecutives: ['Priya Patel', 'Amit Verma'],
-        strategy: 'Round-Robin',
-        isActive: true,
-      ),
-      SourceAssignRule(
-        id: 'SR-04',
-        sourceName: 'Website',
-        colorHex: '0xFF10B981',
-        assignedExecutives: ['Rahul Sharma'],
-        strategy: 'Primary',
-        isActive: true,
-      ),
-      SourceAssignRule(
-        id: 'SR-05',
-        sourceName: 'Referral',
-        colorHex: '0xFF8B5CF6',
-        assignedExecutives: ['Amit Verma'],
-        strategy: 'Primary',
-        isActive: true,
-      ),
-      SourceAssignRule(
-        id: 'SR-06',
-        sourceName: 'Direct Inquiry',
-        colorHex: '0xFF6366F1',
-        assignedExecutives: ['Rahul Sharma', 'Priya Patel', 'Amit Verma', 'Neha Singh'],
-        strategy: 'Round-Robin',
-        isActive: true,
-      ),
-    ];
   }
 
   void _triggerAutoAssignUnassignedLeads() {
@@ -387,32 +322,24 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
     int assignedCount = 0;
     setState(() {
       for (var lead in unassignedLeads) {
-        final ruleIndex = _sourceRules.indexWhere((r) => r.sourceName.toLowerCase() == lead.source.toLowerCase() && r.isActive);
+        final ruleIndex = _sourcesController.leadSources.indexWhere(
+          (r) => r.name.toLowerCase() == lead.source.toLowerCase() && r.isActive,
+        );
         if (ruleIndex != -1) {
-          final rule = _sourceRules[ruleIndex];
-          if (rule.assignedExecutives.isNotEmpty) {
-            String targetExecName;
-            if (rule.strategy == 'Round-Robin' || rule.assignedExecutives.length > 1) {
-              targetExecName = rule.assignedExecutives[_roundRobinIndex % rule.assignedExecutives.length];
-              _roundRobinIndex++;
-            } else {
-              targetExecName = rule.assignedExecutives.first;
-            }
+          final rule = _sourcesController.leadSources[ruleIndex];
+          if (rule.employees.isNotEmpty) {
+            final targetEmp = (rule.allocationStrategy.toLowerCase().contains('round') || rule.employees.length > 1)
+                ? rule.employees[_roundRobinIndex % rule.employees.length]
+                : rule.employees.first;
+            _roundRobinIndex++;
 
-            final execList = _effectiveExecutivesList;
-            if (execList.isEmpty) continue;
-            final execObj = execList.firstWhere(
-              (e) => e.name == targetExecName,
-              orElse: () => execList.first,
-            );
-
-            lead.assignedExecutive = execObj.name;
-            lead.assignedExecutiveAvatar = execObj.avatar;
+            lead.assignedExecutive = targetEmp.name;
+            lead.assignedExecutiveAvatar = targetEmp.avatar ?? '';
             lead.processSteps.add(
               LeadProcessStep(
                 title: 'Auto-Assigned via Pre-set Rule',
                 date: 'Today',
-                note: 'Rule: ${rule.sourceName} ➔ ${execObj.name} (${rule.strategy})',
+                note: 'Rule: ${rule.name} ➔ ${targetEmp.name} (${rule.strategyDisplayName})',
                 isCompleted: true,
               ),
             );
@@ -678,11 +605,11 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
         'index': 2,
         'title': 'Source Rules',
         'subtitle': 'Google, FB Ads & JustDial auto-assignment rules',
-        'stat': '${_sourceRules.length} Configured Rules',
+        'stat': '${_sourcesController.leadSources.length} Configured Sources',
         'icon': Iconsax.routing,
         'color': const Color(0xFF7C3AED),
         'lightColor': const Color(0xFFF5F3FF),
-        'badge': null,
+        'badge': _sourcesController.unassignedLeads > 0 ? '${_sourcesController.unassignedLeads} Unassigned' : null,
       },
       {
         'index': 3,
@@ -3237,279 +3164,491 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
   // ───────────────────────────────────────────────────────────────────────────
 
   Widget _buildSourceRulesOptionView() {
-    final unassignedCount = _leadsList.where((l) => l.assignedExecutive == 'Unassigned').length;
+    return Obx(() {
+      final unassignedCount = _sourcesController.unassignedLeads;
+      final leadSources = _sourcesController.leadSources;
+      final isLoading = _sourcesController.isLoading.value;
+      final error = _sourcesController.errorMessage.value;
 
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      physics: const BouncingScrollPhysics(),
-      children: [
-        // Header Banner & Quick Actions
-        Container(
+      return RefreshIndicator(
+        onRefresh: () => _sourcesController.fetchLeadSources(status: 'all'),
+        color: AppColors.primaryColor,
+        child: ListView(
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF1E1B4B), Color(0xFF312E81)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF1E1B4B).withValues(alpha: 0.25),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        AppText(
-                          'Lead Source Assignment Rules',
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
-                        ),
-                        SizedBox(height: 2),
-                        AppText(
-                          'Configure auto-allocation rules per source',
-                          fontSize: 11,
-                          color: Color(0xFFC7D2FE),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton.icon(
-                    onPressed: () => _showAddEditSourceRuleModal(),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: const Color(0xFF1E1B4B),
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      elevation: 0,
-                    ),
-                    icon: const Icon(Iconsax.add, size: 14),
-                    label: const AppText('Add Rule', fontSize: 11, fontWeight: FontWeight.bold),
+          physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+          children: [
+            // Header Banner & Quick Actions
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF1E1B4B), Color(0xFF312E81)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF1E1B4B).withValues(alpha: 0.25),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
-              const SizedBox(height: 14),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          AppText(
-                            '$unassignedCount Unassigned Leads Pending',
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                          const SizedBox(height: 2),
-                          const AppText(
-                            'Click button to distribute unassigned leads using pre-set rules',
-                            fontSize: 10,
-                            color: Color(0xFFE0E7FF),
-                          ),
-                        ],
-                      ),
-                    ),
-                    ElevatedButton.icon(
-                      onPressed: _triggerAutoAssignUnassignedLeads,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF10B981),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                      icon: const Icon(Iconsax.flash, size: 14),
-                      label: const AppText('Auto-Assign Now', fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-
-        // Live Inbound Ad Integrations Status Strip
-        _buildSourceRulesIntegrationBanner(),
-        const SizedBox(height: 16),
-
-        const AppText(
-          'Configured Lead Sources & Assigned Employees:',
-          fontSize: 13,
-          fontWeight: FontWeight.bold,
-          color: Color(0xFF1E293B),
-        ),
-        const SizedBox(height: 10),
-
-        ..._sourceRules.map((rule) {
-          final colorVal = Color(int.parse(rule.colorHex));
-          return Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: rule.isActive ? colorVal.withValues(alpha: 0.3) : const Color(0xFFE2E8F0)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.02),
-                  blurRadius: 8,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 12,
-                          height: 12,
-                          decoration: BoxDecoration(color: colorVal, shape: BoxShape.circle),
-                        ),
-                        const SizedBox(width: 8),
-                        AppText(rule.sourceName, fontSize: 14.5, fontWeight: FontWeight.w800),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: colorVal.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: AppText(
-                            rule.strategy,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: colorVal,
-                          ),
-                        ),
-                      ],
-                    ),
-                    Row(
-                      children: [
-                        Transform.scale(
-                          scale: 0.8,
-                          child: Switch.adaptive(
-                            value: rule.isActive,
-                            activeThumbColor: AppColors.primaryColor,
-                            onChanged: (val) {
-                              setState(() {
-                                rule.isActive = val;
-                              });
-                            },
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Iconsax.edit_2, size: 16, color: Color(0xFF64748B)),
-                          onPressed: () => _showAddEditSourceRuleModal(existingRule: rule),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                const Divider(height: 1, color: Color(0xFFF1F5F9)),
-                const SizedBox(height: 10),
-
-                const AppText('Assigned Employees:', fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B)),
-                const SizedBox(height: 6),
-                if (rule.assignedExecutives.isEmpty)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFEF2F2),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const AppText(
-                      'No employees assigned (Leads will remain unassigned)',
-                      fontSize: 11,
-                      color: Color(0xFFDC2626),
-                    ),
-                  )
-                else
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: rule.assignedExecutives.map((execName) {
-                      final exec = _effectiveExecutivesList.firstWhere(
-                        (e) => e.name == execName,
-                        orElse: () => SalesExecutivePerf(
-                          name: execName,
-                          avatar: '',
-                          designation: 'Sales Rep',
-                          revenue: 0,
-                          target: 0,
-                          callsCount: 0,
-                          totalTalkTime: '',
-                          avgTalkTime: '',
-                          convertedLeads: 0,
-                          totalLeadsAssigned: 0,
-                          totalLeadsSelfGenerated: 0,
-                        ),
-                      );
-                      return Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF1F5F9),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: const Color(0xFFCBD5E1)),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            CircleAvatar(
-                              radius: 9,
-                              backgroundColor: AppColors.primaryLight,
-                              backgroundImage: exec.avatar.isNotEmpty ? NetworkImage(exec.avatar) : null,
-                              child: exec.avatar.isEmpty
-                                  ? const Icon(Iconsax.user, size: 9, color: AppColors.primaryColor)
-                                  : null,
+                            AppText(
+                              'Lead Source Assignment Rules',
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
                             ),
-                            const SizedBox(width: 6),
-                            AppText(execName, fontSize: 11.5, fontWeight: FontWeight.w700),
+                            SizedBox(height: 2),
+                            AppText(
+                              'Configure auto-allocation rules per source',
+                              fontSize: 11,
+                              color: Color(0xFFC7D2FE),
+                            ),
                           ],
                         ),
-                      );
-                    }).toList(),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton.icon(
+                        onPressed: () => _showAddEditSourceRuleModal(),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: const Color(0xFF1E1B4B),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          elevation: 0,
+                        ),
+                        icon: const Icon(Iconsax.add, size: 14),
+                        label: const AppText('Add Rule', fontSize: 11, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              AppText(
+                                '$unassignedCount Unassigned Leads Pending',
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                              const SizedBox(height: 2),
+                              const AppText(
+                                'Click button to distribute unassigned leads using pre-set rules',
+                                fontSize: 10,
+                                color: Color(0xFFE0E7FF),
+                              ),
+                            ],
+                          ),
+                        ),
+                        ElevatedButton.icon(
+                          onPressed: _triggerAutoAssignUnassignedLeads,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF10B981),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          icon: const Icon(Iconsax.flash, size: 14),
+                          label: const AppText('Auto-Assign Now', fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Live Inbound Ad Integrations Status Strip
+            _buildSourceRulesIntegrationBanner(),
+            const SizedBox(height: 16),
+
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                AppText(
+                  'Configured Lead Sources (${leadSources.length}):',
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF1E293B),
+                ),
+                if (isLoading)
+                  const SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primaryColor),
                   ),
               ],
             ),
-          );
-        }),
-      ],
-    );
+            const SizedBox(height: 10),
+
+            if (isLoading && leadSources.isEmpty)
+              Container(
+                padding: const EdgeInsets.all(32),
+                alignment: Alignment.center,
+                child: const Column(
+                  children: [
+                    CircularProgressIndicator(color: AppColors.primaryColor),
+                    SizedBox(height: 12),
+                    AppText('Loading lead sources...', fontSize: 12, color: AppColors.textColorSecondary),
+                  ],
+                ),
+              )
+            else if (error.isNotEmpty && leadSources.isEmpty)
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF2F2),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFFECACA)),
+                ),
+                child: Column(
+                  children: [
+                    const Icon(Iconsax.warning_2, color: Color(0xFFDC2626), size: 28),
+                    const SizedBox(height: 8),
+                    AppText(error, fontSize: 12, color: const Color(0xFFDC2626), textAlign: TextAlign.center),
+                    const SizedBox(height: 12),
+                    ElevatedButton.icon(
+                      onPressed: () => _sourcesController.fetchLeadSources(status: 'all'),
+                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFDC2626)),
+                      icon: const Icon(Iconsax.refresh, size: 14, color: Colors.white),
+                      label: const AppText('Retry', color: Colors.white, fontSize: 12),
+                    ),
+                  ],
+                ),
+              )
+            else if (leadSources.isEmpty)
+              Container(
+                padding: const EdgeInsets.all(32),
+                alignment: Alignment.center,
+                child: const Column(
+                  children: [
+                    Icon(Iconsax.routing, size: 40, color: Color(0xFF94A3B8)),
+                    SizedBox(height: 12),
+                    AppText('No lead sources configured yet', fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF64748B)),
+                  ],
+                ),
+              )
+            else
+              ...leadSources.map((rule) {
+                final colorVal = rule.colorValue;
+                return Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: () => Get.to(() => LeadSourceDetailScreen(sourceId: rule.id, initialSource: rule)),
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: rule.isActive ? colorVal.withValues(alpha: 0.35) : const Color(0xFFE2E8F0),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.02),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 12,
+                                      height: 12,
+                                      decoration: BoxDecoration(color: colorVal, shape: BoxShape.circle),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Flexible(
+                                      child: AppText(
+                                        rule.name,
+                                        fontSize: 14.5,
+                                        fontWeight: FontWeight.w800,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: colorVal.withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: AppText(
+                                        rule.strategyDisplayName,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: colorVal,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Row(
+                                children: [
+                                  Transform.scale(
+                                    scale: 0.8,
+                                    child: Switch.adaptive(
+                                      value: rule.isActive,
+                                      activeThumbColor: colorVal,
+                                      onChanged: (val) {
+                                        _sourcesController.toggleSourceStatus(rule.id, val);
+                                      },
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Iconsax.edit_2, size: 16, color: Color(0xFF64748B)),
+                                    tooltip: 'Edit Rule',
+                                    onPressed: () => _showAddEditSourceRuleModal(existingRule: rule),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Iconsax.arrow_right_3, size: 16, color: Color(0xFF64748B)),
+                                    tooltip: 'View Details',
+                                    onPressed: () => Get.to(() => LeadSourceDetailScreen(sourceId: rule.id, initialSource: rule)),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                      const SizedBox(height: 6),
+
+                      // Lead stats pills
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Iconsax.task_square, size: 11, color: Color(0xFF64748B)),
+                                const SizedBox(width: 4),
+                                AppText(
+                                  '${rule.leadsCount} Total Leads',
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFF475569),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: rule.unassignedLeadsCount > 0 ? const Color(0xFFFFF7ED) : const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(6),
+                              border: rule.unassignedLeadsCount > 0 ? Border.all(color: const Color(0xFFFED7AA)) : null,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Iconsax.warning_2,
+                                  size: 11,
+                                  color: rule.unassignedLeadsCount > 0 ? const Color(0xFFEA580C) : const Color(0xFF64748B),
+                                ),
+                                const SizedBox(width: 4),
+                                AppText(
+                                  '${rule.unassignedLeadsCount} Unassigned',
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: rule.unassignedLeadsCount > 0 ? const Color(0xFFEA580C) : const Color(0xFF475569),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Spacer(),
+                          if (!rule.isConfigured)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF3F4F6),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: const AppText(
+                                'Pending Setup',
+                                fontSize: 9.5,
+                                color: Color(0xFF6B7280),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                      const SizedBox(height: 10),
+
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const AppText(
+                            'Assigned Employees:',
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF64748B),
+                          ),
+                          AppText(
+                            '${rule.employees.length} Allocated',
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w600,
+                            color: rule.employees.isNotEmpty ? AppColors.primaryColor : const Color(0xFFDC2626),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      if (rule.employees.isEmpty)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEF2F2),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFFFECACA)),
+                          ),
+                          child: const Row(
+                            children: [
+                              Icon(Iconsax.info_circle, size: 14, color: Color(0xFFDC2626)),
+                              SizedBox(width: 6),
+                              Expanded(
+                                child: AppText(
+                                  'No employees assigned (Leads will remain unassigned)',
+                                  fontSize: 11,
+                                  color: Color(0xFFDC2626),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      else
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: rule.employees.map((emp) {
+                            return Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF8FAFC),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: const Color(0xFFE2E8F0)),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  CircleAvatar(
+                                    radius: 10,
+                                    backgroundColor: AppColors.primaryLight,
+                                    backgroundImage: (emp.avatar != null && emp.avatar!.isNotEmpty)
+                                        ? NetworkImage(emp.avatar!)
+                                        : null,
+                                    child: (emp.avatar == null || emp.avatar!.isEmpty)
+                                        ? const Icon(Iconsax.user, size: 10, color: AppColors.primaryColor)
+                                        : null,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      AppText(
+                                        emp.name,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                        color: const Color(0xFF1E293B),
+                                      ),
+                                      if (emp.designation != null && emp.designation!.isNotEmpty)
+                                        AppText(
+                                          emp.designation!,
+                                          fontSize: 9.5,
+                                          color: const Color(0xFF64748B),
+                                        ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }),
+          ],
+        ),
+      );
+    });
   }
 
-  void _showAddEditSourceRuleModal({SourceAssignRule? existingRule}) {
+  void _showAddEditSourceRuleModal({LeadSourceModel? existingRule}) {
     final isEditing = existingRule != null;
-    final sourceNameController = TextEditingController(text: existingRule?.sourceName ?? '');
-    String selectedStrategy = existingRule?.strategy ?? 'Round-Robin';
-    final List<String> selectedExecs = List<String>.from(existingRule?.assignedExecutives ?? []);
+    final sourceNameController = TextEditingController(text: existingRule?.name ?? '');
+    final sourceKeyController = TextEditingController(text: existingRule?.sourceKey ?? '');
+    bool userEditedSourceKey = isEditing;
+    String selectedStrategy = existingRule?.allocationStrategy ?? 'round_robin';
+    String selectedColorHex = existingRule?.color ?? '#3B82F6';
+
+    final Set<int> selectedEmployeeIds = Set<int>.from(
+      existingRule?.employees.map((e) => e.id) ?? [],
+    );
+
+    const List<String> availableColors = [
+      '#3B82F6', // Blue
+      '#10B981', // Green
+      '#8B5CF6', // Purple
+      '#F59E0B', // Amber
+      '#EF4444', // Red
+      '#EC4899', // Pink
+      '#06B6D4', // Cyan
+      '#6366F1', // Indigo
+    ];
+
+    if (isEditing) {
+      _sourcesController.fetchLeadSourceDetail(existingRule.id);
+    }
+
+    if (_hubController.salesEmployees.isEmpty) {
+      _hubController.fetchSalesEmployees();
+    }
 
     showModalBottomSheet(
       context: context,
@@ -3520,6 +3659,16 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
       builder: (ctx) {
         return StatefulBuilder(
           builder: (context, setModalState) {
+            Color parseHex(String hex) {
+              try {
+                String clean = hex.replaceAll('#', '').trim();
+                if (clean.length == 6) clean = 'FF$clean';
+                return Color(int.parse('0x$clean'));
+              } catch (_) {
+                return const Color(0xFF3B82F6);
+              }
+            }
+
             return Padding(
               padding: EdgeInsets.only(
                 top: 20,
@@ -3547,7 +3696,7 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
                     ),
                     const SizedBox(height: 4),
                     const AppText(
-                      'Select which employees will receive leads from this marketing channel',
+                      'Configure incoming lead sources and assign sales employees',
                       fontSize: 11,
                       color: AppColors.textColorSecondary,
                     ),
@@ -3566,14 +3715,86 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
                         isDense: true,
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
                       ),
+                      onChanged: (val) {
+                        if (!userEditedSourceKey) {
+                          final autoKey = val.toLowerCase().trim().replaceAll(RegExp(r'[^a-z0-9]+'), '_').replaceAll(RegExp(r'^_+|_+$'), '');
+                          setModalState(() {
+                            sourceKeyController.text = autoKey;
+                          });
+                        }
+                      },
                     ),
                     const SizedBox(height: 14),
+
+                    // Source Key Field (Required by backend API)
+                    Row(
+                      children: [
+                        const AppText('Source Key:', fontSize: 12, fontWeight: FontWeight.bold),
+                        const SizedBox(width: 4),
+                        const AppText('(unique key e.g. facebook, google_ads)', fontSize: 10, color: AppColors.textColorSecondary),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    TextField(
+                      controller: sourceKeyController,
+                      enabled: !isEditing,
+                      decoration: InputDecoration(
+                        hintText: 'e.g. facebook, website, justdial',
+                        hintStyle: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+                        fillColor: isEditing ? const Color(0xFFF1F5F9) : const Color(0xFFF8FAFC),
+                        filled: true,
+                        isDense: true,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                      ),
+                      onChanged: (_) => userEditedSourceKey = true,
+                    ),
+                    const SizedBox(height: 14),
+
+                    // Color Selection
+                    const AppText('Brand / Badge Color:', fontSize: 12, fontWeight: FontWeight.bold),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: availableColors.map((colorHex) {
+                        final isSelected = selectedColorHex.toLowerCase() == colorHex.toLowerCase();
+                        final color = parseHex(colorHex);
+                        return GestureDetector(
+                          onTap: () {
+                            setModalState(() => selectedColorHex = colorHex);
+                          },
+                          child: Container(
+                            margin: const EdgeInsets.only(right: 10),
+                            width: 28,
+                            height: 28,
+                            decoration: BoxDecoration(
+                              color: color,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: isSelected ? Colors.black87 : Colors.transparent,
+                                width: 2.5,
+                              ),
+                              boxShadow: [
+                                if (isSelected)
+                                  BoxShadow(
+                                    color: color.withValues(alpha: 0.4),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 2),
+                                  ),
+                              ],
+                            ),
+                            child: isSelected
+                                ? const Icon(Icons.check, size: 16, color: Colors.white)
+                                : null,
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 16),
 
                     // Allocation Strategy Dropdown
                     const AppText('Allocation Strategy:', fontSize: 12, fontWeight: FontWeight.bold),
                     const SizedBox(height: 6),
                     DropdownButtonFormField<String>(
-                      initialValue: selectedStrategy,
+                      initialValue: selectedStrategy.contains('round') ? 'round_robin' : 'primary',
                       decoration: InputDecoration(
                         fillColor: const Color(0xFFF8FAFC),
                         filled: true,
@@ -3581,9 +3802,8 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
                       ),
                       items: const [
-                        DropdownMenuItem(value: 'Round-Robin', child: Text('Round-Robin (Rotate sequentially among employees)')),
-                        DropdownMenuItem(value: 'Multi-Executive', child: Text('Multi-Executive (Pool allocation)')),
-                        DropdownMenuItem(value: 'Primary', child: Text('Primary Dedicated Executive')),
+                        DropdownMenuItem(value: 'round_robin', child: Text('Round-Robin (Rotate sequentially among employees)')),
+                        DropdownMenuItem(value: 'primary', child: Text('Primary Dedicated Executive')),
                       ],
                       onChanged: (val) {
                         if (val != null) setModalState(() => selectedStrategy = val);
@@ -3591,41 +3811,149 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
                     ),
                     const SizedBox(height: 16),
 
-                    // Employees Multi-select Checkboxes
-                    const AppText('Select Assigned Employee(s):', fontSize: 12, fontWeight: FontWeight.bold),
-                    const SizedBox(height: 8),
-                    ..._effectiveExecutivesList.map((exec) {
-                      final isSelected = selectedExecs.contains(exec.name);
-                      return CheckboxListTile(
-                        dense: true,
-                        contentPadding: EdgeInsets.zero,
-                        title: Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 12,
-                              backgroundColor: AppColors.primaryLight,
-                              backgroundImage: exec.avatar.isNotEmpty ? NetworkImage(exec.avatar) : null,
-                              child: exec.avatar.isEmpty
-                                  ? const Icon(Iconsax.user, size: 12, color: AppColors.primaryColor)
-                                  : null,
-                            ),
-                            const SizedBox(width: 8),
-                            AppText(exec.name, fontSize: 13, fontWeight: FontWeight.bold),
-                            const SizedBox(width: 6),
-                            AppText('(${exec.designation})', fontSize: 11, color: AppColors.textColorSecondary),
-                          ],
+                    // Employees Multi-select Checkboxes (Fetched from /api/admin/leads/sales-employees)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const AppText('Select Assigned Employee(s):', fontSize: 12, fontWeight: FontWeight.bold),
+                        AppText(
+                          '${selectedEmployeeIds.length} Selected',
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.primaryColor,
                         ),
-                        value: isSelected,
-                        activeColor: AppColors.primaryColor,
-                        onChanged: (val) {
-                          setModalState(() {
-                            if (val == true) {
-                              if (!selectedExecs.contains(exec.name)) selectedExecs.add(exec.name);
-                            } else {
-                              selectedExecs.remove(exec.name);
-                            }
-                          });
-                        },
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+
+                    Obx(() {
+                      final employees = _hubController.salesEmployees.toList();
+                      final isLoadingEmployees = _hubController.isLoadingSalesEmployees.value;
+
+                      if (isLoadingEmployees && employees.isEmpty) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 20),
+                          child: Center(
+                            child: SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          ),
+                        );
+                      }
+
+                      if (employees.isEmpty) {
+                        return Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Iconsax.info_circle, size: 16, color: Color(0xFF64748B)),
+                              const SizedBox(width: 8),
+                              const Expanded(
+                                child: AppText(
+                                  'No sales employees found.',
+                                  fontSize: 12,
+                                  color: AppColors.textColorSecondary,
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: () => _hubController.fetchSalesEmployees(),
+                                child: const Text('Retry', style: TextStyle(fontSize: 12)),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+
+                      return Column(
+                        children: employees.map((emp) {
+                          final isSelected = selectedEmployeeIds.contains(emp.id);
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 6),
+                            decoration: BoxDecoration(
+                              color: isSelected ? const Color(0xFFEFF6FF) : const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: isSelected ? AppColors.primaryColor.withValues(alpha: 0.4) : const Color(0xFFE2E8F0),
+                              ),
+                            ),
+                            child: CheckboxListTile(
+                              dense: true,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                              title: Row(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 14,
+                                    backgroundColor: AppColors.primaryLight,
+                                    backgroundImage: (emp.avatar != null && emp.avatar!.isNotEmpty)
+                                        ? NetworkImage(emp.avatar!)
+                                        : null,
+                                    child: (emp.avatar == null || emp.avatar!.isEmpty)
+                                        ? const Icon(Iconsax.user, size: 14, color: AppColors.primaryColor)
+                                        : null,
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        AppText(emp.displayName, fontSize: 13, fontWeight: FontWeight.bold),
+                                        const SizedBox(height: 2),
+                                        Row(
+                                          children: [
+                                            if (emp.designation != null && emp.designation!.isNotEmpty) ...[
+                                              Flexible(
+                                                child: AppText(
+                                                  emp.designation!,
+                                                  fontSize: 11,
+                                                  color: AppColors.textColorSecondary,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 6),
+                                            ],
+                                            if (emp.employeeId != null && emp.employeeId!.isNotEmpty)
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                                decoration: BoxDecoration(
+                                                  color: const Color(0xFFE2E8F0),
+                                                  borderRadius: BorderRadius.circular(4),
+                                                ),
+                                                child: AppText(
+                                                  emp.employeeId!,
+                                                  fontSize: 9,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: const Color(0xFF475569),
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              value: isSelected,
+                              activeColor: AppColors.primaryColor,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              onChanged: (val) {
+                                setModalState(() {
+                                  if (val == true) {
+                                    selectedEmployeeIds.add(emp.id);
+                                  } else {
+                                    selectedEmployeeIds.remove(emp.id);
+                                  }
+                                });
+                              },
+                            ),
+                          );
+                        }).toList(),
                       );
                     }),
                     const SizedBox(height: 20),
@@ -3633,47 +3961,100 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
                     // Save Button
                     SizedBox(
                       width: double.infinity,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primaryColor,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                        onPressed: () {
-                          final name = sourceNameController.text.trim();
-                          if (name.isEmpty) {
-                            Get.snackbar('Required Field', 'Please enter source name.', backgroundColor: const Color(0xFFEF4444), colorText: Colors.white);
-                            return;
-                          }
-                          setState(() {
-                            if (isEditing) {
-                              existingRule.sourceName = name;
-                              existingRule.strategy = selectedStrategy;
-                              existingRule.assignedExecutives = selectedExecs;
-                            } else {
-                              _sourceRules.add(
-                                SourceAssignRule(
-                                  id: 'SR-0${_sourceRules.length + 1}',
-                                  sourceName: name,
-                                  colorHex: '0xFF3B82F6',
-                                  assignedExecutives: selectedExecs,
-                                  strategy: selectedStrategy,
-                                  isActive: true,
+                      child: Obx(() {
+                        final isBusy = _sourcesController.isUpdating.value || _sourcesController.isCreating.value;
+                        return ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primaryColor,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          onPressed: isBusy
+                              ? null
+                              : () async {
+                                  final name = sourceNameController.text.trim();
+                                  if (name.isEmpty) {
+                                    Get.snackbar('Required Field', 'Please enter lead source name.', backgroundColor: const Color(0xFFEF4444), colorText: Colors.white);
+                                    return;
+                                  }
+
+                                  final sourceKey = sourceKeyController.text.trim();
+                                  if (sourceKey.isEmpty) {
+                                    Get.snackbar('Required Field', 'Please enter source key.', backgroundColor: const Color(0xFFEF4444), colorText: Colors.white);
+                                    return;
+                                  }
+
+                                  if (isEditing) {
+                                    final request = UpdateLeadSourceRequestModel(
+                                      name: name,
+                                      sourceKey: existingRule.sourceKey,
+                                      allocationStrategy: selectedStrategy,
+                                      employeeIds: selectedEmployeeIds.toList(),
+                                      isActive: existingRule.isActive,
+                                      color: selectedColorHex,
+                                    );
+
+                                    final success = await _sourcesController.updateLeadSource(
+                                      existingRule.id,
+                                      request,
+                                      showSnackbar: false,
+                                    );
+
+                                    if (success) {
+                                      if (ctx.mounted) {
+                                        Navigator.of(ctx).pop();
+                                      }
+                                      Get.snackbar(
+                                        'Lead Source Updated 🎯',
+                                        'Rule for $name updated successfully.',
+                                        snackPosition: SnackPosition.BOTTOM,
+                                        backgroundColor: const Color(0xFF10B981),
+                                        colorText: Colors.white,
+                                      );
+                                    }
+                                  } else {
+                                    final request = CreateLeadSourceRequestModel(
+                                      name: name,
+                                      sourceKey: sourceKey,
+                                      allocationStrategy: selectedStrategy,
+                                      employeeIds: selectedEmployeeIds.toList(),
+                                      isActive: true,
+                                      color: selectedColorHex,
+                                    );
+
+                                    final success = await _sourcesController.createLeadSource(
+                                      request,
+                                      showSnackbar: false,
+                                    );
+
+                                    if (success) {
+                                      if (ctx.mounted) {
+                                        Navigator.of(ctx).pop();
+                                      }
+                                      Get.snackbar(
+                                        'Lead Source Created 🎯',
+                                        'Rule for $name created successfully.',
+                                        snackPosition: SnackPosition.BOTTOM,
+                                        backgroundColor: const Color(0xFF10B981),
+                                        colorText: Colors.white,
+                                      );
+                                    }
+                                  }
+                                },
+                          child: isBusy
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                )
+                              : AppText(
+                                  isEditing ? 'Save Changes' : 'Create Source Rule',
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
                                 ),
-                              );
-                            }
-                          });
-                          Navigator.pop(ctx);
-                          Get.snackbar(
-                            'Source Rule Saved 🎯',
-                            'Rule for $name updated successfully.',
-                            snackPosition: SnackPosition.BOTTOM,
-                            backgroundColor: const Color(0xFF10B981),
-                            colorText: Colors.white,
-                          );
-                        },
-                        child: const AppText('Save Source Rule', color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
-                      ),
+                        );
+                      }),
                     ),
                   ],
                 ),
