@@ -5,6 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_text.dart';
 import '../../tasks/views/tasks_list_screen.dart';
 import '../../projects/views/employee_assigned_projects_screen.dart';
+import '../../projects/views/employee_project_work_tracking_screen.dart';
 import '../../chat/views/chat_list_screen.dart';
 import '../../company_profile/views/company_profile_view_screen.dart';
 
@@ -58,6 +59,13 @@ class EmployeeMoreScreen extends StatelessWidget {
         if (isAdmin ||
             p.isAllowed(PermissionConstant.viewProjects,
                 moduleSlug: PermissionConstant.moduleTasksProjects)) {
+          workItems.add(_MoreMenuItem(
+            icon: Iconsax.briefcase,
+            title: 'Project & Task Workspace',
+            subtitle: 'Live work timer, modules, handovers & logs',
+            iconColor: const Color(0xFF2563EB),
+            onTap: () => Get.to(() => const EmployeeProjectWorkTrackingScreen()),
+          ));
           workItems.add(_MoreMenuItem(
             icon: Iconsax.folder_open,
             title: 'Projects',

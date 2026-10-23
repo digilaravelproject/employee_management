@@ -44,6 +44,7 @@ import '../features/payroll/bindings/salary_history_binding.dart';
 import '../features/payroll/views/employee_my_salary_screen.dart';
 import '../features/payslip/views/payslip_history_screen.dart';
 import '../core/services/network/api_client.dart';
+import '../features/projects/views/employee_project_work_tracking_screen.dart';
 import 'app_routes.dart';
 
 class RouteHelper {
@@ -70,6 +71,7 @@ class RouteHelper {
   static String getNotificationsRoute() => AppRoutes.notifications;
   static String getNotificationDetailsRoute() => AppRoutes.notificationDetails;
   static String getSalaryHistoryRoute() => AppRoutes.salaryHistory;
+  static String getEmployeeProjectWorkspaceRoute() => AppRoutes.employeeProjectWorkspace;
 
   /// Shared binding builder for AuthController – reused across login/signup/otp
   static BindingsBuilder _authBinding() => BindingsBuilder(() {
@@ -291,6 +293,12 @@ class RouteHelper {
       name: AppRoutes.payslipHistory,
       page: () => const PayslipHistoryScreen(),
       binding: SalaryHistoryBinding(),
+      transition: Transition.rightToLeft,
+    ),
+
+    GetPage(
+      name: AppRoutes.employeeProjectWorkspace,
+      page: () => const EmployeeProjectWorkTrackingScreen(),
       transition: Transition.rightToLeft,
     ),
   ];

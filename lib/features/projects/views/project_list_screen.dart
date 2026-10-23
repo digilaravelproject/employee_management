@@ -6,6 +6,7 @@ import '../../../core/widgets/app_text.dart';
 import '../controllers/projects_controller.dart';
 import '../models/project_model.dart';
 import 'create_project_screen.dart';
+import 'project_details_screen.dart';
 import 'admin_project_work_tracking_screen.dart';
 import '../../../core/services/permission/permission_service.dart';
 import '../../../core/services/permission/permission_constant.dart';
@@ -430,11 +431,7 @@ class _ProjectCard extends StatelessWidget {
             controller.selectedProject.value = project;
             controller.selectedDetailsTabIdx.value = 0;
             controller.fetchProjectDetails(project.id);
-            Get.to(() => AdminProjectWorkTrackingScreen(
-              initialProject: project,
-              initialProjectId: project.id,
-              initialProjectName: project.name,
-            ));
+            Get.to(() => ProjectDetailsScreen(projectId: project.id));
           },
           borderRadius: BorderRadius.circular(20),
           child: Padding(
@@ -595,44 +592,6 @@ class _ProjectCard extends StatelessWidget {
                       color: AppColors.textColorPrimary,
                     ),
                   ],
-                ),
-                const SizedBox(height: 14),
-
-                // Visual Work Operations & Handover Bar
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: AppColors.primaryColor.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: const Icon(Iconsax.hierarchy_2, size: 12, color: AppColors.primaryColor),
-                          ),
-                          const SizedBox(width: 8),
-                          const Text(
-                            'Modules, Tasks & Handover Operations',
-                            style: TextStyle(
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.primaryColor,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const Icon(Icons.arrow_forward_ios_rounded, size: 11, color: Color(0xFF94A3B8)),
-                    ],
-                  ),
                 ),
               ],
             ),
