@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/custom_snackbar.dart';
 import '../../../core/widgets/app_text.dart';
 import '../../../core/widgets/app_input_field.dart';
 import '../controllers/leads_controller.dart';
@@ -239,64 +241,155 @@ class LeadDetailsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildQuickActions(Lead lead) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        _buildActionItem(
-          icon: Icons.phone_outlined,
-          label: 'Call',
-          onTap: () => Get.snackbar('Mock Action', 'Dialing ${lead.mobile}...', backgroundColor: AppColors.primaryColor, colorText: Colors.white),
-        ),
-        _buildActionItem(
-          icon: Icons.mail_outline_rounded,
-          label: 'Email',
-          onTap: () => Get.snackbar('Mock Action', 'Opening mail client to ${lead.email}...', backgroundColor: AppColors.primaryColor, colorText: Colors.white),
-        ),
-        _buildActionItem(
-          icon: Icons.message_outlined,
-          label: 'WhatsApp',
-          onTap: () => Get.snackbar('Mock Action', 'Opening WhatsApp thread with ${lead.name}...', backgroundColor: AppColors.primaryColor, colorText: Colors.white),
-        ),
-        _buildActionItem(
-          icon: Icons.more_horiz_rounded,
-          label: 'More',
-          onTap: () {},
-        ),
-      ],
-    );
+  Future<void> _makePhoneCall(String phone) async {
+    final cleaned = phone.replaceAll(RegExp(r'[^0-9+]'), '');
+    if (cleaned.isEmpty) {
+      CustomSnackbar.showError('Phone number is not available.');
+      return;
+    }
+    final uri = Uri.parse('tel:$cleaned');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    } else {
+      CustomSnackbar.showError('Could not launch dialer.');
+    }
   }
 
-  Widget _buildActionItem({required IconData icon, required String label, required VoidCallback onTap}) {
-    return GestureDetector(
+  Future<void> _sendEmail(String email) async {
+    if (email.trim().isEmpty) {
+      CustomSnackbar.showError('Email address is not available.');
+      return;
+    }
+    final uri = Uri.parse('mailto:$email');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    } else {
+      CustomSnackbar.showError('Could not open email client.');
+    }
+  }
+
+  Future<void> _openWhatsApp(String phone, {String? name}) async {
+    var cleanNumber = phone.replaceAll(RegExp(r'[^\d]'), '');
+    if (cleanNumber.isEmpty) {
+      CustomSnackbar.showError('Phone number is not valid for WhatsApp.');
+      return;
+    }
+    if (cleanNumber.length == 10) {
+      cleanNumber = '91$cleanNumber';
+    }
+    final text = 'Hello${name != null && name.isNotEmpty ? ' $name' : ''}, regarding your lead requirement.';
+    final appUri = Uri.parse('whatsapp://send?phone=$cleanNumber&text=${Uri.encodeComponent(text)}');
+    final webUri = Uri.parse('https://wa.me/$cleanNumber?text=${Uri.encodeComponent(text)}');
+
+    try {
+      if (await canLaunchUrl(appUri)) {
+        await launchUrl(appUri, mode: LaunchMode.externalApplication);
+      } else if (await canLaunchUrl(webUri)) {
+        await launchUrl(webUri, mode: LaunchMode.externalApplication);
+      } else {
+        await launchUrl(webUri);
+      }
+    } catch (_) {
+      try {
+        await launchUrl(webUri, mode: LaunchMode.externalApplication);
+      } catch (e) {
+        CustomSnackbar.showError('Could not open WhatsApp: $e');
+      }
+    }
+  }
+
+  Widget _buildModernActionTile({
+    required IconData icon,
+    required String label,
+    required Color iconColor,
+    required Color bgColor,
+    required Color borderColor,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
       onTap: onTap,
-      child: Container(
-        width: 76,
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: AppColors.slate200),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.01),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
-            )
-          ],
-        ),
+      borderRadius: BorderRadius.circular(16),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: AppColors.textColorSecondary, size: 22),
-            const SizedBox(height: 6),
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: bgColor,
+                border: Border.all(color: borderColor, width: 1.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: iconColor.withValues(alpha: 0.16),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Icon(icon, color: iconColor, size: 23),
+              ),
+            ),
+            const SizedBox(height: 7),
             AppText(
               label,
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textColorSecondary,
+              fontSize: 11.5,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF334155),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildQuickActions(Lead lead) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.slate200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _buildModernActionTile(
+            icon: Iconsax.call,
+            label: 'Call',
+            iconColor: const Color(0xFF059669),
+            bgColor: const Color(0xFFECFDF5),
+            borderColor: const Color(0xFFA7F3D0),
+            onTap: () => _makePhoneCall(lead.mobile),
+          ),
+          _buildModernActionTile(
+            icon: Icons.chat_bubble_rounded,
+            label: 'WhatsApp',
+            iconColor: const Color(0xFF16A34A),
+            bgColor: const Color(0xFFDCFCE7),
+            borderColor: const Color(0xFF86EFAC),
+            onTap: () => _openWhatsApp(lead.mobile, name: lead.name),
+          ),
+          _buildModernActionTile(
+            icon: Iconsax.sms,
+            label: 'Email',
+            iconColor: const Color(0xFF2563EB),
+            bgColor: const Color(0xFFEFF6FF),
+            borderColor: const Color(0xFFBFDBFE),
+            onTap: () => _sendEmail(lead.email),
+          ),
+        ],
       ),
     );
   }
@@ -332,8 +425,43 @@ class LeadDetailsScreen extends StatelessWidget {
                   }
                 : () => Get.to(() => AssignSalesTeamScreen(lead: lead)),
           ),
-          _buildDetailItem(label: 'Mobile', value: lead.mobile, trailingIcon: Icons.phone_in_talk_outlined),
-          _buildDetailItem(label: 'Email', value: lead.email, trailingIcon: Icons.mail_outline),
+          _buildDetailItem(
+            label: 'Mobile',
+            value: lead.mobile,
+            trailingActions: [
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                tooltip: 'Call',
+                icon: const Icon(Icons.phone_in_talk_outlined, color: Color(0xFF10B981), size: 18),
+                onPressed: () => _makePhoneCall(lead.mobile),
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                tooltip: 'WhatsApp',
+                icon: const Icon(Icons.chat_bubble_rounded, color: Color(0xFF16A34A), size: 18),
+                onPressed: () => _openWhatsApp(lead.mobile, name: lead.name),
+              ),
+            ],
+          ),
+          _buildDetailItem(
+            label: 'Email',
+            value: lead.email,
+            trailingActions: [
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                tooltip: 'Email',
+                icon: const Icon(Icons.mail_outline, color: Color(0xFF3B82F6), size: 18),
+                onPressed: () => _sendEmail(lead.email),
+              ),
+            ],
+          ),
           _buildDetailItem(label: 'Company', value: lead.companyName),
           _buildDetailItem(label: 'Designation', value: lead.designation),
           _buildDetailItem(label: 'Location', value: lead.location),
@@ -350,6 +478,7 @@ class LeadDetailsScreen extends StatelessWidget {
     bool isStatusBadge = false,
     String? avatarUrl,
     IconData? trailingIcon,
+    List<Widget>? trailingActions,
     bool hasChevron = false,
     VoidCallback? onTap,
   }) {
@@ -415,7 +544,10 @@ class LeadDetailsScreen extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               valueWidget,
-              if (trailingIcon != null) ...[
+              if (trailingActions != null && trailingActions.isNotEmpty) ...[
+                const SizedBox(width: 8),
+                ...trailingActions,
+              ] else if (trailingIcon != null) ...[
                 const SizedBox(width: 8),
                 Icon(trailingIcon, color: AppColors.textColorSecondary, size: 16),
               ],

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:iconsax/iconsax.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/app_validators.dart';
 import '../../../core/widgets/app_text.dart';
@@ -60,13 +59,6 @@ class _AddEditClientScreenState extends State<AddEditClientScreen> {
           color: AppColors.textColorPrimary,
         ),
         centerTitle: false,
-        actions: [
-          if (widget.isEditMode)
-            IconButton(
-              icon: const Icon(Iconsax.trash, color: AppColors.errorColor),
-              onPressed: _confirmDelete,
-            ),
-        ],
       ),
       body: Form(
         key: _formKey,
@@ -213,23 +205,36 @@ class _AddEditClientScreenState extends State<AddEditClientScreen> {
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: ElevatedButton(
-                      onPressed: _submitForm,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primaryColor,
-                        minimumSize: const Size(0, 50),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
+                    child: Obx(() {
+                      final isSaving = controller.isSavingClient.value;
+                      return ElevatedButton(
+                        onPressed: isSaving ? null : _submitForm,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primaryColor,
+                          disabledBackgroundColor: AppColors.primaryColor.withValues(alpha: 0.6),
+                          minimumSize: const Size(0, 50),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          elevation: 0,
                         ),
-                        elevation: 0,
-                      ),
-                      child: AppText(
-                        widget.isEditMode ? 'Update Client' : 'Save Client',
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
+                        child: isSaving
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : AppText(
+                                widget.isEditMode ? 'Update Client' : 'Save Client',
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                      );
+                    }),
                   ),
                 ],
               ),
@@ -240,7 +245,7 @@ class _AddEditClientScreenState extends State<AddEditClientScreen> {
     );
   }
 
-  void _submitForm() {
+  void _submitForm() async {
     if (controller.formSelectedStatus.value == null) {
       setState(() {
         _statusError = 'Please select client status';
@@ -248,37 +253,11 @@ class _AddEditClientScreenState extends State<AddEditClientScreen> {
     }
 
     if (_formKey.currentState!.validate() && _statusError == null) {
-      controller.saveClient(id: widget.clientId);
-      Get.back();
+      final success = await controller.saveClient(id: widget.clientId);
+      if (success && mounted) {
+        Navigator.of(context).pop(true);
+      }
     }
   }
-
-  void _confirmDelete() {
-    Get.dialog(
-      AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const AppText('Delete Client', fontSize: 16, fontWeight: FontWeight.bold),
-        content: const AppText('Are you sure you want to permanently delete this client? All projects and log history will be removed.', fontSize: 13, color: AppColors.textColorSecondary),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const AppText('Cancel', fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textColorHint),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (widget.clientId != null) {
-                controller.deleteClient(widget.clientId!);
-                Get.close(2); // close dialog and edit screen!
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.errorColor,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            child: const AppText('Delete', fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
-          ),
-        ],
-      ),
-    );
-  }
 }
+

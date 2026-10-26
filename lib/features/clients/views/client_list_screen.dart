@@ -7,16 +7,46 @@ import '../models/client_model.dart';
 import 'client_details_screen.dart';
 import 'add_edit_client_screen.dart';
 
-class ClientListScreen extends StatelessWidget {
+class ClientListScreen extends StatefulWidget {
   const ClientListScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    // Put or find controller in memory
-    final controller = Get.isRegistered<ClientsController>()
+  State<ClientListScreen> createState() => _ClientListScreenState();
+}
+
+class _ClientListScreenState extends State<ClientListScreen> {
+  final ScrollController _scrollController = ScrollController();
+  late final ClientsController controller;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = Get.isRegistered<ClientsController>()
         ? Get.find<ClientsController>()
         : Get.put(ClientsController());
 
+    _scrollController.addListener(_onScroll);
+  }
+
+  void _onScroll() {
+    if (_scrollController.hasClients) {
+      final maxScroll = _scrollController.position.maxScrollExtent;
+      final currentScroll = _scrollController.position.pixels;
+      if (maxScroll - currentScroll <= 250) {
+        controller.loadMoreClients();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
@@ -57,11 +87,20 @@ class ClientListScreen extends StatelessWidget {
         centerTitle: false,
         actions: [
           // Refresh Button
-          IconButton(
+          /*IconButton(
             tooltip: 'Refresh Clients',
             icon: const Icon(Iconsax.refresh, color: Color(0xFF3B206A), size: 20),
-            onPressed: () => controller.fetchClientsFromApi(),
-          ),
+            onPressed: () {
+              if (controller.searchQuery.value.trim().isNotEmpty) {
+                controller.searchClientsFromApi(
+                  query: controller.searchQuery.value.trim(),
+                  resetPagination: true,
+                );
+              } else {
+                controller.fetchClientsFromApi(resetPagination: true);
+              }
+            },
+          ),*/
           // Add Client Button
           Padding(
             padding: const EdgeInsets.only(right: 14.0, left: 4.0),
@@ -95,13 +134,36 @@ class ClientListScreen extends StatelessWidget {
                 border: Border.all(color: const Color(0xFFE2E8F0)),
               ),
               child: TextField(
-                onChanged: (value) => controller.searchQuery.value = value,
-                decoration: const InputDecoration(
+                controller: controller.searchFieldController,
+                onChanged: (value) => controller.onSearchTextChanged(value),
+                decoration: InputDecoration(
                   hintText: 'Search by client name, email, phone, city...',
-                  hintStyle: TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
-                  prefixIcon: Icon(Iconsax.search_normal, color: Color(0xFF3B206A), size: 18),
+                  hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
+                  prefixIcon: const Icon(Iconsax.search_normal, color: Color(0xFF3B206A), size: 18),
+                  suffixIcon: Obx(() {
+                    if (controller.isSearching.value) {
+                      return const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Color(0xFF3B206A),
+                          ),
+                        ),
+                      );
+                    }
+                    if (controller.searchQuery.value.isNotEmpty) {
+                      return IconButton(
+                        icon: const Icon(Icons.close_rounded, size: 18, color: Color(0xFF64748B)),
+                        onPressed: () => controller.clearSearch(),
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  }),
                   border: InputBorder.none,
-                  contentPadding: EdgeInsets.symmetric(vertical: 13, horizontal: 10),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 13, horizontal: 10),
                 ),
               ),
             ),
@@ -122,30 +184,21 @@ class ClientListScreen extends StatelessWidget {
                     label: 'All',
                     count: controller.totalClientsCount,
                     isSelected: controller.selectedStatusFilter.value == 'All',
-                    onTap: () {
-                      controller.selectedStatusFilter.value = 'All';
-                      controller.fetchClientsFromApi(status: 'all');
-                    },
+                    onTap: () => controller.onStatusFilterChanged('All'),
                   ),
                   _buildFilterTab(
                     controller,
                     label: 'Active',
                     count: controller.activeClientsCount,
                     isSelected: controller.selectedStatusFilter.value == 'Active',
-                    onTap: () {
-                      controller.selectedStatusFilter.value = 'Active';
-                      controller.fetchClientsFromApi(status: 'active');
-                    },
+                    onTap: () => controller.onStatusFilterChanged('Active'),
                   ),
                   _buildFilterTab(
                     controller,
                     label: 'Inactive',
                     count: controller.inactiveClientsCount,
                     isSelected: controller.selectedStatusFilter.value == 'Inactive',
-                    onTap: () {
-                      controller.selectedStatusFilter.value = 'Inactive';
-                      controller.fetchClientsFromApi(status: 'inactive');
-                    },
+                    onTap: () => controller.onStatusFilterChanged('Inactive'),
                   ),
                 ],
               );
@@ -153,7 +206,7 @@ class ClientListScreen extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
-          // ── Client List Feed with Pull-to-Refresh ──
+          // ── Client List Feed with Pull-to-Refresh & Scroll Pagination ──
           Expanded(
             child: Obx(() {
               if (controller.isLoading.value && controller.clients.isEmpty) {
@@ -169,11 +222,20 @@ class ClientListScreen extends StatelessWidget {
               if (list.isEmpty) {
                 return RefreshIndicator(
                   color: const Color(0xFF3B206A),
-                  onRefresh: () => controller.fetchClientsFromApi(),
+                  onRefresh: () async {
+                    if (controller.searchQuery.value.trim().isNotEmpty) {
+                      await controller.searchClientsFromApi(
+                        query: controller.searchQuery.value.trim(),
+                        resetPagination: true,
+                      );
+                    } else {
+                      await controller.fetchClientsFromApi(resetPagination: true);
+                    }
+                  },
                   child: ListView(
                     physics: const AlwaysScrollableScrollPhysics(),
                     children: [
-                      SizedBox(height: MediaQuery.of(context).size.height * 0.2),
+                      SizedBox(height: MediaQuery.of(context).size.height * 0.18),
                       Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -188,20 +250,41 @@ class ClientListScreen extends StatelessWidget {
                               child: const Icon(Iconsax.profile_2user, size: 30, color: Color(0xFF94A3B8)),
                             ),
                             const SizedBox(height: 14),
-                            const Text(
-                              'No Clients Found',
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                            Text(
+                              controller.searchQuery.value.isNotEmpty
+                                  ? 'No matching clients'
+                                  : 'No Clients Found',
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
                             ),
                             const SizedBox(height: 4),
-                            const Text(
-                              'No clients match the selected criteria or search.',
-                              style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 32),
+                              child: Text(
+                                controller.searchQuery.value.isNotEmpty
+                                    ? 'No results found for "${controller.searchQuery.value}". Try a different keyword.'
+                                    : 'No clients match the selected criteria.',
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                              ),
                             ),
                             const SizedBox(height: 14),
                             ElevatedButton.icon(
-                              onPressed: () => controller.fetchClientsFromApi(),
-                              icon: const Icon(Iconsax.refresh, size: 16, color: Colors.white),
-                              label: const Text('Refresh Directory', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                              onPressed: () {
+                                if (controller.searchQuery.value.isNotEmpty) {
+                                  controller.clearSearch();
+                                } else {
+                                  controller.fetchClientsFromApi(resetPagination: true);
+                                }
+                              },
+                              icon: Icon(
+                                controller.searchQuery.value.isNotEmpty ? Icons.close : Iconsax.refresh,
+                                size: 16,
+                                color: Colors.white,
+                              ),
+                              label: Text(
+                                controller.searchQuery.value.isNotEmpty ? 'Clear Search' : 'Refresh Directory',
+                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                              ),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF3B206A),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -215,16 +298,79 @@ class ClientListScreen extends StatelessWidget {
                 );
               }
 
+              final showBottomLoader = controller.isLoadingMore.value;
+              final showBottomEndOfList = !controller.hasMorePages.value && list.length >= 10;
+              final extraItemCount = (showBottomLoader || showBottomEndOfList) ? 1 : 0;
+
               return RefreshIndicator(
                 color: const Color(0xFF3B206A),
-                onRefresh: () => controller.fetchClientsFromApi(),
+                onRefresh: () async {
+                  if (controller.searchQuery.value.trim().isNotEmpty) {
+                    await controller.searchClientsFromApi(
+                      query: controller.searchQuery.value.trim(),
+                      resetPagination: true,
+                    );
+                  } else {
+                    await controller.fetchClientsFromApi(resetPagination: true);
+                  }
+                },
                 child: ListView.builder(
+                  controller: _scrollController,
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                   physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
-                  itemCount: list.length,
+                  itemCount: list.length + extraItemCount,
                   itemBuilder: (context, index) {
-                    final client = list[index];
-                    return _ClientCardItem(client: client);
+                    if (index < list.length) {
+                      final client = list[index];
+                      return _ClientCardItem(client: client);
+                    }
+
+                    // Bottom pagination indicator
+                    if (showBottomLoader) {
+                      return Container(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        alignment: Alignment.center,
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Color(0xFF3B206A),
+                              ),
+                            ),
+                            SizedBox(width: 10),
+                            Text(
+                              'Loading more clients...',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF64748B),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    if (showBottomEndOfList) {
+                      return Container(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        alignment: Alignment.center,
+                        child: Text(
+                          'Showing all ${list.length} clients',
+                          style: const TextStyle(
+                            fontSize: 11.5,
+                            color: Color(0xFF94A3B8),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      );
+                    }
+
+                    return const SizedBox.shrink();
                   },
                 ),
               );

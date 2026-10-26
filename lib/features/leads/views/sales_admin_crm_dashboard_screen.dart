@@ -13,6 +13,7 @@ import '../repositories/admin_leads_repository_interface.dart';
 import '../repositories/admin_leads_repository.dart';
 import '../../../core/services/network/api_client.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../core/utils/custom_snackbar.dart';
 import 'lead_connect_bottom_sheet.dart';
 import '../controllers/lead_integrations_controller.dart';
 import '../controllers/admin_lead_statuses_controller.dart';
@@ -2743,6 +2744,54 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
     );
   }
 
+  Widget _buildModernActionTile({
+    required IconData icon,
+    required String label,
+    required Color iconColor,
+    required Color bgColor,
+    required Color borderColor,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: bgColor,
+                border: Border.all(color: borderColor, width: 1.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: iconColor.withValues(alpha: 0.16),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Icon(icon, color: iconColor, size: 23),
+              ),
+            ),
+            const SizedBox(height: 7),
+            AppText(
+              label,
+              fontSize: 11.5,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF334155),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   // ── Bottom Sheet: Full Lead Details ─────────────────────────────────────────
   void _showApiLeadDetailModal(BuildContext context, AdminLeadDataModel lead) {
     final sourceColor = _getSourceColor(lead.displaySource);
@@ -2860,43 +2909,56 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
                   ],
                   const SizedBox(height: 16),
 
-                  // Quick Action Buttons (Call, WhatsApp, Email)
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            if (lead.displayPhone.isNotEmpty && lead.displayPhone != 'N/A') {
+                  // Quick Action Dock (Call, WhatsApp, Email)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        if (lead.displayPhone.isNotEmpty && lead.displayPhone != 'N/A') ...[
+                          _buildModernActionTile(
+                            icon: Iconsax.call,
+                            label: 'Call',
+                            iconColor: const Color(0xFF059669),
+                            bgColor: const Color(0xFFECFDF5),
+                            borderColor: const Color(0xFFA7F3D0),
+                            onTap: () {
                               launchUrl(Uri.parse('tel:${lead.displayPhone}'));
-                            }
-                          },
-                          icon: const Icon(Iconsax.call, size: 14, color: Colors.white),
-                          label: const AppText('Call', fontSize: 12, color: Colors.white, fontWeight: FontWeight.bold),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF10B981),
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            },
                           ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            if (lead.displayEmail.isNotEmpty && lead.displayEmail != 'N/A') {
+                          _buildModernActionTile(
+                            icon: Icons.chat_bubble_rounded,
+                            label: 'WhatsApp',
+                            iconColor: const Color(0xFF16A34A),
+                            bgColor: const Color(0xFFDCFCE7),
+                            borderColor: const Color(0xFF86EFAC),
+                            onTap: () {
+                              var cleanNumber = lead.displayPhone.replaceAll(RegExp(r'[^\d]'), '');
+                              if (cleanNumber.length == 10) cleanNumber = '91$cleanNumber';
+                              final text = 'Hello ${lead.displayName}, regarding your lead requirement.';
+                              launchUrl(Uri.parse('https://wa.me/$cleanNumber?text=${Uri.encodeComponent(text)}'), mode: LaunchMode.externalApplication);
+                            },
+                          ),
+                        ],
+                        if (lead.displayEmail.isNotEmpty && lead.displayEmail != 'N/A')
+                          _buildModernActionTile(
+                            icon: Iconsax.sms,
+                            label: 'Email',
+                            iconColor: const Color(0xFF2563EB),
+                            bgColor: const Color(0xFFEFF6FF),
+                            borderColor: const Color(0xFFBFDBFE),
+                            onTap: () {
                               launchUrl(Uri.parse('mailto:${lead.displayEmail}'));
-                            }
-                          },
-                          icon: const Icon(Iconsax.sms, size: 14, color: Colors.white),
-                          label: const AppText('Email', fontSize: 12, color: Colors.white, fontWeight: FontWeight.bold),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF2563EB),
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            },
                           ),
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 18),
 
@@ -4797,6 +4859,107 @@ class _AdminLeadFullDetailScreenState extends State<AdminLeadFullDetailScreen> {
     return const Color(0xFFF1F5F9);
   }
 
+  Future<void> _makePhoneCall(String phone) async {
+    final cleaned = phone.replaceAll(RegExp(r'[^0-9+]'), '');
+    if (cleaned.isEmpty) {
+      CustomSnackbar.showError('Phone number is not valid');
+      return;
+    }
+    final uri = Uri.parse('tel:$cleaned');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    }
+  }
+
+  Future<void> _sendEmail(String email) async {
+    if (email.trim().isEmpty) {
+      CustomSnackbar.showError('Email is not available');
+      return;
+    }
+    final uri = Uri.parse('mailto:$email');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    }
+  }
+
+  Future<void> _openWhatsApp(String phone, {String? name}) async {
+    var cleanNumber = phone.replaceAll(RegExp(r'[^\d]'), '');
+    if (cleanNumber.isEmpty) {
+      CustomSnackbar.showError('Phone number is not valid for WhatsApp');
+      return;
+    }
+    if (cleanNumber.length == 10) {
+      cleanNumber = '91$cleanNumber';
+    }
+    final text = 'Hello${name != null && name.isNotEmpty ? ' $name' : ''}, regarding your lead requirement.';
+    final appUri = Uri.parse('whatsapp://send?phone=$cleanNumber&text=${Uri.encodeComponent(text)}');
+    final webUri = Uri.parse('https://wa.me/$cleanNumber?text=${Uri.encodeComponent(text)}');
+
+    try {
+      if (await canLaunchUrl(appUri)) {
+        await launchUrl(appUri, mode: LaunchMode.externalApplication);
+      } else if (await canLaunchUrl(webUri)) {
+        await launchUrl(webUri, mode: LaunchMode.externalApplication);
+      } else {
+        await launchUrl(webUri);
+      }
+    } catch (_) {
+      try {
+        await launchUrl(webUri, mode: LaunchMode.externalApplication);
+      } catch (e) {
+        CustomSnackbar.showError('Could not open WhatsApp: $e');
+      }
+    }
+  }
+
+  Widget _buildModernActionTile({
+    required IconData icon,
+    required String label,
+    required Color iconColor,
+    required Color bgColor,
+    required Color borderColor,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: bgColor,
+                border: Border.all(color: borderColor, width: 1.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: iconColor.withValues(alpha: 0.16),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Icon(icon, color: iconColor, size: 23),
+              ),
+            ),
+            const SizedBox(height: 7),
+            AppText(
+              label,
+              fontSize: 11.5,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF334155),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final apiLead = _currentApiLead;
@@ -4983,55 +5146,106 @@ class _AdminLeadFullDetailScreenState extends State<AdminLeadFullDetailScreen> {
                             const Divider(height: 1, color: Color(0xFFF1F5F9)),
                             const SizedBox(height: 14),
 
-                            // Quick Action Buttons (Call, Email)
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: ElevatedButton.icon(
-                                    onPressed: () {
-                                      if (phone.isNotEmpty && phone != 'N/A') {
-                                        launchUrl(Uri.parse('tel:$phone'));
-                                      }
-                                    },
-                                    icon: const Icon(Iconsax.call, size: 14, color: Colors.white),
-                                    label: const AppText('Call', fontSize: 12, color: Colors.white, fontWeight: FontWeight.bold),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(0xFF10B981),
-                                      padding: const EdgeInsets.symmetric(vertical: 9),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                      elevation: 0,
+                            // Quick Action Dock (Call, WhatsApp, Email)
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF8FAFC),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: const Color(0xFFE2E8F0)),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                children: [
+                                  if (phone.isNotEmpty && phone != 'N/A') ...[
+                                    _buildModernActionTile(
+                                      icon: Iconsax.call,
+                                      label: 'Call',
+                                      iconColor: const Color(0xFF059669),
+                                      bgColor: const Color(0xFFECFDF5),
+                                      borderColor: const Color(0xFFA7F3D0),
+                                      onTap: () => _makePhoneCall(phone),
                                     ),
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: ElevatedButton.icon(
-                                    onPressed: () {
-                                      if (email.isNotEmpty && email != 'N/A') {
-                                        launchUrl(Uri.parse('mailto:$email'));
-                                      }
-                                    },
-                                    icon: const Icon(Iconsax.sms, size: 14, color: Colors.white),
-                                    label: const AppText('Email', fontSize: 12, color: Colors.white, fontWeight: FontWeight.bold),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(0xFF2563EB),
-                                      padding: const EdgeInsets.symmetric(vertical: 9),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                      elevation: 0,
+                                    _buildModernActionTile(
+                                      icon: Icons.chat_bubble_rounded,
+                                      label: 'WhatsApp',
+                                      iconColor: const Color(0xFF16A34A),
+                                      bgColor: const Color(0xFFDCFCE7),
+                                      borderColor: const Color(0xFF86EFAC),
+                                      onTap: () => _openWhatsApp(phone, name: customerName),
                                     ),
-                                  ),
-                                ),
-                              ],
+                                  ],
+                                  if (email.isNotEmpty && email != 'N/A')
+                                    _buildModernActionTile(
+                                      icon: Iconsax.sms,
+                                      label: 'Email',
+                                      iconColor: const Color(0xFF2563EB),
+                                      bgColor: const Color(0xFFEFF6FF),
+                                      borderColor: const Color(0xFFBFDBFE),
+                                      onTap: () => _sendEmail(email),
+                                    ),
+                                ],
+                              ),
                             ),
                             const SizedBox(height: 14),
 
                             // Phone & Email & Details Rows (Only show if present)
                             if (phone.isNotEmpty) ...[
-                              _buildInfoDetailRow(Icons.phone_rounded, 'Phone', phone),
+                              _buildInfoDetailRow(
+                                Icons.phone_rounded,
+                                'Phone',
+                                phone,
+                                actions: [
+                                  InkWell(
+                                    onTap: () => _makePhoneCall(phone),
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(5),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(Icons.phone_rounded, size: 14, color: Color(0xFF10B981)),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  InkWell(
+                                    onTap: () => _openWhatsApp(phone, name: customerName),
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(5),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF25D366).withValues(alpha: 0.12),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(Icons.chat_bubble_rounded, size: 14, color: Color(0xFF16A34A)),
+                                    ),
+                                  ),
+                                ],
+                              ),
                               const SizedBox(height: 10),
                             ],
                             if (email.isNotEmpty) ...[
-                              _buildInfoDetailRow(Icons.email_rounded, 'Email', email),
+                              _buildInfoDetailRow(
+                                Icons.email_rounded,
+                                'Email',
+                                email,
+                                actions: [
+                                  InkWell(
+                                    onTap: () => _sendEmail(email),
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(5),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF2563EB).withValues(alpha: 0.1),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(Icons.email_rounded, size: 14, color: Color(0xFF2563EB)),
+                                    ),
+                                  ),
+                                ],
+                              ),
                               const SizedBox(height: 10),
                             ],
                             if (requirement.isNotEmpty) ...[
@@ -5536,9 +5750,9 @@ class _AdminLeadFullDetailScreenState extends State<AdminLeadFullDetailScreen> {
     );
   }
 
-  Widget _buildInfoDetailRow(dynamic icon, String label, String value, {Color? valueColor}) {
+  Widget _buildInfoDetailRow(dynamic icon, String label, String value, {Color? valueColor, List<Widget>? actions}) {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         if (icon is IconData)
           Icon(icon, size: 15, color: const Color(0xFF64748B))
@@ -5557,6 +5771,7 @@ class _AdminLeadFullDetailScreenState extends State<AdminLeadFullDetailScreen> {
             color: valueColor ?? const Color(0xFF1E293B),
           ),
         ),
+        if (actions != null && actions.isNotEmpty) ...actions,
       ],
     );
   }

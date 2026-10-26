@@ -4,6 +4,7 @@ import 'package:iconsax/iconsax.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/custom_snackbar.dart';
 import '../../../core/widgets/app_text.dart';
 import '../controllers/clients_controller.dart';
 import '../models/client_model.dart';
@@ -40,6 +41,36 @@ class _ClientDetailsScreenState extends State<ClientDetailsScreen> {
     }
   }
 
+  Future<void> _openWhatsApp(String phone, {String? name}) async {
+    var cleanNumber = phone.replaceAll(RegExp(r'[^\d]'), '');
+    if (cleanNumber.isEmpty) {
+      CustomSnackbar.showError('Phone number is not valid for WhatsApp.');
+      return;
+    }
+    if (cleanNumber.length == 10) {
+      cleanNumber = '91$cleanNumber';
+    }
+    final text = 'Hello${name != null && name.isNotEmpty ? ' $name' : ''}, regarding your project inquiry.';
+    final appUri = Uri.parse('whatsapp://send?phone=$cleanNumber&text=${Uri.encodeComponent(text)}');
+    final webUri = Uri.parse('https://wa.me/$cleanNumber?text=${Uri.encodeComponent(text)}');
+
+    try {
+      if (await canLaunchUrl(appUri)) {
+        await launchUrl(appUri, mode: LaunchMode.externalApplication);
+      } else if (await canLaunchUrl(webUri)) {
+        await launchUrl(webUri, mode: LaunchMode.externalApplication);
+      } else {
+        await launchUrl(webUri);
+      }
+    } catch (_) {
+      try {
+        await launchUrl(webUri, mode: LaunchMode.externalApplication);
+      } catch (e) {
+        CustomSnackbar.showError('Could not open WhatsApp: $e');
+      }
+    }
+  }
+
   Future<void> _sendEmail(String email) async {
     final uri = Uri.parse('mailto:$email');
     if (await canLaunchUrl(uri)) {
@@ -63,6 +94,70 @@ class _ClientDetailsScreenState extends State<ClientDetailsScreen> {
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
+  }
+
+  void _confirmDelete(ClientsController controller, Client client) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Row(
+            children: [
+              Icon(Iconsax.trash, color: AppColors.errorColor, size: 22),
+              SizedBox(width: 10),
+              AppText('Delete Client', fontSize: 16, fontWeight: FontWeight.bold),
+            ],
+          ),
+          content: Text(
+            'Are you sure you want to permanently delete "${client.name}"? All associated projects and communication logs will be removed.',
+            style: const TextStyle(fontSize: 13, color: AppColors.textColorSecondary, height: 1.4),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const AppText('Cancel', fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textColorHint),
+            ),
+            Obx(() {
+              final isDeleting = controller.isDeletingClient.value;
+              return ElevatedButton(
+                onPressed: isDeleting
+                    ? null
+                    : () async {
+                        final deleted = await controller.deleteClient(client.id);
+                        if (deleted) {
+                          // Close dialog first
+                          if (dialogContext.mounted) {
+                            Navigator.of(dialogContext).pop();
+                          }
+                          // Pop ClientDetailsScreen back to clients list front page
+                          if (mounted) {
+                            Navigator.of(context).pop(true);
+                          }
+                        }
+                      },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.errorColor,
+                  disabledBackgroundColor: AppColors.errorColor.withValues(alpha: 0.6),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  elevation: 0,
+                ),
+                child: isDeleting
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const AppText('Delete', fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
+              );
+            }),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -98,12 +193,27 @@ class _ClientDetailsScreenState extends State<ClientDetailsScreen> {
           Obx(() {
             final client = controller.selectedClient.value;
             if (client == null) return const SizedBox();
-            return IconButton(
-              icon: const Icon(Iconsax.edit_2, color: AppColors.textColorSecondary),
-              onPressed: () {
-                controller.initializeEditing(client);
-                Get.to(() => AddEditClientScreen(isEditMode: true, clientId: client.id));
-              },
+            return Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  tooltip: 'Edit Client',
+                  icon: const Icon(Iconsax.edit_2, color: AppColors.textColorSecondary, size: 20),
+                  onPressed: () async {
+                    controller.initializeEditing(client);
+                    final updated = await Get.to(() => AddEditClientScreen(isEditMode: true, clientId: client.id));
+                    if (updated == true) {
+                      controller.fetchClientDetail(client.id);
+                    }
+                  },
+                ),
+                IconButton(
+                  tooltip: 'Delete Client',
+                  icon: const Icon(Iconsax.trash, color: AppColors.errorColor, size: 20),
+                  onPressed: () => _confirmDelete(controller, client),
+                ),
+                const SizedBox(width: 4),
+              ],
             );
           }),
         ],
@@ -141,8 +251,8 @@ class _ClientDetailsScreenState extends State<ClientDetailsScreen> {
                       _buildProfileHeader(client, detail),
                       const SizedBox(height: 14),
 
-                      // Quick Action Buttons (Call, Email, Website)
-                      _buildQuickActionButtons(client),
+                      // Quick Action Buttons (Call, WhatsApp, Email, Website)
+                      _buildQuickActionButtons(client, detail),
                       const SizedBox(height: 16),
 
                       // Navigation Quick Links (Assigned Projects & Comm History)
@@ -381,83 +491,108 @@ class _ClientDetailsScreenState extends State<ClientDetailsScreen> {
     );
   }
 
-  Widget _buildQuickActionButtons(Client client) {
-    return Row(
-      children: [
-        if (client.mobile.isNotEmpty)
-          Expanded(
-            child: InkWell(
-              onTap: () => _makePhoneCall(client.mobile),
-              borderRadius: BorderRadius.circular(14),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF10B981).withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.25)),
-                ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Iconsax.call, color: Color(0xFF10B981), size: 16),
-                    SizedBox(width: 6),
-                    AppText('Call', fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF10B981)),
-                  ],
-                ),
+  Widget _buildModernActionTile({
+    required IconData icon,
+    required String label,
+    required Color iconColor,
+    required Color bgColor,
+    required Color borderColor,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: bgColor,
+                border: Border.all(color: borderColor, width: 1.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: iconColor.withValues(alpha: 0.16),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Icon(icon, color: iconColor, size: 23),
               ),
             ),
-          ),
-        if (client.mobile.isNotEmpty && client.email.isNotEmpty)
-          const SizedBox(width: 10),
-        if (client.email.isNotEmpty)
-          Expanded(
-            child: InkWell(
-              onTap: () => _sendEmail(client.email),
-              borderRadius: BorderRadius.circular(14),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                decoration: BoxDecoration(
-                  color: AppColors.primaryColor.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppColors.primaryColor.withValues(alpha: 0.25)),
-                ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Iconsax.sms, color: AppColors.primaryColor, size: 16),
-                    SizedBox(width: 6),
-                    AppText('Email', fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.primaryColor),
-                  ],
-                ),
-              ),
+            const SizedBox(height: 7),
+            AppText(
+              label,
+              fontSize: 11.5,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF334155),
             ),
-          ),
-        if (client.website.isNotEmpty) ...[
-          const SizedBox(width: 10),
-          Expanded(
-            child: InkWell(
-              onTap: () => _openWebsite(client.website),
-              borderRadius: BorderRadius.circular(14),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF3B82F6).withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFF3B82F6).withValues(alpha: 0.25)),
-                ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Iconsax.global, color: Color(0xFF3B82F6), size: 16),
-                    SizedBox(width: 6),
-                    AppText('Website', fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF3B82F6)),
-                  ],
-                ),
-              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickActionButtons(Client client, ClientDetailData? detail) {
+    final phone = (detail != null && detail.mobileNumber.isNotEmpty) ? detail.mobileNumber : client.mobile;
+    final email = (detail != null && detail.email.isNotEmpty) ? detail.email : client.email;
+    final website = (detail != null && detail.website.isNotEmpty) ? detail.website : client.website;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          if (phone.isNotEmpty) ...[
+            _buildModernActionTile(
+              icon: Iconsax.call,
+              label: 'Call',
+              iconColor: const Color(0xFF059669),
+              bgColor: const Color(0xFFECFDF5),
+              borderColor: const Color(0xFFA7F3D0),
+              onTap: () => _makePhoneCall(phone),
             ),
-          ),
+            _buildModernActionTile(
+              icon: Icons.chat_bubble_rounded,
+              label: 'WhatsApp',
+              iconColor: const Color(0xFF16A34A),
+              bgColor: const Color(0xFFDCFCE7),
+              borderColor: const Color(0xFF86EFAC),
+              onTap: () => _openWhatsApp(phone, name: client.name),
+            ),
+          ],
+          if (email.isNotEmpty)
+            _buildModernActionTile(
+              icon: Iconsax.sms,
+              label: 'Email',
+              iconColor: const Color(0xFF2563EB),
+              bgColor: const Color(0xFFEFF6FF),
+              borderColor: const Color(0xFFBFDBFE),
+              onTap: () => _sendEmail(email),
+            ),
+          if (website.isNotEmpty)
+            _buildModernActionTile(
+              icon: Iconsax.global,
+              label: 'Website',
+              iconColor: const Color(0xFF8B5CF6),
+              bgColor: const Color(0xFFF5F3FF),
+              borderColor: const Color(0xFFDDD6FE),
+              onTap: () => _openWebsite(website),
+            ),
         ],
-      ],
+      ),
     );
   }
 
@@ -871,13 +1006,13 @@ class _ClientDetailsScreenState extends State<ClientDetailsScreen> {
           ),
           const SizedBox(height: 10),
           // Phone
-          InkWell(
-            onTap: client.mobile.isNotEmpty ? () => _makePhoneCall(client.mobile) : null,
-            child: Row(
-              children: [
-                const Icon(Iconsax.call, color: Color(0xFF10B981), size: 18),
-                const SizedBox(width: 10),
-                Expanded(
+          Row(
+            children: [
+              const Icon(Iconsax.call, color: Color(0xFF10B981), size: 18),
+              const SizedBox(width: 10),
+              Expanded(
+                child: InkWell(
+                  onTap: client.mobile.isNotEmpty ? () => _makePhoneCall(client.mobile) : null,
                   child: AppText(
                     client.mobile.isNotEmpty ? client.mobile : 'No phone number',
                     fontSize: 13,
@@ -885,8 +1020,24 @@ class _ClientDetailsScreenState extends State<ClientDetailsScreen> {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
+              ),
+              if (client.mobile.isNotEmpty) ...[
+                IconButton(
+                  tooltip: 'Chat on WhatsApp',
+                  icon: const Icon(Icons.chat_bubble_outline_rounded, color: Color(0xFF16A34A), size: 18),
+                  onPressed: () => _openWhatsApp(client.mobile, name: client.name),
+                  constraints: const BoxConstraints(),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                ),
+                IconButton(
+                  tooltip: 'Call Phone',
+                  icon: const Icon(Iconsax.call, color: Color(0xFF10B981), size: 18),
+                  onPressed: () => _makePhoneCall(client.mobile),
+                  constraints: const BoxConstraints(),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                ),
               ],
-            ),
+            ],
           ),
           const SizedBox(height: 10),
           // Email
@@ -989,10 +1140,17 @@ class _ClientDetailsScreenState extends State<ClientDetailsScreen> {
                   ),
                 ),
                 IconButton(
+                  tooltip: 'Call',
                   icon: const Icon(Iconsax.call, color: AppColors.primaryColor, size: 18),
                   onPressed: () => _makePhoneCall(contact.mobile),
                 ),
                 IconButton(
+                  tooltip: 'WhatsApp',
+                  icon: const Icon(Icons.chat_bubble_outline_rounded, color: Color(0xFF16A34A), size: 18),
+                  onPressed: () => _openWhatsApp(contact.mobile, name: contact.name),
+                ),
+                IconButton(
+                  tooltip: 'Email',
                   icon: const Icon(Iconsax.message, color: AppColors.indigo500, size: 18),
                   onPressed: () => _sendEmail(contact.email),
                 ),
