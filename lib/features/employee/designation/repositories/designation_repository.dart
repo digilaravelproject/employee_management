@@ -20,7 +20,7 @@ class DesignationRepository {
       
       return DesignationResponseModel(
         status: false,
-        message: response.message ?? 'Unknown error occurred',
+        message: response.message.isNotEmpty ? response.message : 'Unknown error occurred',
       );
     } catch (e) {
       Logger.e('DesignationRepository => Failed to create designation: $e');
@@ -41,7 +41,7 @@ class DesignationRepository {
       
       return DesignationResponseModel(
         status: false,
-        message: response.message ?? 'Unknown error occurred',
+        message: response.message.isNotEmpty ? response.message : 'Unknown error occurred',
       );
     } catch (e) {
       Logger.e('DesignationRepository => Failed to update designation: $e');
@@ -62,7 +62,7 @@ class DesignationRepository {
       
       return DesignationResponseModel(
         status: false,
-        message: response.message ?? 'Unknown error occurred',
+        message: response.message.isNotEmpty ? response.message : 'Unknown error occurred',
       );
     } catch (e) {
       Logger.e('DesignationRepository => Failed to delete designation: $e');
@@ -83,7 +83,7 @@ class DesignationRepository {
       
       return DesignationResponseModel(
         status: false,
-        message: response.message ?? 'Unknown error occurred',
+        message: response.message.isNotEmpty ? response.message : 'Unknown error occurred',
       );
     } catch (e) {
       Logger.e('DesignationRepository => Failed to remove employee: $e');
@@ -104,7 +104,7 @@ class DesignationRepository {
       
       return DesignationListResponseModel(
         status: false,
-        message: response.message ?? 'Unknown error occurred',
+        message: response.message.isNotEmpty ? response.message : 'Unknown error occurred',
         total: 0,
         data: [],
       );
@@ -129,7 +129,7 @@ class DesignationRepository {
       
       return DesignationResponseModel(
         status: false,
-        message: response.message ?? 'Unknown error occurred',
+        message: response.message.isNotEmpty ? response.message : 'Unknown error occurred',
       );
     } catch (e) {
       Logger.e('DesignationRepository => Failed to get designation details: $e');

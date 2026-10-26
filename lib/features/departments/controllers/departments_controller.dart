@@ -17,18 +17,20 @@ class DepartmentsController extends GetxController {
 
   DepartmentsController({this.repository});
 
-  // Backward compatible allEmployees list (used by external widgets like AudiencePicker)
-  final List<AppUser> allEmployees = const [
-    AppUser(name: 'John Smith', email: 'john.smith@example.com', avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150'),
-    AppUser(name: 'Sarah Johnson', email: 'sarah.johnson@example.com', avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150'),
-    AppUser(name: 'Michael Brown', email: 'michael.brown@example.com', avatarUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150'),
-    AppUser(name: 'David Wilson', email: 'david.wilson@example.com', avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150'),
-    AppUser(name: 'Emily Davis', email: 'emily.davis@example.com', avatarUrl: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150'),
-    AppUser(name: 'James Anderson', email: 'james.anderson@example.com', avatarUrl: 'https://images.unsplash.com/photo-1463453091185-61582044d556?w=150'),
-    AppUser(name: 'Alex Johnson', email: 'alex.johnson@example.com', avatarUrl: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150'),
-    AppUser(name: 'Lisa Anderson', email: 'lisa.anderson@example.com', avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'),
-    AppUser(name: 'Robert Taylor', email: 'robert.taylor@example.com', avatarUrl: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150'),
-  ];
+  // Dynamic allEmployees list (used by external widgets like AudiencePicker)
+  List<AppUser> get allEmployees {
+    if (Get.isRegistered<EmployeeController>()) {
+      final empCtrl = Get.find<EmployeeController>();
+      if (empCtrl.employees.isNotEmpty) {
+        return empCtrl.employees.map((e) => AppUser(
+          name: e.name,
+          email: e.email,
+          avatarUrl: e.profilePic ?? '',
+        )).toList();
+      }
+    }
+    return [];
+  }
 
   // Reactive list of departments
   final RxList<Department> departments = <Department>[].obs;
@@ -92,8 +94,6 @@ class DepartmentsController extends GetxController {
 
     if (repository != null) {
       fetchDepartments();
-    } else {
-      _initializeDummyDepartments();
     }
   }
 
@@ -581,16 +581,5 @@ class DepartmentsController extends GetxController {
     return const Color(0xFF8B5CF6);
   }
 
-  // ── Dummy data ───────────────────────────────────────────────────────────
 
-  void _initializeDummyDepartments() {
-    departments.addAll([
-      Department(id: '1', name: 'Engineering', description: 'Handles all engineering and product development activities.', head: null, employees: const [], teamsCount: 5, icon: Iconsax.code, themeColor: AppColors.primaryColor),
-      Department(id: '2', name: 'Human Resources', description: 'Manages employee recruitment, onboarding, benefits, and workplace culture.', head: null, employees: const [], teamsCount: 3, icon: Iconsax.user_octagon, themeColor: const Color(0xFFEC4899)),
-      Department(id: '3', name: 'Marketing', description: 'Promotes brand growth, social media presence, and strategic campaigns.', head: null, employees: const [], teamsCount: 4, icon: Iconsax.volume_high, themeColor: const Color(0xFF10B981)),
-      Department(id: '4', name: 'Finance', description: 'Oversees payroll, budgets, financial audits, and investment metrics.', head: null, employees: const [], teamsCount: 2, icon: Iconsax.empty_wallet, themeColor: const Color(0xFFF59E0B)),
-      Department(id: '5', name: 'Sales', description: 'Generates client deals, client management, and revenue expansion.', head: null, employees: const [], teamsCount: 4, icon: Iconsax.graph, themeColor: AppColors.primaryColor),
-      Department(id: '6', name: 'IT Support', description: 'Administers server operations, security settings, and technical support.', head: null, employees: const [], teamsCount: 2, icon: Iconsax.monitor, themeColor: const Color(0xFF06B6D4)),
-    ]);
-  }
 }

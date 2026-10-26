@@ -243,7 +243,9 @@ class AddHolidayScreen extends StatelessWidget {
                     ),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<String>(
-                        value: controller.selectedLocation.value,
+                        value: controller.locations.contains(controller.selectedLocation.value)
+                            ? controller.selectedLocation.value
+                            : (controller.locations.isNotEmpty ? controller.locations.first : null),
                         icon: const Icon(Iconsax.arrow_down_1,
                             size: 18, color: AppColors.textColorSecondary),
                         isExpanded: true,

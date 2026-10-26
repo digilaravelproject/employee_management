@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:dgm360/core/theme/app_colors.dart';
 import 'package:get/get.dart';
+import '../../employee/management/controllers/employee_controller.dart';
 import '../../role_permissions/models/role_permission_models.dart';
 import '../models/lead_model.dart';
+import 'admin_lead_sources_controller.dart';
+import 'admin_lead_statuses_controller.dart';
 
 class LeadsController extends GetxController {
   // Main reactive leads state
@@ -22,11 +25,48 @@ class LeadsController extends GetxController {
   final searchQuery = ''.obs;
   final selectedFilter = 'All'.obs; // All, New, Contacted, Converted
 
-  // Dropdown option lists
-  final List<String> leadSources = ['Website', 'Google Ads', 'Referral', 'Facebook Ads'];
-  final List<String> leadStatuses = ['New', 'Contacted', 'Converted'];
+  // Dynamic dropdown option lists
+  List<String> get leadSources {
+    if (Get.isRegistered<AdminLeadSourcesController>()) {
+      final list = Get.find<AdminLeadSourcesController>()
+          .leadSources
+          .map((s) => s.name)
+          .where((n) => n.isNotEmpty)
+          .toList();
+      if (list.isNotEmpty) return list;
+    }
+    return [];
+  }
 
-  final List<AppUser> salesReps = [];
+  List<String> get leadStatuses {
+    if (Get.isRegistered<AdminLeadStatusesController>()) {
+      final list = Get.find<AdminLeadStatusesController>()
+          .leadStatuses
+          .map((s) => s.name)
+          .where((n) => n.isNotEmpty)
+          .toList();
+      if (list.isNotEmpty) return list;
+    }
+    return [];
+  }
+
+  List<AppUser> get salesReps {
+    if (Get.isRegistered<EmployeeController>()) {
+      final empCtrl = Get.find<EmployeeController>();
+      if (empCtrl.employees.isNotEmpty) {
+        return empCtrl.employees
+            .where((e) => e.name.isNotEmpty)
+            .map((e) => AppUser(
+                  id: int.tryParse(e.id),
+                  name: e.name,
+                  email: e.email,
+                  avatarUrl: e.profilePic ?? '',
+                ))
+            .toList();
+      }
+    }
+    return [];
+  }
 
   // Text Editing Controllers for Add / Edit Screen
   late TextEditingController nameController;

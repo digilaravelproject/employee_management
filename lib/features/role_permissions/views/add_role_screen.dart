@@ -16,53 +16,24 @@ class AddRoleScreen extends StatefulWidget {
 }
 
 class _AddRoleScreenState extends State<AddRoleScreen> {
-  // Department choices
-  final List<String> _fallbackDepartments = [
-    'Management',
-    'Human Resources',
-    'Engineering',
-    'Sales & Marketing',
-    'Operations',
-    'Accounts & Finance',
-    'Customer Support',
-    'General',
-  ];
-
-  // Designation choices
-  final List<String> _fallbackDesignations = [
-    'Admin',
-    'HR Manager',
-    'Project Manager',
-    'Team Lead',
-    'Senior Flutter Developer',
-    'UI/UX Designer',
-    'PHP Developer',
-    'Sales Executive',
-    'Accountant',
-    'Intern',
-    'Staff',
-  ];
-
   @override
   Widget build(BuildContext context) {
     final controller = Get.find<RolePermissionsController>();
 
-    // Try to get dynamic departments and designations if available
-    List<String> departmentOptions = _fallbackDepartments;
+    // Get dynamic departments and designations from controllers
+    List<String> departmentOptions = [];
     if (Get.isRegistered<DepartmentsController>()) {
       final deptCtrl = Get.find<DepartmentsController>();
       if (deptCtrl.departments.isNotEmpty) {
-        final dynamicNames = deptCtrl.departments.map((d) => d.name).toList();
-        departmentOptions = {...departmentOptions, ...dynamicNames}.toList();
+        departmentOptions = deptCtrl.departments.map((d) => d.name).where((n) => n.isNotEmpty).toList();
       }
     }
 
-    List<String> designationOptions = _fallbackDesignations;
+    List<String> designationOptions = [];
     if (Get.isRegistered<DesignationController>()) {
       final desigCtrl = Get.find<DesignationController>();
       if (desigCtrl.designations.isNotEmpty) {
-        final dynamicNames = desigCtrl.designations.map((d) => d.name).toList();
-        designationOptions = {...designationOptions, ...dynamicNames}.toList();
+        designationOptions = desigCtrl.designations.map((d) => d.name).where((n) => n.isNotEmpty).toList();
       }
     }
 

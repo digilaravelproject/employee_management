@@ -14,43 +14,36 @@ class FollowupDashboardScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Instantiate or find controller
-    final controller = Get.put(FollowupController());
+    Get.put(FollowupController());
 
-    return Obx(() {
-      final role = controller.selectedRole.value;
-
-      return Scaffold(
-        backgroundColor: AppColors.scaffoldBackgroundColor,
-        appBar: AppBar(
-          backgroundColor: Colors.white,
-          elevation: 0,
-          leading: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Container(
-              decoration: BoxDecoration(
-                color: AppColors.slate100,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: IconButton(
-                icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textColorPrimary, size: 18),
-                onPressed: () => Get.back(),
-              ),
+    return Scaffold(
+      backgroundColor: AppColors.scaffoldBackgroundColor,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Container(
+            decoration: BoxDecoration(
+              color: AppColors.slate100,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textColorPrimary, size: 18),
+              onPressed: () => Get.back(),
             ),
           ),
-          title: const AppText('Followups', fontSize: 16, fontWeight: FontWeight.bold),
-          centerTitle: true,
-          actions: const [
-            Icon(Iconsax.notification, color: AppColors.textColorPrimary),
-            SizedBox(width: 16),
-          ],
         ),
-        body: isEmployeeOnly 
-            ? const EmployeeDashboardView() 
-            : const AdminDashboardView(),
-      );
-    });
+        title: const AppText('Followups', fontSize: 16, fontWeight: FontWeight.bold),
+        centerTitle: true,
+        actions: const [
+          Icon(Iconsax.notification, color: AppColors.textColorPrimary),
+          SizedBox(width: 16),
+        ],
+      ),
+      body: isEmployeeOnly 
+          ? const EmployeeDashboardView() 
+          : const AdminDashboardView(),
+    );
   }
 }
-
-
-

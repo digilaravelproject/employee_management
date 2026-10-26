@@ -5,6 +5,8 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_text.dart';
 import '../bindings/admin_leads_hub_binding.dart';
 import '../controllers/admin_leads_hub_controller.dart';
+import '../controllers/admin_lead_sources_controller.dart';
+import '../controllers/admin_lead_statuses_controller.dart';
 import '../models/admin_leads_request_model.dart';
 import '../models/admin_leads_response_model.dart';
 import '../models/sales_employee_model.dart';
@@ -49,29 +51,42 @@ class _SalesExecutiveCreateLeadScreenState extends State<SalesExecutiveCreateLea
   bool _isLoadingEmployees = false;
   bool _isSubmitting = false;
 
-  // Referral is strictly the FIRST option
-  final List<String> _sourceOptions = [
-    'Referral',
-    'Website',
-    'Google Ads',
-    'Facebook Ads',
-    'JustDial',
-    'Direct Inquiry',
-    'Walk-In',
-  ];
+  List<String> get _sourceOptions {
+    if (Get.isRegistered<AdminLeadSourcesController>()) {
+      final list = Get.find<AdminLeadSourcesController>()
+          .leadSources
+          .map((s) => s.name)
+          .where((n) => n.isNotEmpty)
+          .toList();
+      if (list.isNotEmpty) return list;
+    }
+    return [];
+  }
 
-  final List<String> _statusOptions = [
-    'New',
-    'Interested',
-    'Follow-up Scheduled',
-    'Converted',
-    'Closed / Lost',
-  ];
+  List<String> get _statusOptions {
+    if (Get.isRegistered<AdminLeadStatusesController>()) {
+      final list = Get.find<AdminLeadStatusesController>()
+          .leadStatuses
+          .map((s) => s.name)
+          .where((n) => n.isNotEmpty)
+          .toList();
+      if (list.isNotEmpty) return list;
+    }
+    return [];
+  }
 
   @override
   void initState() {
     super.initState();
     AdminLeadsHubBinding().dependencies();
+    final sourcesCtrl = AdminLeadSourcesController.to;
+    if (sourcesCtrl.leadSources.isEmpty) {
+      sourcesCtrl.fetchLeadSources();
+    }
+    final statusesCtrl = AdminLeadStatusesController.to;
+    if (statusesCtrl.leadStatuses.isEmpty) {
+      statusesCtrl.fetchLeadStatuses();
+    }
     _loadSalesEmployees();
   }
 
@@ -540,31 +555,35 @@ class _SalesExecutiveCreateLeadScreenState extends State<SalesExecutiveCreateLea
       children: [
         AppText('Lead Source *', fontSize: 12, fontWeight: FontWeight.bold, color: _labelColor),
         const SizedBox(height: 6),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: _borderColor),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: _selectedSource,
-              isExpanded: true,
-              hint: AppText('Select Lead Source', fontSize: 13, color: _hintColor),
-              icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF64748B)),
-              items: _sourceOptions.map((source) {
-                return DropdownMenuItem<String>(
-                  value: source,
-                  child: AppText(source, fontSize: 13, fontWeight: FontWeight.w500),
-                );
-              }).toList(),
-              onChanged: (val) {
-                if (val != null) setState(() => _selectedSource = val);
-              },
+        Obx(() {
+          final sources = _sourceOptions;
+          final validSource = sources.contains(_selectedSource) ? _selectedSource : null;
+          return Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: _borderColor),
             ),
-          ),
-        ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: validSource,
+                isExpanded: true,
+                hint: AppText('Select Lead Source', fontSize: 13, color: _hintColor),
+                icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF64748B)),
+                items: sources.map((source) {
+                  return DropdownMenuItem<String>(
+                    value: source,
+                    child: AppText(source, fontSize: 13, fontWeight: FontWeight.w500),
+                  );
+                }).toList(),
+                onChanged: (val) {
+                  if (val != null) setState(() => _selectedSource = val);
+                },
+              ),
+            ),
+          );
+        }),
       ],
     );
   }
@@ -575,31 +594,35 @@ class _SalesExecutiveCreateLeadScreenState extends State<SalesExecutiveCreateLea
       children: [
         AppText('Lead Status *', fontSize: 12, fontWeight: FontWeight.bold, color: _labelColor),
         const SizedBox(height: 6),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: _borderColor),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: _selectedStatus,
-              isExpanded: true,
-              hint: AppText('Select Lead Status', fontSize: 13, color: _hintColor),
-              icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF64748B)),
-              items: _statusOptions.map((st) {
-                return DropdownMenuItem<String>(
-                  value: st,
-                  child: AppText(st, fontSize: 13, fontWeight: FontWeight.w500),
-                );
-              }).toList(),
-              onChanged: (val) {
-                if (val != null) setState(() => _selectedStatus = val);
-              },
+        Obx(() {
+          final statuses = _statusOptions;
+          final validStatus = statuses.contains(_selectedStatus) ? _selectedStatus : null;
+          return Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: _borderColor),
             ),
-          ),
-        ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: validStatus,
+                isExpanded: true,
+                hint: AppText('Select Lead Status', fontSize: 13, color: _hintColor),
+                icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF64748B)),
+                items: statuses.map((st) {
+                  return DropdownMenuItem<String>(
+                    value: st,
+                    child: AppText(st, fontSize: 13, fontWeight: FontWeight.w500),
+                  );
+                }).toList(),
+                onChanged: (val) {
+                  if (val != null) setState(() => _selectedStatus = val);
+                },
+              ),
+            ),
+          );
+        }),
       ],
     );
   }

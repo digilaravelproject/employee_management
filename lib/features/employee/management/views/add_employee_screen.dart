@@ -74,12 +74,12 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
   // ----------------------------------------------------
   String selectedWorkMode = 'Office';
   String selectedEmployeeType = 'Full-time';
-  String selectedDepartment = 'Engineering';
-  String selectedDesignation = 'Senior Flutter Developer';
-  String selectedRole = 'Employee';
-  int selectedRoleId = 9;
-  String selectedTeam = 'Team Alpha';
-  String selectedShift = 'Morning Shift';
+  String selectedDepartment = '';
+  String selectedDesignation = '';
+  String selectedRole = '';
+  int selectedRoleId = 0;
+  String selectedTeam = '';
+  String selectedShift = '';
   String selectedReportingManager = '';
   DateTime selectedJoiningDate = DateTime.now();
   String selectedEmploymentStatus = 'Active';
@@ -134,6 +134,46 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
   final FocusNode ifscCodeFocusNode = FocusNode();
   final FocusNode branchNameFocusNode = FocusNode();
   final FocusNode skillInputFocusNode = FocusNode();
+
+  // Field GlobalKeys for auto-scrolling to exact error field
+  final GlobalKey _nameKey = GlobalKey();
+  final GlobalKey _empIdKey = GlobalKey();
+  final GlobalKey _genderKey = GlobalKey();
+  final GlobalKey _maritalStatusKey = GlobalKey();
+  final GlobalKey _bloodGroupKey = GlobalKey();
+
+  final GlobalKey _mobileKey = GlobalKey();
+  final GlobalKey _altMobileKey = GlobalKey();
+  final GlobalKey _emailKey = GlobalKey();
+  final GlobalKey _emergencyContactKey = GlobalKey();
+  final GlobalKey _addressKey = GlobalKey();
+  final GlobalKey _cityKey = GlobalKey();
+  final GlobalKey _pincodeKey = GlobalKey();
+  final GlobalKey _stateKey = GlobalKey();
+  final GlobalKey _countryKey = GlobalKey();
+
+  final GlobalKey _workModeKey = GlobalKey();
+  final GlobalKey _employeeTypeKey = GlobalKey();
+  final GlobalKey _departmentKey = GlobalKey();
+  final GlobalKey _designationKey = GlobalKey();
+  final GlobalKey _roleKey = GlobalKey();
+  final GlobalKey _shiftKey = GlobalKey();
+  final GlobalKey _employmentStatusKey = GlobalKey();
+  final GlobalKey _probationPeriodKey = GlobalKey();
+  final GlobalKey _noticePeriodKey = GlobalKey();
+
+  final GlobalKey _salaryTypeKey = GlobalKey();
+  final GlobalKey _salaryKey = GlobalKey();
+  final GlobalKey _targetAmountKey = GlobalKey();
+  final GlobalKey _targetPeriodKey = GlobalKey();
+  final GlobalKey _incentivePercentKey = GlobalKey();
+
+  final GlobalKey _accountHolderNameKey = GlobalKey();
+  final GlobalKey _bankNameKey = GlobalKey();
+  final GlobalKey _accountNumberKey = GlobalKey();
+  final GlobalKey _ifscCodeKey = GlobalKey();
+  final GlobalKey _branchNameKey = GlobalKey();
+  final GlobalKey _skillsKey = GlobalKey();
 
   @override
   void initState() {
@@ -202,13 +242,11 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
     // Step 3 Employment
     selectedWorkMode = e != null && e.workMode.isNotEmpty ? e.workMode : 'Office';
     selectedEmployeeType = e != null && e.employeeType.isNotEmpty ? e.employeeType : 'Full-time';
-    selectedDepartment = e != null && e.department.isNotEmpty ? e.department : (controller.departmentsList.length > 1 ? controller.departmentsList[1] : 'Engineering');
-    selectedDesignation = e != null && e.designation.isNotEmpty ? e.designation : (controller.designations.isNotEmpty ? controller.designations[0] : 'Senior Flutter Developer');
-    selectedTeam = e != null && e.team.isNotEmpty ? e.team : (controller.teamsList.length > 1 ? controller.teamsList[1] : 'Team Alpha');
-    selectedShift = e != null && e.shift.isNotEmpty ? e.shift : (controller.shiftsList.length > 1 ? controller.shiftsList[1] : 'Morning Shift');
-    selectedReportingManager = e != null && e.reportingManager.isNotEmpty
-        ? e.reportingManager
-        : (controller.reportingManagersList.isNotEmpty ? controller.reportingManagersList.first : '');
+    selectedDepartment = e != null && e.department.isNotEmpty ? e.department : '';
+    selectedDesignation = e != null && e.designation.isNotEmpty ? e.designation : '';
+    selectedTeam = e != null && e.team.isNotEmpty ? e.team : '';
+    selectedShift = e != null && e.shift.isNotEmpty ? e.shift : '';
+    selectedReportingManager = e != null && e.reportingManager.isNotEmpty ? e.reportingManager : '';
     selectedEmploymentStatus = e != null && e.employmentStatus.isNotEmpty ? e.employmentStatus : 'Active';
     selectedProbationPeriod = e != null && e.probationPeriod.isNotEmpty ? e.probationPeriod : '3 Months';
     selectedNoticePeriod = e != null && e.noticePeriod.isNotEmpty ? e.noticePeriod : '30 Days';
@@ -298,39 +336,56 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
     super.dispose();
   }
 
+  void _scrollToAndFocusField({
+    required int step,
+    GlobalKey? fieldKey,
+    FocusNode? focusNode,
+    VoidCallback? extraAction,
+  }) {
+    final bool stepChanged = _currentStep != step;
+    if (stepChanged) {
+      _goToStep(step, validateBefore: false);
+    }
+    Future.delayed(Duration(milliseconds: stepChanged ? 350 : 60), () {
+      if (!mounted) return;
+      if (fieldKey?.currentContext != null) {
+        Scrollable.ensureVisible(
+          fieldKey!.currentContext!,
+          duration: const Duration(milliseconds: 350),
+          curve: Curves.easeInOut,
+          alignment: 0.15,
+        );
+      }
+      focusNode?.requestFocus();
+      extraAction?.call();
+    });
+  }
+
   bool _validateStep(int step, {bool autoNavigate = false}) {
     if (step == 0) {
       if (nameController.text.trim().isEmpty) {
         CustomSnackbar.showError('Please enter employee full name');
-        if (autoNavigate || _currentStep != 0) {
-          _goToStep(0, validateBefore: false, focusNodeToRequest: nameFocusNode);
-        } else {
-          nameFocusNode.requestFocus();
-        }
+        _scrollToAndFocusField(step: 0, fieldKey: _nameKey, focusNode: nameFocusNode);
         return false;
       }
       if (empIdController.text.trim().isEmpty) {
         CustomSnackbar.showError('Please enter employee ID');
-        if (autoNavigate || _currentStep != 0) {
-          _goToStep(0, validateBefore: false, focusNodeToRequest: empIdFocusNode);
-        } else {
-          empIdFocusNode.requestFocus();
-        }
+        _scrollToAndFocusField(step: 0, fieldKey: _empIdKey, focusNode: empIdFocusNode);
         return false;
       }
       if (selectedGender.trim().isEmpty) {
         CustomSnackbar.showError('Please select gender');
-        if (autoNavigate || _currentStep != 0) _goToStep(0, validateBefore: false);
+        _scrollToAndFocusField(step: 0, fieldKey: _genderKey);
         return false;
       }
       if (selectedMaritalStatus.trim().isEmpty) {
         CustomSnackbar.showError('Please select marital status');
-        if (autoNavigate || _currentStep != 0) _goToStep(0, validateBefore: false);
+        _scrollToAndFocusField(step: 0, fieldKey: _maritalStatusKey);
         return false;
       }
       if (selectedBloodGroup.trim().isEmpty) {
         CustomSnackbar.showError('Please select blood group');
-        if (autoNavigate || _currentStep != 0) _goToStep(0, validateBefore: false);
+        _scrollToAndFocusField(step: 0, fieldKey: _bloodGroupKey);
         return false;
       }
       // Auto-fill account holder name with employee name if empty
@@ -342,266 +397,176 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
       final mobile = mobileController.text.trim();
       if (mobile.isEmpty) {
         CustomSnackbar.showError('Please enter primary mobile number');
-        if (autoNavigate || _currentStep != 1) {
-          _goToStep(1, validateBefore: false, focusNodeToRequest: mobileFocusNode);
-        } else {
-          mobileFocusNode.requestFocus();
-        }
+        _scrollToAndFocusField(step: 1, fieldKey: _mobileKey, focusNode: mobileFocusNode);
         return false;
       }
       if (!AppValidators.isValidMobile(mobile)) {
         CustomSnackbar.showError('Please enter a valid 10-digit primary mobile number');
-        if (autoNavigate || _currentStep != 1) {
-          _goToStep(1, validateBefore: false, focusNodeToRequest: mobileFocusNode);
-        } else {
-          mobileFocusNode.requestFocus();
-        }
+        _scrollToAndFocusField(step: 1, fieldKey: _mobileKey, focusNode: mobileFocusNode);
         return false;
       }
 
       final altMobile = altMobileController.text.trim();
       if (altMobile.isEmpty) {
         CustomSnackbar.showError('Please enter alternate mobile number');
-        if (autoNavigate || _currentStep != 1) {
-          _goToStep(1, validateBefore: false, focusNodeToRequest: altMobileFocusNode);
-        } else {
-          altMobileFocusNode.requestFocus();
-        }
+        _scrollToAndFocusField(step: 1, fieldKey: _altMobileKey, focusNode: altMobileFocusNode);
         return false;
       }
       if (!AppValidators.isValidMobile(altMobile)) {
         CustomSnackbar.showError('Please enter a valid 10-digit alternate mobile number');
-        if (autoNavigate || _currentStep != 1) {
-          _goToStep(1, validateBefore: false, focusNodeToRequest: altMobileFocusNode);
-        } else {
-          altMobileFocusNode.requestFocus();
-        }
+        _scrollToAndFocusField(step: 1, fieldKey: _altMobileKey, focusNode: altMobileFocusNode);
         return false;
       }
 
       final email = emailController.text.trim();
       if (email.isEmpty) {
         CustomSnackbar.showError('Please enter email address');
-        if (autoNavigate || _currentStep != 1) {
-          _goToStep(1, validateBefore: false, focusNodeToRequest: emailFocusNode);
-        } else {
-          emailFocusNode.requestFocus();
-        }
+        _scrollToAndFocusField(step: 1, fieldKey: _emailKey, focusNode: emailFocusNode);
         return false;
       }
       if (!AppValidators.isValidEmail(email)) {
         CustomSnackbar.showError('Please enter a valid email address');
-        if (autoNavigate || _currentStep != 1) {
-          _goToStep(1, validateBefore: false, focusNodeToRequest: emailFocusNode);
-        } else {
-          emailFocusNode.requestFocus();
-        }
+        _scrollToAndFocusField(step: 1, fieldKey: _emailKey, focusNode: emailFocusNode);
         return false;
       }
 
       final emergencyContact = emergencyContactController.text.trim();
       if (emergencyContact.isEmpty) {
         CustomSnackbar.showError('Please enter emergency contact phone number');
-        if (autoNavigate || _currentStep != 1) {
-          _goToStep(1, validateBefore: false, focusNodeToRequest: emergencyContactFocusNode);
-        } else {
-          emergencyContactFocusNode.requestFocus();
-        }
+        _scrollToAndFocusField(step: 1, fieldKey: _emergencyContactKey, focusNode: emergencyContactFocusNode);
         return false;
       }
       if (!AppValidators.isValidMobile(emergencyContact)) {
         CustomSnackbar.showError('Please enter a valid 10-digit emergency contact phone number');
-        if (autoNavigate || _currentStep != 1) {
-          _goToStep(1, validateBefore: false, focusNodeToRequest: emergencyContactFocusNode);
-        } else {
-          emergencyContactFocusNode.requestFocus();
-        }
+        _scrollToAndFocusField(step: 1, fieldKey: _emergencyContactKey, focusNode: emergencyContactFocusNode);
         return false;
       }
 
       if (addressController.text.trim().isEmpty) {
         CustomSnackbar.showError('Please enter street address');
-        if (autoNavigate || _currentStep != 1) {
-          _goToStep(1, validateBefore: false, focusNodeToRequest: addressFocusNode);
-        } else {
-          addressFocusNode.requestFocus();
-        }
+        _scrollToAndFocusField(step: 1, fieldKey: _addressKey, focusNode: addressFocusNode);
         return false;
       }
       if (cityController.text.trim().isEmpty) {
         CustomSnackbar.showError('Please enter city');
-        if (autoNavigate || _currentStep != 1) {
-          _goToStep(1, validateBefore: false, focusNodeToRequest: cityFocusNode);
-        } else {
-          cityFocusNode.requestFocus();
-        }
+        _scrollToAndFocusField(step: 1, fieldKey: _cityKey, focusNode: cityFocusNode);
         return false;
       }
       final pincode = pincodeController.text.trim();
       if (pincode.isEmpty) {
         CustomSnackbar.showError('Please enter pincode');
-        if (autoNavigate || _currentStep != 1) {
-          _goToStep(1, validateBefore: false, focusNodeToRequest: pincodeFocusNode);
-        } else {
-          pincodeFocusNode.requestFocus();
-        }
+        _scrollToAndFocusField(step: 1, fieldKey: _pincodeKey, focusNode: pincodeFocusNode);
         return false;
       }
       if (!AppValidators.isValidPincode(pincode)) {
         CustomSnackbar.showError('Please enter a valid 6-digit pincode');
-        if (autoNavigate || _currentStep != 1) {
-          _goToStep(1, validateBefore: false, focusNodeToRequest: pincodeFocusNode);
-        } else {
-          pincodeFocusNode.requestFocus();
-        }
+        _scrollToAndFocusField(step: 1, fieldKey: _pincodeKey, focusNode: pincodeFocusNode);
         return false;
       }
       if (stateController.text.trim().isEmpty) {
         CustomSnackbar.showError('Please enter state');
-        if (autoNavigate || _currentStep != 1) {
-          _goToStep(1, validateBefore: false, focusNodeToRequest: stateFocusNode);
-        } else {
-          stateFocusNode.requestFocus();
-        }
+        _scrollToAndFocusField(step: 1, fieldKey: _stateKey, focusNode: stateFocusNode);
         return false;
       }
       if (countryController.text.trim().isEmpty) {
         CustomSnackbar.showError('Please enter country');
-        if (autoNavigate || _currentStep != 1) {
-          _goToStep(1, validateBefore: false, focusNodeToRequest: countryFocusNode);
-        } else {
-          countryFocusNode.requestFocus();
-        }
+        _scrollToAndFocusField(step: 1, fieldKey: _countryKey, focusNode: countryFocusNode);
         return false;
       }
       return true;
     } else if (step == 2) {
       if (selectedWorkMode.trim().isEmpty) {
         CustomSnackbar.showError('Please select work mode');
-        if (autoNavigate || _currentStep != 2) _goToStep(2, validateBefore: false);
+        _scrollToAndFocusField(step: 2, fieldKey: _workModeKey);
         return false;
       }
       if (selectedEmployeeType.trim().isEmpty) {
         CustomSnackbar.showError('Please select employee type');
-        if (autoNavigate || _currentStep != 2) _goToStep(2, validateBefore: false);
+        _scrollToAndFocusField(step: 2, fieldKey: _employeeTypeKey);
         return false;
       }
       if (selectedDepartment.trim().isEmpty) {
         CustomSnackbar.showError('Please select department');
-        if (autoNavigate || _currentStep != 2) _goToStep(2, validateBefore: false);
+        _scrollToAndFocusField(step: 2, fieldKey: _departmentKey);
         return false;
       }
       if (selectedDesignation.trim().isEmpty) {
         CustomSnackbar.showError('Please select designation');
-        if (autoNavigate || _currentStep != 2) _goToStep(2, validateBefore: false);
+        _scrollToAndFocusField(step: 2, fieldKey: _designationKey);
         return false;
       }
       if (selectedRole.trim().isEmpty) {
         CustomSnackbar.showError('Please select role');
-        if (autoNavigate || _currentStep != 2) _goToStep(2, validateBefore: false);
-        return false;
-      }
-      if (selectedTeam.trim().isEmpty) {
-        CustomSnackbar.showError('Please select team / unit');
-        if (autoNavigate || _currentStep != 2) _goToStep(2, validateBefore: false);
+        _scrollToAndFocusField(step: 2, fieldKey: _roleKey);
         return false;
       }
       if (selectedShift.trim().isEmpty) {
         CustomSnackbar.showError('Please select assigned shift');
-        if (autoNavigate || _currentStep != 2) _goToStep(2, validateBefore: false);
-        return false;
-      }
-      if (selectedReportingManager.trim().isEmpty || selectedReportingManager.trim().toLowerCase() == 'none') {
-        CustomSnackbar.showError('Please select reporting manager');
-        if (autoNavigate || _currentStep != 2) _goToStep(2, validateBefore: false);
+        _scrollToAndFocusField(step: 2, fieldKey: _shiftKey);
         return false;
       }
       if (selectedEmploymentStatus.trim().isEmpty) {
         CustomSnackbar.showError('Please select employment status');
-        if (autoNavigate || _currentStep != 2) _goToStep(2, validateBefore: false);
+        _scrollToAndFocusField(step: 2, fieldKey: _employmentStatusKey);
         return false;
       }
       if (selectedProbationPeriod.trim().isEmpty) {
         CustomSnackbar.showError('Please select probation period');
-        if (autoNavigate || _currentStep != 2) _goToStep(2, validateBefore: false);
+        _scrollToAndFocusField(step: 2, fieldKey: _probationPeriodKey);
         return false;
       }
       if (selectedNoticePeriod.trim().isEmpty) {
         CustomSnackbar.showError('Please select notice period');
-        if (autoNavigate || _currentStep != 2) _goToStep(2, validateBefore: false);
+        _scrollToAndFocusField(step: 2, fieldKey: _noticePeriodKey);
         return false;
       }
       return true;
     } else if (step == 3) {
       if (selectedSalaryType.trim().isEmpty) {
         CustomSnackbar.showError('Please select salary type');
-        if (autoNavigate || _currentStep != 3) _goToStep(3, validateBefore: false);
+        _scrollToAndFocusField(step: 3, fieldKey: _salaryTypeKey);
         return false;
       }
       final salStr = salaryController.text.trim();
       if (salStr.isEmpty) {
         CustomSnackbar.showError('Please enter salary');
-        if (autoNavigate || _currentStep != 3) {
-          _goToStep(3, validateBefore: false, focusNodeToRequest: salaryFocusNode);
-        } else {
-          salaryFocusNode.requestFocus();
-        }
+        _scrollToAndFocusField(step: 3, fieldKey: _salaryKey, focusNode: salaryFocusNode);
         return false;
       }
       final salVal = double.tryParse(salStr);
       if (salVal == null || salVal <= 0) {
         CustomSnackbar.showError('Please enter a valid base salary amount');
-        if (autoNavigate || _currentStep != 3) {
-          _goToStep(3, validateBefore: false, focusNodeToRequest: salaryFocusNode);
-        } else {
-          salaryFocusNode.requestFocus();
-        }
+        _scrollToAndFocusField(step: 3, fieldKey: _salaryKey, focusNode: salaryFocusNode);
         return false;
       }
       if (hasSalesTarget) {
         final targetStr = targetAmountController.text.trim();
         if (targetStr.isEmpty) {
           CustomSnackbar.showError('Please enter sales target amount');
-          if (autoNavigate || _currentStep != 3) {
-            _goToStep(3, validateBefore: false, focusNodeToRequest: targetAmountFocusNode);
-          } else {
-            targetAmountFocusNode.requestFocus();
-          }
+          _scrollToAndFocusField(step: 3, fieldKey: _targetAmountKey, focusNode: targetAmountFocusNode);
           return false;
         }
         final targetVal = double.tryParse(targetStr);
         if (targetVal == null || targetVal < 0) {
           CustomSnackbar.showError('Please enter a valid sales target amount');
-          if (autoNavigate || _currentStep != 3) {
-            _goToStep(3, validateBefore: false, focusNodeToRequest: targetAmountFocusNode);
-          } else {
-            targetAmountFocusNode.requestFocus();
-          }
+          _scrollToAndFocusField(step: 3, fieldKey: _targetAmountKey, focusNode: targetAmountFocusNode);
           return false;
         }
         if (selectedTargetPeriod.trim().isEmpty) {
           CustomSnackbar.showError('Please select target period');
-          if (autoNavigate || _currentStep != 3) _goToStep(3, validateBefore: false);
+          _scrollToAndFocusField(step: 3, fieldKey: _targetPeriodKey);
           return false;
         }
         final incStr = incentivePercentController.text.trim();
         if (incStr.isEmpty) {
           CustomSnackbar.showError('Please enter incentive commission percentage');
-          if (autoNavigate || _currentStep != 3) {
-            _goToStep(3, validateBefore: false, focusNodeToRequest: incentivePercentFocusNode);
-          } else {
-            incentivePercentFocusNode.requestFocus();
-          }
+          _scrollToAndFocusField(step: 3, fieldKey: _incentivePercentKey, focusNode: incentivePercentFocusNode);
           return false;
         }
         final incVal = double.tryParse(incStr);
         if (incVal == null || incVal < 0) {
           CustomSnackbar.showError('Please enter a valid incentive commission percentage');
-          if (autoNavigate || _currentStep != 3) {
-            _goToStep(3, validateBefore: false, focusNodeToRequest: incentivePercentFocusNode);
-          } else {
-            incentivePercentFocusNode.requestFocus();
-          }
+          _scrollToAndFocusField(step: 3, fieldKey: _incentivePercentKey, focusNode: incentivePercentFocusNode);
           return false;
         }
       }
@@ -609,76 +574,44 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
     } else if (step == 4) {
       if (accountHolderNameController.text.trim().isEmpty) {
         CustomSnackbar.showError('Please enter account holder name');
-        if (autoNavigate || _currentStep != 4) {
-          _goToStep(4, validateBefore: false, focusNodeToRequest: accountHolderNameFocusNode);
-        } else {
-          accountHolderNameFocusNode.requestFocus();
-        }
+        _scrollToAndFocusField(step: 4, fieldKey: _accountHolderNameKey, focusNode: accountHolderNameFocusNode);
         return false;
       }
       if (bankNameController.text.trim().isEmpty) {
         CustomSnackbar.showError('Please enter bank name');
-        if (autoNavigate || _currentStep != 4) {
-          _goToStep(4, validateBefore: false, focusNodeToRequest: bankNameFocusNode);
-        } else {
-          bankNameFocusNode.requestFocus();
-        }
+        _scrollToAndFocusField(step: 4, fieldKey: _bankNameKey, focusNode: bankNameFocusNode);
         return false;
       }
       final accNum = accountNumberController.text.trim();
       if (accNum.isEmpty) {
         CustomSnackbar.showError('Please enter account number');
-        if (autoNavigate || _currentStep != 4) {
-          _goToStep(4, validateBefore: false, focusNodeToRequest: accountNumberFocusNode);
-        } else {
-          accountNumberFocusNode.requestFocus();
-        }
+        _scrollToAndFocusField(step: 4, fieldKey: _accountNumberKey, focusNode: accountNumberFocusNode);
         return false;
       }
       if (accNum.length < 6 || !RegExp(r'^[0-9]+$').hasMatch(accNum)) {
         CustomSnackbar.showError('Please enter a valid bank account number');
-        if (autoNavigate || _currentStep != 4) {
-          _goToStep(4, validateBefore: false, focusNodeToRequest: accountNumberFocusNode);
-        } else {
-          accountNumberFocusNode.requestFocus();
-        }
+        _scrollToAndFocusField(step: 4, fieldKey: _accountNumberKey, focusNode: accountNumberFocusNode);
         return false;
       }
       final ifsc = ifscCodeController.text.trim().toUpperCase();
       if (ifsc.isEmpty) {
         CustomSnackbar.showError('Please enter IFSC code');
-        if (autoNavigate || _currentStep != 4) {
-          _goToStep(4, validateBefore: false, focusNodeToRequest: ifscCodeFocusNode);
-        } else {
-          ifscCodeFocusNode.requestFocus();
-        }
+        _scrollToAndFocusField(step: 4, fieldKey: _ifscCodeKey, focusNode: ifscCodeFocusNode);
         return false;
       }
       if (!AppValidators.isValidIfsc(ifsc)) {
         CustomSnackbar.showError('Please enter a valid 11-character IFSC code (e.g. HDFC0001234)');
-        if (autoNavigate || _currentStep != 4) {
-          _goToStep(4, validateBefore: false, focusNodeToRequest: ifscCodeFocusNode);
-        } else {
-          ifscCodeFocusNode.requestFocus();
-        }
+        _scrollToAndFocusField(step: 4, fieldKey: _ifscCodeKey, focusNode: ifscCodeFocusNode);
         return false;
       }
       if (branchNameController.text.trim().isEmpty) {
         CustomSnackbar.showError('Please enter branch name');
-        if (autoNavigate || _currentStep != 4) {
-          _goToStep(4, validateBefore: false, focusNodeToRequest: branchNameFocusNode);
-        } else {
-          branchNameFocusNode.requestFocus();
-        }
+        _scrollToAndFocusField(step: 4, fieldKey: _branchNameKey, focusNode: branchNameFocusNode);
         return false;
       }
       if (_skillsList.isEmpty) {
         CustomSnackbar.showError('Please add at least one professional skill');
-        if (autoNavigate || _currentStep != 4) {
-          _goToStep(4, validateBefore: false, focusNodeToRequest: skillInputFocusNode);
-        } else {
-          skillInputFocusNode.requestFocus();
-        }
+        _scrollToAndFocusField(step: 4, fieldKey: _skillsKey, focusNode: skillInputFocusNode);
         return false;
       }
       return true;
@@ -712,6 +645,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
 
   void _handleErrorAndNavigateToField(String errorMessage, Map<String, dynamic>? errors) {
     int targetStep = 0;
+    GlobalKey? targetFieldKey;
     FocusNode? targetFocusNode;
     VoidCallback? onStepReached;
 
@@ -730,6 +664,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
 
     if (matches(['employee_id', 'employee id', 'employee-id', 'empid', 'emp_id', 'emp id'])) {
       targetStep = 0;
+      targetFieldKey = _empIdKey;
       targetFocusNode = empIdFocusNode;
       onStepReached = () {
         empIdFocusNode.requestFocus();
@@ -742,85 +677,126 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
       };
     } else if (matches(['name', 'first_name', 'last_name', 'full name'])) {
       targetStep = 0;
+      targetFieldKey = _nameKey;
       targetFocusNode = nameFocusNode;
-    } else if (matches(['gender', 'date_of_birth', 'dob', 'marital', 'blood', 'avatar', 'photo'])) {
+    } else if (matches(['gender'])) {
       targetStep = 0;
+      targetFieldKey = _genderKey;
+    } else if (matches(['marital'])) {
+      targetStep = 0;
+      targetFieldKey = _maritalStatusKey;
+    } else if (matches(['blood'])) {
+      targetStep = 0;
+      targetFieldKey = _bloodGroupKey;
     } else if (matches(['alternate_mobile', 'alternate_phone', 'alternate mobile', 'alt_mobile'])) {
       targetStep = 1;
+      targetFieldKey = _altMobileKey;
       targetFocusNode = altMobileFocusNode;
     } else if (matches(['mobile', 'phone'])) {
       targetStep = 1;
+      targetFieldKey = _mobileKey;
       targetFocusNode = mobileFocusNode;
     } else if (matches(['email'])) {
       targetStep = 1;
+      targetFieldKey = _emailKey;
       targetFocusNode = emailFocusNode;
     } else if (matches(['emergency'])) {
       targetStep = 1;
+      targetFieldKey = _emergencyContactKey;
       targetFocusNode = emergencyContactFocusNode;
     } else if (matches(['postal', 'pincode', 'zip'])) {
       targetStep = 1;
+      targetFieldKey = _pincodeKey;
       targetFocusNode = pincodeFocusNode;
     } else if (matches(['city'])) {
       targetStep = 1;
+      targetFieldKey = _cityKey;
       targetFocusNode = cityFocusNode;
     } else if (matches(['state'])) {
       targetStep = 1;
+      targetFieldKey = _stateKey;
       targetFocusNode = stateFocusNode;
     } else if (matches(['country'])) {
       targetStep = 1;
+      targetFieldKey = _countryKey;
       targetFocusNode = countryFocusNode;
     } else if (matches(['address', 'street'])) {
       targetStep = 1;
+      targetFieldKey = _addressKey;
       targetFocusNode = addressFocusNode;
-    } else if (matches([
-      'work_mode', 'work mode',
-      'employee_type', 'employee type',
-      'department',
-      'designation',
-      'role',
-      'team',
-      'shift',
-      'reporting_manager', 'reporting manager', 'manager',
-      'joining', 'date_of_joining',
-      'employment_status', 'status',
-      'probation',
-      'notice',
-    ])) {
+    } else if (matches(['work_mode', 'work mode'])) {
       targetStep = 2;
+      targetFieldKey = _workModeKey;
+    } else if (matches(['employee_type', 'employee type'])) {
+      targetStep = 2;
+      targetFieldKey = _employeeTypeKey;
+    } else if (matches(['department'])) {
+      targetStep = 2;
+      targetFieldKey = _departmentKey;
+    } else if (matches(['designation'])) {
+      targetStep = 2;
+      targetFieldKey = _designationKey;
+    } else if (matches(['role'])) {
+      targetStep = 2;
+      targetFieldKey = _roleKey;
+    } else if (matches(['shift'])) {
+      targetStep = 2;
+      targetFieldKey = _shiftKey;
+    } else if (matches(['employment_status', 'status'])) {
+      targetStep = 2;
+      targetFieldKey = _employmentStatusKey;
+    } else if (matches(['probation'])) {
+      targetStep = 2;
+      targetFieldKey = _probationPeriodKey;
+    } else if (matches(['notice'])) {
+      targetStep = 2;
+      targetFieldKey = _noticePeriodKey;
+    } else if (matches(['salary_type', 'salary type'])) {
+      targetStep = 3;
+      targetFieldKey = _salaryTypeKey;
     } else if (matches(['target', 'sales_target'])) {
       targetStep = 3;
+      targetFieldKey = _targetAmountKey;
       targetFocusNode = targetAmountFocusNode;
     } else if (matches(['incentive', 'commission'])) {
       targetStep = 3;
+      targetFieldKey = _incentivePercentKey;
       targetFocusNode = incentivePercentFocusNode;
     } else if (matches(['salary', 'base_salary', 'ctc'])) {
       targetStep = 3;
+      targetFieldKey = _salaryKey;
       targetFocusNode = salaryFocusNode;
     } else if (matches(['account_holder', 'account holder'])) {
       targetStep = 4;
+      targetFieldKey = _accountHolderNameKey;
       targetFocusNode = accountHolderNameFocusNode;
     } else if (matches(['account_number', 'account number', 'account_no'])) {
       targetStep = 4;
+      targetFieldKey = _accountNumberKey;
       targetFocusNode = accountNumberFocusNode;
     } else if (matches(['bank', 'bank_name', 'bank name'])) {
       targetStep = 4;
+      targetFieldKey = _bankNameKey;
       targetFocusNode = bankNameFocusNode;
     } else if (matches(['ifsc'])) {
       targetStep = 4;
+      targetFieldKey = _ifscCodeKey;
       targetFocusNode = ifscCodeFocusNode;
     } else if (matches(['branch'])) {
       targetStep = 4;
+      targetFieldKey = _branchNameKey;
       targetFocusNode = branchNameFocusNode;
     } else if (matches(['skill'])) {
       targetStep = 4;
+      targetFieldKey = _skillsKey;
       targetFocusNode = skillInputFocusNode;
     }
 
-    _goToStep(
-      targetStep,
-      validateBefore: false,
-      focusNodeToRequest: targetFocusNode,
-      onStepReached: onStepReached,
+    _scrollToAndFocusField(
+      step: targetStep,
+      fieldKey: targetFieldKey,
+      focusNode: targetFocusNode,
+      extraAction: onStepReached,
     );
   }
 
@@ -1498,6 +1474,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
               _buildFieldTitle('Full Name', isRequired: true),
               const SizedBox(height: 6),
               AppInputField(
+                key: _nameKey,
                 controller: nameController,
                 focusNode: nameFocusNode,
                 hint: 'e.g. Rahul Sharma',
@@ -1509,6 +1486,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
               _buildFieldTitle('Employee ID', isRequired: true),
               const SizedBox(height: 6),
               AppInputField(
+                key: _empIdKey,
                 controller: empIdController,
                 focusNode: empIdFocusNode,
                 hint: 'EMP-2026-001',
@@ -1520,6 +1498,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
               _buildFieldTitle('Gender', isRequired: true),
               const SizedBox(height: 8),
               Row(
+                key: _genderKey,
                 children: _genders.map((gender) {
                   final isSelected = selectedGender == gender;
                   return Expanded(
@@ -1604,6 +1583,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
                         _buildFieldTitle('Marital Status'),
                         const SizedBox(height: 6),
                         _buildDropdown(
+                          key: _maritalStatusKey,
                           value: selectedMaritalStatus,
                           items: _maritalStatuses,
                           onChanged: (val) {
@@ -1621,6 +1601,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
                         _buildFieldTitle('Blood Group'),
                         const SizedBox(height: 6),
                         _buildDropdown(
+                          key: _bloodGroupKey,
                           value: selectedBloodGroup,
                           items: _bloodGroups,
                           onChanged: (val) {
@@ -1665,6 +1646,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
               _buildFieldTitle('Primary Mobile Number', isRequired: true),
               const SizedBox(height: 6),
               AppInputField(
+                key: _mobileKey,
                 controller: mobileController,
                 focusNode: mobileFocusNode,
                 hint: '10-digit mobile number',
@@ -1677,6 +1659,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
               _buildFieldTitle('Alternate Mobile Number', isRequired: true),
               const SizedBox(height: 6),
               AppInputField(
+                key: _altMobileKey,
                 controller: altMobileController,
                 focusNode: altMobileFocusNode,
                 hint: '10-digit secondary contact number',
@@ -1689,6 +1672,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
               _buildFieldTitle('Email Address', isRequired: true),
               const SizedBox(height: 6),
               AppInputField(
+                key: _emailKey,
                 controller: emailController,
                 focusNode: emailFocusNode,
                 hint: 'name@example.com',
@@ -1701,6 +1685,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
               _buildFieldTitle('Emergency Contact Phone', isRequired: true),
               const SizedBox(height: 6),
               AppInputField(
+                key: _emergencyContactKey,
                 controller: emergencyContactController,
                 focusNode: emergencyContactFocusNode,
                 hint: '10-digit emergency contact number',
@@ -1720,6 +1705,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
               _buildFieldTitle('Street Address / Flat / Building', isRequired: true),
               const SizedBox(height: 6),
               AppInputField(
+                key: _addressKey,
                 controller: addressController,
                 focusNode: addressFocusNode,
                 hint: 'e.g. Flat 402, Sunshine Heights, MG Road',
@@ -1736,6 +1722,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
                         _buildFieldTitle('City', isRequired: true),
                         const SizedBox(height: 6),
                         AppInputField(
+                          key: _cityKey,
                           controller: cityController,
                           focusNode: cityFocusNode,
                           hint: 'e.g. Bengaluru',
@@ -1752,6 +1739,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
                         _buildFieldTitle('Pincode / Postal', isRequired: true),
                         const SizedBox(height: 6),
                         AppInputField(
+                          key: _pincodeKey,
                           controller: pincodeController,
                           focusNode: pincodeFocusNode,
                           hint: 'e.g. 560038',
@@ -1775,6 +1763,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
                         _buildFieldTitle('State / Province', isRequired: true),
                         const SizedBox(height: 6),
                         AppInputField(
+                          key: _stateKey,
                           controller: stateController,
                           focusNode: stateFocusNode,
                           hint: 'e.g. Karnataka',
@@ -1791,6 +1780,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
                         _buildFieldTitle('Country', isRequired: true),
                         const SizedBox(height: 6),
                         AppInputField(
+                          key: _countryKey,
                           controller: countryController,
                           focusNode: countryFocusNode,
                           hint: 'e.g. India',
@@ -1834,6 +1824,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
               _buildFieldTitle('Work Mode', isRequired: true),
               const SizedBox(height: 8),
               Row(
+                key: _workModeKey,
                 children: controller.workModesList.map((mode) {
                   final isSelected = selectedWorkMode == mode;
                   IconData modeIcon = Iconsax.building;
@@ -1876,6 +1867,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
               _buildFieldTitle('Employee Type', isRequired: true),
               const SizedBox(height: 8),
               Wrap(
+                key: _employeeTypeKey,
                 spacing: 8,
                 runSpacing: 8,
                 children: controller.employeeTypesList.map((type) {
@@ -1911,9 +1903,10 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
               _buildFieldTitle('Department', isRequired: true),
               const SizedBox(height: 6),
               Obx(() {
-                final depts = controller.departmentsList.where((d) => d != 'All').toList();
+                final depts = _departmentsController.departments.map((d) => d.name).where((n) => n.isNotEmpty).toList();
                 return _buildDropdown(
-                  value: depts.contains(selectedDepartment) ? selectedDepartment : (depts.isNotEmpty ? depts.first : 'Engineering'),
+                  key: _departmentKey,
+                  value: selectedDepartment,
                   items: depts,
                   onChanged: (val) {
                     if (val != null) {
@@ -1932,9 +1925,13 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
               _buildFieldTitle('Designation', isRequired: true),
               const SizedBox(height: 6),
               Obx(() {
-                final desigs = controller.designations;
+                final desigs = _designationController.designations
+                    .map((d) => d.name)
+                    .where((n) => n.isNotEmpty)
+                    .toList();
                 return _buildDropdown(
-                  value: desigs.contains(selectedDesignation) ? selectedDesignation : (desigs.isNotEmpty ? desigs.first : 'Senior Flutter Developer'),
+                  key: _designationKey,
+                  value: selectedDesignation,
                   items: desigs,
                   onChanged: (val) {
                     if (val != null) setState(() => selectedDesignation = val);
@@ -1948,22 +1945,18 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
               Obx(() {
                 final rolesList = _rolePermissionsController.roles;
                 final roleNames = rolesList.map((r) => r.name).toList();
-                final fallbackRoles = ['Employee', 'Admin', 'HR', 'Manager'];
-                final displayItems = roleNames.isNotEmpty ? roleNames : fallbackRoles;
-                final currentValue = displayItems.contains(selectedRole)
-                    ? selectedRole
-                    : (displayItems.isNotEmpty ? displayItems.first : 'Employee');
 
                 return _buildDropdown(
-                  value: currentValue,
-                  items: displayItems,
+                  key: _roleKey,
+                  value: selectedRole,
+                  items: roleNames,
                   onChanged: (val) {
                     if (val != null) {
                       setState(() {
                         selectedRole = val;
                         final matched = rolesList.firstWhereOrNull((r) => r.name == val);
                         if (matched != null) {
-                          selectedRoleId = int.tryParse(matched.id) ?? 9;
+                          selectedRoleId = int.tryParse(matched.id) ?? 0;
                         }
                       });
                     }
@@ -1972,23 +1965,27 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
               }),
               const SizedBox(height: 16),
 
-              _buildFieldTitle('Team / Unit', isRequired: true),
+              _buildFieldTitle('Team / Unit', isRequired: false),
               const SizedBox(height: 6),
-              _buildDropdown(
-                value: selectedTeam,
-                items: controller.teamsList.where((t) => t != 'All').toList(),
-                onChanged: (val) {
-                  if (val != null) setState(() => selectedTeam = val);
-                },
-              ),
+              Obx(() {
+                final teams = controller.teamsList.where((t) => t != 'All').toList();
+                return _buildDropdown(
+                  value: selectedTeam,
+                  items: teams,
+                  onChanged: (val) {
+                    if (val != null) setState(() => selectedTeam = val);
+                  },
+                );
+              }),
               const SizedBox(height: 16),
 
               _buildFieldTitle('Assigned Shift', isRequired: true),
               const SizedBox(height: 6),
               Obx(() {
-                final shifts = controller.shiftsList.where((s) => s != 'All').toList();
+                final shifts = _shiftController.shifts.map((s) => s.name).where((n) => n.isNotEmpty).toList();
                 return _buildDropdown(
-                  value: shifts.contains(selectedShift) ? selectedShift : (shifts.isNotEmpty ? shifts.first : 'Morning Shift'),
+                  key: _shiftKey,
+                  value: selectedShift,
                   items: shifts,
                   onChanged: (val) {
                     if (val != null) setState(() => selectedShift = val);
@@ -1997,17 +1994,18 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
               }),
               const SizedBox(height: 16),
 
-              _buildFieldTitle('Reporting Manager', isRequired: true),
+              _buildFieldTitle('Reporting Manager', isRequired: false),
               const SizedBox(height: 6),
-              _buildDropdown(
-                value: selectedReportingManager.isNotEmpty
-                    ? selectedReportingManager
-                    : (controller.reportingManagersList.isNotEmpty ? controller.reportingManagersList.first : 'None'),
-                items: controller.reportingManagersList,
-                onChanged: (val) {
-                  if (val != null) setState(() => selectedReportingManager = val);
-                },
-              ),
+              Obx(() {
+                final managers = controller.reportingManagersList;
+                return _buildDropdown(
+                  value: selectedReportingManager,
+                  items: managers,
+                  onChanged: (val) {
+                    if (val != null) setState(() => selectedReportingManager = val);
+                  },
+                );
+              }),
               const SizedBox(height: 16),
 
               // Date of Joining
@@ -2063,6 +2061,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
               _buildFieldTitle('Current Employment Status', isRequired: true),
               const SizedBox(height: 8),
               Wrap(
+                key: _employmentStatusKey,
                 spacing: 8,
                 runSpacing: 8,
                 children: controller.employmentStatusesList.map((st) {
@@ -2120,6 +2119,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
                         _buildFieldTitle('Probation Period'),
                         const SizedBox(height: 6),
                         _buildDropdown(
+                          key: _probationPeriodKey,
                           value: selectedProbationPeriod,
                           items: controller.probationPeriodsList,
                           onChanged: (val) {
@@ -2137,6 +2137,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
                         _buildFieldTitle('Notice Period'),
                         const SizedBox(height: 6),
                         _buildDropdown(
+                          key: _noticePeriodKey,
                           value: selectedNoticePeriod,
                           items: controller.noticePeriodsList,
                           onChanged: (val) {
@@ -2181,6 +2182,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
               _buildFieldTitle('Salary Type', isRequired: true),
               const SizedBox(height: 8),
               Row(
+                key: _salaryTypeKey,
                 children: controller.salaryTypesList.map((type) {
                   final isSelected = selectedSalaryType == type;
                   return Expanded(
@@ -2223,6 +2225,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
               ),
               const SizedBox(height: 6),
               AppInputField(
+                key: _salaryKey,
                 controller: salaryController,
                 focusNode: salaryFocusNode,
                 hint: 'e.g. 75000',
@@ -2325,6 +2328,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
                           ),
                           const SizedBox(height: 6),
                           AppInputField(
+                            key: _targetAmountKey,
                             controller: targetAmountController,
                             focusNode: targetAmountFocusNode,
                             hint: 'e.g. 500000',
@@ -2343,6 +2347,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
                           _buildFieldTitle('Target Period'),
                           const SizedBox(height: 6),
                           _buildDropdown(
+                            key: _targetPeriodKey,
                             value: selectedTargetPeriod,
                             items: controller.targetPeriodsList,
                             onChanged: (val) {
@@ -2360,6 +2365,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
                 _buildFieldTitle('Incentive Commission (%)', isRequired: true),
                 const SizedBox(height: 6),
                 AppInputField(
+                  key: _incentivePercentKey,
                   controller: incentivePercentController,
                   focusNode: incentivePercentFocusNode,
                   hint: 'e.g. 5.0 % on target achievement',
@@ -2424,6 +2430,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
               _buildFieldTitle('Account Holder Name', isRequired: true),
               const SizedBox(height: 6),
               AppInputField(
+                key: _accountHolderNameKey,
                 controller: accountHolderNameController,
                 focusNode: accountHolderNameFocusNode,
                 hint: 'Name as registered with bank',
@@ -2434,6 +2441,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
               _buildFieldTitle('Bank Name', isRequired: true),
               const SizedBox(height: 6),
               AppInputField(
+                key: _bankNameKey,
                 controller: bankNameController,
                 focusNode: bankNameFocusNode,
                 hint: 'e.g. HDFC Bank, SBI, ICICI Bank',
@@ -2444,6 +2452,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
               _buildFieldTitle('Account Number', isRequired: true),
               const SizedBox(height: 6),
               AppInputField(
+                key: _accountNumberKey,
                 controller: accountNumberController,
                 focusNode: accountNumberFocusNode,
                 hint: 'e.g. 50100456789123',
@@ -2461,6 +2470,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
                         _buildFieldTitle('IFSC Code', isRequired: true),
                         const SizedBox(height: 6),
                         AppInputField(
+                          key: _ifscCodeKey,
                           controller: ifscCodeController,
                           focusNode: ifscCodeFocusNode,
                           hint: 'e.g. HDFC0001234',
@@ -2477,6 +2487,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
                         _buildFieldTitle('Branch Name'),
                         const SizedBox(height: 6),
                         AppInputField(
+                          key: _branchNameKey,
                           controller: branchNameController,
                           focusNode: branchNameFocusNode,
                           hint: 'e.g. Indiranagar Branch',
@@ -2499,6 +2510,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
               _buildFieldTitle('Add Skill Tag'),
               const SizedBox(height: 6),
               Row(
+                key: _skillsKey,
                 children: [
                   Expanded(
                     child: AppInputField(
@@ -2592,49 +2604,51 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
               const Divider(color: Color(0xFFF1F5F9)),
               const SizedBox(height: 8),
 
-              // Popular skill suggestions
-              const AppText('Popular Suggestions:', fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.textColorSecondary),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: [
-                  'Flutter',
-                  'Dart',
-                  'Firebase',
-                  'Node.js',
-                  'React Native',
-                  'UI/UX',
-                  'Sales',
-                  'SEO',
-                  'Lead Gen',
-                  'HR Ops',
-                ].where((s) => !_skillsList.contains(s)).map((suggested) {
-                  return GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _skillsList.add(suggested);
-                      });
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF1F5F9),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: const Color(0xFFCBD5E1)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.add, size: 12, color: Color(0xFF64748B)),
-                          const SizedBox(width: 4),
-                          AppText(suggested, fontSize: 11, color: const Color(0xFF475569), fontWeight: FontWeight.w600),
-                        ],
-                      ),
+              // Dynamic skill suggestions from loaded designations
+              Builder(builder: (context) {
+                final suggestions = _designationController.designations
+                    .map((d) => d.name)
+                    .where((d) => d.isNotEmpty && !_skillsList.contains(d))
+                    .take(8)
+                    .toList();
+                if (suggestions.isEmpty) return const SizedBox.shrink();
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const AppText('Suggested Skills:', fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.textColorSecondary),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: suggestions.map((suggested) {
+                        return GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _skillsList.add(suggested);
+                            });
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: const Color(0xFFCBD5E1)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.add, size: 12, color: Color(0xFF64748B)),
+                                const SizedBox(width: 4),
+                                AppText(suggested, fontSize: 11, color: const Color(0xFF475569), fontWeight: FontWeight.w600),
+                              ],
+                            ),
+                          ),
+                        );
+                      }).toList(),
                     ),
-                  );
-                }).toList(),
-              ),
+                  ],
+                );
+              }),
             ],
           ),
           const SizedBox(height: 40),
@@ -2769,11 +2783,15 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
   }
 
   Widget _buildDropdown({
+    Key? key,
     required String value,
     required List<String> items,
     required ValueChanged<String?> onChanged,
+    String hint = 'Select',
   }) {
+    final validValue = (value.isNotEmpty && items.contains(value)) ? value : null;
     return Container(
+      key: key,
       padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -2782,8 +2800,9 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
-          value: items.contains(value) ? value : (items.isNotEmpty ? items.first : null),
+          value: validValue,
           isExpanded: true,
+          hint: AppText(hint, fontSize: 13, color: AppColors.textColorSecondary),
           icon: const Icon(Icons.arrow_drop_down, color: AppColors.textColorSecondary),
           items: items.map((item) {
             return DropdownMenuItem<String>(

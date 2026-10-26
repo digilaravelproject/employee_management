@@ -17,17 +17,6 @@ class EditRoleScreen extends StatefulWidget {
 }
 
 class _EditRoleScreenState extends State<EditRoleScreen> {
-  final List<String> _fallbackDepartments = [
-    'Management',
-    'Human Resources',
-    'Engineering',
-    'Sales & Marketing',
-    'Operations',
-    'Accounts & Finance',
-    'Customer Support',
-    'General',
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -39,15 +28,15 @@ class _EditRoleScreenState extends State<EditRoleScreen> {
   Widget build(BuildContext context) {
     final controller = Get.find<RolePermissionsController>();
 
-    List<String> departmentOptions = _fallbackDepartments;
+    List<String> departmentOptions = [];
     if (Get.isRegistered<DepartmentsController>()) {
       final deptCtrl = Get.find<DepartmentsController>();
       if (deptCtrl.departments.isNotEmpty) {
-        final dynamicNames = deptCtrl.departments.map((d) => d.name).toList();
-        departmentOptions = {...departmentOptions, ...dynamicNames}.toList();
+        departmentOptions = deptCtrl.departments.map((d) => d.name).where((n) => n.isNotEmpty).toList();
       }
     }
     if (widget.role.departmentName != null &&
+        widget.role.departmentName!.isNotEmpty &&
         !departmentOptions.contains(widget.role.departmentName!)) {
       departmentOptions.add(widget.role.departmentName!);
     }

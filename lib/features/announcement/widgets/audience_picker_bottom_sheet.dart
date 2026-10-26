@@ -29,26 +29,12 @@ class AudienceDataHelper {
     if (Get.isRegistered<DepartmentsController>()) {
       final deptCtrl = Get.find<DepartmentsController>();
       if (deptCtrl.departments.isNotEmpty) {
-        names = deptCtrl.departments.map((d) => d.name).toList();
+        names = deptCtrl.departments.map((d) => d.name).where((n) => n.isNotEmpty).toList();
       }
     }
     if (names.isEmpty && Get.isRegistered<EmployeeController>()) {
       final empCtrl = Get.find<EmployeeController>();
-      names = empCtrl.departmentsList.where((d) => d != 'All').toList();
-    }
-    if (names.isEmpty) {
-      names = [
-        'Engineering',
-        'Human Resources',
-        'Sales & Marketing',
-        'Operations',
-        'Finance & Accounts',
-        'Design & Creative',
-        'Customer Support',
-        'Quality Assurance',
-        'Product Management',
-        'IT & Infrastructure',
-      ];
+      names = empCtrl.departmentsList.where((d) => d != 'All' && d.isNotEmpty).toList();
     }
 
     return names
@@ -65,28 +51,12 @@ class AudienceDataHelper {
     if (Get.isRegistered<DesignationController>()) {
       final desigCtrl = Get.find<DesignationController>();
       if (desigCtrl.designations.isNotEmpty) {
-        names = desigCtrl.designations.map((d) => d.name).toList();
+        names = desigCtrl.designations.map((d) => d.name).where((n) => n.isNotEmpty).toList();
       }
     }
     if (names.isEmpty && Get.isRegistered<EmployeeController>()) {
       final empCtrl = Get.find<EmployeeController>();
-      names = empCtrl.designations;
-    }
-    if (names.isEmpty) {
-      names = [
-        'Senior Flutter Developer',
-        'Backend Developer',
-        'Frontend Developer',
-        'UI/UX Designer',
-        'HR Manager',
-        'Project Manager',
-        'QA Engineer',
-        'Sales Executive',
-        'Marketing Specialist',
-        'Operations Lead',
-        'Finance Manager',
-        'Tech Lead',
-      ];
+      names = empCtrl.designations.where((d) => d.isNotEmpty).toList();
     }
 
     return names
@@ -130,28 +100,7 @@ class AudienceDataHelper {
       }
     }
 
-    // Default mock employees
-    final fallbackList = [
-      {'id': '1', 'name': 'Rohit Sharma', 'role': 'Senior Flutter Developer', 'dept': 'Engineering'},
-      {'id': '2', 'name': 'Sarah Johnson', 'role': 'UI/UX Designer', 'dept': 'Design & Creative'},
-      {'id': '3', 'name': 'Michael Brown', 'role': 'HR Manager', 'dept': 'Human Resources'},
-      {'id': '4', 'name': 'Ananya Roy', 'role': 'Director of HR', 'dept': 'Human Resources'},
-      {'id': '5', 'name': 'Rajesh Verma', 'role': 'VP Engineering', 'dept': 'Engineering'},
-      {'id': '6', 'name': 'David Wilson', 'role': 'Backend Developer', 'dept': 'Engineering'},
-      {'id': '7', 'name': 'Lisa Anderson', 'role': 'Sales Executive', 'dept': 'Sales & Marketing'},
-      {'id': '8', 'name': 'Emily Davis', 'role': 'Marketing Specialist', 'dept': 'Sales & Marketing'},
-      {'id': '9', 'name': 'Priya Patel', 'role': 'QA Engineer', 'dept': 'Engineering'},
-      {'id': '10', 'name': 'James Anderson', 'role': 'Operations Lead', 'dept': 'Operations'},
-    ];
-
-    return fallbackList
-        .map((e) => AudiencePickerItem(
-              id: e['id']!,
-              title: e['name']!,
-              subtitle: '${e['role']} • ${e['dept']}',
-              icon: Iconsax.user,
-            ))
-        .toList();
+    return [];
   }
 }
 

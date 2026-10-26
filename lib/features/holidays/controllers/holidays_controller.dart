@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../core/services/network/api_client.dart';
 import '../../../core/utils/logger.dart';
+import '../../employee/management/controllers/employee_controller.dart';
 import '../../leave_management/controllers/leave_calendar_controller.dart';
 import '../../leave_management/models/holiday_calendar_model.dart';
 import '../models/add_holiday_model.dart';
@@ -52,14 +53,26 @@ class HolidaysController extends GetxController {
   final RxString selectedLocation = 'All Locations'.obs;
   final RxBool repeatEveryYear = true.obs;
 
-  // Constant list of locations and types for dropdowns
-  final List<String> locations = [
-    'All Locations',
-    'Delhi HQ',
-    'Mumbai Office',
-    'Bangalore Tech Hub',
-    'Remote',
-  ];
+  // Dynamic list of locations for dropdowns based on holidays and employee offices
+  List<String> get locations {
+    final set = <String>{'All Locations'};
+    for (final h in holidays) {
+      final loc = h.location.trim();
+      if (loc.isNotEmpty && loc != 'All' && loc != 'All Locations') {
+        set.add(loc);
+      }
+    }
+    if (Get.isRegistered<EmployeeController>()) {
+      final empCtrl = Get.find<EmployeeController>();
+      for (final e in empCtrl.employees) {
+        final city = e.city.trim();
+        if (city.isNotEmpty) {
+          set.add(city);
+        }
+      }
+    }
+    return set.toList();
+  }
 
   final List<String> holidayTypes = [
     'National',

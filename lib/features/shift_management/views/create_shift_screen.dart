@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/custom_snackbar.dart';
 import '../../../core/widgets/app_text.dart';
 import '../../employee/management/controllers/employee_controller.dart';
 import '../controllers/shift_controller.dart';
@@ -79,6 +80,16 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
   final PageController _pageController = PageController();
   int _currentStep = 0;
   final int _totalSteps = 7;
+
+  final GlobalKey _shiftNameKey = GlobalKey();
+  final GlobalKey _shiftCodeKey = GlobalKey();
+  final GlobalKey _shiftTypeKey = GlobalKey();
+  final GlobalKey _timingKey = GlobalKey();
+  final GlobalKey _breaksKey = GlobalKey();
+  final GlobalKey _scheduleKey = GlobalKey();
+
+  final FocusNode _shiftNameFocusNode = FocusNode();
+  final FocusNode _shiftCodeFocusNode = FocusNode();
 
   bool get _isEditing => widget.shiftToEdit != null || widget.shiftDataToEdit != null;
   String get _shiftId => widget.shiftToEdit?.id ?? widget.shiftDataToEdit?.id.toString() ?? '';
@@ -351,6 +362,8 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
     _pageController.dispose();
     _shiftNameController.dispose();
     _shiftCodeController.dispose();
+    _shiftNameFocusNode.dispose();
+    _shiftCodeFocusNode.dispose();
     _descriptionController.dispose();
     _searchEmployeeController.dispose();
     super.dispose();
@@ -425,8 +438,106 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
     }
   }
 
-  void _goToStep(int step) {
+  void _scrollToAndFocusField({
+    required int step,
+    GlobalKey? fieldKey,
+    FocusNode? focusNode,
+  }) {
+    final bool stepChanged = _currentStep != step;
+    if (stepChanged) {
+      _goToStep(step, validateBefore: false);
+    }
+    Future.delayed(Duration(milliseconds: stepChanged ? 350 : 60), () {
+      if (!mounted) return;
+      if (fieldKey?.currentContext != null) {
+        Scrollable.ensureVisible(
+          fieldKey!.currentContext!,
+          duration: const Duration(milliseconds: 350),
+          curve: Curves.easeInOut,
+          alignment: 0.15,
+        );
+      }
+      focusNode?.requestFocus();
+    });
+  }
+
+  bool _validateShiftStep(int step) {
+    if (step == 0) {
+      if (_shiftNameController.text.trim().isEmpty) {
+        CustomSnackbar.showError('Please enter shift name');
+        _scrollToAndFocusField(step: 0, fieldKey: _shiftNameKey, focusNode: _shiftNameFocusNode);
+        return false;
+      }
+      if (_shiftCodeController.text.trim().isEmpty) {
+        CustomSnackbar.showError('Please enter shift code');
+        _scrollToAndFocusField(step: 0, fieldKey: _shiftCodeKey, focusNode: _shiftCodeFocusNode);
+        return false;
+      }
+      if (_shiftType.trim().isEmpty) {
+        CustomSnackbar.showError('Please select shift type');
+        _scrollToAndFocusField(step: 0, fieldKey: _shiftTypeKey);
+        return false;
+      }
+      return true;
+    } else if (step == 1) {
+      if (!_crossMidnight && (_startTime.hour == _endTime.hour && _startTime.minute == _endTime.minute)) {
+        CustomSnackbar.showError('Shift start time and end time cannot be identical');
+        _scrollToAndFocusField(step: 1, fieldKey: _timingKey);
+        return false;
+      }
+      return true;
+    } else if (step == 2) {
+      if (_enableBreak && _breaks.isEmpty) {
+        CustomSnackbar.showError('Please add at least one break or disable breaks');
+        _scrollToAndFocusField(step: 2, fieldKey: _breaksKey);
+        return false;
+      }
+      return true;
+    } else if (step == 5) {
+      final hasWorkingDay = _weeklySchedule.any((d) => d.isWorking);
+      if (!hasWorkingDay) {
+        CustomSnackbar.showError('Please enable at least one working day in the weekly schedule');
+        _scrollToAndFocusField(step: 5, fieldKey: _scheduleKey);
+        return false;
+      }
+      return true;
+    }
+    return true;
+  }
+
+  bool _validateAllShiftSteps() {
+    for (int i = 0; i < _totalSteps; i++) {
+      if (!_validateShiftStep(i)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  void _handleShiftApiError(String errorMsg) {
+    final lower = errorMsg.toLowerCase();
+    if (lower.contains('name')) {
+      _scrollToAndFocusField(step: 0, fieldKey: _shiftNameKey, focusNode: _shiftNameFocusNode);
+    } else if (lower.contains('code')) {
+      _scrollToAndFocusField(step: 0, fieldKey: _shiftCodeKey, focusNode: _shiftCodeFocusNode);
+    } else if (lower.contains('type')) {
+      _scrollToAndFocusField(step: 0, fieldKey: _shiftTypeKey);
+    } else if (lower.contains('time') || lower.contains('timing')) {
+      _scrollToAndFocusField(step: 1, fieldKey: _timingKey);
+    } else if (lower.contains('break')) {
+      _scrollToAndFocusField(step: 2, fieldKey: _breaksKey);
+    } else if (lower.contains('working') || lower.contains('schedule') || lower.contains('day')) {
+      _scrollToAndFocusField(step: 5, fieldKey: _scheduleKey);
+    }
+  }
+
+  void _goToStep(int step, {bool validateBefore = true}) {
     if (step < 0 || step >= _totalSteps) return;
+    if (validateBefore && step > _currentStep) {
+      for (int i = _currentStep; i < step; i++) {
+        if (!_validateShiftStep(i)) return;
+      }
+    }
     setState(() {
       _currentStep = step;
     });
@@ -674,6 +785,8 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
                 _buildFieldLabel('Shift Name', isRequired: true),
                 const SizedBox(height: 8),
                 _buildTextInput(
+                  key: _shiftNameKey,
+                  focusNode: _shiftNameFocusNode,
                   controller: _shiftNameController,
                   hint: 'e.g. Morning Shift',
                   prefixIcon: Iconsax.clock,
@@ -684,6 +797,8 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
                 _buildFieldLabel('Shift Code', isRequired: true),
                 const SizedBox(height: 8),
                 _buildTextInput(
+                  key: _shiftCodeKey,
+                  focusNode: _shiftCodeFocusNode,
                   controller: _shiftCodeController,
                   hint: 'e.g. MORNING or SHIFT-01',
                   prefixIcon: Iconsax.code,
@@ -694,6 +809,7 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
                 _buildFieldLabel('Shift Type', isRequired: true),
                 const SizedBox(height: 8),
                 _buildDropdownField<String>(
+                  key: _shiftTypeKey,
                   value: _shiftType,
                   items: _shiftTypes,
                   onChanged: (val) {
@@ -811,6 +927,7 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
+                  key: _timingKey,
                   children: [
                     Expanded(
                       child: Column(
@@ -1002,6 +1119,7 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
             ),
           ),
           _buildCardContainer(
+            key: _breaksKey,
             child: _enableBreak
                 ? Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1516,6 +1634,7 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
             ),
           ),
           _buildCardContainer(
+            key: _scheduleKey,
             child: Column(
               children: [
                 // Day Rows
@@ -2010,15 +2129,7 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
                       ? null
                       : () async {
                           if (isLastStep) {
-                            if (_shiftNameController.text.trim().isEmpty) {
-                              Get.snackbar(
-                                'Validation',
-                                'Please enter shift name',
-                                snackPosition: SnackPosition.BOTTOM,
-                                backgroundColor: Colors.orange,
-                                colorText: Colors.white,
-                              );
-                              _goToStep(0);
+                            if (!_validateAllShiftSteps()) {
                               return;
                             }
 
@@ -2076,48 +2187,31 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
                               final res = await ctrl.updateShiftApi(_shiftId, request);
                               if (res.status) {
                                 Get.back(result: true);
-                                Get.snackbar(
-                                  'Success',
+                                CustomSnackbar.showSuccess(
                                   res.message.isNotEmpty ? res.message : 'Shift updated successfully.',
-                                  snackPosition: SnackPosition.BOTTOM,
-                                  backgroundColor: AppColors.successColor,
-                                  colorText: Colors.white,
-                                  duration: const Duration(seconds: 3),
                                 );
                               } else {
-                                Get.snackbar(
-                                  'Failed to Update Shift',
-                                  res.message.isNotEmpty ? res.message : 'Failed to update shift.',
-                                  snackPosition: SnackPosition.BOTTOM,
-                                  backgroundColor: AppColors.errorColor,
-                                  colorText: Colors.white,
-                                  duration: const Duration(seconds: 4),
-                                );
+                                final err = res.message.isNotEmpty ? res.message : 'Failed to update shift.';
+                                CustomSnackbar.showError(err);
+                                _handleShiftApiError(err);
                               }
                             } else {
                               final res = await ctrl.createShiftApi(request);
                               if (res.status) {
                                 Get.back(result: true);
-                                Get.snackbar(
-                                  'Success',
+                                CustomSnackbar.showSuccess(
                                   res.message.isNotEmpty ? res.message : 'Shift created successfully.',
-                                  snackPosition: SnackPosition.BOTTOM,
-                                  backgroundColor: AppColors.successColor,
-                                  colorText: Colors.white,
-                                  duration: const Duration(seconds: 3),
                                 );
                               } else {
-                                Get.snackbar(
-                                  'Failed to Create Shift',
-                                  res.message.isNotEmpty ? res.message : 'Failed to create shift.',
-                                  snackPosition: SnackPosition.BOTTOM,
-                                  backgroundColor: AppColors.errorColor,
-                                  colorText: Colors.white,
-                                  duration: const Duration(seconds: 4),
-                                );
+                                final err = res.message.isNotEmpty ? res.message : 'Failed to create shift.';
+                                CustomSnackbar.showError(err);
+                                _handleShiftApiError(err);
                               }
                             }
                           } else {
+                            if (!_validateShiftStep(_currentStep)) {
+                              return;
+                            }
                             _goToStep(_currentStep + 1);
                           }
                         },
@@ -2168,9 +2262,11 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
   // Reusable UI Components
   // ----------------------------------------------------
   Widget _buildCardContainer({
+    Key? key,
     required Widget child,
   }) {
     return Container(
+      key: key,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -2201,12 +2297,16 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
   }
 
   Widget _buildTextInput({
+    Key? key,
+    FocusNode? focusNode,
     required TextEditingController controller,
     required String hint,
     IconData? prefixIcon,
     ValueChanged<String>? onChanged,
   }) {
     return TextFormField(
+      key: key,
+      focusNode: focusNode,
       controller: controller,
       onChanged: onChanged,
       style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textColorPrimary),
@@ -2234,11 +2334,13 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
   }
 
   Widget _buildDropdownField<T>({
+    Key? key,
     required T value,
     required List<T> items,
     required ValueChanged<T?> onChanged,
   }) {
     return Container(
+      key: key,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
       decoration: BoxDecoration(
         color: Colors.white,

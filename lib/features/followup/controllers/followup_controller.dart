@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../../clients/controllers/clients_controller.dart';
+import '../../employee/management/controllers/employee_controller.dart';
+import '../../leads/controllers/admin_leads_hub_controller.dart';
+import '../../leads/controllers/leads_controller.dart';
 import '../models/followup_model.dart';
 
 class FollowupController extends GetxController {
@@ -31,21 +35,39 @@ class FollowupController extends GetxController {
 
   // Predefined Dropdown Lists
   final List<String> months = ['This Month', 'Previous Month', 'Last 15 Days'];
-  final List<String> employees = [
-    'All Employees',
-    'Rahul Sharma',
-    'Neha Kapoor',
-    'Vikash Yadav',
-    'Amit Singh'
-  ];
+  
+  List<String> get employees {
+    final list = <String>['All Employees'];
+    if (Get.isRegistered<EmployeeController>()) {
+      final empCtrl = Get.find<EmployeeController>();
+      list.addAll(empCtrl.employees.map((e) => e.name).where((n) => n.isNotEmpty));
+    }
+    return list;
+  }
 
-  final List<String> clientNames = [
-    'R K Enterprises',
-    'Tech Solutions',
-    'Bright Marketing',
-    'Future Soft',
-    'Digital India Pvt Ltd'
-  ];
+  List<String> get clientNames {
+    final set = <String>{};
+    if (Get.isRegistered<ClientsController>()) {
+      final clientCtrl = Get.find<ClientsController>();
+      set.addAll(clientCtrl.clients.map((c) => c.name).where((n) => n.isNotEmpty));
+    }
+    if (Get.isRegistered<AdminLeadsHubController>()) {
+      final leadsCtrl = Get.find<AdminLeadsHubController>();
+      set.addAll(
+        leadsCtrl.leadsList
+            .map((l) => (l.fullName?.trim().isNotEmpty ?? false)
+                ? l.fullName!.trim()
+                : (l.companyName?.trim().isNotEmpty ?? false)
+                    ? l.companyName!.trim()
+                    : '')
+            .where((n) => n.isNotEmpty),
+      );
+    } else if (Get.isRegistered<LeadsController>()) {
+      final leadsCtrl = Get.find<LeadsController>();
+      set.addAll(leadsCtrl.leads.map((l) => l.name).where((n) => n.isNotEmpty));
+    }
+    return set.toList();
+  }
 
   @override
   void onInit() {
@@ -54,189 +76,10 @@ class FollowupController extends GetxController {
   }
 
   void _seedDummyData() {
-    // 1. Seed Call Logs
-    callLogs.assignAll([
-      CallLog(
-        id: 'call_1',
-        clientName: 'R K Enterprises',
-        type: 'Outgoing',
-        employeeName: 'Rahul Sharma',
-        timeStr: 'Today, 11:00 AM',
-        durationStr: '09:23',
-      ),
-      CallLog(
-        id: 'call_2',
-        clientName: 'Tech Solutions',
-        type: 'Incoming',
-        employeeName: 'Neha Kapoor',
-        timeStr: 'Today, 10:15 AM',
-        durationStr: '07:45',
-      ),
-      CallLog(
-        id: 'call_3',
-        clientName: 'Bright Marketing',
-        type: 'Outgoing',
-        employeeName: 'Amit Singh',
-        timeStr: 'Yesterday, 04:30 PM',
-        durationStr: '03:12',
-      ),
-      CallLog(
-        id: 'call_4',
-        clientName: 'Future Soft',
-        type: 'Missed',
-        employeeName: 'Vikash Yadav',
-        timeStr: 'Yesterday, 03:10 PM',
-        durationStr: '00:00',
-      ),
-      CallLog(
-        id: 'call_5',
-        clientName: 'Digital India Pvt Ltd',
-        type: 'Incoming',
-        employeeName: 'Rahul Sharma',
-        timeStr: 'Yesterday, 11:20 AM',
-        durationStr: '06:18',
-      ),
-      CallLog(
-        id: 'call_6',
-        clientName: 'R K Enterprises',
-        type: 'Incoming',
-        employeeName: 'Neha Kapoor',
-        timeStr: '22 May, 03:45 PM',
-        durationStr: '12:05',
-      ),
-      CallLog(
-        id: 'call_7',
-        clientName: 'Future Soft',
-        type: 'Outgoing',
-        employeeName: 'Rahul Sharma',
-        timeStr: '22 May, 11:00 AM',
-        durationStr: '04:50',
-      ),
-    ]);
-
-    // 2. Seed Meetings
-    meetings.assignAll([
-      FollowupMeeting(
-        id: 'meet_1',
-        title: 'Project Discussion',
-        clientName: 'R K Enterprises',
-        employeeName: 'Rahul Sharma',
-        dateTime: DateTime.now().add(const Duration(hours: 2)),
-        duration: '1 Hour',
-        mode: 'Office',
-        notes: 'Discuss project requirements, sprint timeline, and initial wireframes layout.',
-      ),
-      FollowupMeeting(
-        id: 'meet_2',
-        title: 'Requirement Discussion',
-        clientName: 'Tech Solutions',
-        employeeName: 'Neha Kapoor',
-        dateTime: DateTime.now().add(const Duration(hours: 5)),
-        duration: '45 Mins',
-        mode: 'Online',
-        notes: 'Review api documentation, database schema definitions, and secure access protocols.',
-      ),
-      FollowupMeeting(
-        id: 'meet_3',
-        title: 'Proposal Presentation',
-        clientName: 'Bright Marketing',
-        employeeName: 'Amit Singh',
-        dateTime: DateTime.now().add(const Duration(days: 1)),
-        duration: '1 Hour',
-        mode: 'Office',
-        notes: 'Present pricing quotation slides, service level agreement criteria, and onboarding stages.',
-      ),
-      FollowupMeeting(
-        id: 'meet_4',
-        title: 'Follow-up Meeting',
-        clientName: 'Future Soft',
-        employeeName: 'Vikash Yadav',
-        dateTime: DateTime.now().subtract(const Duration(days: 1)),
-        duration: '30 Mins',
-        mode: 'Online',
-        notes: 'Provide demo walkthrough of payroll feature updates and salary breakups customization.',
-      ),
-    ]);
-
-    // 3. Seed Reminders
-    reminders.assignAll([
-      FollowupReminder(
-        id: 'rem_1',
-        title: 'Follow up with R K Enterprises',
-        category: 'Call',
-        dateTime: DateTime.now().add(const Duration(hours: 1)),
-        employeeName: 'Rahul Sharma',
-        isCompleted: false,
-      ),
-      FollowupReminder(
-        id: 'rem_2',
-        title: 'Meeting with Tech Solutions',
-        category: 'Meeting',
-        dateTime: DateTime.now().add(const Duration(hours: 4)),
-        employeeName: 'Neha Kapoor',
-        isCompleted: false,
-      ),
-      FollowupReminder(
-        id: 'rem_3',
-        title: 'Send Proposal to Bright Marketing',
-        category: 'Task',
-        dateTime: DateTime.now().add(const Duration(days: 1)),
-        employeeName: 'Amit Singh',
-        isCompleted: false,
-      ),
-      FollowupReminder(
-        id: 'rem_4',
-        title: 'Follow up with Future Soft',
-        category: 'Call',
-        dateTime: DateTime.now().add(const Duration(days: 2)),
-        employeeName: 'Rahul Sharma',
-        isCompleted: false,
-      ),
-      FollowupReminder(
-        id: 'rem_5',
-        title: 'Wellness webinar planning',
-        category: 'Task',
-        dateTime: DateTime.now().subtract(const Duration(days: 1)),
-        employeeName: 'Vikash Yadav',
-        isCompleted: true,
-      ),
-    ]);
-
-    // 4. Seed Notes
-    notes.assignAll([
-      ActivityNote(
-        id: 'note_1',
-        clientName: 'R K Enterprises',
-        title: 'Project Discussion',
-        note: 'Had a detailed discussion about project scope, deadlines, and milestone deliverables.',
-        dateTime: DateTime.now().subtract(const Duration(hours: 3)),
-        employeeName: 'Rahul Sharma',
-      ),
-      ActivityNote(
-        id: 'note_2',
-        clientName: 'Tech Solutions',
-        title: 'Requirement Notes',
-        note: 'Client needs custom CRM integration with dynamic reports generation and ledger spreadsheets export.',
-        dateTime: DateTime.now().subtract(const Duration(hours: 6)),
-        employeeName: 'Neha Kapoor',
-      ),
-      ActivityNote(
-        id: 'note_3',
-        clientName: 'Bright Marketing',
-        title: 'Proposal Notes',
-        note: 'Shared proposal slides and pricing details. Awaiting budget approvals from their finance head.',
-        dateTime: DateTime.now().subtract(const Duration(days: 1)),
-        employeeName: 'Amit Singh',
-      ),
-      ActivityNote(
-        id: 'note_4',
-        clientName: 'Future Soft',
-        title: 'Follow-up Notes',
-        note: 'Demo presented. Waiting for feedback on the new shifts schedule screen design.',
-        dateTime: DateTime.now().subtract(const Duration(days: 2)),
-        employeeName: 'Rahul Sharma',
-      ),
-    ]);
+    callLogs.clear();
+    meetings.clear();
+    reminders.clear();
+    notes.clear();
   }
 
   // Getters - Filtered Call Logs

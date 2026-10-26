@@ -153,8 +153,10 @@ class _AssignProjectScreenState extends State<AssignProjectScreen> {
                               selectedValue: manager?.name,
                               items: controller.projectManagers.map((m) => m.name).toList(),
                               onChanged: (name) {
-                                final selected = controller.projectManagers.firstWhere((m) => m.name == name);
-                                controller.projectSelectedManager.value = selected;
+                                final selected = controller.projectManagers.firstWhereOrNull((m) => m.name == name);
+                                if (selected != null) {
+                                  controller.projectSelectedManager.value = selected;
+                                }
                                 setState(() {
                                   _managerError = null;
                                 });

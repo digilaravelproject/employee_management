@@ -22,8 +22,6 @@ class DesignationController extends GetxController {
     super.onInit();
     if (repository != null) {
       fetchDesignations();
-    } else {
-      _initializeDummyDesignations();
     }
   }
 
@@ -66,47 +64,7 @@ class DesignationController extends GetxController {
     }
   }
 
-  void _initializeDummyDesignations() {
-    designations.addAll([
-      DesignationModel(
-        id: '1',
-        name: 'Senior Flutter Developer',
-        hierarchyLevel: 'Senior',
-        skills: ['Flutter', 'Dart', 'GetX', 'REST API'],
-      ),
-      DesignationModel(
-        id: '2',
-        name: 'HR Manager',
-        hierarchyLevel: 'Manager',
-        skills: ['Recruitment', 'Communication', 'Management'],
-      ),
-      DesignationModel(
-        id: '3',
-        name: 'PHP Developer',
-        hierarchyLevel: 'Junior',
-        skills: ['PHP', 'Laravel', 'MySQL'],
-      ),
-      DesignationModel(
-        id: '4',
-        name: 'UI/UX Designer',
-        hierarchyLevel: 'Junior',
-        skills: ['Figma', 'Wireframing', 'User Research'],
-      ),
-      DesignationModel(
-        id: '5',
-        name: 'Sales Executive',
-        hierarchyLevel: 'Junior',
-        skills: ['Negotiation', 'Communication', 'Client Handling'],
-      ),
-      DesignationModel(
-        id: '6',
-        name: 'Project Manager',
-        hierarchyLevel: 'Manager',
-        skills: ['Agile', 'Scrum', 'Team Leadership'],
-      ),
-    ]);
-    filteredDesignations.assignAll(designations);
-  }
+
 
   void searchDesignation(String query) {
     if (query.isEmpty) {

@@ -3,6 +3,7 @@ import 'package:dgm360/core/theme/app_colors.dart';
 import 'package:get/get.dart';
 import '../../../core/services/network/api_client.dart';
 import '../../../core/utils/custom_snackbar.dart';
+import '../../employee/management/controllers/employee_controller.dart';
 import '../../role_permissions/models/role_permission_models.dart';
 import '../models/client_model.dart';
 import '../models/client_detail_model.dart';
@@ -65,24 +66,24 @@ class ClientsController extends GetxController {
   final List<String> projectStatuses = ['Active', 'Completed', 'On Hold'];
   final List<String> communicationTypes = ['Email', 'Call', 'Meeting', 'Note'];
 
-  // Project Managers list (Symmetrical with role reps)
-  final List<AppUser> projectManagers = [
-    const AppUser(
-      name: 'Vikash Yadav',
-      email: 'vikash.yadav@company.com',
-      avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-    ),
-    const AppUser(
-      name: 'Rahul Sharma',
-      email: 'rahul.sharma@company.com',
-      avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
-    ),
-    const AppUser(
-      name: 'Neha Verma',
-      email: 'neha.verma@company.com',
-      avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
-    ),
-  ];
+  // Project Managers list (Dynamically mapped from employees)
+  List<AppUser> get projectManagers {
+    if (Get.isRegistered<EmployeeController>()) {
+      final empCtrl = Get.find<EmployeeController>();
+      if (empCtrl.employees.isNotEmpty) {
+        return empCtrl.employees
+            .where((e) => e.name.isNotEmpty)
+            .map((e) => AppUser(
+                  id: int.tryParse(e.id),
+                  name: e.name,
+                  email: e.email,
+                  avatarUrl: e.profilePic ?? '',
+                ))
+            .toList();
+      }
+    }
+    return [];
+  }
 
   // Forms Text Editing Controllers
   late TextEditingController nameController;
@@ -117,7 +118,6 @@ class ClientsController extends GetxController {
     super.onInit();
     searchFieldController = TextEditingController();
     _initializeFormControllers();
-    _seedClientsFromApiResponse();
     fetchClientsFromApi(page: 1, resetPagination: true);
 
     // Debounce search input to call search API automatically
@@ -167,156 +167,6 @@ class ClientsController extends GetxController {
     commToController.dispose();
     commDescController.dispose();
     super.onClose();
-  }
-
-  // Seed Clients from the provided live API response
-  void _seedClientsFromApiResponse() {
-    clients.assignAll([
-      Client(
-        id: '2',
-        name: '2R K Enterprises Pvt Ltd',
-        email: 'info@rkenterprises.com',
-        mobile: '+91 98765 43210',
-        website: 'https://www.rkenterprises.com',
-        address: 'Suite 12, Tech Tower, Mumbai',
-        status: 'Active',
-        notes: 'Updated client notes',
-        leadId: null,
-        projectsCount: 1,
-        communicationsCount: 1,
-        createdOn: DateTime.parse('2026-10-23T06:23:07.000000Z'),
-        updatedAt: DateTime.parse('2026-10-23T06:24:14.000000Z'),
-        keyContacts: const [
-          KeyContact(
-            name: 'Rahul Kumar',
-            designation: 'Managing Director',
-            mobile: '+91 98765 43210',
-            email: 'rahul@rkenterprises.com',
-          ),
-          KeyContact(
-            name: 'Neha Sharma',
-            designation: 'Project Manager',
-            mobile: '+91 87654 32109',
-            email: 'neha@rkenterprises.com',
-          ),
-        ],
-        projects: [
-          ClientProject(
-            id: 'P001',
-            name: 'Website Development',
-            description: 'Develop a custom WordPress website reflecting new enterprise standards.',
-            startDate: DateTime(2024, 1, 1),
-            dueDate: DateTime(2024, 6, 30),
-            projectManager: projectManagers[0], // Vikash Yadav
-            estimatedValue: 500000.0,
-            status: 'Active',
-          ),
-          ClientProject(
-            id: 'P002',
-            name: 'Mobile App Development',
-            description: 'Develop iOS and Android applications for employee attendance tracking.',
-            startDate: DateTime(2024, 2, 15),
-            dueDate: DateTime(2024, 8, 15),
-            projectManager: projectManagers[1], // Rahul Sharma
-            estimatedValue: 800000.0,
-            status: 'Active',
-          ),
-          ClientProject(
-            id: 'P003',
-            name: 'ERP System',
-            description: 'Deploy inventory tracking ERP system across regional offices.',
-            startDate: DateTime(2023, 10, 10),
-            dueDate: DateTime(2023, 12, 30),
-            projectManager: projectManagers[2], // Neha Verma
-            estimatedValue: 575000.0,
-            status: 'Completed',
-          ),
-        ],
-        communications: [
-          ClientCommunication(
-            id: 'CM001',
-            type: 'Email',
-            subject: 'Project requirement discussion',
-            dateTime: DateTime(2024, 5, 20, 11, 30),
-            to: 'info@rkenterprises.com',
-            description: 'Sent proposal details outlining initial phase modules and timelines.',
-            attachmentName: 'Design_Document.pdf',
-          ),
-          ClientCommunication(
-            id: 'CM002',
-            type: 'Call',
-            subject: 'Discussed about timeline',
-            dateTime: DateTime(2024, 5, 20, 10, 15),
-            to: 'Rahul Kumar',
-            description: 'Quick call to address timeline concerns. Client agreed on milestone payouts.',
-          ),
-          ClientCommunication(
-            id: 'CM003',
-            type: 'Meeting',
-            subject: 'Kick-off meeting',
-            dateTime: DateTime(2024, 5, 19, 15, 00),
-            to: 'Rahul Kumar, Neha Sharma',
-            description: 'Conducted a physical kick-off meeting to align engineering deliverables.',
-          ),
-          ClientCommunication(
-            id: 'CM004',
-            type: 'Note',
-            subject: 'Client interested in extra module',
-            dateTime: DateTime(2024, 5, 18, 16, 20),
-            to: 'Internal',
-            description: 'Client expressed interest in adding a shift roster module in Phase 2.',
-          ),
-          ClientCommunication(
-            id: 'CM005',
-            type: 'Email',
-            subject: 'Proposal sent',
-            dateTime: DateTime(2024, 5, 18, 11, 45),
-            to: 'info@rkenterprises.com',
-            description: 'Emailed estimated budget and scope document to Neha Sharma.',
-          ),
-        ],
-      ),
-      Client(
-        id: '1',
-        name: 'Greaves td',
-        email: 'jdmessaging@gmail.com',
-        mobile: '9930190653',
-        website: '',
-        address: 'Ghatkopar West, Mumbai, Apollo Bunder',
-        status: 'Active',
-        notes: '',
-        leadId: 218,
-        projectsCount: 1,
-        communicationsCount: 0,
-        createdOn: DateTime.parse('2026-10-23T06:16:26.000000Z'),
-        updatedAt: DateTime.parse('2026-10-23T06:16:26.000000Z'),
-        keyContacts: const [
-          KeyContact(
-            name: 'Gaurav Jadhav',
-            designation: 'Commercial Lead',
-            mobile: '9930190653',
-            email: 'jdmessaging@gmail.com',
-          ),
-        ],
-        projects: [
-          ClientProject(
-            id: 'P002',
-            name: 'Supply Chain Tracker',
-            description: 'Logistics and delivery tracking integration.',
-            startDate: DateTime(2026, 10, 23),
-            dueDate: DateTime(2027, 1, 15),
-            projectManager: projectManagers[1],
-            estimatedValue: 450000.0,
-            status: 'Active',
-          ),
-        ],
-        communications: const [],
-      ),
-    ]);
-    countsAll.value = 2;
-    countsActive.value = 2;
-    countsInactive.value = 0;
-    totalClients.value = 2;
   }
 
   /// Fetch clients live from the API: /api/admin/clients?status=all&per_page=15&page=1
@@ -518,10 +368,6 @@ class ClientsController extends GetxController {
       isDetailLoading.value = true;
       detailErrorMessage.value = '';
 
-      if (id.toString() == '2' && clientDetailData.value == null) {
-        _seedDetailForClient2();
-      }
-
       final response = await repository.getClientDetail(id);
 
       if (response.status && response.data != null) {
@@ -574,91 +420,6 @@ class ClientsController extends GetxController {
     } finally {
       isDetailLoading.value = false;
     }
-  }
-
-  void _seedDetailForClient2() {
-    clientDetailData.value = ClientDetailData(
-      id: 2,
-      name: "2R K Enterprises Pvt Ltd",
-      email: "info@rkenterprises.com",
-      mobileNumber: "+91 98765 43210",
-      website: "https://www.rkenterprises.com",
-      address: "Suite 12, Tech Tower, Mumbai",
-      status: "Active",
-      notes: "Updated client notes",
-      leadId: null,
-      projectsCount: 1,
-      communicationsCount: 1,
-      createdAt: DateTime.parse("2026-10-23T06:23:07.000000Z"),
-      updatedAt: DateTime.parse("2026-10-23T06:24:14.000000Z"),
-      createdBy: ClientCreatedBy(
-        id: 19,
-        name: "Rahul Sharma",
-        email: "darshankondekar01+15@gmail.com",
-      ),
-      projects: [
-        ClientDetailProject(
-          id: 5,
-          clientId: 2,
-          name: "CRM Software Development",
-          description: "Develop a custom CRM software as per the client business process.",
-          category: "Custom ERP / CRM",
-          priority: "Standard",
-          startDate: "2026-10-23",
-          endDate: "2027-01-21",
-          workingDays: 70,
-          estimatedValue: 550000.0,
-          status: "In Progress",
-          progress: 0,
-          projectManager: ProjectManagerSummary(
-            id: 7,
-            name: "Rahul Sharma",
-            email: "rahul@example.com",
-            phone: "9876543210",
-            designation: "Lead Flutter Developer",
-            employeeId: "EMP-2026-007",
-            department: "Engineering",
-          ),
-          team: [
-            ProjectTeamMember(
-              id: 7,
-              employeeId: "EMP-2026-007",
-              name: "Rahul Sharma",
-              email: "rahul@example.com",
-              designation: "Lead Flutter Developer",
-            ),
-            ProjectTeamMember(
-              id: 19,
-              employeeId: "EMP-2026-017",
-              name: "Rahul Sharma",
-              email: "darshankondekar01+15@gmail.com",
-              designation: "Lead Flutter Developer",
-            ),
-          ],
-        ),
-      ],
-      communications: [
-        ClientDetailCommunication(
-          id: 1,
-          clientId: 2,
-          type: "Meeting",
-          subject: "Updated project review meeting remind",
-          communicatedAt: DateTime.parse("2026-10-24T15:30:00+05:30"),
-          recipient: "info@client.com",
-          description: "Reviewed milestones and agreed on the next delivery.",
-          attachmentName: "proflect-logo-cover 2.png",
-          attachmentUrl: "https://attendance.digiemperor.com/storage/client-communications/dyM0ZlqGIVDaKTUmP6PMlw5R14JFNxy17j2xFXU3.png",
-          createdBy: ClientCreatedBy(
-            id: 19,
-            name: "Rahul Sharma",
-            email: "darshankondekar01+15@gmail.com",
-            designation: "Lead Flutter Developer",
-          ),
-          createdAt: DateTime.parse("2026-10-23T06:29:46.000000Z"),
-          updatedAt: DateTime.parse("2026-10-23T06:32:30.000000Z"),
-        ),
-      ],
-    );
   }
 
   // Active / Inactive Filtering Calculations
@@ -913,7 +674,7 @@ class ClientsController extends GetxController {
     projectNameController.clear();
     projectDescController.clear();
     projectValueController.clear();
-    projectSelectedManager.value = projectManagers[0];
+    projectSelectedManager.value = projectManagers.isNotEmpty ? projectManagers[0] : null;
     projectSelectedStatus.value = 'Active';
     projectStartDate.value = DateTime.now();
     projectDueDate.value = DateTime.now().add(const Duration(days: 90));
@@ -931,7 +692,10 @@ class ClientsController extends GetxController {
             : 'Custom project solution.',
         startDate: projectStartDate.value ?? DateTime.now(),
         dueDate: projectDueDate.value ?? DateTime.now().add(const Duration(days: 90)),
-        projectManager: projectSelectedManager.value ?? projectManagers[0],
+        projectManager: projectSelectedManager.value ??
+            (projectManagers.isNotEmpty
+                ? projectManagers[0]
+                : const AppUser(name: 'Unassigned', email: '', avatarUrl: '')),
         estimatedValue: double.tryParse(projectValueController.text.trim()) ?? 50000.0,
         status: projectSelectedStatus.value ?? 'Active',
       );
