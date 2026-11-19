@@ -155,12 +155,7 @@ class CustomImageWidget extends StatelessWidget {
                 ),
               ),
             ),
-            errorWidget: (context, url, error) => Image.asset(
-              placeHolder,
-              height: height,
-              width: width,
-              fit: fit ?? BoxFit.cover,
-            ),
+            errorWidget: (context, url, error) => _buildDefaultPlaceholder(),
           );
         case ImageType.png:
           return Image.asset(
@@ -169,6 +164,7 @@ class CustomImageWidget extends StatelessWidget {
             width: width,
             fit: fit ?? BoxFit.cover,
             color: color,
+            errorBuilder: (context, error, stackTrace) => _buildDefaultPlaceholder(),
           );
         case ImageType.gif:
           if (imagePath!.startsWith('http')) {
@@ -194,6 +190,7 @@ class CustomImageWidget extends StatelessWidget {
                     width: width,
                     fit: fit ?? BoxFit.cover,
                     color: color,
+                    errorBuilder: (context, error, stackTrace) => _buildDefaultPlaceholder(),
                   );
                 } else {
                   // Agar cache mil gaya to file se fast load
@@ -222,18 +219,37 @@ class CustomImageWidget extends StatelessWidget {
               width: width,
               fit: fit ?? BoxFit.cover,
               color: color,
+              errorBuilder: (context, error, stackTrace) => _buildDefaultPlaceholder(),
             );
           }
         case ImageType.unknown:
         default:
-          return Image.asset(
-            placeHolder,
-            height: height,
-            width: width,
-            fit: fit ?? BoxFit.cover,
-          );
+          return _buildDefaultPlaceholder();
       }
     }
-    return const SizedBox();
+    return _buildDefaultPlaceholder();
+  }
+
+  Widget _buildDefaultPlaceholder() {
+    return Container(
+      height: height,
+      width: width,
+      color: Colors.grey.shade100,
+      alignment: Alignment.center,
+      child: Image.asset(
+        placeHolder,
+        height: height,
+        width: width,
+        fit: fit ?? BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => Icon(
+          Icons.image_outlined,
+          size: (height != null && width != null)
+              ? (height! < width! ? height! * 0.4 : width! * 0.4).clamp(16.0, 48.0)
+              : 24.0,
+          color: Colors.grey.shade400,
+        ),
+      ),
+    );
+  }
   }
 }

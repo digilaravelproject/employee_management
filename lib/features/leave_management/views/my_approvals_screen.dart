@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/app_avatar.dart';
 import '../../../core/widgets/app_text.dart';
 import '../controllers/my_leaves_controller.dart';
 import '../models/admin_leave_model.dart';
@@ -229,20 +230,10 @@ class MyApprovalsScreen extends StatelessWidget {
             // Header: Employee details & Status
             Row(
               children: [
-                CircleAvatar(
+                AppAvatar(
+                  imageUrl: item.employee.avatar,
+                  name: item.employee.name,
                   radius: 20,
-                  backgroundColor: AppColors.primaryLight,
-                  backgroundImage: item.employee.avatar != null && item.employee.avatar!.isNotEmpty
-                      ? NetworkImage(item.employee.avatar!)
-                      : null,
-                  child: item.employee.avatar == null || item.employee.avatar!.isEmpty
-                      ? AppText(
-                          item.employee.name.isNotEmpty ? item.employee.name[0].toUpperCase() : 'E',
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primaryColor,
-                        )
-                      : null,
                 ),
                 const SizedBox(width: 12),
                 Expanded(

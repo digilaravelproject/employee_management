@@ -4,6 +4,7 @@ import 'package:iconsax/iconsax.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/app_avatar.dart';
 import '../../../core/widgets/app_text.dart';
 import '../controllers/performance_controller.dart';
 import '../models/performance_model.dart';
@@ -376,10 +377,10 @@ class _AssignedByMetaRow extends StatelessWidget {
         const SizedBox(width: 10),
         const AppText('Assigned By', fontSize: 12, color: AppColors.textColorSecondary, fontWeight: FontWeight.w500),
         const Spacer(),
-        CircleAvatar(
+        AppAvatar(
+          imageUrl: imageUrl,
+          name: name,
           radius: 10,
-          backgroundColor: AppColors.slate200,
-          backgroundImage: NetworkImage(imageUrl),
         ),
         const SizedBox(width: 6),
         AppText(name, fontSize: 12, color: AppColors.textColorPrimary, fontWeight: FontWeight.w700),

@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/app_validators.dart';
+import '../../../core/widgets/app_network_image.dart';
 import '../../../core/widgets/app_text.dart';
 import '../../../core/widgets/app_input_field.dart';
 import '../../../core/widgets/custom_bottom_sheet_dropdown.dart';
@@ -172,18 +173,13 @@ class _CompanyProfileEditScreenState extends State<CompanyProfileEditScreen> {
                             Stack(
                               alignment: Alignment.bottomRight,
                               children: [
-                                Obx(() => Container(
+                                Obx(() => AppNetworkImage(
+                                      imageUrl: controller.tempLogoUrl.value,
                                       width: 80,
                                       height: 80,
-                                      decoration: BoxDecoration(
-                                        color: AppColors.slate50,
-                                        borderRadius: BorderRadius.circular(20),
-                                        border: Border.all(color: AppColors.slate200, width: 1.5),
-                                        image: DecorationImage(
-                                          image: NetworkImage(controller.tempLogoUrl.value),
-                                          fit: BoxFit.cover,
-                                        ),
-                                      ),
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(color: AppColors.slate200, width: 1.5),
+                                      fallbackIcon: Iconsax.buildings,
                                     )),
                                 GestureDetector(
                                   onTap: () => controller.changeLogo(),

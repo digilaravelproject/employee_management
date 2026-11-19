@@ -194,6 +194,24 @@ class AddAssetScreen extends StatelessWidget {
                                   controller.selectedImage.value,
                                   fit: BoxFit.cover,
                                   width: double.infinity,
+                                  loadingBuilder: (context, child, progress) {
+                                    if (progress == null) return child;
+                                    return const Center(
+                                      child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primaryColor),
+                                    );
+                                  },
+                                  errorBuilder: (context, error, stackTrace) => Container(
+                                    color: AppColors.slate100,
+                                    alignment: Alignment.center,
+                                    child: const Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Iconsax.image, size: 36, color: AppColors.textColorHint),
+                                        SizedBox(height: 8),
+                                        AppText('Failed to load image preview', fontSize: 11, color: AppColors.textColorHint),
+                                      ],
+                                    ),
+                                  ),
                                 ),
                               )
                             : Column(

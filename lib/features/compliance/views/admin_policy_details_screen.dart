@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/app_avatar.dart';
 import '../../../core/widgets/app_text.dart';
 import '../controllers/compliance_controller.dart';
 import '../models/compliance_models.dart';
@@ -448,10 +449,12 @@ class _AdminPolicyDetailsScreenState extends State<AdminPolicyDetailsScreen> wit
                   padding: const EdgeInsets.symmetric(vertical: 4),
                   child: Row(
                     children: [
-                      CircleAvatar(
+                      AppAvatar(
+                        imageUrl: ack.avatarUrl,
+                        name: ack.employeeName,
                         radius: 16,
-                        backgroundImage: NetworkImage(ack.avatarUrl),
                         backgroundColor: const Color(0xFFCBD5E1),
+                        foregroundColor: AppColors.textColorPrimary,
                       ),
                       const SizedBox(width: 12),
                       Expanded(

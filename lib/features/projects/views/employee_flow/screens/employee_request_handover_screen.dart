@@ -4,6 +4,7 @@ import 'package:iconsax/iconsax.dart';
 import '../controllers/employee_flow_controller.dart';
 import '../models/employee_flow_models.dart';
 import '../widgets/employee_flow_widgets.dart';
+import '../../../../../core/widgets/app_avatar.dart';
 
 /// Screen 5: Request Handover
 /// Matches Mockup 5 from the user reference:
@@ -312,9 +313,10 @@ class _EmployeeRequestHandoverScreenState extends State<EmployeeRequestHandoverS
                       value: a['name']!,
                       child: Row(
                         children: [
-                          CircleAvatar(
+                          AppAvatar(
+                            imageUrl: a['avatar'],
+                            name: a['name'],
                             radius: 14,
-                            backgroundImage: NetworkImage(a['avatar']!),
                           ),
                           const SizedBox(width: 10),
                           Column(

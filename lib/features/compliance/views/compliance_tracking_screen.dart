@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/app_avatar.dart';
 import '../../../core/widgets/app_text.dart';
 import '../controllers/compliance_controller.dart';
 
@@ -150,10 +151,12 @@ class ComplianceTrackingScreen extends StatelessWidget {
                     ),
                     child: Row(
                       children: [
-                        CircleAvatar(
+                        AppAvatar(
+                          imageUrl: ack.avatarUrl,
+                          name: ack.employeeName,
                           radius: 18,
-                          backgroundImage: NetworkImage(ack.avatarUrl),
                           backgroundColor: const Color(0xFFCBD5E1),
+                          foregroundColor: AppColors.textColorPrimary,
                         ),
                         const SizedBox(width: 12),
                         Expanded(

@@ -351,7 +351,14 @@ class AssetDetailsScreen extends StatelessWidget {
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(19),
                           child: asset.assignedTo!.avatarUrl.isNotEmpty
-                              ? Image.network(asset.assignedTo!.avatarUrl, fit: BoxFit.cover)
+                              ? Image.network(
+                                  asset.assignedTo!.avatarUrl,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) => Container(
+                                    color: AppColors.slate200,
+                                    child: const Icon(Icons.person, size: 18, color: Colors.grey),
+                                  ),
+                                )
                               : Container(
                                   color: AppColors.slate200,
                                   child: const Icon(Icons.person, size: 18, color: Colors.grey),

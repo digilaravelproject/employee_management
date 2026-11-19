@@ -5,35 +5,63 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_text.dart';
 import '../controllers/clients_controller.dart';
-import '../models/client_model.dart';
+import '../models/client_detail_model.dart';
 import 'assign_project_screen.dart';
 
 class AssignedProjectsScreen extends StatefulWidget {
-  const AssignedProjectsScreen({super.key});
+  final String? clientId;
+  const AssignedProjectsScreen({super.key, this.clientId});
 
   @override
   State<AssignedProjectsScreen> createState() => _AssignedProjectsScreenState();
 }
 
-class _AssignedProjectsScreenState extends State<AssignedProjectsScreen> with SingleTickerProviderStateMixin {
+class _AssignedProjectsScreenState extends State<AssignedProjectsScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  late ClientsController controller;
+
+  String get effectiveClientId =>
+      widget.clientId ?? controller.selectedClient.value?.id.toString() ?? '';
 
   @override
   void initState() {
     super.initState();
+    controller = Get.find<ClientsController>();
     _tabController = TabController(length: 3, vsync: this);
+    _tabController.addListener(_onTabChanged);
+
+    if (effectiveClientId.isNotEmpty) {
+      controller.fetchClientProjects(effectiveClientId, status: 'all');
+    }
+  }
+
+  void _onTabChanged() {
+    if (_tabController.indexIsChanging) return;
+    if (effectiveClientId.isEmpty) return;
+
+    String status = 'all';
+    if (_tabController.index == 1) status = 'active';
+    if (_tabController.index == 2) status = 'completed';
+
+    controller.fetchClientProjects(effectiveClientId, status: status);
+  }
+
+  String get _currentTabStatus {
+    if (_tabController.index == 1) return 'active';
+    if (_tabController.index == 2) return 'completed';
+    return 'all';
   }
 
   @override
   void dispose() {
+    _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.find<ClientsController>();
-
     return Scaffold(
       backgroundColor: AppColors.scaffoldBackgroundColor,
       appBar: AppBar(
@@ -47,32 +75,64 @@ class _AssignedProjectsScreenState extends State<AssignedProjectsScreen> with Si
               borderRadius: BorderRadius.circular(12),
             ),
             child: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textColorPrimary, size: 20),
+              icon: const Icon(
+                Icons.arrow_back_ios_new_rounded,
+                color: AppColors.textColorPrimary,
+                size: 20,
+              ),
               onPressed: () => Get.back(),
             ),
           ),
         ),
         title: const AppText(
-          'Assigned Projects',
+          'Client Projects',
           fontSize: 20,
           fontWeight: FontWeight.bold,
           color: AppColors.textColorPrimary,
         ),
         centerTitle: false,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded, color: AppColors.textColorPrimary),
+            tooltip: 'Refresh',
+            onPressed: () {
+              if (effectiveClientId.isNotEmpty) {
+                controller.fetchClientProjects(
+                  effectiveClientId,
+                  status: _currentTabStatus,
+                );
+              }
+            },
+          ),
+        ],
       ),
       body: Obx(() {
-        final client = controller.selectedClient.value;
-        if (client == null) {
-          return const Center(child: AppText('No client selected'));
-        }
+        final clientInfo = controller.clientProjectsClientInfo.value;
+        final selectedClient = controller.selectedClient.value;
+        final clientName = clientInfo?.name.isNotEmpty == true
+            ? clientInfo!.name
+            : (selectedClient?.name ?? 'Client');
+        final clientEmail = clientInfo?.email.isNotEmpty == true
+            ? clientInfo!.email
+            : (selectedClient?.email ?? '');
+        final clientMobile = clientInfo?.mobileNumber.isNotEmpty == true
+            ? clientInfo!.mobileNumber
+            : (selectedClient?.mobile ?? '');
+        final clientStatus = clientInfo?.status.isNotEmpty == true
+            ? clientInfo!.status
+            : (selectedClient?.status ?? 'Active');
 
-        final allProjs = client.projects;
-        final activeProjs = allProjs.where((p) => p.status == 'Active').toList();
-        final completedProjs = allProjs.where((p) => p.status == 'Completed').toList();
+        final counts = controller.clientProjectsCounts.value;
+        final allCount = counts?.all ?? controller.clientProjects.length;
+        final activeCount = counts?.active ?? 0;
+        final completedCount = counts?.completed ?? 0;
+
+        final projects = controller.clientProjects;
+        final isLoading = controller.isLoadingClientProjects.value;
 
         return Column(
           children: [
-            // ── Screen 5 Mini Header Summary ──
+            // ── Mini Header Summary (Real Client Info from API) ──
             Container(
               color: Colors.white,
               padding: const EdgeInsets.all(16),
@@ -86,16 +146,18 @@ class _AssignedProjectsScreenState extends State<AssignedProjectsScreen> with Si
                 child: Row(
                   children: [
                     Container(
-                      width: 42,
-                      height: 42,
+                      width: 44,
+                      height: 44,
                       decoration: const BoxDecoration(
                         shape: BoxShape.circle,
                         color: AppColors.primaryColor,
                       ),
                       child: Center(
                         child: AppText(
-                          client.name.isNotEmpty ? client.name.substring(0, 2).toUpperCase() : 'CL',
-                          fontSize: 12,
+                          clientName.isNotEmpty
+                              ? clientName.substring(0, clientName.length >= 2 ? 2 : 1).toUpperCase()
+                              : 'CL',
+                          fontSize: 14,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
                         ),
@@ -106,18 +168,56 @@ class _AssignedProjectsScreenState extends State<AssignedProjectsScreen> with Si
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          AppText(
-                            client.name,
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textColorPrimary,
+                          Row(
+                            children: [
+                              Expanded(
+                                child: AppText(
+                                  clientName,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.textColorPrimary,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: (clientStatus.toLowerCase() == 'active'
+                                          ? AppColors.successColor
+                                          : AppColors.slate400)
+                                      .withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: AppText(
+                                  clientStatus,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: clientStatus.toLowerCase() == 'active'
+                                      ? AppColors.successColor
+                                      : AppColors.slate400,
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 2),
-                          AppText(
-                            client.email,
-                            fontSize: 12,
-                            color: AppColors.textColorSecondary,
-                          ),
+                          if (clientEmail.isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            AppText(
+                              clientEmail,
+                              fontSize: 12,
+                              color: AppColors.textColorSecondary,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                          if (clientMobile.isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            AppText(
+                              clientMobile,
+                              fontSize: 11,
+                              color: AppColors.textColorHint,
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -126,7 +226,7 @@ class _AssignedProjectsScreenState extends State<AssignedProjectsScreen> with Si
               ),
             ),
 
-            // Tabs Header
+            // Tabs Header with Real API Counts
             Container(
               color: Colors.white,
               child: TabBar(
@@ -138,27 +238,32 @@ class _AssignedProjectsScreenState extends State<AssignedProjectsScreen> with Si
                 labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                 unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                 tabs: [
-                  Tab(text: 'All Projects (${allProjs.length})'),
-                  Tab(text: 'Active (${activeProjs.length})'),
-                  Tab(text: 'Completed (${completedProjs.length})'),
+                  Tab(text: 'All Projects ($allCount)'),
+                  Tab(text: 'Active ($activeCount)'),
+                  Tab(text: 'Completed ($completedCount)'),
                 ],
               ),
             ),
             const SizedBox(height: 10),
 
-            // Tab Views Content
+            // Projects List Content
             Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  _buildProjectsList(context, allProjs),
-                  _buildProjectsList(context, activeProjs),
-                  _buildProjectsList(context, completedProjs),
-                ],
-              ),
+              child: isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : RefreshIndicator(
+                      onRefresh: () async {
+                        if (effectiveClientId.isNotEmpty) {
+                          await controller.fetchClientProjects(
+                            effectiveClientId,
+                            status: _currentTabStatus,
+                          );
+                        }
+                      },
+                      child: _buildProjectsList(context, projects),
+                    ),
             ),
 
-            // Symmetrical trigger bottom action button
+            // Bottom Action Button
             Container(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
               decoration: const BoxDecoration(
@@ -168,13 +273,17 @@ class _AssignedProjectsScreenState extends State<AssignedProjectsScreen> with Si
               child: SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  onPressed: () {
+                  onPressed: () async {
                     controller.clearProjectForm();
-                    Get.to(() => AssignProjectScreen(clientId: client.id));
+                    final added = await Get.to(() => AssignProjectScreen(clientId: effectiveClientId));
+                    if (added == true) {
+                      controller.fetchClientProjects(effectiveClientId, status: _currentTabStatus);
+                      controller.fetchClientDetail(effectiveClientId);
+                    }
                   },
                   icon: const Icon(Icons.add, color: Colors.white, size: 18),
                   label: const AppText(
-                    'Assign New Project',
+                    'Add New Project',
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
@@ -194,32 +303,40 @@ class _AssignedProjectsScreenState extends State<AssignedProjectsScreen> with Si
     );
   }
 
-  Widget _buildProjectsList(BuildContext context, List<ClientProject> projects) {
+  Widget _buildProjectsList(BuildContext context, List<ClientDetailProject> projects) {
     if (projects.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Iconsax.briefcase, size: 48, color: AppColors.textColorHint.withValues(alpha: 0.3)),
-            const SizedBox(height: 12),
-            const AppText('No projects found under this category.', fontSize: 12, color: AppColors.textColorHint),
-          ],
-        ),
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: [
+          SizedBox(height: MediaQuery.of(context).size.height * 0.15),
+          Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Iconsax.briefcase, size: 52, color: AppColors.textColorHint.withValues(alpha: 0.3)),
+                const SizedBox(height: 12),
+                const AppText(
+                  'No projects found under this status.',
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textColorHint,
+                ),
+              ],
+            ),
+          ),
+        ],
       );
     }
 
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      physics: const BouncingScrollPhysics(),
+      physics: const AlwaysScrollableScrollPhysics(),
       itemCount: projects.length,
       itemBuilder: (context, index) {
         final project = projects[index];
-        final statusColor = project.status == 'Completed' 
-            ? AppColors.successColor 
-            : (project.status == 'Active' ? AppColors.warningColor : AppColors.errorColor);
-
-        final startDateStr = DateFormat('dd MMM yyyy').format(project.startDate);
-        final dueDateStr = DateFormat('dd MMM yyyy').format(project.dueDate);
+        final statusColor = _getStatusColor(project.status);
+        final currencyFormat = NumberFormat.currency(locale: 'HI', symbol: '₹', decimalDigits: 0);
+        final valStr = currencyFormat.format(project.estimatedValue);
 
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
@@ -232,40 +349,134 @@ class _AssignedProjectsScreenState extends State<AssignedProjectsScreen> with Si
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Header: Project Name & Status
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  AppText(
-                    project.name,
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textColorPrimary,
+                  Expanded(
+                    child: AppText(
+                      project.name,
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textColorPrimary,
+                    ),
                   ),
+                  const SizedBox(width: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: statusColor.withValues(alpha: 0.08),
+                      color: statusColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: AppText(
                       project.status,
-                      fontSize: 10,
+                      fontSize: 11,
                       fontWeight: FontWeight.bold,
                       color: statusColor,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              const Divider(height: 1, color: AppColors.slate100),
-              const SizedBox(height: 12),
-              Row(
+              const SizedBox(height: 8),
+
+              // Category & Priority Chips
+              Wrap(
+                spacing: 8,
+                runSpacing: 6,
                 children: [
-                  _buildDateCol('Start Date', startDateStr),
-                  const Spacer(),
-                  _buildDateCol('Due Date', dueDateStr),
+                  if (project.category.isNotEmpty)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: AppColors.slate100,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: AppText(
+                        project.category,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textColorSecondary,
+                      ),
+                    ),
+                  if (project.priority.isNotEmpty)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryColor.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: AppText(
+                        'Priority: ${project.priority}',
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primaryColor,
+                      ),
+                    ),
+                  if (project.workingDays > 0)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: AppColors.indigo500.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: AppText(
+                        '${project.workingDays} Working Days',
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.indigo500,
+                      ),
+                    ),
                 ],
               ),
+
+              if (project.description.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                AppText(
+                  project.description,
+                  fontSize: 12,
+                  color: AppColors.textColorSecondary,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+
+              const SizedBox(height: 14),
+              const Divider(height: 1, color: AppColors.slate100),
+              const SizedBox(height: 12),
+
+              // Financial & Timeline Row
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _buildDataCol('Estimated Value', valStr, isPrimary: true),
+                  _buildDataCol('Start Date', _formatDate(project.startDate)),
+                  _buildDataCol('End Date', _formatDate(project.endDate)),
+                ],
+              ),
+
+              // Optional Project Manager info
+              if (project.projectManager != null && project.projectManager!.name.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.slate50,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Iconsax.user, size: 14, color: AppColors.textColorSecondary),
+                      const SizedBox(width: 6),
+                      AppText(
+                        'Manager: ${project.projectManager!.name}',
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textColorSecondary,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ],
           ),
         );
@@ -273,14 +484,46 @@ class _AssignedProjectsScreenState extends State<AssignedProjectsScreen> with Si
     );
   }
 
-  Widget _buildDateCol(String label, String value) {
+  Widget _buildDataCol(String label, String value, {bool isPrimary = false}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        AppText(label, fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textColorHint),
+        AppText(
+          label,
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+          color: AppColors.textColorHint,
+        ),
         const SizedBox(height: 4),
-        AppText(value, fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textColorSecondary),
+        AppText(
+          value,
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+          color: isPrimary ? AppColors.primaryColor : AppColors.textColorPrimary,
+        ),
       ],
     );
+  }
+
+  String _formatDate(String dateStr) {
+    if (dateStr.isEmpty) return '—';
+    try {
+      final d = DateTime.parse(dateStr);
+      return DateFormat('dd MMM yyyy').format(d);
+    } catch (_) {
+      return dateStr;
+    }
+  }
+
+  Color _getStatusColor(String status) {
+    final s = status.toLowerCase();
+    if (s.contains('progress') || s == 'active') {
+      return AppColors.warningColor;
+    } else if (s.contains('complete') || s == 'done') {
+      return AppColors.successColor;
+    } else if (s.contains('hold') || s.contains('pause')) {
+      return AppColors.indigo500;
+    }
+    return AppColors.textColorSecondary;
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/app_avatar.dart';
 import '../../../core/widgets/app_text.dart';
 import '../../departments/controllers/departments_controller.dart';
 import '../../employee/designation/controllers/designation_controller.dart';
@@ -490,10 +491,10 @@ class _AudiencePickerBottomSheetState extends State<AudiencePickerBottomSheet> {
 
   Widget _buildLeading(AudiencePickerItem item) {
     if (item.avatarUrl != null && item.avatarUrl!.isNotEmpty) {
-      return CircleAvatar(
+      return AppAvatar(
+        imageUrl: item.avatarUrl,
+        name: item.title,
         radius: 18,
-        backgroundImage: NetworkImage(item.avatarUrl!),
-        backgroundColor: AppColors.slate200,
       );
     }
 

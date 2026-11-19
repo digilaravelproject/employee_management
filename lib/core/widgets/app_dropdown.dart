@@ -21,6 +21,9 @@ class AppDropdown<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final effectiveHint = items.isEmpty ? 'No data available' : hint;
+    final validValue = items.any((item) => item.value == value) ? value : null;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -36,13 +39,13 @@ class AppDropdown<T> extends StatelessWidget {
           const SizedBox(height: 8),
         ],
         DropdownButtonFormField<T>(
-          value: value,
+          value: validValue,
           items: items,
-          onChanged: onChanged,
+          onChanged: items.isEmpty ? null : onChanged,
           validator: validator,
           icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textColorSecondary),
           decoration: InputDecoration(
-            hintText: hint,
+            hintText: effectiveHint,
           ),
           style: const TextStyle(
             fontSize: 16,

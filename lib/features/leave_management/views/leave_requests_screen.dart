@@ -381,14 +381,9 @@ class _LeaveRequestsScreenState extends State<LeaveRequestsScreen> {
     required List<FilterItemOption> items,
     required ValueChanged<FilterItemOption?> onChanged,
   }) {
-    final validItems = items.any((item) => item.id?.toString() == value.id?.toString())
-        ? items
-        : [value, ...items];
-
-    final matchedValue = validItems.firstWhere(
-      (item) => item.id?.toString() == value.id?.toString(),
-      orElse: () => validItems.first,
-    );
+    final hasItems = items.isNotEmpty;
+    final matchedValue = items.firstWhereOrNull((item) => item.id?.toString() == value.id?.toString()) ??
+        (hasItems ? items.first : null);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
@@ -403,11 +398,12 @@ class _LeaveRequestsScreenState extends State<LeaveRequestsScreen> {
           isExpanded: true,
           dropdownColor: Colors.white,
           borderRadius: BorderRadius.circular(12),
+          hint: const AppText('No options available', fontSize: 13, color: AppColors.textColorHint),
           icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textColorSecondary, size: 20),
           style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textColorPrimary),
-          onChanged: onChanged,
-          items: validItems.map((FilterItemOption item) {
-            final isSelected = item.id?.toString() == matchedValue.id?.toString();
+          onChanged: hasItems ? onChanged : null,
+          items: items.map((FilterItemOption item) {
+            final isSelected = item.id?.toString() == matchedValue?.id?.toString();
             return DropdownMenuItem<FilterItemOption>(
               value: item,
               child: AppText(
@@ -428,7 +424,9 @@ class _LeaveRequestsScreenState extends State<LeaveRequestsScreen> {
     required List<T> items,
     required ValueChanged<T?> onChanged,
   }) {
-    final validItems = items.contains(value) ? items : [value, ...items];
+    final hasItems = items.isNotEmpty;
+    final matchedValue = items.contains(value) ? value : (hasItems ? items.first : null);
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
       decoration: BoxDecoration(
@@ -438,15 +436,16 @@ class _LeaveRequestsScreenState extends State<LeaveRequestsScreen> {
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<T>(
-          value: value,
+          value: matchedValue,
           isExpanded: true,
           dropdownColor: Colors.white,
           borderRadius: BorderRadius.circular(12),
+          hint: const AppText('No options available', fontSize: 13, color: AppColors.textColorHint),
           icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textColorSecondary, size: 20),
           style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textColorPrimary),
-          onChanged: onChanged,
-          items: validItems.map((T item) {
-            final isSelected = item == value;
+          onChanged: hasItems ? onChanged : null,
+          items: items.map((T item) {
+            final isSelected = item == matchedValue;
             return DropdownMenuItem<T>(
               value: item,
               child: AppText(

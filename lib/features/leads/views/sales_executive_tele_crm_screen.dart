@@ -1158,35 +1158,51 @@ class _SalesExecutiveTeleCrmScreenState extends State<SalesExecutiveTeleCrmScree
                         fontSize: 14.5,
                         fontWeight: FontWeight.w800,
                         color: AppColors.textColorPrimary,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 4),
+                      if (lead.city.isNotEmpty) ...[
+                        Row(
+                          children: [
+                            const Icon(Iconsax.location, size: 12, color: AppColors.textColorSecondary),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: AppText(
+                                lead.city,
+                                fontSize: 11,
+                                color: AppColors.textColorSecondary,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                      ],
                       Row(
                         children: [
-                          const Icon(Iconsax.location, size: 12, color: AppColors.textColorSecondary),
-                          const SizedBox(width: 4),
-                          AppText(
-                            lead.city,
-                            fontSize: 11,
-                            color: AppColors.textColorSecondary,
-                          ),
-                          const SizedBox(width: 10),
-                          const Icon(Iconsax.call, size: 12, color: AppColors.textColorSecondary),
-                          const SizedBox(width: 4),
-                          AppText(
-                            lead.phone,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textColorPrimary,
-                          ),
-                          const SizedBox(width: 10),
-                          const Icon(Iconsax.wallet_3, size: 12, color: AppColors.textColorSecondary),
-                          const SizedBox(width: 4),
-                          AppText(
-                            '₹${(lead.potentialValue / 1000).toStringAsFixed(0)}k',
-                            fontSize: 11,
-                            fontWeight: FontWeight.w800,
-                            color: const Color(0xFF15803D),
-                          ),
+                          if (lead.phone.isNotEmpty) ...[
+                            const Icon(Iconsax.call, size: 12, color: AppColors.textColorSecondary),
+                            const SizedBox(width: 4),
+                            AppText(
+                              lead.phone,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textColorPrimary,
+                            ),
+                            const SizedBox(width: 12),
+                          ],
+                          if (lead.potentialValue > 0) ...[
+                            const Icon(Iconsax.wallet_3, size: 12, color: AppColors.textColorSecondary),
+                            const SizedBox(width: 4),
+                            AppText(
+                              '₹${(lead.potentialValue / 1000).toStringAsFixed(0)}k',
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFF15803D),
+                            ),
+                          ],
                         ],
                       ),
                     ],
@@ -2036,14 +2052,25 @@ void showUpdateLeadStatusModal({
                   const SizedBox(height: 10),
                   Obx(() {
                     final statuses = controller.leadStatuses;
-                    if (statuses.isEmpty && controller.isLoadingStatuses.value) {
+                    if (statuses.isEmpty) {
+                      if (controller.isLoadingStatuses.value) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                          child: Center(
+                            child: SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          ),
+                        );
+                      }
                       return const Padding(
                         padding: EdgeInsets.symmetric(vertical: 16),
                         child: Center(
-                          child: SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(strokeWidth: 2),
+                          child: Text(
+                            'No lead statuses available from server.',
+                            style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
                           ),
                         ),
                       );

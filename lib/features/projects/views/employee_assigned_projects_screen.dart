@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/app_avatar.dart';
 import '../../../core/widgets/app_text.dart';
 import '../controllers/employee_assigned_projects_controller.dart';
 import '../controllers/projects_controller.dart';
@@ -551,31 +552,11 @@ class _EmployeeAssignedProjectCard extends StatelessWidget {
           for (int i = 0; i < visibleCount; i++)
             Positioned(
               left: i * 18.0,
-              child: Container(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 2),
-                ),
-                child: CircleAvatar(
-                  radius: 12,
-                  backgroundColor: AppColors.slate200,
-                  backgroundImage: item.team[i].avatar.isNotEmpty
-                      ? NetworkImage(item.team[i].avatar)
-                      : null,
-                  onBackgroundImageError: (_, _) {},
-                  child: item.team[i].avatar.isEmpty
-                      ? Text(
-                          item.team[i].name.isNotEmpty
-                              ? item.team[i].name[0].toUpperCase()
-                              : '?',
-                          style: const TextStyle(
-                            fontSize: 9,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textColorSecondary,
-                          ),
-                        )
-                      : null,
-                ),
+              child: AppAvatar(
+                imageUrl: item.team[i].avatar,
+                name: item.team[i].name,
+                radius: 12,
+                border: Border.all(color: Colors.white, width: 2),
               ),
             ),
           if (hasOverflow)

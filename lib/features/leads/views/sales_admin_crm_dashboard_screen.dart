@@ -4636,7 +4636,8 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
   void _showDeleteStatusDialog(LeadStatusModel status) {
     final leadsUsingStatus = _leadsList.where((l) => l.status.toLowerCase() == status.name.toLowerCase()).toList();
     final otherStatuses = _statusController.leadStatuses.where((s) => s.id != status.id).toList();
-    String fallbackStatusName = otherStatuses.isNotEmpty ? otherStatuses.first.name : 'New';
+    final hasOtherStatuses = otherStatuses.isNotEmpty;
+    String? fallbackStatusName = hasOtherStatuses ? otherStatuses.first.name : null;
 
     showDialog(
       context: context,
@@ -4672,17 +4673,18 @@ class _SalesAdminDashboardScreenState extends State<SalesAdminDashboardScreen> w
                     ),
                     const SizedBox(height: 10),
                     DropdownButtonFormField<String>(
-                      initialValue: fallbackStatusName,
+                      value: hasOtherStatuses && otherStatuses.any((s) => s.name == fallbackStatusName) ? fallbackStatusName : null,
+                      hint: Text(hasOtherStatuses ? 'Select fallback status' : 'No alternative statuses available'),
                       decoration: InputDecoration(
                         fillColor: const Color(0xFFF8FAFC),
                         filled: true,
                         isDense: true,
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                       ),
-                      items: otherStatuses.map((s) => DropdownMenuItem(value: s.name, child: Text(s.name))).toList(),
-                      onChanged: (val) {
+                      items: hasOtherStatuses ? otherStatuses.map((s) => DropdownMenuItem(value: s.name, child: Text(s.name))).toList() : null,
+                      onChanged: hasOtherStatuses ? (val) {
                         if (val != null) setDialogState(() => fallbackStatusName = val);
-                      },
+                      } : null,
                     ),
                   ],
                 ],

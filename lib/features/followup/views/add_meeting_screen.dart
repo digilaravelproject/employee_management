@@ -183,6 +183,7 @@ class _AddMeetingScreenState extends State<AddMeetingScreen> {
                               label: 'Client/Lead',
                               selectedValue: client,
                               items: controller.clientNames,
+                              hintText: controller.clientNames.isEmpty ? 'No clients/leads available' : null,
                               onChanged: (val) {
                                 _selectedClient.value = val;
                                 setState(() {
@@ -215,6 +216,7 @@ class _AddMeetingScreenState extends State<AddMeetingScreen> {
                                 label: 'Employee / Representative',
                                 selectedValue: emp,
                                 items: repsList,
+                                hintText: repsList.isEmpty ? 'No employees available' : null,
                                 onChanged: (val) {
                                   _selectedEmployee.value = val;
                                   setState(() {

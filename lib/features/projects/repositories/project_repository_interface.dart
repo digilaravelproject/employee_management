@@ -1,8 +1,18 @@
+import 'package:dio/dio.dart';
 import '../../employee/management/models/employee_model.dart';
 import '../models/create_project_model.dart';
+import '../models/working_days_model.dart';
 
 abstract class ProjectRepositoryInterface {
   Future<CreateProjectResponseModel> createProject(CreateProjectRequestModel request);
+  Future<CreateProjectResponseModel> createProjectFromLead({
+    required dynamic leadId,
+    required FormData formData,
+  });
+  Future<WorkingDaysModel> calculateWorkingDays({
+    required String startDate,
+    required String endDate,
+  });
   Future<EmployeeListResponseModel> getEmployees();
   Future<ProjectListResponseModel> getProjects({
     String? status,

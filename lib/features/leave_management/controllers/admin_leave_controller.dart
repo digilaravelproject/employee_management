@@ -71,32 +71,14 @@ class AdminLeaveController extends GetxController {
 
   final RxList<FilterItemOption> leaveTypeOptions = <FilterItemOption>[
     FilterItemOption(id: null, name: 'All'),
-    FilterItemOption(id: 1, name: 'Casual Leave'),
-    FilterItemOption(id: 2, name: 'Sick Leave'),
-    FilterItemOption(id: 3, name: 'Paid Leave'),
-    FilterItemOption(id: 4, name: 'Comp Off'),
-    FilterItemOption(id: 5, name: 'Maternity Leave'),
-    FilterItemOption(id: 6, name: 'Paternity Leave'),
-    FilterItemOption(id: 7, name: 'Other Leave'),
   ].obs;
 
   final RxList<String> roles = <String>[
     'All',
-    'Admin',
-    'Manager',
-    'Team Lead',
-    'Employee',
   ].obs;
 
   final RxList<String> designations = <String>[
     'All',
-    'UI/UX Designer',
-    'Frontend Developer',
-    'Backend Developer',
-    'HR Executive',
-    'Marketing Executive',
-    'Sales Lead',
-    'Project Manager',
   ].obs;
 
   final List<String> datePresets = [
@@ -112,6 +94,9 @@ class AdminLeaveController extends GetxController {
   void onInit() {
     super.onInit();
     fetchDepartmentOptions();
+    fetchLeaveTypeOptions();
+    fetchDesignationOptions();
+    fetchRoleOptions();
     fetchLeaveRequests();
   }
 
@@ -133,7 +118,7 @@ class AdminLeaveController extends GetxController {
           if (data is List) {
             final List<FilterItemOption> loaded = [FilterItemOption(id: null, name: 'All')];
             for (var item in data) {
-              if (item is Map<String, dynamic>) {
+              if (item is Map) {
                 loaded.add(FilterItemOption(
                   id: item['id'],
                   name: item['name']?.toString() ?? 'Dept ${item['id']}',
@@ -148,6 +133,92 @@ class AdminLeaveController extends GetxController {
       }
     } catch (e) {
       Logger.d('AdminLeaveController => fetchDepartmentOptions error: $e');
+    }
+  }
+
+  // ── Fetch Leave Types from API ──────────────────────────────────
+  Future<void> fetchLeaveTypeOptions() async {
+    try {
+      if (Get.isRegistered<ApiClient>()) {
+        final apiClient = Get.find<ApiClient>();
+        final response = await apiClient.get(AppConstants.adminLeaveTypesUrl, handleError: false, showToaster: false);
+        if (response.isSuccess && response.json != null) {
+          final data = response.json!['data'];
+          if (data is List) {
+            final List<FilterItemOption> loaded = [FilterItemOption(id: null, name: 'All')];
+            for (var item in data) {
+              if (item is Map) {
+                loaded.add(FilterItemOption(
+                  id: item['id'],
+                  name: item['name']?.toString() ?? 'Leave Type ${item['id']}',
+                ));
+              }
+            }
+            leaveTypeOptions.assignAll(loaded);
+            return;
+          }
+        }
+      }
+      leaveTypeOptions.assignAll([FilterItemOption(id: null, name: 'All')]);
+    } catch (e) {
+      Logger.d('AdminLeaveController => fetchLeaveTypeOptions error: $e');
+      leaveTypeOptions.assignAll([FilterItemOption(id: null, name: 'All')]);
+    }
+  }
+
+  // ── Fetch Designations from API ─────────────────────────────────
+  Future<void> fetchDesignationOptions() async {
+    try {
+      if (Get.isRegistered<ApiClient>()) {
+        final apiClient = Get.find<ApiClient>();
+        final response = await apiClient.get(AppConstants.adminDesignationsUrl, handleError: false, showToaster: false);
+        if (response.isSuccess && response.json != null) {
+          final data = response.json!['data'];
+          if (data is List) {
+            final List<String> loaded = ['All'];
+            for (var item in data) {
+              if (item is Map) {
+                final name = item['name']?.toString() ?? '';
+                if (name.isNotEmpty) loaded.add(name);
+              }
+            }
+            designations.assignAll(loaded);
+            return;
+          }
+        }
+      }
+      designations.assignAll(['All']);
+    } catch (e) {
+      Logger.d('AdminLeaveController => fetchDesignationOptions error: $e');
+      designations.assignAll(['All']);
+    }
+  }
+
+  // ── Fetch Roles from API ────────────────────────────────────────
+  Future<void> fetchRoleOptions() async {
+    try {
+      if (Get.isRegistered<ApiClient>()) {
+        final apiClient = Get.find<ApiClient>();
+        final response = await apiClient.get(AppConstants.adminRolesUrl, handleError: false, showToaster: false);
+        if (response.isSuccess && response.json != null) {
+          final data = response.json!['data'];
+          if (data is List) {
+            final List<String> loaded = ['All'];
+            for (var item in data) {
+              if (item is Map) {
+                final name = item['name']?.toString() ?? '';
+                if (name.isNotEmpty) loaded.add(name);
+              }
+            }
+            roles.assignAll(loaded);
+            return;
+          }
+        }
+      }
+      roles.assignAll(['All']);
+    } catch (e) {
+      Logger.d('AdminLeaveController => fetchRoleOptions error: $e');
+      roles.assignAll(['All']);
     }
   }
 

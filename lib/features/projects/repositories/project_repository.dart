@@ -1,16 +1,97 @@
-import 'package:get/get.dart';
+import 'package:dio/dio.dart';
+import 'package:get/get.dart' hide FormData, MultipartFile;
 import '../../../core/constants/app_constants.dart';
 import '../../../core/controllers/app_controller.dart';
 import '../../../core/services/network/api_client.dart';
 import '../../../core/utils/logger.dart';
 import '../../employee/management/models/employee_model.dart';
 import '../models/create_project_model.dart';
+import '../models/working_days_model.dart';
 import 'project_repository_interface.dart';
 
 class ProjectRepository implements ProjectRepositoryInterface {
   final ApiClient apiClient;
 
   ProjectRepository({required this.apiClient});
+
+  @override
+  Future<CreateProjectResponseModel> createProjectFromLead({
+    required dynamic leadId,
+    required FormData formData,
+  }) async {
+    try {
+      final url = AppConstants.adminLeadProjectsUrl(leadId);
+      Logger.d('ProjectRepository => POST $url');
+
+      final response = await apiClient.post(
+        url,
+        data: formData,
+        handleError: false,
+        showToaster: false,
+      );
+
+      Logger.d('ProjectRepository => Status: ${response.statusCode}, isSuccess: ${response.isSuccess}');
+
+      if (response.json != null) {
+        return CreateProjectResponseModel.fromJson(response.json!);
+      } else if (response.body is Map<String, dynamic>) {
+        return CreateProjectResponseModel.fromJson(response.body as Map<String, dynamic>);
+      }
+
+      return CreateProjectResponseModel(
+        status: response.isSuccess,
+        message: response.message.isNotEmpty
+            ? response.message
+            : (response.isSuccess
+                ? 'Project created from converted lead successfully.'
+                : 'Failed to create project from lead.'),
+      );
+    } catch (e, stack) {
+      Logger.e('ProjectRepository => Error creating project from lead: $e');
+      Logger.e('ProjectRepository => StackTrace: $stack');
+      return CreateProjectResponseModel(
+        status: false,
+        message: 'Something went wrong while creating project from lead: $e',
+      );
+    }
+  }
+
+  @override
+  Future<WorkingDaysModel> calculateWorkingDays({
+    required String startDate,
+    required String endDate,
+  }) async {
+    try {
+      Logger.d('ProjectRepository => GET ${AppConstants.adminWorkingDaysUrl}?start_date=$startDate&end_date=$endDate');
+      final response = await apiClient.get(
+        AppConstants.adminWorkingDaysUrl,
+        queryParameters: {
+          'start_date': startDate,
+          'end_date': endDate,
+        },
+        handleError: false,
+        showToaster: false,
+      );
+
+      if (response.json != null) {
+        return WorkingDaysModel.fromJson(response.json!);
+      } else if (response.body is Map<String, dynamic>) {
+        return WorkingDaysModel.fromJson(response.body as Map<String, dynamic>);
+      }
+
+      return WorkingDaysModel(
+        status: false,
+        message: response.message.isNotEmpty ? response.message : 'Failed to calculate working days',
+      );
+    } catch (e, stack) {
+      Logger.e('ProjectRepository => Error calculating working days: $e');
+      Logger.e('ProjectRepository => StackTrace: $stack');
+      return WorkingDaysModel(
+        status: false,
+        message: 'Something went wrong while calculating working days: $e',
+      );
+    }
+  }
 
   @override
   Future<CreateProjectResponseModel> createProject(CreateProjectRequestModel request) async {

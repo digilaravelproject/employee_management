@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/app_avatar.dart';
 import '../../../core/widgets/app_text.dart';
 import '../controllers/admin_reports_controller.dart';
 
@@ -120,17 +121,11 @@ class _EmployeeOverviewReportScreenState extends State<EmployeeOverviewReportScr
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
       child: Row(
         children: [
-          Container(
-            width: 54,
-            height: 54,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              image: DecorationImage(
-                image: NetworkImage(employee.avatarUrl),
-                fit: BoxFit.cover,
-              ),
-              border: Border.all(color: const Color(0xFFE2E8F0), width: 2),
-            ),
+          AppAvatar(
+            imageUrl: employee.avatarUrl,
+            name: employee.name,
+            radius: 27,
+            border: Border.all(color: const Color(0xFFE2E8F0), width: 2),
           ),
           const SizedBox(width: 14),
           Expanded(

@@ -70,7 +70,6 @@ class ApplyLeaveController extends GetxController {
     toDate.value = now.add(const Duration(days: 1));
     calculateTotalDays();
 
-    _loadInitialAssignees();
     fetchLeaveTypes();
     fetchAssignees();
   }
@@ -81,49 +80,6 @@ class ApplyLeaveController extends GetxController {
     contactController.dispose();
     addressController.dispose();
     super.onClose();
-  }
-
-  // ----------------------------------------------------
-  // Load Initial Fallback Assignees from All-Users schema
-  // ----------------------------------------------------
-  void _loadInitialAssignees() {
-    final initialList = [
-      AssigneeUserModel(id: 20, name: 'Rahul Sharma', employeeId: 'EMP-2026-019', designation: 'Lead Flutter Developer'),
-      AssigneeUserModel(id: 19, name: 'Rahul Sharma', employeeId: 'EMP-2026-018', designation: 'Lead Flutter Developer'),
-      AssigneeUserModel(id: 18, name: 'saurabh sawant', employeeId: 'EMP-2026-010', designation: 'Lead Flutter Developer'),
-      AssigneeUserModel(id: 17, name: 'Rahul Sharma', employeeId: 'EMP-2026-015', designation: 'Lead Flutter Developer'),
-      AssigneeUserModel(id: 16, name: 'Rahul Sharma', employeeId: 'EMP-2026-014', designation: 'Lead Flutter Developer'),
-      AssigneeUserModel(id: 15, name: 'Rahul Sharma', employeeId: 'EMP-2026-013', designation: 'Lead Flutter Developer'),
-      AssigneeUserModel(id: 14, name: 'Rahul Sharma', employeeId: 'EMP-2026-012', designation: 'Lead Flutter Developer'),
-      AssigneeUserModel(id: 13, name: 'Rahul Sharma', employeeId: 'EMP-2026-011', designation: 'Lead Flutter Developer'),
-      AssigneeUserModel(id: 12, name: 'Rahul Sharma01', employeeId: 'EMP1025', designation: 'UI/UX Designer'),
-      AssigneeUserModel(id: 7, name: 'Rahul Sharma', employeeId: 'EMP-2026-007', designation: 'Lead Flutter Developer'),
-      AssigneeUserModel(id: 8, name: 'Administrator', employeeId: 'EMP1025', designation: 'Administrator'),
-      AssigneeUserModel(id: 6, name: 'Rohit S. Sharma', employeeId: 'EMP-2026-003', designation: 'Lead Flutter Developer'),
-      AssigneeUserModel(id: 4, name: 'Sarah Smith', designation: 'HR Executive'),
-      AssigneeUserModel(id: 5, name: 'Michael Brown', designation: 'Lead Developer'),
-      AssigneeUserModel(id: 3, name: 'John Doe', employeeId: 'EMP1026', designation: 'Senior Flutter Developer'),
-      AssigneeUserModel(id: 2, name: 'Rahul Sharma', employeeId: 'EMP1025', designation: 'UI/UX Designer'),
-      AssigneeUserModel(id: 1, name: 'Rahul Sharma', employeeId: 'EMP1025', role: 'admin'),
-    ];
-
-    final Map<String, int> nameCounts = {};
-    for (final u in initialList) {
-      nameCounts[u.displayName] = (nameCounts[u.displayName] ?? 0) + 1;
-    }
-
-    final processed = initialList.map((u) {
-      if ((nameCounts[u.displayName] ?? 0) > 1) {
-        return u.copyWith(displayName: '${u.displayName} (#${u.id})');
-      }
-      return u;
-    }).toList();
-
-    assigneeUsers.assignAll(processed);
-    if (processed.isNotEmpty && selectedAssigneeUser.value == null) {
-      selectedAssigneeUser.value = processed.first;
-      selectedAssignee.value = processed.first.displayName;
-    }
   }
 
   // ----------------------------------------------------
@@ -162,9 +118,17 @@ class ApplyLeaveController extends GetxController {
           selectedAssigneeUser.value = assigneeUsers.first;
           selectedAssignee.value = assigneeUsers.first.displayName;
         }
+      } else {
+        // Only show users from this API; if empty or failed, clear list
+        assigneeUsers.clear();
+        selectedAssigneeUser.value = null;
+        selectedAssignee.value = '';
       }
     } catch (e) {
       Logger.e('ApplyLeaveController => fetchAssignees error: $e');
+      assigneeUsers.clear();
+      selectedAssigneeUser.value = null;
+      selectedAssignee.value = '';
     } finally {
       isLoadingAssignees.value = false;
     }
@@ -523,7 +487,7 @@ class ApplyLeaveController extends GetxController {
       isSubmitting.value = true;
 
       int? assignedUserId = selectedAssigneeUser.value?.id;
-      if (assignedUserId == null) {
+      if (assignedUserId == null && selectedAssignee.value.isNotEmpty) {
         for (final a in assigneeUsers) {
           if (a.displayName == selectedAssignee.value || a.name == selectedAssignee.value) {
             assignedUserId = a.id;
@@ -531,7 +495,6 @@ class ApplyLeaveController extends GetxController {
           }
         }
       }
-      assignedUserId ??= assigneeUsers.isNotEmpty ? assigneeUsers.first.id : 1;
 
       final request = ApplyLeaveRequestModel(
         leaveTypeId: leaveModel.id,

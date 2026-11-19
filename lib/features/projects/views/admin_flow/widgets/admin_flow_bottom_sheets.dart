@@ -20,8 +20,10 @@ class AdminFlowBottomSheets {
     final startDateCtrl = TextEditingController(text: 'Oct 24, 2026');
     final dueDateCtrl = TextEditingController(text: 'Nov 02, 2026');
 
-    String selectedModule = defaultModule ?? (project.modules.isNotEmpty ? project.modules.first.title : 'General');
-    String selectedEmployee = defaultAssignee ?? (project.members.isNotEmpty ? project.members.first.name : 'Unassigned');
+    final hasModules = project.modules.isNotEmpty;
+    final hasMembers = project.members.isNotEmpty;
+    String? selectedModule = defaultModule ?? (hasModules ? project.modules.first.title : null);
+    String? selectedEmployee = defaultAssignee ?? (hasMembers ? project.members.first.name : null);
     String selectedPriority = 'Medium';
 
     showModalBottomSheet(
@@ -112,7 +114,8 @@ class AdminFlowBottomSheets {
                 const Text('Target Module *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AdminFlowTheme.textDark)),
                 const SizedBox(height: 6),
                 DropdownButtonFormField<String>(
-                  initialValue: selectedModule,
+                  value: hasModules && project.modules.any((m) => m.title == selectedModule) ? selectedModule : null,
+                  hint: Text(hasModules ? 'Select Module' : 'No modules available', style: const TextStyle(fontSize: 13, color: AdminFlowTheme.textHint)),
                   decoration: InputDecoration(
                     filled: true,
                     fillColor: const Color(0xFFF8FAFC),
@@ -120,10 +123,10 @@ class AdminFlowBottomSheets {
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AdminFlowTheme.cardBorder)),
                     enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AdminFlowTheme.cardBorder)),
                   ),
-                  items: project.modules.map((m) => DropdownMenuItem(value: m.title, child: Text(m.title, style: const TextStyle(fontSize: 13)))).toList(),
-                  onChanged: (val) {
+                  items: hasModules ? project.modules.map((m) => DropdownMenuItem(value: m.title, child: Text(m.title, style: const TextStyle(fontSize: 13)))).toList() : null,
+                  onChanged: hasModules ? (val) {
                     if (val != null) setSheetState(() => selectedModule = val);
-                  },
+                  } : null,
                 ),
                 const SizedBox(height: 14),
 
@@ -131,7 +134,8 @@ class AdminFlowBottomSheets {
                 const Text('Assign To Employee *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AdminFlowTheme.textDark)),
                 const SizedBox(height: 6),
                 DropdownButtonFormField<String>(
-                  initialValue: selectedEmployee,
+                  value: hasMembers && project.members.any((m) => m.name == selectedEmployee) ? selectedEmployee : null,
+                  hint: Text(hasMembers ? 'Select Employee' : 'No team members available', style: const TextStyle(fontSize: 13, color: AdminFlowTheme.textHint)),
                   decoration: InputDecoration(
                     filled: true,
                     fillColor: const Color(0xFFF8FAFC),
@@ -139,13 +143,13 @@ class AdminFlowBottomSheets {
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AdminFlowTheme.cardBorder)),
                     enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AdminFlowTheme.cardBorder)),
                   ),
-                  items: project.members.map((m) => DropdownMenuItem(
+                  items: hasMembers ? project.members.map((m) => DropdownMenuItem(
                     value: m.name,
                     child: Text('${m.name} (${m.role})', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                  )).toList(),
-                  onChanged: (val) {
+                  )).toList() : null,
+                  onChanged: hasMembers ? (val) {
                     if (val != null) setSheetState(() => selectedEmployee = val);
-                  },
+                  } : null,
                 ),
                 const SizedBox(height: 14),
 
@@ -280,12 +284,20 @@ class AdminFlowBottomSheets {
                         Get.snackbar('Required', 'Please enter task title');
                         return;
                       }
+                      if (selectedModule == null) {
+                        Get.snackbar('Required', 'Please select or create a module first');
+                        return;
+                      }
+                      if (selectedEmployee == null) {
+                        Get.snackbar('Required', 'Please select an employee to assign');
+                        return;
+                      }
                       final allocatedHrs = double.tryParse(hoursCtrl.text.trim()) ?? 8.0;
 
                       controller.addTaskToModule(
-                        moduleTitle: selectedModule,
+                        moduleTitle: selectedModule!,
                         title: titleCtrl.text.trim(),
-                        assigneeName: selectedEmployee,
+                        assigneeName: selectedEmployee!,
                         allocatedHours: allocatedHrs,
                         priority: selectedPriority,
                         dueDate: dueDateCtrl.text.trim(),

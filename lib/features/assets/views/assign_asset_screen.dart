@@ -77,8 +77,13 @@ class AssignAssetScreen extends StatelessWidget {
                               ),
                               child: ClipRRect(
                                 borderRadius: BorderRadius.circular(10),
-                                child: preSelectedAsset.imageUrl != null
-                                    ? Image.network(preSelectedAsset.imageUrl!, fit: BoxFit.cover)
+                                child: (preSelectedAsset.imageUrl != null && preSelectedAsset.imageUrl!.isNotEmpty)
+                                    ? Image.network(
+                                        preSelectedAsset.imageUrl!,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (context, error, stackTrace) =>
+                                            const Icon(Iconsax.monitor, size: 20, color: AppColors.primaryColor),
+                                      )
                                     : const Icon(Iconsax.monitor, size: 20, color: AppColors.primaryColor),
                               ),
                             ),
@@ -193,7 +198,21 @@ class AssignAssetScreen extends StatelessWidget {
                   Obx(() {
                     final employees = controller.allEmployees;
                     if (employees.isEmpty) {
-                      return const SizedBox();
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        decoration: BoxDecoration(
+                          color: AppColors.slate50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.slate200),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(Iconsax.info_circle, size: 18, color: AppColors.slate400),
+                            SizedBox(width: 10),
+                            AppText('No employees available to assign', fontSize: 13, color: AppColors.textColorSecondary),
+                          ],
+                        ),
+                      );
                     }
 
                     return Container(
@@ -221,7 +240,14 @@ class AssignAssetScreen extends StatelessWidget {
                                     child: ClipRRect(
                                       borderRadius: BorderRadius.circular(12),
                                       child: employee.avatarUrl.isNotEmpty
-                                          ? Image.network(employee.avatarUrl, fit: BoxFit.cover)
+                                          ? Image.network(
+                                              employee.avatarUrl,
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (context, error, stackTrace) => Container(
+                                                color: AppColors.slate200,
+                                                child: const Icon(Icons.person, size: 12, color: Colors.grey),
+                                              ),
+                                            )
                                           : Container(
                                               color: AppColors.slate200,
                                               child: const Icon(Icons.person, size: 12, color: Colors.grey),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/app_avatar.dart';
 import '../../../core/widgets/app_text.dart';
 import '../controllers/chat_controller.dart';
 import 'chat_room_screen.dart';
@@ -134,10 +135,12 @@ class NewChatScreen extends StatelessWidget {
                         // Swap New Chat screen with Chat Room screen directly
                         Get.off(() => const ChatRoomScreen());
                       },
-                      leading: CircleAvatar(
+                      leading: AppAvatar(
+                        imageUrl: contact.avatarUrl,
+                        name: contact.name,
                         radius: 20,
-                        backgroundImage: NetworkImage(contact.avatarUrl),
                         backgroundColor: const Color(0xFFCBD5E1),
+                        foregroundColor: AppColors.textColorPrimary,
                       ),
                       title: AppText(
                         contact.name,

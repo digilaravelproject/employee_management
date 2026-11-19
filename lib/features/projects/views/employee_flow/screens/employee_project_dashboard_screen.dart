@@ -4,6 +4,7 @@ import 'package:iconsax/iconsax.dart';
 import '../controllers/employee_flow_controller.dart';
 import '../models/employee_flow_models.dart';
 import '../widgets/employee_flow_widgets.dart';
+import '../../../../../core/widgets/app_avatar.dart';
 import 'employee_project_details_screen.dart';
 import 'employee_task_details_screen.dart';
 
@@ -133,21 +134,12 @@ class EmployeeProjectDashboardScreen extends StatelessWidget {
           ),
         ],
         // Avatar with border
-        Container(
-          width: 46,
-          height: 46,
-          decoration: BoxDecoration(
-            color: EmployeeFlowTheme.infoBg,
-            shape: BoxShape.circle,
-            border: Border.all(color: EmployeeFlowTheme.primaryBlue.withValues(alpha: 0.3), width: 1.5),
-            image: const DecorationImage(
-              image: NetworkImage('https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'),
-              fit: BoxFit.cover,
-            ),
-          ),
-          child: const Center(
-            child: Icon(Icons.person, color: EmployeeFlowTheme.primaryBlue, size: 22),
-          ),
+        AppAvatar(
+          imageUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+          radius: 23,
+          backgroundColor: EmployeeFlowTheme.infoBg,
+          foregroundColor: EmployeeFlowTheme.primaryBlue,
+          border: Border.all(color: EmployeeFlowTheme.primaryBlue.withValues(alpha: 0.3), width: 1.5),
         ),
         const SizedBox(width: 12),
         // Name and Designation

@@ -41,6 +41,15 @@ class AppLogo extends StatelessWidget {
           fit: BoxFit.cover,
           width: size,
           height: size,
+          errorBuilder: (context, error, stackTrace) => Container(
+            color: AppColors.primaryLight,
+            alignment: Alignment.center,
+            child: Icon(
+              Icons.business,
+              size: size * 0.5,
+              color: AppColors.primaryColor,
+            ),
+          ),
         ),
       ),
     );

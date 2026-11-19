@@ -49,7 +49,12 @@ class AppImagePreview extends StatelessWidget {
                     minScale: 0.5,
                     maxScale: 4.0,
                     child: imagePath != null
-                        ? Image.file(File(imagePath!))
+                        ? Image.file(
+                            File(imagePath!),
+                            errorBuilder: (context, error, stackTrace) => const Center(
+                              child: Icon(Icons.broken_image_rounded, color: Colors.white, size: 40),
+                            ),
+                          )
                         : Image.network(
                             imageUrl!,
                             loadingBuilder: (context, child, loadingProgress) {

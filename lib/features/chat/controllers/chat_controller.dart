@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../../core/services/network/api_client.dart';
+import '../../../core/widgets/app_avatar.dart';
 import '../../../core/utils/logger.dart';
 import '../../performance/repositories/performance_repository.dart';
 import '../../performance/repositories/performance_repository_interface.dart';
@@ -395,9 +396,10 @@ class ChatController extends GetxController {
         margin: const EdgeInsets.all(12),
         borderRadius: 16,
         duration: const Duration(seconds: 3),
-        icon: CircleAvatar(
+        icon: AppAvatar(
+          imageUrl: responderAvatar,
+          name: responderName,
           radius: 18,
-          backgroundImage: NetworkImage(responderAvatar),
         ),
       );
     }

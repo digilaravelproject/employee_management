@@ -330,3 +330,165 @@ class ClientDetailData {
     );
   }
 }
+
+class AddClientCommunicationResponse {
+  final bool status;
+  final String message;
+  final ClientDetailCommunication? data;
+
+  AddClientCommunicationResponse({
+    required this.status,
+    required this.message,
+    this.data,
+  });
+
+  factory AddClientCommunicationResponse.fromJson(Map<String, dynamic> json) {
+    return AddClientCommunicationResponse(
+      status: json['status'] == true,
+      message: json['message']?.toString() ?? '',
+      data: json['data'] is Map<String, dynamic>
+          ? ClientDetailCommunication.fromJson(json['data'])
+          : null,
+    );
+  }
+}
+
+class SingleClientCommunicationResponse {
+  final bool status;
+  final String message;
+  final ClientDetailCommunication? data;
+
+  SingleClientCommunicationResponse({
+    required this.status,
+    required this.message,
+    this.data,
+  });
+
+  factory SingleClientCommunicationResponse.fromJson(Map<String, dynamic> json) {
+    return SingleClientCommunicationResponse(
+      status: json['status'] == true,
+      message: json['message']?.toString() ?? '',
+      data: json['data'] is Map<String, dynamic>
+          ? ClientDetailCommunication.fromJson(json['data'])
+          : null,
+    );
+  }
+}
+
+typedef UpdateClientCommunicationResponse = SingleClientCommunicationResponse;
+
+class AddClientProjectResponse {
+  final bool status;
+  final String message;
+  final ClientDetailProject? data;
+
+  AddClientProjectResponse({
+    required this.status,
+    required this.message,
+    this.data,
+  });
+
+  factory AddClientProjectResponse.fromJson(Map<String, dynamic> json) {
+    return AddClientProjectResponse(
+      status: json['status'] == true,
+      message: json['message']?.toString() ?? '',
+      data: json['data'] is Map<String, dynamic>
+          ? ClientDetailProject.fromJson(json['data'])
+          : null,
+    );
+  }
+}
+
+class ClientProjectsCounts {
+  final int all;
+  final int active;
+  final int completed;
+
+  ClientProjectsCounts({
+    this.all = 0,
+    this.active = 0,
+    this.completed = 0,
+  });
+
+  factory ClientProjectsCounts.fromJson(Map<String, dynamic>? json) {
+    if (json == null) return ClientProjectsCounts();
+    return ClientProjectsCounts(
+      all: (json['all'] as num?)?.toInt() ?? 0,
+      active: (json['active'] as num?)?.toInt() ?? 0,
+      completed: (json['completed'] as num?)?.toInt() ?? 0,
+    );
+  }
+}
+
+class ClientProjectsClientInfo {
+  final int id;
+  final String name;
+  final String email;
+  final String mobileNumber;
+  final String status;
+
+  ClientProjectsClientInfo({
+    required this.id,
+    required this.name,
+    required this.email,
+    required this.mobileNumber,
+    required this.status,
+  });
+
+  factory ClientProjectsClientInfo.fromJson(Map<String, dynamic>? json) {
+    if (json == null) {
+      return ClientProjectsClientInfo(id: 0, name: '', email: '', mobileNumber: '', status: '');
+    }
+    return ClientProjectsClientInfo(
+      id: (json['id'] as num?)?.toInt() ?? 0,
+      name: json['name']?.toString() ?? '',
+      email: json['email']?.toString() ?? '',
+      mobileNumber: (json['mobile_number'] ?? json['mobile'])?.toString() ?? '',
+      status: json['status']?.toString() ?? '',
+    );
+  }
+}
+
+class ClientProjectsResponse {
+  final bool status;
+  final String message;
+  final ClientProjectsClientInfo? client;
+  final ClientProjectsCounts counts;
+  final int total;
+  final List<ClientDetailProject> data;
+
+  ClientProjectsResponse({
+    required this.status,
+    required this.message,
+    this.client,
+    required this.counts,
+    required this.total,
+    this.data = const [],
+  });
+
+  factory ClientProjectsResponse.fromJson(Map<String, dynamic> json) {
+    List<ClientDetailProject> parsedList = [];
+    if (json['data'] is List) {
+      parsedList = (json['data'] as List)
+          .whereType<Map<String, dynamic>>()
+          .map((item) => ClientDetailProject.fromJson(item))
+          .toList();
+    }
+
+    return ClientProjectsResponse(
+      status: json['status'] == true,
+      message: json['message']?.toString() ?? '',
+      client: json['client'] is Map<String, dynamic>
+          ? ClientProjectsClientInfo.fromJson(json['client'])
+          : null,
+      counts: ClientProjectsCounts.fromJson(
+        json['counts'] is Map<String, dynamic> ? json['counts'] : null,
+      ),
+      total: (json['total'] as num?)?.toInt() ?? parsedList.length,
+      data: parsedList,
+    );
+  }
+}
+
+
+

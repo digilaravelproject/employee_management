@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/app_avatar.dart';
 import '../../../core/widgets/app_text.dart';
 import '../../employee/management/models/employee_model.dart';
 import '../controllers/projects_controller.dart';
@@ -165,9 +166,11 @@ class CreateProjectScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(color: AppColors.slate200),
                     ),
-                    child: Row(
+                    child: Column(
                       children: [
-                        Expanded(
+                        Row(
+                          children: [
+                            Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -230,6 +233,95 @@ class CreateProjectScreen extends StatelessWidget {
                             ],
                           ),
                         ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    // Working Days Card
+                    Obx(() {
+                      final workingDays = controller.calculatedWorkingDays.value;
+                      final calDays = controller.calendarDays.value;
+                      final isLoading = controller.isLoadingWorkingDays.value;
+                      final rule = controller.workingDaysRule.value;
+
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF0FDF4),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFF86EFAC)),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFDCFCE7),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(Icons.work_history_rounded, size: 16, color: Color(0xFF16A34A)),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: isLoading
+                                  ? const Text(
+                                      'Calculating official working days...',
+                                      style: TextStyle(fontSize: 11.5, color: Color(0xFF15803D), fontStyle: FontStyle.italic),
+                                    )
+                                  : Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Text(
+                                              '${workingDays ?? '--'} Working Days',
+                                              style: const TextStyle(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.bold,
+                                                color: Color(0xFF166534),
+                                              ),
+                                            ),
+                                            if (calDays != null) ...[
+                                              const SizedBox(width: 6),
+                                              Text(
+                                                '($calDays Calendar Days)',
+                                                style: const TextStyle(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w500,
+                                                  color: Color(0xFF15803D),
+                                                ),
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                        if (rule.isNotEmpty)
+                                          Text(
+                                            rule,
+                                            style: const TextStyle(fontSize: 9.5, color: Color(0xFF15803D)),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                      ],
+                                    ),
+                            ),
+                            if (isLoading)
+                              const SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF16A34A)),
+                              )
+                            else
+                              InkWell(
+                                onTap: controller.fetchWorkingDays,
+                                borderRadius: BorderRadius.circular(12),
+                                child: const Padding(
+                                  padding: EdgeInsets.all(4),
+                                  child: Icon(Icons.refresh_rounded, size: 16, color: Color(0xFF16A34A)),
+                                ),
+                              ),
+                          ],
+                        ),
+                      );
+                    }),
                       ],
                     ),
                   ),
@@ -685,18 +777,10 @@ class CreateProjectScreen extends StatelessWidget {
     if (pic != null && pic.isNotEmpty) {
       url = pic.startsWith('http') ? pic : AppConstants.getFileUrl(pic);
     }
-    return CircleAvatar(
+    return AppAvatar(
+      imageUrl: url,
+      name: emp.name,
       radius: 18,
-      backgroundColor: AppColors.primaryLight,
-      backgroundImage: url != null ? NetworkImage(url) : null,
-      child: url == null
-          ? AppText(
-              emp.name.isNotEmpty ? emp.name[0].toUpperCase() : 'E',
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: AppColors.primaryColor,
-            )
-          : null,
     );
   }
 
@@ -741,6 +825,7 @@ class CreateProjectScreen extends StatelessWidget {
       } else {
         controller.endDate.value = picked;
       }
+      controller.fetchWorkingDays();
     }
   }
 

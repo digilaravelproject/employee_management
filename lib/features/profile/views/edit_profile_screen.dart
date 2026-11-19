@@ -5,6 +5,7 @@ import 'package:iconsax/iconsax.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/app_validators.dart';
+import '../../../core/widgets/app_avatar.dart';
 import '../../../core/widgets/app_input_field.dart';
 import '../../../core/widgets/app_text.dart';
 import '../../auth/domain/models/user_model.dart';
@@ -370,30 +371,29 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               Obx(() {
                 final File? file = controller.selectedAvatar.value;
                 final String? avatarUrl = controller.currentUser.value?.avatar;
+                final String name = controller.currentUser.value?.name ?? '';
 
-                ImageProvider imageProvider;
                 if (file != null) {
-                  imageProvider = FileImage(file);
-                } else if (avatarUrl != null &&
-                    avatarUrl.isNotEmpty &&
-                    avatarUrl.startsWith('http')) {
-                  imageProvider = NetworkImage(avatarUrl);
-                } else {
-                  imageProvider = const AssetImage('assets/images/user1.png');
+                  return Container(
+                    width: 76,
+                    height: 76,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppColors.primaryLight, width: 3),
+                      image: DecorationImage(
+                        image: FileImage(file),
+                        fit: BoxFit.cover,
+                      ),
+                      color: AppColors.slate200,
+                    ),
+                  );
                 }
 
-                return Container(
-                  width: 76,
-                  height: 76,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.primaryLight, width: 3),
-                    image: DecorationImage(
-                      image: imageProvider,
-                      fit: BoxFit.cover,
-                    ),
-                    color: AppColors.slate200,
-                  ),
+                return AppAvatar(
+                  imageUrl: avatarUrl,
+                  name: name,
+                  radius: 38,
+                  border: Border.all(color: AppColors.primaryLight, width: 3),
                 );
               }),
               Positioned(

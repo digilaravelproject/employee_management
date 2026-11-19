@@ -1,7 +1,8 @@
 import 'dart:convert';
+import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import 'package:get/get.dart' hide FormData, MultipartFile;
 import 'package:intl/intl.dart';
 
 import '../../../core/services/storage/shared_prefs.dart';
@@ -9,7 +10,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_text.dart';
 import '../../employee/management/models/employee_model.dart';
 import '../../projects/controllers/projects_controller.dart';
-import '../../projects/models/create_project_model.dart';
+import '../../projects/models/working_days_model.dart';
 import '../../projects/views/project_details_screen.dart';
 import 'sales_executive_tele_crm_screen.dart';
 
@@ -67,6 +68,7 @@ class LeadProjectHandoverModel {
   final double advanceReceived;
   final String paymentMode;
   final int durationDays;
+  final int? workingDays;
   final DateTime startDate;
   final DateTime targetEndDate;
   final String scopeOfWork;
@@ -88,6 +90,7 @@ class LeadProjectHandoverModel {
     required this.advanceReceived,
     required this.paymentMode,
     required this.durationDays,
+    this.workingDays,
     required this.startDate,
     required this.targetEndDate,
     required this.scopeOfWork,
@@ -110,6 +113,7 @@ class LeadProjectHandoverModel {
         'advanceReceived': advanceReceived,
         'paymentMode': paymentMode,
         'durationDays': durationDays,
+        'workingDays': workingDays,
         'startDate': startDate.toIso8601String(),
         'targetEndDate': targetEndDate.toIso8601String(),
         'scopeOfWork': scopeOfWork,
@@ -132,6 +136,7 @@ class LeadProjectHandoverModel {
         advanceReceived: (json['advanceReceived'] as num?)?.toDouble() ?? 0.0,
         paymentMode: json['paymentMode'] ?? 'Bank Transfer',
         durationDays: json['durationDays'] is int ? json['durationDays'] : 30,
+        workingDays: json['workingDays'] as int?,
         startDate: DateTime.tryParse(json['startDate']?.toString() ?? '') ?? DateTime.now(),
         targetEndDate: DateTime.tryParse(json['targetEndDate']?.toString() ?? '') ?? DateTime.now().add(const Duration(days: 30)),
         scopeOfWork: json['scopeOfWork'] ?? '',
@@ -240,9 +245,15 @@ class _SalesConvertToProjectScreenState extends State<SalesConvertToProjectScree
   DateTime _startDate = DateTime.now();
   late DateTime _targetEndDate;
 
+  // Working Days calculation state (from API)
+  bool _isLoadingWorkingDays = false;
+  int? _calculatedWorkingDays;
+  int? _calendarDays;
+  String? _workingDaysRule;
+  WorkingDaysExcluded? _workingDaysExcluded;
+
   // Financials
-  String _paymentMode = 'UPI / Online';
-  final List<String> _paymentModes = ['UPI / Online', 'Bank Transfer (NEFT/IMPS)', 'Cheque', 'Cash'];
+  final String _paymentMode = 'UPI / Online';
 
   // Priority
   String _priority = 'Standard'; // Standard, High Priority, Urgent ⚡
@@ -287,6 +298,43 @@ class _SalesConvertToProjectScreenState extends State<SalesConvertToProjectScree
     _paymentRefController = TextEditingController();
 
     _loadEmployees();
+    _fetchWorkingDays();
+  }
+
+  Future<void> _fetchWorkingDays() async {
+    setState(() => _isLoadingWorkingDays = true);
+    try {
+      final projectsCtrl = Get.isRegistered<ProjectsController>()
+          ? Get.find<ProjectsController>()
+          : Get.put(ProjectsController());
+
+      final sDateStr = DateFormat('yyyy-MM-dd').format(_startDate);
+      final eDateStr = DateFormat('yyyy-MM-dd').format(_targetEndDate);
+
+      final result = await projectsCtrl.calculateWorkingDays(
+        startDate: sDateStr,
+        endDate: eDateStr,
+      );
+
+      if (mounted) {
+        if (result.status && result.data != null) {
+          final data = result.data!;
+          setState(() {
+            _calculatedWorkingDays = data.workingDays;
+            _calendarDays = data.calendarDays;
+            _workingDaysRule = data.rule;
+            _workingDaysExcluded = data.excluded;
+            _isLoadingWorkingDays = false;
+          });
+        } else {
+          setState(() => _isLoadingWorkingDays = false);
+        }
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _isLoadingWorkingDays = false);
+      }
+    }
   }
 
   Future<void> _loadEmployees() async {
@@ -324,6 +372,7 @@ class _SalesConvertToProjectScreenState extends State<SalesConvertToProjectScree
       _durationDays = days;
       _targetEndDate = _startDate.add(Duration(days: days));
     });
+    _fetchWorkingDays();
   }
 
   Future<void> _pickAttachment(String categoryTag) async {
@@ -499,23 +548,56 @@ class _SalesConvertToProjectScreenState extends State<SalesConvertToProjectScree
       fullDescription.writeln('🎯 Converted from Lead: ${widget.lead.customerName} (${widget.lead.id})');
       fullDescription.writeln('💰 Agreed Deal Value: ₹${budget.toStringAsFixed(0)} | Advance: ₹${advance.toStringAsFixed(0)} ($_paymentMode)');
       if (paymentRef.isNotEmpty) fullDescription.writeln('🧾 Ref: $paymentRef');
-      fullDescription.writeln('⏱️ Estimated Delivery: $_durationDays Days (Target: $eDateStr)');
+      final workingDaysInfo = _calculatedWorkingDays != null ? ' ($_calculatedWorkingDays Working Days)' : '';
+      fullDescription.writeln('⏱️ Estimated Delivery: $_durationDays Calendar Days$workingDaysInfo (Target: $eDateStr)');
       fullDescription.writeln('\n📋 Scope of Work:\n$scope');
       if (instructions.isNotEmpty) fullDescription.writeln('\n📌 Client Notes:\n$instructions');
 
-      final request = CreateProjectRequestModel(
-        name: projectName,
-        description: fullDescription.toString(),
-        category: _selectedCategory,
-        startDate: sDateStr,
-        endDate: eDateStr,
-        status: 'Not Started',
-        progress: 0,
-        employeeIds: empIds,
-        filePaths: filePaths,
-      );
+      final targetLeadId = widget.lead.rawId != 0
+          ? widget.lead.rawId
+          : (int.tryParse(widget.lead.id.replaceAll(RegExp(r'[^0-9]'), '')) ?? widget.lead.rawId);
 
-      final response = await projectsCtrl.repository.createProject(request);
+      final workingDaysVal = _calculatedWorkingDays?.toString() ?? '$_durationDays';
+
+      final formData = FormData();
+      formData.fields.add(MapEntry('name', projectName));
+      formData.fields.add(MapEntry('category', _selectedCategory));
+      formData.fields.add(MapEntry('priority', _priority));
+      formData.fields.add(MapEntry('start_date', sDateStr));
+      formData.fields.add(MapEntry('end_date', eDateStr));
+      formData.fields.add(MapEntry('deliverables', scope));
+      formData.fields.add(MapEntry('special_instructions', instructions));
+      formData.fields.add(MapEntry('description', fullDescription.toString()));
+
+      // Send working day in matching fields (curl: 'working day="2"')
+      formData.fields.add(MapEntry('working day', workingDaysVal));
+      formData.fields.add(MapEntry('working_days', workingDaysVal));
+      formData.fields.add(MapEntry('working_day', workingDaysVal));
+
+      for (final id in empIds) {
+        if (id.trim().isNotEmpty) {
+          formData.fields.add(MapEntry('employee_ids[]', id.trim()));
+          formData.fields.add(MapEntry('members[]', id.trim()));
+        }
+      }
+
+      for (int i = 0; i < filePaths.length; i++) {
+        final path = filePaths[i];
+        if (path.isNotEmpty) {
+          final fileName = path.split('/').last;
+          formData.files.add(
+            MapEntry(
+              'files[$i]',
+              await MultipartFile.fromFile(path, filename: fileName),
+            ),
+          );
+        }
+      }
+
+      final response = await projectsCtrl.createProjectFromLead(
+        leadId: targetLeadId,
+        formData: formData,
+      );
 
       String? createdProjectId;
       if (response.status && response.data != null) {
@@ -535,6 +617,7 @@ class _SalesConvertToProjectScreenState extends State<SalesConvertToProjectScree
         advanceReceived: advance,
         paymentMode: _paymentMode,
         durationDays: _durationDays,
+        workingDays: _calculatedWorkingDays,
         startDate: _startDate,
         targetEndDate: _targetEndDate,
         scopeOfWork: scope,
@@ -556,7 +639,7 @@ class _SalesConvertToProjectScreenState extends State<SalesConvertToProjectScree
           title: 'Project Handover Created 🚀',
           date: DateFormat('dd MMM yyyy').format(DateTime.now()),
           time: DateFormat('hh:mm a').format(DateTime.now()),
-          note: 'Project "$projectName" created. Target delivery: $_durationDays days. ${_attachments.length} client documents attached.',
+          note: 'Project "$projectName" created. Target delivery: $_durationDays calendar days${_calculatedWorkingDays != null ? " ($_calculatedWorkingDays working days)" : ""}. ${_attachments.length} client documents attached.',
           performedBy: 'You',
           isCompleted: true,
         ),
@@ -641,7 +724,9 @@ class _SalesConvertToProjectScreenState extends State<SalesConvertToProjectScree
                           const Text('Duration', style: TextStyle(fontSize: 10.5, color: Color(0xFF64748B))),
                           const SizedBox(height: 2),
                           Text(
-                            '${handover.durationDays} Days',
+                            handover.workingDays != null
+                                ? '${handover.workingDays} W-Days'
+                                : '${handover.durationDays} Days',
                             style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF2563EB)),
                           ),
                         ],
@@ -762,7 +847,7 @@ class _SalesConvertToProjectScreenState extends State<SalesConvertToProjectScree
                       style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
                     ),
                     Text(
-                      'Target: $_durationDays Days Delivery',
+                      'Target: $_durationDays Days${_calculatedWorkingDays != null ? " • $_calculatedWorkingDays Working Days" : ""}',
                       style: const TextStyle(fontSize: 10.5, color: Color(0xFF15803D), fontWeight: FontWeight.bold),
                     ),
                   ],
@@ -872,11 +957,15 @@ class _SalesConvertToProjectScreenState extends State<SalesConvertToProjectScree
                             Text(
                               widget.lead.customerName,
                               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.white),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                             const SizedBox(height: 2),
                             Text(
                               '${widget.lead.phone} • ${widget.lead.city}',
                               style: const TextStyle(fontSize: 11.5, color: Color(0xFFE0E7FF)),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ),
@@ -1045,6 +1134,7 @@ class _SalesConvertToProjectScreenState extends State<SalesConvertToProjectScree
                                 _startDate = p;
                                 _targetEndDate = _startDate.add(Duration(days: _durationDays));
                               });
+                              _fetchWorkingDays();
                             }
                           },
                           borderRadius: BorderRadius.circular(12),
@@ -1090,6 +1180,7 @@ class _SalesConvertToProjectScreenState extends State<SalesConvertToProjectScree
                                 _targetEndDate = p;
                                 _durationDays = _targetEndDate.difference(_startDate).inDays;
                               });
+                              _fetchWorkingDays();
                             }
                           },
                           borderRadius: BorderRadius.circular(12),
@@ -1121,6 +1212,155 @@ class _SalesConvertToProjectScreenState extends State<SalesConvertToProjectScree
                         ),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Official Working Days Field (Calculated via /api/admin/working-days)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF0FDF4),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFF86EFAC)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFDCFCE7),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(Icons.work_history_rounded, size: 16, color: Color(0xFF16A34A)),
+                            ),
+                            const SizedBox(width: 8),
+                            const Expanded(
+                              child: Text(
+                                'Working Days (Official)',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF14532D),
+                                ),
+                              ),
+                            ),
+                            if (_isLoadingWorkingDays)
+                              const SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF16A34A)),
+                              )
+                            else
+                              InkWell(
+                                onTap: _fetchWorkingDays,
+                                borderRadius: BorderRadius.circular(12),
+                                child: const Padding(
+                                  padding: EdgeInsets.all(4),
+                                  child: Icon(Icons.refresh_rounded, size: 16, color: Color(0xFF16A34A)),
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        if (_isLoadingWorkingDays)
+                          const Row(
+                            children: [
+                              Text(
+                                'Calculating working days from attendance rules...',
+                                style: TextStyle(fontSize: 11.5, color: Color(0xFF15803D), fontStyle: FontStyle.italic),
+                              ),
+                            ],
+                          )
+                        else if (_calculatedWorkingDays != null) ...[
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.baseline,
+                            textBaseline: TextBaseline.alphabetic,
+                            children: [
+                              Text(
+                                '$_calculatedWorkingDays',
+                                style: const TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFF15803D),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              const Text(
+                                'Working Days',
+                                style: TextStyle(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF166534),
+                                ),
+                              ),
+                              const Spacer(),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: const Color(0xFFBBF7D0)),
+                                ),
+                                child: Text(
+                                  '${_calendarDays ?? _durationDays} Calendar Days',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF15803D),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (_workingDaysExcluded != null) ...[
+                            const SizedBox(height: 6),
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 4,
+                              children: [
+                                if (_workingDaysExcluded!.sundays > 0)
+                                  _buildWorkingDaysBadge('${_workingDaysExcluded!.sundays} Sundays off'),
+                                if (_workingDaysExcluded!.secondAndFourthSaturdays > 0)
+                                  _buildWorkingDaysBadge('${_workingDaysExcluded!.secondAndFourthSaturdays} Sats (2nd/4th) off'),
+                                if (_workingDaysExcluded!.holidays > 0)
+                                  _buildWorkingDaysBadge('${_workingDaysExcluded!.holidays} Holidays off'),
+                              ],
+                            ),
+                          ],
+                          if (_workingDaysRule != null && _workingDaysRule!.isNotEmpty) ...[
+                            const SizedBox(height: 6),
+                            Text(
+                              _workingDaysRule!,
+                              style: const TextStyle(fontSize: 10, color: Color(0xFF15803D), height: 1.2),
+                            ),
+                          ],
+                        ] else ...[
+                          Row(
+                            children: [
+                              const Expanded(
+                                child: Text(
+                                  'Unable to calculate working days automatically.',
+                                  style: TextStyle(fontSize: 11.5, color: Color(0xFF64748B)),
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: _fetchWorkingDays,
+                                style: TextButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  minimumSize: Size.zero,
+                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                ),
+                                child: const Text('Calculate', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF16A34A))),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 12),
 
@@ -1538,6 +1778,25 @@ class _SalesConvertToProjectScreenState extends State<SalesConvertToProjectScree
             fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
             color: isSelected ? Colors.white : const Color(0xFF334155),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWorkingDaysBadge(String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: const Color(0xFFDCFCE7),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: const Color(0xFFBBF7D0)),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+          color: Color(0xFF166534),
         ),
       ),
     );

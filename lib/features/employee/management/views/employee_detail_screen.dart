@@ -495,6 +495,7 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen>
                           radius: 36,
                           backgroundColor: AppColors.primaryLight,
                           backgroundImage: imageProvider,
+                          onBackgroundImageError: imageProvider != null ? (_, _) {} : null,
                           child: imageProvider == null
                               ? AppText(
                                   initial,

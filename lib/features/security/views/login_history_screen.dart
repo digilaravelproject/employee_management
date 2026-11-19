@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/app_avatar.dart';
 import '../../../core/widgets/app_text.dart';
 import '../controllers/security_controller.dart';
 
@@ -193,17 +194,11 @@ class _LoginHistoryCard extends StatelessWidget {
           // Row 1: Profile details & Status
           Row(
             children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  image: DecorationImage(
-                    image: NetworkImage(log.avatarUrl),
-                    fit: BoxFit.cover,
-                  ),
-                  border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
-                ),
+              AppAvatar(
+                imageUrl: log.avatarUrl,
+                name: log.name,
+                radius: 19,
+                border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
               ),
               const SizedBox(width: 12),
               Expanded(

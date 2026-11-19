@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_avatar.dart';
 import '../../../../core/widgets/app_text.dart';
 import '../controllers/employee_controller.dart';
 import 'add_employee_screen.dart';
@@ -444,18 +445,10 @@ class EmployeeListScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Avatar with Initials / Network Image
-                  CircleAvatar(
+                  AppAvatar(
+                    imageUrl: hasAvatar ? emp.profilePic.toString() : null,
+                    name: emp.name,
                     radius: 24,
-                    backgroundColor: AppColors.primaryLight,
-                    backgroundImage: hasAvatar ? NetworkImage(emp.profilePic.toString()) : null,
-                    child: !hasAvatar
-                        ? AppText(
-                            initial,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.primaryColor,
-                          )
-                        : null,
                   ),
                   const SizedBox(width: 14),
 
@@ -864,6 +857,8 @@ class EmployeeListScreen extends StatelessWidget {
     required List<T> items,
     required ValueChanged<T?> onChanged,
   }) {
+    final hasItems = items.isNotEmpty;
+    final validValue = items.contains(value) ? value : (hasItems ? items.first : null);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
       decoration: BoxDecoration(
@@ -873,11 +868,12 @@ class EmployeeListScreen extends StatelessWidget {
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<T>(
-          value: value,
+          value: validValue,
           isExpanded: true,
+          hint: const Text('No options available', style: TextStyle(fontSize: 13, color: AppColors.textColorHint)),
           icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textColorSecondary, size: 20),
           style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textColorPrimary),
-          onChanged: onChanged,
+          onChanged: hasItems ? onChanged : null,
           items: items.map((T item) {
             return DropdownMenuItem<T>(
               value: item,

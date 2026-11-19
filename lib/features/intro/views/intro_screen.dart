@@ -65,6 +65,18 @@ class IntroScreen extends GetView<IntroController> {
                                 child: Image.asset(
                                   data['image']!,
                                   fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) => Container(
+                                    color: AppColors.slate100,
+                                    alignment: Alignment.center,
+                                    child: const Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.image_outlined, size: 64, color: AppColors.slate400),
+                                        SizedBox(height: 12),
+                                        AppText('Illustration Preview', fontSize: 13, color: AppColors.textColorHint),
+                                      ],
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),

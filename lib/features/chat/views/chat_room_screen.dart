@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:intl/intl.dart';
+import '../../../core/widgets/app_avatar.dart';
 import '../../../core/widgets/app_text.dart';
 import '../controllers/chat_controller.dart';
 import '../models/chat_models.dart';
@@ -57,10 +58,12 @@ class ChatRoomScreen extends StatelessWidget {
         titleSpacing: 0,
         title: Row(
           children: [
-            CircleAvatar(
+            AppAvatar(
+              imageUrl: conversation.avatarUrl,
+              name: conversation.name,
               radius: 18,
-              backgroundImage: NetworkImage(conversation.avatarUrl),
               backgroundColor: const Color(0xFFCBD5E1),
+              foregroundColor: AppColors.textColorPrimary,
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -245,12 +248,40 @@ class ChatRoomScreen extends StatelessWidget {
                     ),
                   );
                 },
+                errorBuilder: (context, error, stackTrace) => Container(
+                  width: 200,
+                  height: 130,
+                  color: AppColors.slate100,
+                  alignment: Alignment.center,
+                  child: const Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Iconsax.image, size: 28, color: AppColors.textColorHint),
+                      SizedBox(height: 6),
+                      AppText('Image unavailable', fontSize: 10, color: AppColors.textColorHint),
+                    ],
+                  ),
+                ),
               )
             : Image.file(
                 File(message.mediaUrl!),
                 width: 200,
                 height: 130,
                 fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  width: 200,
+                  height: 130,
+                  color: AppColors.slate100,
+                  alignment: Alignment.center,
+                  child: const Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Iconsax.image, size: 28, color: AppColors.textColorHint),
+                      SizedBox(height: 6),
+                      AppText('Image unavailable', fontSize: 10, color: AppColors.textColorHint),
+                    ],
+                  ),
+                ),
               ),
       );
     } else if (message.mediaType == 'document') {

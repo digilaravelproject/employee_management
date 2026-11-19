@@ -2789,6 +2789,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
     required ValueChanged<String?> onChanged,
     String hint = 'Select',
   }) {
+    final effectiveHint = items.isEmpty ? 'No options available' : hint;
     final validValue = (value.isNotEmpty && items.contains(value)) ? value : null;
     return Container(
       key: key,
@@ -2802,7 +2803,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
         child: DropdownButton<String>(
           value: validValue,
           isExpanded: true,
-          hint: AppText(hint, fontSize: 13, color: AppColors.textColorSecondary),
+          hint: AppText(effectiveHint, fontSize: 13, color: AppColors.textColorSecondary),
           icon: const Icon(Icons.arrow_drop_down, color: AppColors.textColorSecondary),
           items: items.map((item) {
             return DropdownMenuItem<String>(
@@ -2810,7 +2811,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
               child: AppText(item, fontSize: 13, fontWeight: FontWeight.w600),
             );
           }).toList(),
-          onChanged: onChanged,
+          onChanged: items.isEmpty ? null : onChanged,
         ),
       ),
     );

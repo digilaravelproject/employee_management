@@ -138,8 +138,9 @@ class LeaveCalendarScreen extends StatelessWidget {
 
               const SizedBox(height: 20),
 
-              // Location Selector Bar (Optional Filter)
+              // Location Selector Bar (Only shown if API provides multiple locations)
               Obx(() {
+                final hasMultipleLocations = controller.availableLocations.length > 1;
                 return Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -149,37 +150,38 @@ class LeaveCalendarScreen extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                       color: AppColors.textColorPrimary,
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: AppColors.slate200),
-                      ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          value: controller.selectedLocation.value,
-                          isDense: true,
-                          icon: const Icon(Icons.arrow_drop_down, size: 18, color: AppColors.textColorSecondary),
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textColorSecondary,
+                    if (hasMultipleLocations)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: AppColors.slate200),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: controller.selectedLocation.value,
+                            isDense: true,
+                            icon: const Icon(Icons.arrow_drop_down, size: 18, color: AppColors.textColorSecondary),
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textColorSecondary,
+                            ),
+                            items: controller.availableLocations.map((loc) {
+                              return DropdownMenuItem<String>(
+                                value: loc,
+                                child: Text(loc),
+                              );
+                            }).toList(),
+                            onChanged: (loc) {
+                              if (loc != null) {
+                                controller.changeLocation(loc);
+                              }
+                            },
                           ),
-                          items: controller.availableLocations.map((loc) {
-                            return DropdownMenuItem<String>(
-                              value: loc,
-                              child: Text(loc),
-                            );
-                          }).toList(),
-                          onChanged: (loc) {
-                            if (loc != null) {
-                              controller.changeLocation(loc);
-                            }
-                          },
                         ),
                       ),
-                    ),
                   ],
                 );
               }),

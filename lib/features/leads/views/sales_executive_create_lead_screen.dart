@@ -558,6 +558,7 @@ class _SalesExecutiveCreateLeadScreenState extends State<SalesExecutiveCreateLea
         Obx(() {
           final sources = _sourceOptions;
           final validSource = sources.contains(_selectedSource) ? _selectedSource : null;
+          final hint = sources.isEmpty ? 'No lead sources available' : 'Select Lead Source';
           return Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             decoration: BoxDecoration(
@@ -569,7 +570,7 @@ class _SalesExecutiveCreateLeadScreenState extends State<SalesExecutiveCreateLea
               child: DropdownButton<String>(
                 value: validSource,
                 isExpanded: true,
-                hint: AppText('Select Lead Source', fontSize: 13, color: _hintColor),
+                hint: AppText(hint, fontSize: 13, color: _hintColor),
                 icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF64748B)),
                 items: sources.map((source) {
                   return DropdownMenuItem<String>(
@@ -577,9 +578,11 @@ class _SalesExecutiveCreateLeadScreenState extends State<SalesExecutiveCreateLea
                     child: AppText(source, fontSize: 13, fontWeight: FontWeight.w500),
                   );
                 }).toList(),
-                onChanged: (val) {
-                  if (val != null) setState(() => _selectedSource = val);
-                },
+                onChanged: sources.isEmpty
+                    ? null
+                    : (val) {
+                        if (val != null) setState(() => _selectedSource = val);
+                      },
               ),
             ),
           );
@@ -597,6 +600,7 @@ class _SalesExecutiveCreateLeadScreenState extends State<SalesExecutiveCreateLea
         Obx(() {
           final statuses = _statusOptions;
           final validStatus = statuses.contains(_selectedStatus) ? _selectedStatus : null;
+          final hint = statuses.isEmpty ? 'No lead statuses available' : 'Select Lead Status';
           return Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             decoration: BoxDecoration(
@@ -608,7 +612,7 @@ class _SalesExecutiveCreateLeadScreenState extends State<SalesExecutiveCreateLea
               child: DropdownButton<String>(
                 value: validStatus,
                 isExpanded: true,
-                hint: AppText('Select Lead Status', fontSize: 13, color: _hintColor),
+                hint: AppText(hint, fontSize: 13, color: _hintColor),
                 icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF64748B)),
                 items: statuses.map((st) {
                   return DropdownMenuItem<String>(
@@ -616,9 +620,11 @@ class _SalesExecutiveCreateLeadScreenState extends State<SalesExecutiveCreateLea
                     child: AppText(st, fontSize: 13, fontWeight: FontWeight.w500),
                   );
                 }).toList(),
-                onChanged: (val) {
-                  if (val != null) setState(() => _selectedStatus = val);
-                },
+                onChanged: statuses.isEmpty
+                    ? null
+                    : (val) {
+                        if (val != null) setState(() => _selectedStatus = val);
+                      },
               ),
             ),
           );

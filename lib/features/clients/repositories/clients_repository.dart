@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/services/network/api_client.dart';
 import '../../../core/utils/logger.dart';
@@ -182,6 +183,187 @@ class ClientsRepository implements ClientsRepositoryInterface {
       return DeleteClientResponse(
         status: false,
         message: e.toString(),
+      );
+    }
+  }
+
+  @override
+  Future<AddClientCommunicationResponse> addCommunication({
+    required dynamic clientId,
+    required FormData formData,
+  }) async {
+    try {
+      final endpoint = AppConstants.adminClientCommunicationsUrl(clientId);
+      final response = await apiClient.post(
+        endpoint,
+        data: formData,
+        showToaster: false,
+      );
+
+      if (response.isSuccess && response.json != null) {
+        return AddClientCommunicationResponse.fromJson(response.json!);
+      }
+
+      return AddClientCommunicationResponse(
+        status: false,
+        message: response.message.isNotEmpty ? response.message : 'Failed to add communication.',
+      );
+    } catch (e) {
+      Logger.e('ClientsRepository => addCommunication error: $e');
+      return AddClientCommunicationResponse(
+        status: false,
+        message: e.toString(),
+      );
+    }
+  }
+
+  @override
+  Future<SingleClientCommunicationResponse> getCommunicationDetail({
+    required dynamic clientId,
+    required dynamic communicationId,
+  }) async {
+    try {
+      final endpoint = AppConstants.adminClientCommunicationDetailUrl(clientId, communicationId);
+      final response = await apiClient.get(endpoint);
+
+      if (response.isSuccess && response.json != null) {
+        return SingleClientCommunicationResponse.fromJson(response.json!);
+      }
+
+      return SingleClientCommunicationResponse(
+        status: false,
+        message: response.message.isNotEmpty ? response.message : 'Failed to retrieve communication detail.',
+      );
+    } catch (e) {
+      Logger.e('ClientsRepository => getCommunicationDetail error: $e');
+      return SingleClientCommunicationResponse(
+        status: false,
+        message: e.toString(),
+      );
+    }
+  }
+
+  @override
+  Future<UpdateClientCommunicationResponse> updateCommunication({
+    required dynamic clientId,
+    required dynamic communicationId,
+    required Map<String, dynamic> data,
+  }) async {
+    try {
+      final endpoint = AppConstants.adminClientCommunicationDetailUrl(clientId, communicationId);
+      final response = await apiClient.patch(
+        endpoint,
+        data: data,
+        showToaster: false,
+      );
+
+      if (response.isSuccess && response.json != null) {
+        return SingleClientCommunicationResponse.fromJson(response.json!);
+      }
+
+      return SingleClientCommunicationResponse(
+        status: false,
+        message: response.message.isNotEmpty ? response.message : 'Failed to update communication.',
+      );
+    } catch (e) {
+      Logger.e('ClientsRepository => updateCommunication error: $e');
+      return SingleClientCommunicationResponse(
+        status: false,
+        message: e.toString(),
+      );
+    }
+  }
+
+  @override
+  Future<DeleteClientResponse> deleteCommunication({
+    required dynamic clientId,
+    required dynamic communicationId,
+  }) async {
+    try {
+      final endpoint = AppConstants.adminClientCommunicationDetailUrl(clientId, communicationId);
+      final response = await apiClient.delete(
+        endpoint,
+        showToaster: false,
+      );
+
+      if (response.isSuccess && response.json != null) {
+        return DeleteClientResponse.fromJson(response.json!);
+      }
+
+      return DeleteClientResponse(
+        status: false,
+        message: response.message.isNotEmpty ? response.message : 'Failed to delete communication.',
+      );
+    } catch (e) {
+      Logger.e('ClientsRepository => deleteCommunication error: $e');
+      return DeleteClientResponse(
+        status: false,
+        message: e.toString(),
+      );
+    }
+  }
+
+  @override
+  Future<AddClientProjectResponse> addClientProject({
+    required dynamic clientId,
+    required Map<String, dynamic> data,
+  }) async {
+    try {
+      final endpoint = AppConstants.adminClientProjectsUrl(clientId);
+      final response = await apiClient.post(
+        endpoint,
+        data: data,
+        showToaster: false,
+      );
+
+      if (response.isSuccess && response.json != null) {
+        return AddClientProjectResponse.fromJson(response.json!);
+      }
+
+      return AddClientProjectResponse(
+        status: false,
+        message: response.message.isNotEmpty ? response.message : 'Failed to add project to client.',
+      );
+    } catch (e) {
+      Logger.e('ClientsRepository => addClientProject error: $e');
+      return AddClientProjectResponse(
+        status: false,
+        message: e.toString(),
+      );
+    }
+  }
+
+  @override
+  Future<ClientProjectsResponse> getClientProjects({
+    required dynamic clientId,
+    String status = 'all',
+  }) async {
+    try {
+      final endpoint = '${AppConstants.adminClientProjectsUrl(clientId)}?status=$status';
+      final response = await apiClient.get(
+        endpoint,
+        showToaster: false,
+      );
+
+      if (response.isSuccess && response.json != null) {
+        return ClientProjectsResponse.fromJson(response.json!);
+      }
+
+      return ClientProjectsResponse(
+        status: false,
+        message: response.message.isNotEmpty ? response.message : 'Failed to retrieve client projects.',
+        counts: ClientProjectsCounts(),
+        total: 0,
+        data: const [],
+      );
+    } catch (e) {
+      Logger.e('ClientsRepository => getClientProjects error: $e');
+      return ClientProjectsResponse(
+        status: false,
+        message: e.toString(),
+        counts: ClientProjectsCounts(),
+        total: 0,
+        data: const [],
       );
     }
   }

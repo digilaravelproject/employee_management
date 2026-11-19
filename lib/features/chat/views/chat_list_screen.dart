@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/app_avatar.dart';
 import '../../../core/widgets/app_text.dart';
 import '../controllers/chat_controller.dart';
 import 'chat_room_screen.dart';
@@ -221,10 +222,12 @@ class ChatListScreen extends StatelessWidget {
             },
             leading: Stack(
               children: [
-                CircleAvatar(
+                AppAvatar(
+                  imageUrl: chat.avatarUrl,
+                  name: chat.name,
                   radius: 22,
-                  backgroundImage: NetworkImage(chat.avatarUrl),
                   backgroundColor: const Color(0xFFCBD5E1),
+                  foregroundColor: AppColors.textColorPrimary,
                 ),
                 if (chat.isOnline)
                   Positioned(

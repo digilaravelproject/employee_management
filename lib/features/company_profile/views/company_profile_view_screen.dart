@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/app_network_image.dart';
 import '../../../core/widgets/app_text.dart';
 import '../controllers/company_profile_controller.dart';
 import '../models/company_profile_model.dart';
@@ -81,18 +82,13 @@ class CompanyProfileViewScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           // Company Logo representation
-                          Container(
+                          AppNetworkImage(
+                            imageUrl: profile.logoUrl,
                             width: 64,
                             height: 64,
-                            decoration: BoxDecoration(
-                              color: AppColors.slate50,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: AppColors.slate200, width: 1.5),
-                              image: DecorationImage(
-                                image: NetworkImage(profile.logoUrl),
-                                fit: BoxFit.cover,
-                              ),
-                            ),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: AppColors.slate200, width: 1.5),
+                            fallbackIcon: Iconsax.buildings,
                           ),
                           const SizedBox(width: 14),
                           Expanded(

@@ -53,6 +53,10 @@ class AppConstants {
   static const String adminClientsUrl = '/api/admin/clients';
   static const String adminClientsSearchUrl = '/api/admin/clients/search';
   static String adminClientDetailUrl(dynamic id) => '$adminClientsUrl/$id';
+  static String adminClientProjectsUrl(dynamic id) => '$adminClientsUrl/$id/projects';
+  static String adminClientCommunicationsUrl(dynamic id) => '$adminClientsUrl/$id/communications';
+  static String adminClientCommunicationDetailUrl(dynamic clientId, dynamic communicationId) =>
+      '$adminClientsUrl/$clientId/communications/$communicationId';
   static const String adminLeadsUrl = '/api/admin/leads';
   static const String adminLeadsSearchUrl = '/api/admin/leads/search';
   static const String employeeLeadsUrl = '/api/employee/leads';
@@ -63,6 +67,7 @@ class AppConstants {
   static String employeeLeadStatusUrl(dynamic id) => '$employeeLeadsUrl/$id/status';
   static String employeeLeadReminderUrl(dynamic id) => '$employeeLeadsUrl/$id/reminder';
   static String adminLeadDetailUrl(dynamic id) => '$adminLeadsUrl/$id';
+  static String adminLeadProjectsUrl(dynamic id) => '$adminLeadsUrl/$id/projects';
   static String adminAssignLeadUrl(dynamic id) => '$adminLeadsUrl/$id/assign';
   static const String adminSalesEmployeesUrl = '$adminLeadsUrl/sales-employees';
   static String adminSalesEmployeeLeadDetailsUrl(dynamic id) => '$adminSalesEmployeesUrl/$id';
@@ -122,6 +127,7 @@ class AppConstants {
   static const String adminProjectsUrl = '/api/admin/projects';
   static const String adminSearchProjectsUrl = '/api/admin/projects/search';
   static String adminProjectDetailsUrl(dynamic id) => '$adminProjectsUrl/$id';
+  static const String adminWorkingDaysUrl = '/api/admin/working-days';
   static String adminProjectEmployeeUrl(dynamic projectId, dynamic employeeId) =>
       '$adminProjectsUrl/$projectId/employees/$employeeId';
   static const String assignedProjectsUrl = '/api/admin/projects/assigned';

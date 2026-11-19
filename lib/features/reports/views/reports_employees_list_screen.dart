@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/app_avatar.dart';
 import '../../../core/widgets/app_text.dart';
 import '../controllers/admin_reports_controller.dart';
 import 'employee_overview_report_screen.dart';
@@ -259,17 +260,11 @@ class _EmployeeListCard extends StatelessWidget {
                 // Profile Avatar with circular frame and status indicator
                 Stack(
                   children: [
-                    Container(
-                      width: 46,
-                      height: 46,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        image: DecorationImage(
-                          image: NetworkImage(employee.avatarUrl),
-                          fit: BoxFit.cover,
-                        ),
-                        border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
-                      ),
+                    AppAvatar(
+                      imageUrl: employee.avatarUrl,
+                      name: employee.name,
+                      radius: 23,
+                      border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
                     ),
                     Positioned(
                       right: 1,

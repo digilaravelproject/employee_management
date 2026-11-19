@@ -228,9 +228,13 @@ class ApplyLeaveScreen extends StatelessWidget {
                         Obx(() {
                           final selected = controller.selectedAssignee.value;
                           final list = controller.assigneeList;
+                          final isLoading = controller.isLoadingAssignees.value;
                           return CustomBottomSheetDropdown(
                             label: 'Assign To',
-                            selectedValue: selected.isNotEmpty ? selected : (list.isNotEmpty ? list.first : null),
+                            hintText: isLoading
+                                ? 'Loading employees...'
+                                : (list.isEmpty ? 'No employees available' : 'Select Assignee (Optional)'),
+                            selectedValue: selected.isNotEmpty ? selected : null,
                             items: list,
                             prefixIcon: Iconsax.user_tag,
                             prefixIconColor: AppColors.primaryColor,

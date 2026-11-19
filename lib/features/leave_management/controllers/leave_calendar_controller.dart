@@ -31,13 +31,7 @@ class LeaveCalendarController extends GetxController {
       .where((y) => y <= DateTime.now().year)
       .toList()
       .obs;
-  final RxList<String> availableLocations = [
-    'All Locations',
-    'Delhi HQ',
-    'Mumbai Office',
-    'Bangalore Tech Hub',
-    'Remote',
-  ].obs;
+  final RxList<String> availableLocations = ['All Locations'].obs;
 
   // Track expanded state for months. Default all open or current month open.
   final RxMap<String, bool> expandedMonths = <String, bool>{}.obs;
@@ -61,13 +55,34 @@ class LeaveCalendarController extends GetxController {
 
       final response = await repository.getHolidays(
         year: selectedYear.value,
-        location: selectedLocation.value,
+        location: selectedLocation.value == 'All Locations' ? null : selectedLocation.value,
       );
 
       if (response != null && response.status) {
         holidayData.value = response;
         summary.value = response.summary;
         months.assignAll(response.months);
+
+        // Dynamically update available locations from actual holidays
+        final Set<String> locSet = {};
+        for (final item in response.data) {
+          if (item.location != null && item.location!.trim().isNotEmpty) {
+            locSet.add(item.location!.trim());
+          }
+        }
+        for (final m in response.months) {
+          for (final h in m.holidays) {
+            if (h.location != null && h.location!.trim().isNotEmpty) {
+              locSet.add(h.location!.trim());
+            }
+          }
+        }
+        if (locSet.isNotEmpty) {
+          final sortedLocs = locSet.toList()..sort();
+          availableLocations.assignAll(['All Locations', ...sortedLocs]);
+        } else {
+          availableLocations.assignAll(['All Locations']);
+        }
 
         // By default, expand all months that have holidays
         for (final m in response.months) {

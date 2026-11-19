@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import 'package:get/get.dart' hide FormData, MultipartFile;
 import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
 import '../../../core/services/network/api_client.dart';
@@ -9,12 +9,31 @@ import '../../employee/management/models/employee_model.dart';
 import '../../role_permissions/models/role_permission_models.dart';
 import '../models/create_project_model.dart';
 import '../models/project_model.dart';
+import '../models/working_days_model.dart';
 import '../repositories/project_repository.dart';
 import '../repositories/project_repository_interface.dart';
+import 'package:dio/dio.dart';
 import '../../tasks/controllers/tasks_controller.dart';
 
 class ProjectsController extends GetxController {
   final ProjectRepositoryInterface repository;
+
+  Future<CreateProjectResponseModel> createProjectFromLead({
+    required dynamic leadId,
+    required FormData formData,
+  }) async {
+    return repository.createProjectFromLead(
+      leadId: leadId,
+      formData: formData,
+    );
+  }
+
+  Future<WorkingDaysModel> calculateWorkingDays({
+    required String startDate,
+    required String endDate,
+  }) async {
+    return repository.calculateWorkingDays(startDate: startDate, endDate: endDate);
+  }
 
   ProjectsController({ProjectRepositoryInterface? repository})
       : repository = repository ??
@@ -66,6 +85,28 @@ class ProjectsController extends GetxController {
   final RxString selectedStatus = 'Not Started'.obs;
   final Rx<DateTime> startDate = DateTime.now().obs;
   final Rx<DateTime> endDate = DateTime.now().add(const Duration(days: 30)).obs;
+  final RxBool isLoadingWorkingDays = false.obs;
+  final RxnInt calculatedWorkingDays = RxnInt();
+  final RxnInt calendarDays = RxnInt();
+  final RxString workingDaysRule = ''.obs;
+
+  Future<void> fetchWorkingDays() async {
+    isLoadingWorkingDays.value = true;
+    try {
+      final s = DateFormat('yyyy-MM-dd').format(startDate.value);
+      final e = DateFormat('yyyy-MM-dd').format(endDate.value);
+      final res = await calculateWorkingDays(startDate: s, endDate: e);
+      if (res.status && res.data != null) {
+        calculatedWorkingDays.value = res.data!.workingDays;
+        calendarDays.value = res.data!.calendarDays;
+        workingDaysRule.value = res.data!.rule;
+      }
+    } catch (_) {
+    } finally {
+      isLoadingWorkingDays.value = false;
+    }
+  }
+
   final RxList<AppUser> selectedEmployees = <AppUser>[].obs;
   final RxList<ProjectFile> selectedFiles = <ProjectFile>[].obs;
 
@@ -98,6 +139,7 @@ class ProjectsController extends GetxController {
     scrollController.addListener(_scrollListener);
     fetchEmployees();
     fetchProjects(isRefresh: true);
+    fetchWorkingDays();
 
     ever(selectedTab, (_) {
       if (searchQuery.value.trim().isEmpty) {

@@ -1,6 +1,8 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:dgm360/core/theme/app_colors.dart';
-import 'package:get/get.dart';
+import 'package:get/get.dart' hide FormData, MultipartFile;
+import 'package:intl/intl.dart';
 import '../../../core/services/network/api_client.dart';
 import '../../../core/utils/custom_snackbar.dart';
 import '../../employee/management/controllers/employee_controller.dart';
@@ -63,7 +65,7 @@ class ClientsController extends GetxController {
 
   // Dropdown lists
   final List<String> clientStatuses = ['Active', 'Inactive'];
-  final List<String> projectStatuses = ['Active', 'Completed', 'On Hold'];
+  final List<String> projectStatuses = ['Active', 'In Progress', 'Completed', 'On Hold'];
   final List<String> communicationTypes = ['Email', 'Call', 'Meeting', 'Note'];
 
   // Project Managers list (Dynamically mapped from employees)
@@ -100,10 +102,30 @@ class ClientsController extends GetxController {
   late TextEditingController projectNameController;
   late TextEditingController projectDescController;
   late TextEditingController projectValueController;
+  final projectSelectedCategory = Rxn<String>();
   final projectSelectedManager = Rxn<AppUser>();
   final projectSelectedStatus = Rxn<String>();
   final projectStartDate = Rxn<DateTime>();
   final projectDueDate = Rxn<DateTime>();
+  final isSubmittingProject = false.obs;
+  final List<String> projectCategories = [
+    'Custom ERP / CRM',
+    'Web Development',
+    'Mobile App Development',
+    'E-Commerce',
+    'UI/UX Design',
+    'Cloud & DevOps',
+    'Software Maintenance',
+    'Digital Marketing',
+    'Other',
+  ];
+
+  // Live Client Projects
+  final clientProjects = <ClientDetailProject>[].obs;
+  final clientProjectsCounts = Rxn<ClientProjectsCounts>();
+  final clientProjectsClientInfo = Rxn<ClientProjectsClientInfo>();
+  final isLoadingClientProjects = false.obs;
+  final clientProjectsCurrentStatus = 'all'.obs;
 
   // Communication form controllers
   final commSelectedType = Rxn<String>();
@@ -112,6 +134,9 @@ class ClientsController extends GetxController {
   late TextEditingController commDescController;
   final commDateTime = Rxn<DateTime>();
   final commAttachmentName = Rxn<String>();
+  final commAttachmentPath = Rxn<String>();
+  final commAttachmentSize = Rxn<int>();
+  final isSubmittingComm = false.obs;
 
   @override
   void onInit() {
@@ -408,6 +433,7 @@ class ClientsController extends GetxController {
             to: c.recipient,
             description: c.description,
             attachmentName: c.attachmentName,
+            attachmentUrl: c.attachmentUrl,
           )).toList(),
           createdOn: d.createdAt ?? DateTime.now(),
           updatedAt: d.updatedAt,
@@ -674,40 +700,133 @@ class ClientsController extends GetxController {
     projectNameController.clear();
     projectDescController.clear();
     projectValueController.clear();
+    projectSelectedCategory.value = projectCategories[0];
     projectSelectedManager.value = projectManagers.isNotEmpty ? projectManagers[0] : null;
     projectSelectedStatus.value = 'Active';
     projectStartDate.value = DateTime.now();
     projectDueDate.value = DateTime.now().add(const Duration(days: 90));
   }
 
-  void saveProject(String clientId) {
-    final idx = clients.indexWhere((c) => c.id == clientId);
-    if (idx != -1) {
-      final client = clients[idx];
-      final newProj = ClientProject(
-        id: 'P00${client.projects.length + 10}',
-        name: projectNameController.text.trim(),
-        description: projectDescController.text.trim().isNotEmpty 
-            ? projectDescController.text.trim() 
-            : 'Custom project solution.',
-        startDate: projectStartDate.value ?? DateTime.now(),
-        dueDate: projectDueDate.value ?? DateTime.now().add(const Duration(days: 90)),
-        projectManager: projectSelectedManager.value ??
-            (projectManagers.isNotEmpty
-                ? projectManagers[0]
-                : const AppUser(name: 'Unassigned', email: '', avatarUrl: '')),
-        estimatedValue: double.tryParse(projectValueController.text.trim()) ?? 50000.0,
-        status: projectSelectedStatus.value ?? 'Active',
+  Future<bool> saveProject(dynamic clientId) async {
+    isSubmittingProject.value = true;
+    try {
+      final name = projectNameController.text.trim();
+      final desc = projectDescController.text.trim();
+      final category = projectSelectedCategory.value ?? 'Custom ERP / CRM';
+      final startDate = projectStartDate.value ?? DateTime.now();
+      final dueDate = projectDueDate.value ?? DateTime.now().add(const Duration(days: 90));
+      final valStr = projectValueController.text.replaceAll(',', '').replaceAll(' ', '').trim();
+      final estVal = double.tryParse(valStr) ?? 0.0;
+      final status = projectSelectedStatus.value ?? 'Active';
+
+      final Map<String, dynamic> data = {
+        'name': name,
+        'description': desc.isNotEmpty ? desc : 'Custom project requirement.',
+        'category': category,
+        'start_date': DateFormat('yyyy-MM-dd').format(startDate),
+        'end_date': DateFormat('yyyy-MM-dd').format(dueDate),
+        'estimated_value': estVal,
+        'status': status,
+      };
+
+      final response = await repository.addClientProject(
+        clientId: clientId,
+        data: data,
       );
 
-      final updatedProjects = List<ClientProject>.from(client.projects)..add(newProj);
-      final updatedClient = client.copyWith(projects: updatedProjects);
+      if (response.status) {
+        if (response.data != null) {
+          final p = response.data!;
+          final newClientProject = ClientProject(
+            id: p.id.toString(),
+            name: p.name,
+            description: p.description,
+            startDate: DateTime.tryParse(p.startDate) ?? startDate,
+            dueDate: DateTime.tryParse(p.endDate) ?? dueDate,
+            projectManager: AppUser(
+              name: p.projectManager?.name ?? 'Assigned Manager',
+              email: p.projectManager?.email ?? '',
+              avatarUrl: p.projectManager?.avatar ?? '',
+            ),
+            estimatedValue: p.estimatedValue,
+            status: p.status,
+          );
 
-      clients[idx] = updatedClient;
-      if (selectedClient.value?.id == clientId) {
-        selectedClient.value = updatedClient;
+          if (selectedClient.value != null &&
+              (selectedClient.value!.id == clientId.toString() || selectedClient.value!.id == clientId)) {
+            final updatedProjects = List<ClientProject>.from(selectedClient.value!.projects)
+              ..insert(0, newClientProject);
+            selectedClient.value = selectedClient.value!.copyWith(
+              projects: updatedProjects,
+              projectsCount: selectedClient.value!.projectsCount + 1,
+            );
+          }
+
+          final clientIdx = clients.indexWhere((c) => c.id == clientId.toString() || c.id == clientId);
+          if (clientIdx != -1) {
+            final client = clients[clientIdx];
+            final updatedProjects = List<ClientProject>.from(client.projects)
+              ..insert(0, newClientProject);
+            clients[clientIdx] = client.copyWith(
+              projects: updatedProjects,
+              projectsCount: client.projectsCount + 1,
+            );
+          }
+        }
+
+        fetchClientDetail(clientId);
+        fetchClientProjects(clientId, status: clientProjectsCurrentStatus.value);
+
+        CustomSnackbar.showSuccess(
+          response.message.isNotEmpty ? response.message : 'Project added to client successfully.',
+        );
+        clearProjectForm();
+        return true;
+      } else {
+        CustomSnackbar.showError(
+          response.message.isNotEmpty ? response.message : 'Failed to add project to client.',
+        );
+        return false;
       }
-      _showSnackbar('Success 🎉', 'Project assigned to client', const Color(0xFF10B981));
+    } catch (e) {
+      CustomSnackbar.showError('Error adding project: $e');
+      return false;
+    } finally {
+      isSubmittingProject.value = false;
+    }
+  }
+
+  Future<void> fetchClientProjects(dynamic clientId, {String status = 'all'}) async {
+    isLoadingClientProjects.value = true;
+    clientProjectsCurrentStatus.value = status;
+    try {
+      final response = await repository.getClientProjects(
+        clientId: clientId,
+        status: status,
+      );
+
+      if (response.status) {
+        clientProjects.assignAll(response.data);
+        clientProjectsCounts.value = response.counts;
+        if (response.client != null) {
+          clientProjectsClientInfo.value = response.client;
+        }
+
+        if (selectedClient.value != null &&
+            (selectedClient.value!.id == clientId.toString() || selectedClient.value!.id == clientId)) {
+          selectedClient.value = selectedClient.value!.copyWith(
+            projectsCount: response.counts.all > 0 ? response.counts.all : response.total,
+          );
+        }
+      } else {
+        CustomSnackbar.showError(
+          response.message.isNotEmpty ? response.message : 'Failed to retrieve client projects.',
+        );
+      }
+    } catch (e) {
+      CustomSnackbar.showError('Error loading projects: $e');
+    } finally {
+      isLoadingClientProjects.value = false;
     }
   }
 
@@ -719,30 +838,245 @@ class ClientsController extends GetxController {
     commDescController.clear();
     commDateTime.value = DateTime.now();
     commAttachmentName.value = null;
+    commAttachmentPath.value = null;
+    commAttachmentSize.value = null;
   }
 
-  void saveCommunication(String clientId) {
-    final idx = clients.indexWhere((c) => c.id == clientId);
-    if (idx != -1) {
-      final client = clients[idx];
-      final newComm = ClientCommunication(
-        id: 'CM00${client.communications.length + 10}',
-        type: commSelectedType.value ?? 'Email',
-        subject: commSubjectController.text.trim(),
-        dateTime: commDateTime.value ?? DateTime.now(),
-        to: commToController.text.trim().isNotEmpty ? commToController.text.trim() : 'info@client.com',
-        description: commDescController.text.trim(),
-        attachmentName: commAttachmentName.value,
+  Future<bool> saveCommunication(dynamic clientId) async {
+    final subject = commSubjectController.text.trim();
+    final recipient = commToController.text.trim();
+    final description = commDescController.text.trim();
+    final type = commSelectedType.value ?? 'Email';
+    final commDate = commDateTime.value ?? DateTime.now();
+    final formattedDate = DateFormat('yyyy-MM-dd HH:mm:ss').format(commDate);
+
+    if (subject.isEmpty || recipient.isEmpty || description.isEmpty) {
+      _showSnackbar('Required Fields', 'Please fill in all required fields.', AppColors.errorColor);
+      return false;
+    }
+
+    isSubmittingComm.value = true;
+    try {
+      final Map<String, dynamic> formMap = {
+        'type': type,
+        'subject': subject,
+        'communicated_at': formattedDate,
+        'recipient': recipient,
+        'description': description,
+      };
+
+      if (commAttachmentPath.value != null && commAttachmentPath.value!.isNotEmpty) {
+        formMap['attachment'] = await MultipartFile.fromFile(
+          commAttachmentPath.value!,
+          filename: commAttachmentName.value ?? 'attachment',
+        );
+      }
+
+      final formData = FormData.fromMap(formMap);
+      final response = await repository.addCommunication(
+        clientId: clientId,
+        formData: formData,
       );
 
-      final updatedComms = List<ClientCommunication>.from(client.communications)..insert(0, newComm);
-      final updatedClient = client.copyWith(communications: updatedComms);
+      if (response.status) {
+        final newCommData = response.data;
+        final newComm = ClientCommunication(
+          id: (newCommData?.id ?? DateTime.now().millisecondsSinceEpoch).toString(),
+          type: newCommData?.type ?? type,
+          subject: newCommData?.subject ?? subject,
+          dateTime: newCommData?.communicatedAt ?? commDate,
+          to: newCommData?.recipient ?? recipient,
+          description: newCommData?.description ?? description,
+          attachmentName: newCommData?.attachmentName ?? commAttachmentName.value,
+          attachmentUrl: newCommData?.attachmentUrl,
+        );
 
-      clients[idx] = updatedClient;
-      if (selectedClient.value?.id == clientId) {
-        selectedClient.value = updatedClient;
+        if (selectedClient.value != null &&
+            (selectedClient.value!.id == clientId.toString() || selectedClient.value!.id == clientId)) {
+          final updatedComms = List<ClientCommunication>.from(selectedClient.value!.communications)..insert(0, newComm);
+          selectedClient.value = selectedClient.value!.copyWith(
+            communications: updatedComms,
+            communicationsCount: selectedClient.value!.communicationsCount + 1,
+          );
+        }
+
+        final idx = clients.indexWhere((c) => c.id == clientId.toString() || c.id == clientId);
+        if (idx != -1) {
+          final client = clients[idx];
+          final updatedComms = List<ClientCommunication>.from(client.communications)..insert(0, newComm);
+          clients[idx] = client.copyWith(
+            communications: updatedComms,
+            communicationsCount: client.communicationsCount + 1,
+          );
+        }
+
+        // Fetch fresh client detail from backend
+        fetchClientDetail(clientId);
+
+        CustomSnackbar.showSuccess(
+          response.message.isNotEmpty ? response.message : 'Client communication added successfully.',
+        );
+        clearCommForm();
+        return true;
+      } else {
+        CustomSnackbar.showError(
+          response.message.isNotEmpty ? response.message : 'Failed to add communication.',
+        );
+        return false;
       }
-      _showSnackbar('Success 🎉', 'Communication entry logged', const Color(0xFF10B981));
+    } catch (e) {
+      CustomSnackbar.showError('Failed to add communication: $e');
+      return false;
+    } finally {
+      isSubmittingComm.value = false;
+    }
+  }
+
+  Future<ClientDetailCommunication?> fetchCommunicationDetail({
+    required dynamic clientId,
+    required dynamic communicationId,
+  }) async {
+    try {
+      final response = await repository.getCommunicationDetail(
+        clientId: clientId,
+        communicationId: communicationId,
+      );
+      if (response.status && response.data != null) {
+        return response.data;
+      }
+      if (response.message.isNotEmpty) {
+        CustomSnackbar.showError(response.message);
+      }
+      return null;
+    } catch (e) {
+      CustomSnackbar.showError('Error fetching communication: $e');
+      return null;
+    }
+  }
+
+  Future<bool> updateCommunication({
+    required dynamic clientId,
+    required dynamic communicationId,
+    required Map<String, dynamic> data,
+  }) async {
+    isSubmittingComm.value = true;
+    try {
+      final response = await repository.updateCommunication(
+        clientId: clientId,
+        communicationId: communicationId,
+        data: data,
+      );
+
+      if (response.status) {
+        final updatedData = response.data;
+        if (updatedData != null) {
+          final updatedComm = ClientCommunication(
+            id: updatedData.id.toString(),
+            type: updatedData.type,
+            subject: updatedData.subject,
+            dateTime: updatedData.communicatedAt ?? DateTime.now(),
+            to: updatedData.recipient,
+            description: updatedData.description,
+            attachmentName: updatedData.attachmentName,
+            attachmentUrl: updatedData.attachmentUrl,
+          );
+
+          if (selectedClient.value != null &&
+              (selectedClient.value!.id == clientId.toString() || selectedClient.value!.id == clientId)) {
+            final comms = List<ClientCommunication>.from(selectedClient.value!.communications);
+            final idx = comms.indexWhere((c) => c.id == communicationId.toString() || c.id == communicationId);
+            if (idx != -1) {
+              comms[idx] = updatedComm;
+              selectedClient.value = selectedClient.value!.copyWith(communications: comms);
+            }
+          }
+
+          final clientIdx = clients.indexWhere((c) => c.id == clientId.toString() || c.id == clientId);
+          if (clientIdx != -1) {
+            final client = clients[clientIdx];
+            final comms = List<ClientCommunication>.from(client.communications);
+            final idx = comms.indexWhere((c) => c.id == communicationId.toString() || c.id == communicationId);
+            if (idx != -1) {
+              comms[idx] = updatedComm;
+              clients[clientIdx] = client.copyWith(communications: comms);
+            }
+          }
+        }
+
+        fetchClientDetail(clientId);
+
+        CustomSnackbar.showSuccess(
+          response.message.isNotEmpty ? response.message : 'Client communication updated successfully.',
+        );
+        clearCommForm();
+        return true;
+      } else {
+        CustomSnackbar.showError(
+          response.message.isNotEmpty ? response.message : 'Failed to update communication.',
+        );
+        return false;
+      }
+    } catch (e) {
+      CustomSnackbar.showError('Failed to update communication: $e');
+      return false;
+    } finally {
+      isSubmittingComm.value = false;
+    }
+  }
+
+  Future<bool> deleteCommunication({
+    required dynamic clientId,
+    required dynamic communicationId,
+  }) async {
+    try {
+      final DeleteClientResponse response = await repository.deleteCommunication(
+        clientId: clientId,
+        communicationId: communicationId,
+      );
+
+      if (response.status) {
+        if (selectedClient.value != null &&
+            (selectedClient.value!.id == clientId.toString() || selectedClient.value!.id == clientId)) {
+          final comms = List<ClientCommunication>.from(selectedClient.value!.communications);
+          comms.removeWhere((c) => c.id.toString() == communicationId.toString());
+          final newCount = (selectedClient.value!.communicationsCount > 0)
+              ? selectedClient.value!.communicationsCount - 1
+              : comms.length;
+          selectedClient.value = selectedClient.value!.copyWith(
+            communications: comms,
+            communicationsCount: newCount,
+          );
+        }
+
+        final clientIdx = clients.indexWhere((c) => c.id == clientId.toString() || c.id == clientId);
+        if (clientIdx != -1) {
+          final client = clients[clientIdx];
+          final comms = List<ClientCommunication>.from(client.communications);
+          comms.removeWhere((c) => c.id.toString() == communicationId.toString());
+          final newCount = (client.communicationsCount > 0)
+              ? client.communicationsCount - 1
+              : comms.length;
+          clients[clientIdx] = client.copyWith(
+            communications: comms,
+            communicationsCount: newCount,
+          );
+        }
+
+        fetchClientDetail(clientId);
+
+        CustomSnackbar.showSuccess(
+          response.message.isNotEmpty ? response.message : 'Client communication deleted successfully.',
+        );
+        return true;
+      } else {
+        CustomSnackbar.showError(
+          response.message.isNotEmpty ? response.message : 'Failed to delete communication.',
+        );
+        return false;
+      }
+    } catch (e) {
+      CustomSnackbar.showError('Failed to delete communication: $e');
+      return false;
     }
   }
 

@@ -1,3 +1,4 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
@@ -7,10 +8,24 @@ import '../../../core/widgets/app_text.dart';
 import '../../../core/widgets/app_input_field.dart';
 import '../../../core/widgets/custom_bottom_sheet_dropdown.dart';
 import '../controllers/clients_controller.dart';
+import '../models/client_detail_model.dart';
+import '../models/client_model.dart';
 
 class AddCommunicationScreen extends StatefulWidget {
   final String clientId;
-  const AddCommunicationScreen({super.key, required this.clientId});
+  final bool isEditMode;
+  final dynamic communicationId;
+  final ClientDetailCommunication? communication;
+  final ClientCommunication? clientCommunication;
+
+  const AddCommunicationScreen({
+    super.key,
+    required this.clientId,
+    this.isEditMode = false,
+    this.communicationId,
+    this.communication,
+    this.clientCommunication,
+  });
 
   @override
   State<AddCommunicationScreen> createState() => _AddCommunicationScreenState();
@@ -25,6 +40,18 @@ class _AddCommunicationScreenState extends State<AddCommunicationScreen> {
   void initState() {
     super.initState();
     controller = Get.find<ClientsController>();
+    if (widget.isEditMode) {
+      final comm = widget.communication;
+      final cComm = widget.clientCommunication;
+      controller.commSelectedType.value = comm?.type ?? cComm?.type ?? 'Email';
+      controller.commSubjectController.text = comm?.subject ?? cComm?.subject ?? '';
+      controller.commToController.text = comm?.recipient ?? cComm?.to ?? '';
+      controller.commDescController.text = comm?.description ?? cComm?.description ?? '';
+      controller.commDateTime.value = comm?.communicatedAt ?? cComm?.dateTime ?? DateTime.now();
+      controller.commAttachmentName.value = comm?.attachmentName ?? cComm?.attachmentName;
+      controller.commAttachmentPath.value = null;
+      controller.commAttachmentSize.value = null;
+    }
   }
 
   @override
@@ -47,8 +74,8 @@ class _AddCommunicationScreenState extends State<AddCommunicationScreen> {
             ),
           ),
         ),
-        title: const AppText(
-          'Add Communication',
+        title: AppText(
+          widget.isEditMode ? 'Edit Communication' : 'Add Communication',
           fontSize: 20,
           fontWeight: FontWeight.bold,
           color: AppColors.textColorPrimary,
@@ -145,7 +172,17 @@ class _AddCommunicationScreenState extends State<AddCommunicationScreen> {
                           const SizedBox(height: 8),
                           Obx(() {
                             final att = controller.commAttachmentName.value;
+                            final size = controller.commAttachmentSize.value;
                             if (att != null) {
+                              String sizeText = '';
+                              if (size != null && size > 0) {
+                                if (size >= 1024 * 1024) {
+                                  sizeText = '${(size / (1024 * 1024)).toStringAsFixed(2)} MB';
+                                } else {
+                                  sizeText = '${(size / 1024).toStringAsFixed(1)} KB';
+                                }
+                              }
+
                               return Container(
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
@@ -155,15 +192,24 @@ class _AddCommunicationScreenState extends State<AddCommunicationScreen> {
                                 ),
                                 child: Row(
                                   children: [
-                                    const Icon(Icons.picture_as_pdf, color: AppColors.errorColor, size: 24),
+                                    const Icon(Icons.description_rounded, color: AppColors.primaryColor, size: 24),
                                     const SizedBox(width: 10),
                                     Expanded(
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          AppText(att, fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textColorPrimary),
-                                          const SizedBox(height: 2),
-                                          const AppText('2.4 MB', fontSize: 11, color: AppColors.textColorSecondary),
+                                          AppText(
+                                            att,
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.bold,
+                                            color: AppColors.textColorPrimary,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          if (sizeText.isNotEmpty) ...[
+                                            const SizedBox(height: 2),
+                                            AppText(sizeText, fontSize: 11, color: AppColors.textColorSecondary),
+                                          ],
                                         ],
                                       ),
                                     ),
@@ -171,6 +217,8 @@ class _AddCommunicationScreenState extends State<AddCommunicationScreen> {
                                       icon: const Icon(Icons.close, color: AppColors.textColorHint, size: 20),
                                       onPressed: () {
                                         controller.commAttachmentName.value = null;
+                                        controller.commAttachmentPath.value = null;
+                                        controller.commAttachmentSize.value = null;
                                       },
                                     ),
                                   ],
@@ -179,9 +227,7 @@ class _AddCommunicationScreenState extends State<AddCommunicationScreen> {
                             }
 
                             return GestureDetector(
-                              onTap: () {
-                                controller.commAttachmentName.value = 'Design_Document.pdf';
-                              },
+                              onTap: _pickAttachment,
                               child: Container(
                                 padding: const EdgeInsets.symmetric(vertical: 24),
                                 decoration: BoxDecoration(
@@ -194,9 +240,9 @@ class _AddCommunicationScreenState extends State<AddCommunicationScreen> {
                                     children: [
                                       Icon(Iconsax.document_upload, color: AppColors.textColorHint, size: 32),
                                       SizedBox(height: 8),
-                                      AppText('Tap to Mock Upload Attachment', fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textColorSecondary),
+                                      AppText('Tap to Upload Attachment', fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textColorSecondary),
                                       SizedBox(height: 2),
-                                      AppText('Supports PDF, FIG, PNG (Max 10MB)', fontSize: 10, color: AppColors.textColorHint),
+                                      AppText('Supports PDF, DOC, PNG, JPG, ZIP (Max 10MB)', fontSize: 10, color: AppColors.textColorHint),
                                     ],
                                   ),
                                 ),
@@ -220,27 +266,66 @@ class _AddCommunicationScreenState extends State<AddCommunicationScreen> {
               ),
               child: SizedBox(
                 width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _submitForm,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryColor,
-                    minimumSize: const Size(double.infinity, 50),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    elevation: 0,
-                  ),
-                  child: const AppText(
-                    'Save Communication',
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
+                child: Obx(() {
+                  final isSubmitting = controller.isSubmittingComm.value;
+                  return ElevatedButton(
+                    onPressed: isSubmitting ? null : _submitForm,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryColor,
+                      disabledBackgroundColor: AppColors.primaryColor.withValues(alpha: 0.6),
+                      minimumSize: const Size(double.infinity, 50),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      elevation: 0,
+                    ),
+                    child: isSubmitting
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : AppText(
+                            widget.isEditMode ? 'Update Communication' : 'Save Communication',
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                  );
+                }),
               ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _pickAttachment() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'doc', 'docx', 'png', 'jpg', 'jpeg', 'xls', 'xlsx', 'zip', 'txt'],
+      );
+
+      if (result != null && result.files.isNotEmpty) {
+        final file = result.files.first;
+        if (file.path != null && file.path!.isNotEmpty) {
+          controller.commAttachmentName.value = file.name;
+          controller.commAttachmentPath.value = file.path;
+          controller.commAttachmentSize.value = file.size;
+        }
+      }
+    } catch (e) {
+      Get.snackbar(
+        'Attachment Error',
+        'Could not pick file: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: AppColors.errorColor,
+        colorText: Colors.white,
+      );
+    }
   }
 
   Widget _buildDateTimePicker(BuildContext context, {required DateTime? value}) {
@@ -287,16 +372,50 @@ class _AddCommunicationScreenState extends State<AddCommunicationScreen> {
     );
   }
 
-  void _submitForm() {
-    if (controller.commSelectedType.value == null) {
+  Future<void> _submitForm() async {
+    FocusScope.of(context).unfocus();
+
+    if (controller.commSelectedType.value == null || controller.commSelectedType.value!.trim().isEmpty) {
       setState(() {
         _typeError = 'Please select communication type';
       });
+      return;
     }
 
     if (_formKey.currentState!.validate() && _typeError == null) {
-      controller.saveCommunication(widget.clientId);
-      Get.back();
+      if (widget.isEditMode) {
+        final formattedDate = DateFormat('yyyy-MM-dd HH:mm:ss').format(controller.commDateTime.value ?? DateTime.now());
+        final payload = <String, dynamic>{
+          "type": controller.commSelectedType.value ?? 'Email',
+          "subject": controller.commSubjectController.text.trim(),
+          "communicated_at": formattedDate,
+          "recipient": controller.commToController.text.trim(),
+          "description": controller.commDescController.text.trim(),
+        };
+
+        final commId = widget.communicationId ?? widget.communication?.id ?? widget.clientCommunication?.id;
+        final success = await controller.updateCommunication(
+          clientId: widget.clientId,
+          communicationId: commId,
+          data: payload,
+        );
+        if (success && mounted) {
+          if (Navigator.of(context).canPop()) {
+            Navigator.of(context).pop(true);
+          } else {
+            Get.back(result: true);
+          }
+        }
+      } else {
+        final success = await controller.saveCommunication(widget.clientId);
+        if (success && mounted) {
+          if (Navigator.of(context).canPop()) {
+            Navigator.of(context).pop(true);
+          } else {
+            Get.back(result: true);
+          }
+        }
+      }
     }
   }
 }

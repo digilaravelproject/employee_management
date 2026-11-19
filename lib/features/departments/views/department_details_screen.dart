@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/custom_snackbar.dart';
+import '../../../core/widgets/app_avatar.dart';
 import '../../../core/widgets/app_text.dart';
 import '../controllers/departments_controller.dart';
 import '../models/department_api_model.dart';
@@ -265,21 +266,13 @@ class _DepartmentDetailsScreenState extends State<DepartmentDetailsScreen> {
                     child: dept.head != null
                         ? Row(
                             children: [
-                              dept.head!.avatar != null && dept.head!.avatar!.isNotEmpty
-                                  ? CircleAvatar(
-                                      radius: 22,
-                                      backgroundImage: NetworkImage(dept.head!.avatar!),
-                                    )
-                                  : CircleAvatar(
-                                      radius: 22,
-                                      backgroundColor: themeColor.withValues(alpha: 0.15),
-                                      child: AppText(
-                                        dept.head!.name.isNotEmpty ? dept.head!.name.substring(0, 1).toUpperCase() : 'H',
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: themeColor,
-                                      ),
-                                    ),
+                              AppAvatar(
+                                imageUrl: dept.head!.avatar,
+                                name: dept.head!.name,
+                                radius: 22,
+                                backgroundColor: themeColor.withValues(alpha: 0.15),
+                                foregroundColor: themeColor,
+                              ),
                               const SizedBox(width: 14),
                               Expanded(
                                 child: Column(
@@ -540,18 +533,13 @@ class _DepartmentDetailsScreenState extends State<DepartmentDetailsScreen> {
                   final empAvatar = emp.avatar;
                   return Row(
                     children: [
-                      empAvatar != null && empAvatar.isNotEmpty
-                          ? CircleAvatar(radius: 20, backgroundImage: NetworkImage(empAvatar))
-                          : CircleAvatar(
-                              radius: 20,
-                              backgroundColor: AppColors.primaryColor.withValues(alpha: 0.1),
-                              child: AppText(
-                                empName.isNotEmpty ? empName[0].toUpperCase() : '?',
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.primaryColor,
-                              ),
-                            ),
+                      AppAvatar(
+                        imageUrl: empAvatar,
+                        name: empName,
+                        radius: 20,
+                        backgroundColor: AppColors.primaryColor.withValues(alpha: 0.1),
+                        foregroundColor: AppColors.primaryColor,
+                      ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(

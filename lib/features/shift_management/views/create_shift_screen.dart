@@ -2335,10 +2335,15 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
 
   Widget _buildDropdownField<T>({
     Key? key,
-    required T value,
+    required T? value,
     required List<T> items,
     required ValueChanged<T?> onChanged,
+    String? hintText,
   }) {
+    final hasItems = items.isNotEmpty;
+    final validValue = items.contains(value) ? value : (hasItems ? items.first : null);
+    final effectiveHint = hintText ?? (hasItems ? 'Select' : 'No options available');
+
     return Container(
       key: key,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
@@ -2349,11 +2354,12 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<T>(
-          value: value,
+          value: validValue,
           isExpanded: true,
+          hint: Text(effectiveHint, style: const TextStyle(fontSize: 13, color: AppColors.textColorHint)),
           icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textColorSecondary),
           style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textColorPrimary),
-          onChanged: onChanged,
+          onChanged: hasItems ? onChanged : null,
           items: items.map((T item) {
             return DropdownMenuItem<T>(
               value: item,

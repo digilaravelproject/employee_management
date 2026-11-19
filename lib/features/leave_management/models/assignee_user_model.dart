@@ -72,10 +72,27 @@ class AssigneeUserModel {
   factory AssigneeUserModel.fromJson(Map<String, dynamic> json) {
     final rawId = json['id'];
     final id = rawId is int ? rawId : int.tryParse(rawId?.toString() ?? '0') ?? 0;
-    final name = json['name']?.toString() ?? 'Unknown User';
-    final empId = json['employee_id']?.toString();
-    final desig = json['designation']?.toString();
-    final role = json['role']?.toString();
+
+    String name = json['name']?.toString() ?? '';
+    if (name.trim().isEmpty) {
+      final fName = json['first_name']?.toString() ?? '';
+      final lName = json['last_name']?.toString() ?? '';
+      name = '$fName $lName'.trim();
+      if (name.isEmpty) {
+        name = json['email']?.toString() ?? 'User #$id';
+      }
+    }
+
+    final empId = json['employee_id']?.toString() ?? json['emp_id']?.toString();
+    final desig = json['designation'] is Map
+        ? (json['designation'] as Map)['name']?.toString()
+        : json['designation']?.toString();
+    final role = json['role'] is Map
+        ? (json['role'] as Map)['name']?.toString()
+        : json['role']?.toString();
+    final dept = json['department'] is Map
+        ? (json['department'] as Map)['name']?.toString()
+        : json['department']?.toString();
 
     return AssigneeUserModel(
       id: id,
@@ -84,8 +101,8 @@ class AssigneeUserModel {
       email: json['email']?.toString(),
       role: role,
       designation: desig,
-      department: json['department']?.toString(),
-      avatar: json['avatar']?.toString(),
+      department: dept,
+      avatar: json['avatar']?.toString() ?? json['profile_image']?.toString(),
       status: json['status']?.toString(),
     );
   }
@@ -120,8 +137,8 @@ class AssigneeUsersResponseModel {
     List<AssigneeUserModel> users = [];
     if (json['data'] is List) {
       users = (json['data'] as List)
-          .whereType<Map<String, dynamic>>()
-          .map((item) => AssigneeUserModel.fromJson(item))
+          .whereType<Map>()
+          .map((item) => AssigneeUserModel.fromJson(Map<String, dynamic>.from(item)))
           .toList();
     }
     return AssigneeUsersResponseModel(

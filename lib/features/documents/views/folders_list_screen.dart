@@ -516,11 +516,10 @@ class FoldersListScreen extends StatelessWidget {
   void _showUploadSheet(BuildContext context, DocumentsController controller) {
     final nameController = TextEditingController();
     String selectedType = 'pdf';
-    String selectedFolder = controller.selectedFolder.value != null 
+    final availableFolders = controller.isAdminView.value ? controller.adminFolders : controller.employeeFolders;
+    String? selectedFolder = (controller.selectedFolder.value != null && availableFolders.any((f) => f.name == controller.selectedFolder.value!.name))
       ? controller.selectedFolder.value!.name 
-      : (controller.isAdminView.value 
-          ? (controller.adminFolders.isNotEmpty ? controller.adminFolders.first.name : 'Policies')
-          : (controller.employeeFolders.isNotEmpty ? controller.employeeFolders.first.name : 'My Documents'));
+      : (availableFolders.isNotEmpty ? availableFolders.first.name : null);
     String selectedStatus = 'Public';
 
     Get.bottomSheet(
@@ -615,11 +614,14 @@ class FoldersListScreen extends StatelessWidget {
               const AppText('Select Folder', fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textColorSecondary),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
-                value: selectedFolder,
-                items: (controller.isAdminView.value ? controller.adminFolders : controller.employeeFolders)
-                    .map((f) => DropdownMenuItem(value: f.name, child: Text(f.name)))
-                    .toList(),
-                onChanged: (val) {
+                value: (availableFolders.isNotEmpty && availableFolders.any((f) => f.name == selectedFolder)) ? selectedFolder : null,
+                hint: Text(availableFolders.isEmpty ? 'No folders available' : 'Select Folder'),
+                items: availableFolders.isEmpty
+                    ? null
+                    : availableFolders
+                        .map((f) => DropdownMenuItem(value: f.name, child: Text(f.name)))
+                        .toList(),
+                onChanged: availableFolders.isEmpty ? null : (val) {
                   if (val != null) selectedFolder = val;
                 },
                 decoration: InputDecoration(
@@ -639,10 +641,14 @@ class FoldersListScreen extends StatelessWidget {
                   ),
                   onPressed: () {
                     if (nameController.text.trim().isNotEmpty) {
+                      if (selectedFolder == null || selectedFolder!.isEmpty) {
+                        Get.snackbar('Required', 'Please select a folder');
+                        return;
+                      }
                       controller.uploadFile(
                         nameController.text.trim(),
                         selectedType,
-                        selectedFolder,
+                        selectedFolder!,
                         selectedStatus,
                       );
                       Get.back();

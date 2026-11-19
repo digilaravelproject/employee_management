@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_avatar.dart';
 import '../../../../core/widgets/app_text.dart';
 import '../../../../routes/route_helper.dart';
 import '../controllers/designation_controller.dart';
@@ -477,21 +478,11 @@ class DesignationListScreen extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(vertical: 8.0),
                           child: Row(
                             children: [
-                              emp.avatar != null
-                                  ? CircleAvatar(
-                                      radius: 18,
-                                      backgroundImage: NetworkImage(emp.avatar!),
-                                    )
-                                  : CircleAvatar(
-                                      radius: 18,
-                                      backgroundColor: AppColors.primaryLight,
-                                      child: AppText(
-                                        emp.name.substring(0, 1).toUpperCase(),
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                        color: AppColors.primaryColor,
-                                      ),
-                                    ),
+                              AppAvatar(
+                                imageUrl: emp.avatar,
+                                name: emp.name,
+                                radius: 18,
+                              ),
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Column(
@@ -629,21 +620,11 @@ class DesignationListScreen extends StatelessWidget {
                         ),
                         child: Row(
                           children: [
-                            emp.profilePic != null
-                                ? CircleAvatar(
-                                    radius: 18,
-                                    backgroundImage: NetworkImage(emp.profilePic!),
-                                  )
-                                : CircleAvatar(
-                                    radius: 18,
-                                    backgroundColor: AppColors.primaryLight,
-                                    child: AppText(
-                                      emp.name.substring(0, 1).toUpperCase(),
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.primaryColor,
-                                    ),
-                                  ),
+                            AppAvatar(
+                              imageUrl: emp.profilePic,
+                              name: emp.name,
+                              radius: 18,
+                            ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Column(

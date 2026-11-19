@@ -19,13 +19,13 @@ class AssignProjectScreen extends StatefulWidget {
 class _AssignProjectScreenState extends State<AssignProjectScreen> {
   final _formKey = GlobalKey<FormState>();
   late ClientsController controller;
-  String? _managerError;
   String? _statusError;
 
   @override
   void initState() {
     super.initState();
     controller = Get.find<ClientsController>();
+    controller.clearProjectForm();
   }
 
   @override
@@ -49,7 +49,7 @@ class _AssignProjectScreenState extends State<AssignProjectScreen> {
           ),
         ),
         title: const AppText(
-          'Assign Project',
+          'Add Project',
           fontSize: 20,
           fontWeight: FontWeight.bold,
           color: AppColors.textColorPrimary,
@@ -86,6 +86,22 @@ class _AssignProjectScreenState extends State<AssignProjectScreen> {
                           ),
                           const SizedBox(height: 14),
 
+                          // Category
+                          const AppText('Category *', fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textColorSecondary),
+                          const SizedBox(height: 8),
+                          Obx(() {
+                            final cat = controller.projectSelectedCategory.value ?? controller.projectCategories[0];
+                            return CustomBottomSheetDropdown(
+                              label: 'Category',
+                              selectedValue: cat,
+                              items: controller.projectCategories,
+                              onChanged: (val) {
+                                controller.projectSelectedCategory.value = val;
+                              },
+                            );
+                          }),
+                          const SizedBox(height: 14),
+
                           // Description
                           AppInputField(
                             controller: controller.projectDescController,
@@ -119,15 +135,15 @@ class _AssignProjectScreenState extends State<AssignProjectScreen> {
                           }),
                           const SizedBox(height: 14),
 
-                          // Due Date
-                          const AppText('Due Date *', fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textColorSecondary),
+                          // End Date
+                          const AppText('End Date *', fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textColorSecondary),
                           const SizedBox(height: 8),
                           Obx(() {
                             final date = controller.projectDueDate.value;
                             return _buildDatePicker(
                               context,
                               value: date,
-                              hint: 'Select Due Date',
+                              hint: 'Select End Date',
                               onTap: () async {
                                 final selected = await showDatePicker(
                                   context: context,
@@ -141,34 +157,6 @@ class _AssignProjectScreenState extends State<AssignProjectScreen> {
                               },
                             );
                           }),
-                          const SizedBox(height: 14),
-
-                          // Project Manager Dropdown
-                          const AppText('Project Manager *', fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textColorSecondary),
-                          const SizedBox(height: 8),
-                          Obx(() {
-                            final manager = controller.projectSelectedManager.value;
-                            return CustomBottomSheetDropdown(
-                              label: 'Project Manager',
-                              selectedValue: manager?.name,
-                              items: controller.projectManagers.map((m) => m.name).toList(),
-                              onChanged: (name) {
-                                final selected = controller.projectManagers.firstWhereOrNull((m) => m.name == name);
-                                if (selected != null) {
-                                  controller.projectSelectedManager.value = selected;
-                                }
-                                setState(() {
-                                  _managerError = null;
-                                });
-                              },
-                              borderColor: _managerError != null ? AppColors.errorColor : null,
-                            );
-                          }),
-                          if (_managerError != null)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 6, left: 16),
-                              child: AppText(_managerError!, fontSize: 12, color: AppColors.errorColor),
-                            ),
                           const SizedBox(height: 14),
 
                           // Estimated Value (₹)
@@ -252,21 +240,33 @@ class _AssignProjectScreenState extends State<AssignProjectScreen> {
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: ElevatedButton(
-                      onPressed: _submitForm,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primaryColor,
-                        minimumSize: const Size(0, 50),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        elevation: 0,
-                      ),
-                      child: const AppText(
-                        'Save Project',
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
+                    child: Obx(() {
+                      final isSubmitting = controller.isSubmittingProject.value;
+                      return ElevatedButton(
+                        onPressed: isSubmitting ? null : _submitForm,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primaryColor,
+                          minimumSize: const Size(0, 50),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          elevation: 0,
+                        ),
+                        child: isSubmitting
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const AppText(
+                                'Add Project',
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                      );
+                    }),
                   ),
                 ],
               ),
@@ -309,21 +309,18 @@ class _AssignProjectScreenState extends State<AssignProjectScreen> {
     );
   }
 
-  void _submitForm() {
-    if (controller.projectSelectedManager.value == null) {
-      setState(() {
-        _managerError = 'Please select a project manager';
-      });
-    }
+  Future<void> _submitForm() async {
     if (controller.projectSelectedStatus.value == null) {
       setState(() {
         _statusError = 'Please select status';
       });
     }
 
-    if (_formKey.currentState!.validate() && _managerError == null && _statusError == null) {
-      controller.saveProject(widget.clientId);
-      Get.back();
+    if (_formKey.currentState!.validate() && _statusError == null) {
+      final success = await controller.saveProject(widget.clientId);
+      if (success) {
+        Get.back(result: true);
+      }
     }
   }
 }

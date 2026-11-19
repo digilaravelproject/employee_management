@@ -10,8 +10,10 @@ import '../controllers/clients_controller.dart';
 import '../models/client_model.dart';
 import '../models/client_detail_model.dart';
 import 'add_edit_client_screen.dart';
+import 'assign_project_screen.dart';
 import 'assigned_projects_screen.dart';
 import 'communication_history_screen.dart';
+import 'communication_detail_bottom_sheet.dart';
 
 class ClientDetailsScreen extends StatefulWidget {
   const ClientDetailsScreen({super.key});
@@ -264,14 +266,14 @@ class _ClientDetailsScreenState extends State<ClientDetailsScreen> {
                       const SizedBox(height: 16),
 
                       // Projects from API (Live CRM details)
-                      if (detail != null && detail.projects.isNotEmpty) ...[
-                        _buildProjectsSection(detail.projects),
+                      if (detail != null) ...[
+                        _buildProjectsSection(detail.projects, detail.id),
                         const SizedBox(height: 16),
                       ],
 
                       // Communications Log from API (Live History)
                       if (detail != null && detail.communications.isNotEmpty) ...[
-                        _buildCommunicationsSection(detail.communications),
+                        _buildCommunicationsSection(detail.communications, detail.id),
                         const SizedBox(height: 16),
                       ],
 
@@ -604,7 +606,7 @@ class _ClientDetailsScreenState extends State<ClientDetailsScreen> {
       children: [
         Expanded(
           child: GestureDetector(
-            onTap: () => Get.to(() => const AssignedProjectsScreen()),
+            onTap: () => Get.to(() => AssignedProjectsScreen(clientId: detail?.id.toString() ?? client.id.toString())),
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 14),
               decoration: BoxDecoration(
@@ -623,7 +625,7 @@ class _ClientDetailsScreenState extends State<ClientDetailsScreen> {
                 children: [
                   const Icon(Iconsax.briefcase, color: AppColors.primaryColor, size: 20),
                   const SizedBox(height: 6),
-                  AppText('Assigned Projects ($pCount)', fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textColorPrimary),
+                  AppText('Projects ($pCount)', fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textColorPrimary),
                 ],
               ),
             ),
@@ -661,7 +663,9 @@ class _ClientDetailsScreenState extends State<ClientDetailsScreen> {
     );
   }
 
-  Widget _buildProjectsSection(List<ClientDetailProject> projects) {
+  Widget _buildProjectsSection(List<ClientDetailProject> projects, dynamic clientId) {
+    final controller = Get.find<ClientsController>();
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -674,7 +678,6 @@ class _ClientDetailsScreenState extends State<ClientDetailsScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const AppText(
                 'Projects',
@@ -682,8 +685,39 @@ class _ClientDetailsScreenState extends State<ClientDetailsScreen> {
                 fontWeight: FontWeight.bold,
                 color: AppColors.textColorPrimary,
               ),
+              const Spacer(),
               InkWell(
-                onTap: () => Get.to(() => const AssignedProjectsScreen()),
+                onTap: () async {
+                  controller.clearProjectForm();
+                  final added = await Get.to(() => AssignProjectScreen(clientId: clientId.toString()));
+                  if (added == true) {
+                    controller.fetchClientDetail(clientId);
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.add, size: 14, color: AppColors.primaryColor),
+                      SizedBox(width: 4),
+                      AppText(
+                        'Add Project',
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primaryColor,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              InkWell(
+                onTap: () => Get.to(() => AssignedProjectsScreen(clientId: clientId.toString())),
                 child: const AppText(
                   'View All',
                   fontSize: 12,
@@ -694,7 +728,20 @@ class _ClientDetailsScreenState extends State<ClientDetailsScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          ...projects.map((proj) {
+          if (projects.isEmpty)
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 18),
+              alignment: Alignment.center,
+              child: const Column(
+                children: [
+                  Icon(Iconsax.briefcase, size: 28, color: AppColors.textColorHint),
+                  SizedBox(height: 6),
+                  AppText('No projects added yet', fontSize: 12, color: AppColors.textColorHint),
+                ],
+              ),
+            )
+          else
+            ...projects.map((proj) {
             final f = NumberFormat.currency(locale: 'HI', symbol: '₹', decimalDigits: 0);
             final valStr = f.format(proj.estimatedValue);
 
@@ -808,7 +855,7 @@ class _ClientDetailsScreenState extends State<ClientDetailsScreen> {
     );
   }
 
-  Widget _buildCommunicationsSection(List<ClientDetailCommunication> comms) {
+  Widget _buildCommunicationsSection(List<ClientDetailCommunication> comms, dynamic clientId) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -848,91 +895,139 @@ class _ClientDetailsScreenState extends State<ClientDetailsScreen> {
 
             return Container(
               margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
                 color: AppColors.slate50,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: AppColors.slate200),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFEFF6FF),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: AppText(
-                          comm.type,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFF2563EB),
-                        ),
-                      ),
-                      AppText(
-                        dateStr,
-                        fontSize: 11,
-                        color: AppColors.textColorHint,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  AppText(
-                    comm.subject,
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textColorPrimary,
-                  ),
-                  const SizedBox(height: 4),
-                  AppText(
-                    comm.description,
-                    fontSize: 12,
-                    color: AppColors.textColorSecondary,
-                  ),
-                  if (comm.attachmentUrl != null && comm.attachmentUrl!.isNotEmpty) ...[
-                    const SizedBox(height: 10),
-                    InkWell(
-                      onTap: () => _openUrl(comm.attachmentUrl!),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: AppColors.slate200),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
+              child: Material(
+                color: Colors.transparent,
+                borderRadius: BorderRadius.circular(16),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: () {
+                    CommunicationDetailBottomSheet.show(
+                      context: context,
+                      clientId: clientId,
+                      communicationId: comm.id,
+                      initialType: comm.type,
+                      initialSubject: comm.subject,
+                      initialDate: comm.communicatedAt,
+                      initialRecipient: comm.recipient,
+                      initialDescription: comm.description,
+                      initialAttachmentName: comm.attachmentName,
+                      initialAttachmentUrl: comm.attachmentUrl,
+                    );
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Icon(Iconsax.document, size: 14, color: AppColors.primaryColor),
-                            const SizedBox(width: 6),
-                            Flexible(
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEFF6FF),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
                               child: AppText(
-                                comm.attachmentName ?? 'View Attachment',
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.primaryColor,
+                                comm.type,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF2563EB),
                               ),
                             ),
-                            const SizedBox(width: 4),
-                            const Icon(Icons.download_rounded, size: 14, color: AppColors.primaryColor),
+                            AppText(
+                              dateStr,
+                              fontSize: 11,
+                              color: AppColors.textColorHint,
+                            ),
                           ],
                         ),
-                      ),
+                        const SizedBox(height: 6),
+                        AppText(
+                          comm.subject,
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textColorPrimary,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        AppText(
+                          comm.description,
+                          fontSize: 12,
+                          color: AppColors.textColorSecondary,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        if (comm.attachmentUrl != null && comm.attachmentUrl!.isNotEmpty) ...[
+                          const SizedBox(height: 10),
+                          InkWell(
+                            onTap: () => _openUrl(comm.attachmentUrl!),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: AppColors.slate200),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Iconsax.document, size: 14, color: AppColors.primaryColor),
+                                  const SizedBox(width: 6),
+                                  Flexible(
+                                    child: AppText(
+                                      comm.attachmentName ?? 'View Attachment',
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.primaryColor,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  const Icon(Icons.download_rounded, size: 14, color: AppColors.primaryColor),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            if (comm.createdBy != null)
+                              AppText(
+                                'Logged by: ${comm.createdBy!.name}',
+                                fontSize: 10.5,
+                                color: AppColors.textColorHint,
+                              )
+                            else
+                              const SizedBox.shrink(),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                AppText(
+                                  'View Details',
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primaryColor,
+                                ),
+                                const SizedBox(width: 3),
+                                Icon(Icons.arrow_forward_ios_rounded, size: 8, color: AppColors.primaryColor),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-                  ],
-                  if (comm.createdBy != null) ...[
-                    const SizedBox(height: 8),
-                    AppText(
-                      'Logged by: ${comm.createdBy!.name}',
-                      fontSize: 10.5,
-                      color: AppColors.textColorHint,
-                    ),
-                  ],
-                ],
+                  ),
+                ),
               ),
             );
           }),

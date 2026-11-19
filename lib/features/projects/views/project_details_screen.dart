@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/app_avatar.dart';
 import '../../../core/widgets/app_text.dart';
 import '../../../core/controllers/app_controller.dart';
 import '../../role_permissions/models/role_permission_models.dart';
@@ -852,9 +853,10 @@ class _JiraBoardTab extends StatelessWidget {
                         if (task.assignee != null)
                           Tooltip(
                             message: 'Assigned to ${task.assignee!.name}',
-                            child: CircleAvatar(
+                            child: AppAvatar(
+                              imageUrl: task.assignee!.avatarUrl,
+                              name: task.assignee!.name,
                               radius: 13,
-                              backgroundImage: NetworkImage(task.assignee!.avatarUrl),
                             ),
                           ),
                       ],
@@ -944,19 +946,22 @@ class _JiraBoardTab extends StatelessWidget {
               const AppText('Module', fontSize: 12, fontWeight: FontWeight.bold),
               const SizedBox(height: 6),
               Obx(() {
-                final modNames = p.modules.isNotEmpty ? p.modules.map((m) => m.name).toList() : ['General'];
+                final hasModules = p.modules.isNotEmpty;
+                final modNames = p.modules.map((m) => m.name).toList();
+                final validMod = modNames.contains(selectedMod.value) ? selectedMod.value : (modNames.isNotEmpty ? modNames.first : null);
                 return Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   decoration: BoxDecoration(color: AppColors.slate50, borderRadius: BorderRadius.circular(10)),
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<String>(
-                      value: modNames.contains(selectedMod.value) ? selectedMod.value : modNames.first,
+                      value: validMod,
                       isExpanded: true,
                       dropdownColor: Colors.white,
-                      items: modNames.map((m) => DropdownMenuItem(value: m, child: AppText(m, fontSize: 12))).toList(),
-                      onChanged: (val) {
+                      hint: const AppText('No modules available', fontSize: 12, color: AppColors.textColorHint),
+                      items: hasModules ? modNames.map((m) => DropdownMenuItem(value: m, child: AppText(m, fontSize: 12))).toList() : null,
+                      onChanged: hasModules ? (val) {
                         if (val != null) selectedMod.value = val;
-                      },
+                      } : null,
                     ),
                   ),
                 );
@@ -967,21 +972,24 @@ class _JiraBoardTab extends StatelessWidget {
               const AppText('Assign Employee', fontSize: 12, fontWeight: FontWeight.bold),
               const SizedBox(height: 6),
               Obx(() {
+                final hasMembers = p.teamMembers.isNotEmpty;
+                final validAssignee = p.teamMembers.contains(assignee.value) ? assignee.value : null;
                 return Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   decoration: BoxDecoration(color: AppColors.slate50, borderRadius: BorderRadius.circular(10)),
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<AppUser>(
-                      value: assignee.value,
+                      value: validAssignee,
                       isExpanded: true,
                       dropdownColor: Colors.white,
+                      hint: const AppText('No team members available', fontSize: 12, color: AppColors.textColorHint),
                       items: p.teamMembers.map((m) {
                         return DropdownMenuItem<AppUser>(
                           value: m,
                           child: AppText(m.name, fontSize: 12),
                         );
                       }).toList(),
-                      onChanged: (val) => assignee.value = val,
+                      onChanged: hasMembers ? (val) => assignee.value = val : null,
                     ),
                   ),
                 );
@@ -1416,7 +1424,11 @@ class _TimesheetTab extends StatelessWidget {
                         // Member Header Row
                         Row(
                           children: [
-                            CircleAvatar(radius: 20, backgroundImage: NetworkImage(member.avatarUrl)),
+                            AppAvatar(
+                              imageUrl: member.avatarUrl,
+                              name: member.name,
+                              radius: 20,
+                            ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Column(
@@ -1841,17 +1853,10 @@ class _TeamTab extends StatelessWidget {
                       ),
                       child: Row(
                         children: [
-                          CircleAvatar(
+                          AppAvatar(
+                            imageUrl: emp.avatarUrl,
+                            name: emp.name,
                             radius: 20,
-                            backgroundColor: AppColors.slate200,
-                            backgroundImage: emp.avatarUrl.isNotEmpty ? NetworkImage(emp.avatarUrl) : null,
-                            onBackgroundImageError: (error, stackTrace) {},
-                            child: emp.avatarUrl.isEmpty
-                                ? Text(
-                                    emp.name.isNotEmpty ? emp.name[0].toUpperCase() : '?',
-                                    style: const TextStyle(fontWeight: FontWeight.bold),
-                                  )
-                                : null,
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -2062,7 +2067,11 @@ class _TeamTab extends StatelessWidget {
                     final emp = list[idx];
                     final isAssigned = p.teamMembers.contains(emp);
                     return ListTile(
-                      leading: CircleAvatar(backgroundImage: NetworkImage(emp.avatarUrl)),
+                      leading: AppAvatar(
+                        imageUrl: emp.avatarUrl,
+                        name: emp.name,
+                        radius: 20,
+                      ),
                       title: AppText(emp.name, fontSize: 13, fontWeight: FontWeight.bold),
                       subtitle: AppText(emp.email, fontSize: 10, color: AppColors.textColorHint),
                       trailing: isAssigned

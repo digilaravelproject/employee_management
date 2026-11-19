@@ -168,6 +168,7 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
                               label: 'Client/Lead',
                               selectedValue: client,
                               items: controller.clientNames,
+                              hintText: controller.clientNames.isEmpty ? 'No clients/leads available' : null,
                               onChanged: (val) {
                                 _selectedClient.value = val;
                                 setState(() {

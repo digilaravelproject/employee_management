@@ -80,6 +80,7 @@ class ClientCommunication {
   final String to;
   final String description;
   final String? attachmentName;
+  final String? attachmentUrl;
 
   const ClientCommunication({
     required this.id,
@@ -89,6 +90,7 @@ class ClientCommunication {
     required this.to,
     required this.description,
     this.attachmentName,
+    this.attachmentUrl,
   });
 
   ClientCommunication copyWith({
@@ -99,6 +101,7 @@ class ClientCommunication {
     String? to,
     String? description,
     String? attachmentName,
+    String? attachmentUrl,
   }) {
     return ClientCommunication(
       id: id ?? this.id,
@@ -108,6 +111,7 @@ class ClientCommunication {
       to: to ?? this.to,
       description: description ?? this.description,
       attachmentName: attachmentName ?? this.attachmentName,
+      attachmentUrl: attachmentUrl ?? this.attachmentUrl,
     );
   }
 }
