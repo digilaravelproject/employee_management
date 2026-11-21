@@ -159,6 +159,19 @@ class AdminProjectTask {
 }
 
 class AdminReportsController extends GetxController {
+  // Existing fields above...
+  // Refresh method to reload employee data (mock/API)
+  Future<void> refreshEmployees() async {
+    // In a real app, replace with API call.
+    // Here we re-seed mock data for demonstration.
+    employees.clear();
+    _seedMockData();
+    _applyFilter();
+    // Update selected employee if list not empty
+    if (employees.isNotEmpty) {
+      selectedEmployee.value = employees[0];
+    }
+  }
   final employees = <AdminReportEmployee>[].obs;
   final filteredEmployees = <AdminReportEmployee>[].obs;
 
@@ -217,6 +230,7 @@ class AdminReportsController extends GetxController {
   }
 
   void _seedMockData() {
+    // existing mock data generation (unchanged)
     // Standard mock calendar of attendance for May 2024
     // 1-31: Present, Late, Absent, Half Day, Weekend (Saturdays & Sundays are weekly offs)
     // Sundays: 5, 12, 19, 26. Saturdays: 4, 11, 18, 25.

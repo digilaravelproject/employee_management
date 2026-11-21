@@ -52,11 +52,27 @@ class CustomSnackbar1 {
   }
 
   static void showError(String message, {String title = 'Error'}) {
+    final msgLower = message.toLowerCase();
+    final isNetIssue = msgLower.contains('something went wrong') ||
+        msgLower.contains('socket') ||
+        msgLower.contains('host lookup') ||
+        msgLower.contains('network') ||
+        msgLower.contains('connection') ||
+        msgLower.contains('timeout') ||
+        msgLower.contains('timed out') ||
+        msgLower.contains('offline') ||
+        msgLower.contains('unreachable');
+
+    final effectiveTitle = isNetIssue ? 'No Internet Connection' : title;
+    final effectiveMessage = isNetIssue
+        ? 'Please check your internet connection and turn on Wi-Fi or Mobile Data.'
+        : message;
+
     _show(
-      title: title,
-      message: message,
+      title: effectiveTitle,
+      message: effectiveMessage,
       backgroundColor: AppColors.errorColor,
-      icon: Iconsax.danger,
+      icon: isNetIssue ? Icons.wifi_off_rounded : Iconsax.danger,
     );
   }
 
@@ -94,6 +110,9 @@ class CustomSnackbar {
     required IconData icon,
     Color? textColor,
   }) {
+    final String cleanTitle = AppText.cleanText(title);
+    final String cleanMessage = AppText.cleanText(message);
+
     final Color effectiveTextColor =
         textColor ??
             (backgroundColor.computeLuminance() > 0.5
@@ -110,8 +129,8 @@ class CustomSnackbar {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                AppText(title.toUpperCase(), fontSize: 12, fontWeight: FontWeight.bold, color: effectiveTextColor),
-                AppText(message, fontSize: 13, color: effectiveTextColor),
+                AppText(cleanTitle.toUpperCase(), fontSize: 12, fontWeight: FontWeight.bold, color: effectiveTextColor),
+                AppText(cleanMessage, fontSize: 13, color: effectiveTextColor),
               ],
             ),
           ),
@@ -129,8 +148,8 @@ class CustomSnackbar {
       messengerKey.currentState?.showSnackBar(snackBar);
     } else {
       Get.snackbar(
-        title,
-        message,
+        cleanTitle,
+        cleanMessage,
         backgroundColor: backgroundColor,
         colorText: effectiveTextColor,
         icon: Icon(icon, color: effectiveTextColor, size: 24),
@@ -152,11 +171,27 @@ class CustomSnackbar {
   }
 
   static void showError(String message, {String title = 'Error'}) {
+    final msgLower = message.toLowerCase();
+    final isNetIssue = msgLower.contains('something went wrong') ||
+        msgLower.contains('socket') ||
+        msgLower.contains('host lookup') ||
+        msgLower.contains('network') ||
+        msgLower.contains('connection') ||
+        msgLower.contains('timeout') ||
+        msgLower.contains('timed out') ||
+        msgLower.contains('offline') ||
+        msgLower.contains('unreachable');
+
+    final effectiveTitle = isNetIssue ? 'No Internet Connection' : title;
+    final effectiveMessage = isNetIssue
+        ? 'Please check your internet connection and turn on Wi-Fi or Mobile Data.'
+        : message;
+
     _show(
-      title: title,
-      message: message,
+      title: effectiveTitle,
+      message: effectiveMessage,
       backgroundColor: AppColors.errorColor,
-      icon: Icons.error_rounded,
+      icon: isNetIssue ? Icons.wifi_off_rounded : Icons.error_rounded,
     );
   }
 

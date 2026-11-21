@@ -3,9 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:intl/intl.dart';
+import '../../../core/services/network/api_client.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/custom_snackbar.dart';
 import '../../../core/widgets/app_text.dart';
+import '../../departments/controllers/departments_controller.dart';
+import '../../departments/repositories/department_repository.dart';
+import '../../employee/designation/controllers/designation_controller.dart';
+import '../../employee/designation/repositories/designation_repository.dart';
 import '../../employee/management/controllers/employee_controller.dart';
 import '../controllers/shift_controller.dart';
 import '../models/create_shift_request_model.dart';
@@ -46,7 +51,7 @@ class EmployeeItem {
   final String id;
   final String name;
   final String department;
-  final String team;
+  final String designation;
   final String currentShift;
   final String status; // 'Assigned' or 'Available'
   bool isSelected;
@@ -55,7 +60,7 @@ class EmployeeItem {
     required this.id,
     required this.name,
     required this.department,
-    required this.team,
+    required this.designation,
     required this.currentShift,
     required this.status,
     this.isSelected = false,
@@ -79,7 +84,7 @@ class CreateShiftScreen extends StatefulWidget {
 class _CreateShiftScreenState extends State<CreateShiftScreen> {
   final PageController _pageController = PageController();
   int _currentStep = 0;
-  final int _totalSteps = 7;
+  final int _totalSteps = 6;
 
   final GlobalKey _shiftNameKey = GlobalKey();
   final GlobalKey _shiftCodeKey = GlobalKey();
@@ -115,12 +120,10 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
   // Step 3: Break Settings (Panel 4)
   // ----------------------------------------------------
   late bool _enableBreak;
-  final String _newBreakName = 'Lunch Break';
+  final TextEditingController _breakNameController = TextEditingController();
   late String _breakType;
-  late String _breakDuration;
   late TimeOfDay _breakStartTime;
   late TimeOfDay _breakEndTime;
-  final List<String> _breakDurations = ['15 Minutes', '30 Minutes', '45 Minutes', '60 Minutes', '90 Minutes'];
 
   late List<BreakItem> _breaks;
 
@@ -146,28 +149,31 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
   // Step 5: Overtime Settings (Panel 6)
   // ----------------------------------------------------
   late bool _enableOvertime;
-  late String _otStartsAfter;
-  late String _minimumOT;
+  final TextEditingController _otStartsAfterController = TextEditingController();
+  final TextEditingController _minimumOTController = TextEditingController();
   late String _otCalculation;
   late bool _approvalRequired;
 
-  final List<String> _otStartsOptions = ['08:00 Hours', '08:30 Hours', '09:00 Hours', '10:00 Hours'];
-  final List<String> _minOtOptions = ['15 Minutes', '30 Minutes', '45 Minutes', '60 Minutes'];
   final List<String> _otCalculationOptions = ['Hourly', 'Daily', '1.5x Hourly Rate', '2x Hourly Rate', 'Flat Stipend'];
 
   // ----------------------------------------------------
   // Step 6: Weekly Schedule (Panel 7)
   // ----------------------------------------------------
   late List<DaySchedule> _weeklySchedule;
+  bool _enableAlternateOff = false;
+  String _alternateOffDay = 'Saturday';
+  final List<String> _alternateWeeks = ['2nd & 4th', '1st & 3rd'];
+  String _selectedAlternateWeek = '2nd & 4th';
+  final List<String> _weekDaysList = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
   // ----------------------------------------------------
-  // Step 7: Employee Assignment (Panel 8)
+  // Step 6: Employee Assignment (Panel 7)
   // ----------------------------------------------------
   final TextEditingController _searchEmployeeController = TextEditingController();
   String _selectedDepartment = 'All';
-  String _selectedTeam = 'All';
-  final List<String> _departments = ['All', 'Sales', 'Support', 'HR', 'Engineering', 'Marketing'];
-  final List<String> _teams = ['All', 'Team Alpha', 'Team Beta', 'Core Operations'];
+  String _selectedDesignation = 'All';
+  final List<String> _departments = ['All'];
+  final List<String> _designations = ['All'];
 
   final List<EmployeeItem> _allEmployees = [];
 
@@ -190,10 +196,9 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
     _allEmployees.clear();
 
     if (empCtrl.employees.isNotEmpty) {
-      final deptSet = <String>{'All'};
       for (final emp in empCtrl.employees) {
-        final dept = emp.department.isNotEmpty ? emp.department : 'General';
-        deptSet.add(dept);
+        final dept = emp.department.isNotEmpty ? emp.department : '';
+        final desig = emp.designation.isNotEmpty ? emp.designation : '';
 
         final isPreSelected = assignedIds.contains(emp.id) ||
             assignedNames.contains(emp.name.toLowerCase());
@@ -203,19 +208,69 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
             id: emp.id,
             name: emp.name,
             department: dept,
-            team: emp.designation.isNotEmpty ? emp.designation : 'General',
+            designation: desig,
             currentShift: emp.shift.isNotEmpty ? emp.shift : 'No Shift',
             status: emp.shift.isNotEmpty ? 'Assigned' : 'Available',
             isSelected: isPreSelected,
           ),
         );
       }
-      _departments.clear();
-      _departments.addAll(deptSet);
     }
+
+    _loadDepartmentsAndDesignations();
 
     if (mounted) {
       setState(() {});
+    }
+  }
+
+  void _loadDepartmentsAndDesignations() {
+    final deptCtrl = Get.isRegistered<DepartmentsController>()
+        ? Get.find<DepartmentsController>()
+        : Get.put(DepartmentsController(
+            repository: Get.isRegistered<DepartmentRepository>()
+                ? Get.find<DepartmentRepository>()
+                : DepartmentRepository(apiClient: Get.find<ApiClient>()),
+          ));
+
+    final desigCtrl = Get.isRegistered<DesignationController>()
+        ? Get.find<DesignationController>()
+        : Get.put(DesignationController(
+            repository: Get.isRegistered<DesignationRepository>()
+                ? Get.find<DesignationRepository>()
+                : DesignationRepository(apiClient: Get.find<ApiClient>()),
+          ));
+
+    // 1. Departments list from DepartmentsController
+    final deptList = <String>[];
+    if (deptCtrl.apiDepartments.isNotEmpty) {
+      deptList.addAll(deptCtrl.apiDepartments.map((d) => d.name.trim()).where((n) => n.isNotEmpty));
+    } else if (deptCtrl.departments.isNotEmpty) {
+      deptList.addAll(deptCtrl.departments.map((d) => d.name.trim()).where((n) => n.isNotEmpty));
+    }
+
+    _departments.clear();
+    _departments.add('All');
+    if (deptList.isNotEmpty) {
+      _departments.addAll(deptList.toSet());
+    }
+    if (!_departments.contains(_selectedDepartment)) {
+      _selectedDepartment = 'All';
+    }
+
+    // 2. Designations list from DesignationController
+    final desigList = <String>[];
+    if (desigCtrl.designations.isNotEmpty) {
+      desigList.addAll(desigCtrl.designations.map((d) => d.name.trim()).where((n) => n.isNotEmpty));
+    }
+
+    _designations.clear();
+    _designations.add('All');
+    if (desigList.isNotEmpty) {
+      _designations.addAll(desigList.toSet());
+    }
+    if (!_designations.contains(_selectedDesignation)) {
+      _selectedDesignation = 'All';
     }
   }
 
@@ -228,13 +283,13 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
 
     // Step 1: Basic Info
     _shiftNameController = TextEditingController(
-      text: data?.name ?? shift?.name ?? 'Morning Shift',
+      text: data?.name ?? shift?.name ?? '',
     );
     _shiftCodeController = TextEditingController(
-      text: data?.code ?? shift?.code ?? 'MORNING',
+      text: data?.code ?? shift?.code ?? '',
     );
     _descriptionController = TextEditingController(
-      text: data?.description ?? shift?.description ?? 'Morning working shift for sales and operations team...',
+      text: data?.description ?? shift?.description ?? '',
     );
 
     final resolvedType = data?.shiftType ?? shift?.type ?? 'Fixed Shift';
@@ -251,16 +306,15 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
     // Step 2: Timings
     final startTimeStr = data?.startTime ?? shift?.startTime;
     final endTimeStr = data?.endTime ?? shift?.endTime;
-    _startTime = _parseTimeToTimeOfDay(startTimeStr, defaultTime: const TimeOfDay(hour: 10, minute: 0));
-    _endTime = _parseTimeToTimeOfDay(endTimeStr, defaultTime: const TimeOfDay(hour: 19, minute: 0));
+    _startTime = _parseTimeToTimeOfDay(startTimeStr, defaultTime: const TimeOfDay(hour: 9, minute: 0));
+    _endTime = _parseTimeToTimeOfDay(endTimeStr, defaultTime: const TimeOfDay(hour: 18, minute: 0));
     _crossMidnight = data?.crossMidnight ?? shift?.crossMidnight ?? false;
 
     // Step 3: Breaks
-    _enableBreak = data?.breaksEnabled ?? shift?.enableBreak ?? true;
+    _enableBreak = data?.breaksEnabled ?? shift?.enableBreak ?? false;
     _breakType = 'Paid';
-    _breakDuration = '60 Minutes';
     _breakStartTime = const TimeOfDay(hour: 13, minute: 0);
-    _breakEndTime = const TimeOfDay(hour: 14, minute: 0);
+    _breakEndTime = const TimeOfDay(hour: 13, minute: 30);
 
     if (data != null && data.breaks.isNotEmpty) {
       _breaks = data.breaks.map((b) {
@@ -272,7 +326,7 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
           endTime: _parseTimeToTimeOfDay(b.endTime, defaultTime: const TimeOfDay(hour: 14, minute: 0)),
         );
       }).toList();
-    } else {
+    } else if (shift != null) {
       _breaks = [
         BreakItem(
           name: 'Lunch Break',
@@ -282,44 +336,58 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
           endTime: const TimeOfDay(hour: 14, minute: 0),
         ),
       ];
+    } else {
+      // Create mode: no prefilled breaks
+      _breaks = [];
     }
 
     // Step 4: Attendance Rules
-    final graceMins = data?.gracePeriodMinutes ?? (shift != null ? _parseDurationToMinutes(shift.gracePeriod, defaultValue: 15) : 15);
-    _gracePeriod = _gracePeriodOptions.contains('$graceMins Minutes') ? '$graceMins Minutes' : '15 Minutes';
+    final graceMins = data?.gracePeriodMinutes ?? (shift != null ? _parseDurationToMinutes(shift.gracePeriod, defaultValue: 15) : null);
+    _gracePeriod = graceMins != null && _gracePeriodOptions.contains('$graceMins Minutes') ? '$graceMins Minutes' : _gracePeriodOptions.first;
 
-    final lateMins = data?.lateAfterMinutes ?? (shift != null ? _parseDurationToMinutes(shift.lateAfter, defaultValue: 15) : 15);
-    _lateAfter = _lateAfterOptions.contains('$lateMins Minutes') ? '$lateMins Minutes' : '15 Minutes';
+    final lateMins = data?.lateAfterMinutes ?? (shift != null ? _parseDurationToMinutes(shift.lateAfter, defaultValue: 15) : null);
+    _lateAfter = lateMins != null && _lateAfterOptions.contains('$lateMins Minutes') ? '$lateMins Minutes' : _lateAfterOptions.first;
 
-    final minWorkMins = data?.minimumWorkingMinutes ?? (shift != null ? _parseDurationToMinutes(shift.minWorkingHours, defaultValue: 480) : 480);
-    final minWorkStr = '${(minWorkMins ~/ 60).toString().padLeft(2, '0')}:00 Hours';
-    _minWorkingHours = _minHoursOptions.contains(minWorkStr) ? minWorkStr : '08:00 Hours';
+    final minWorkMins = data?.minimumWorkingMinutes ?? (shift != null ? _parseDurationToMinutes(shift.minWorkingHours, defaultValue: 480) : null);
+    final minWorkStr = minWorkMins != null ? '${(minWorkMins ~/ 60).toString().padLeft(2, '0')}:00 Hours' : '';
+    _minWorkingHours = _minHoursOptions.contains(minWorkStr) ? minWorkStr : _minHoursOptions.first;
 
     _earlyLeavingAllowed = data?.earlyLeavingAllowed ?? shift?.earlyLeavingAllowed ?? false;
-    _autoMarkLate = data?.autoMarkLate ?? shift?.autoMarkLate ?? true;
-    _autoMarkHalfDay = data?.autoMarkHalfDay ?? shift?.autoMarkHalfDay ?? true;
+    _autoMarkLate = data?.autoMarkLate ?? shift?.autoMarkLate ?? false;
+    _autoMarkHalfDay = data?.autoMarkHalfDay ?? shift?.autoMarkHalfDay ?? false;
 
-    final lateThreshMins = data?.lateThresholdMinutes ?? (shift != null ? _parseDurationToMinutes(shift.lateThreshold, defaultValue: 30) : 30);
-    _lateThreshold = _lateThresholdOptions.contains('$lateThreshMins Minutes') ? '$lateThreshMins Minutes' : '30 Minutes';
+    final lateThreshMins = data?.lateThresholdMinutes ?? (shift != null ? _parseDurationToMinutes(shift.lateThreshold, defaultValue: 30) : null);
+    _lateThreshold = lateThreshMins != null && _lateThresholdOptions.contains('$lateThreshMins Minutes') ? '$lateThreshMins Minutes' : _lateThresholdOptions.first;
 
-    final halfDayMins = data?.halfDayAfterMinutes ?? (shift != null ? _parseDurationToMinutes(shift.halfDayAfter, defaultValue: 240) : 240);
-    final halfDayStr = '${(halfDayMins ~/ 60).toString().padLeft(2, '0')}:00 Hours';
-    _halfDayAfter = _halfDayOptions.contains(halfDayStr) ? halfDayStr : '04:00 Hours';
+    final halfDayMins = data?.halfDayAfterMinutes ?? (shift != null ? _parseDurationToMinutes(shift.halfDayAfter, defaultValue: 240) : null);
+    final halfDayStr = halfDayMins != null ? '${(halfDayMins ~/ 60).toString().padLeft(2, '0')}:00 Hours' : '';
+    _halfDayAfter = _halfDayOptions.contains(halfDayStr) ? halfDayStr : _halfDayOptions.first;
 
     // Step 5: Overtime
-    _enableOvertime = data?.overtimeEnabled ?? shift?.enableOvertime ?? true;
+    _enableOvertime = data?.overtimeEnabled ?? shift?.enableOvertime ?? false;
 
-    final otStartsMins = data?.overtimeStartsAfterMinutes ?? (shift != null ? _parseDurationToMinutes(shift.otStartsAfter, defaultValue: 480) : 480);
-    final otStartsStr = '${(otStartsMins ~/ 60).toString().padLeft(2, '0')}:00 Hours';
-    _otStartsAfter = _otStartsOptions.contains(otStartsStr) ? otStartsStr : '08:00 Hours';
+    // Default OT starts after = shift end time
+    final defaultOtStarts = _formatTimeOfDay(_endTime);
+    final otStartsMins = data?.overtimeStartsAfterMinutes ?? (shift != null ? _parseDurationToMinutes(shift.otStartsAfter, defaultValue: 0) : null);
+    if (otStartsMins != null && otStartsMins > 0) {
+      final hours = (otStartsMins ~/ 60).toString().padLeft(2, '0');
+      final mins = (otStartsMins % 60).toString().padLeft(2, '0');
+      _otStartsAfterController.text = '$hours:$mins';
+    } else {
+      _otStartsAfterController.text = defaultOtStarts;
+    }
 
-    final minOtMins = data?.minimumOvertimeMinutes ?? (shift != null ? _parseDurationToMinutes(shift.minimumOT, defaultValue: 30) : 30);
-    _minimumOT = _minOtOptions.contains('$minOtMins Minutes') ? '$minOtMins Minutes' : '30 Minutes';
+    final minOtMins = data?.minimumOvertimeMinutes ?? (shift != null ? _parseDurationToMinutes(shift.minimumOT, defaultValue: 0) : null);
+    if (minOtMins != null && minOtMins > 0) {
+      _minimumOTController.text = '$minOtMins';
+    } else {
+      _minimumOTController.text = '';
+    }
 
-    final otCalc = data?.overtimeCalculation ?? shift?.otCalculation ?? 'Hourly';
-    _otCalculation = _otCalculationOptions.contains(otCalc) ? otCalc : 'Hourly';
+    final otCalc = data?.overtimeCalculation ?? shift?.otCalculation;
+    _otCalculation = otCalc != null && _otCalculationOptions.contains(otCalc) ? otCalc : _otCalculationOptions.first;
 
-    _approvalRequired = data?.overtimeApprovalRequired ?? shift?.approvalRequired ?? true;
+    _approvalRequired = data?.overtimeApprovalRequired ?? shift?.approvalRequired ?? false;
 
     // Step 6: Weekly Schedule
     if (data != null && data.workingDays.isNotEmpty) {
@@ -331,7 +399,8 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
           endTime: _parseTimeToTimeOfDay(d.endTime, defaultTime: _endTime),
         );
       }).toList();
-    } else {
+    } else if (shift != null) {
+      // Edit mode (ShiftModel): Mon–Fri working by default
       _weeklySchedule = [
         DaySchedule(dayName: 'Monday', isWorking: true, startTime: _startTime, endTime: _endTime),
         DaySchedule(dayName: 'Tuesday', isWorking: true, startTime: _startTime, endTime: _endTime),
@@ -341,12 +410,51 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
         DaySchedule(dayName: 'Saturday', isWorking: false, startTime: _startTime, endTime: _endTime),
         DaySchedule(dayName: 'Sunday', isWorking: false, startTime: _startTime, endTime: _endTime),
       ];
+    } else {
+      // Create mode: all days off — user selects
+      _weeklySchedule = [
+        DaySchedule(dayName: 'Monday', isWorking: false, startTime: _startTime, endTime: _endTime),
+        DaySchedule(dayName: 'Tuesday', isWorking: false, startTime: _startTime, endTime: _endTime),
+        DaySchedule(dayName: 'Wednesday', isWorking: false, startTime: _startTime, endTime: _endTime),
+        DaySchedule(dayName: 'Thursday', isWorking: false, startTime: _startTime, endTime: _endTime),
+        DaySchedule(dayName: 'Friday', isWorking: false, startTime: _startTime, endTime: _endTime),
+        DaySchedule(dayName: 'Saturday', isWorking: false, startTime: _startTime, endTime: _endTime),
+        DaySchedule(dayName: 'Sunday', isWorking: false, startTime: _startTime, endTime: _endTime),
+      ];
     }
 
     // Step 7: Pre-select employees and load live employee directory
     final empCtrl = Get.isRegistered<EmployeeController>()
         ? Get.find<EmployeeController>()
         : Get.put(EmployeeController());
+
+    // Ensure departments & designations controllers are ready and fetch data if empty
+    final deptCtrl = Get.isRegistered<DepartmentsController>()
+        ? Get.find<DepartmentsController>()
+        : Get.put(DepartmentsController(
+            repository: Get.isRegistered<DepartmentRepository>()
+                ? Get.find<DepartmentRepository>()
+                : DepartmentRepository(apiClient: Get.find<ApiClient>()),
+          ));
+
+    final desigCtrl = Get.isRegistered<DesignationController>()
+        ? Get.find<DesignationController>()
+        : Get.put(DesignationController(
+            repository: Get.isRegistered<DesignationRepository>()
+                ? Get.find<DesignationRepository>()
+                : DesignationRepository(apiClient: Get.find<ApiClient>()),
+          ));
+
+    if (deptCtrl.apiDepartments.isEmpty && deptCtrl.departments.isEmpty) {
+      deptCtrl.fetchDepartments().then((_) {
+        if (mounted) setState(() => _loadDepartmentsAndDesignations());
+      });
+    }
+    if (desigCtrl.designations.isEmpty) {
+      desigCtrl.fetchDesignations().then((_) {
+        if (mounted) setState(() => _loadDepartmentsAndDesignations());
+      });
+    }
 
     _initEmployeeList();
 
@@ -365,6 +473,9 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
     _shiftNameFocusNode.dispose();
     _shiftCodeFocusNode.dispose();
     _descriptionController.dispose();
+    _breakNameController.dispose();
+    _otStartsAfterController.dispose();
+    _minimumOTController.dispose();
     _searchEmployeeController.dispose();
     super.dispose();
   }
@@ -438,6 +549,29 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
     }
   }
 
+  String _calculateBreakDuration(TimeOfDay start, TimeOfDay end) {
+    int startMinutes = start.hour * 60 + start.minute;
+    int endMinutes = end.hour * 60 + end.minute;
+
+    if (endMinutes < startMinutes) {
+      endMinutes += 24 * 60; // if passes midnight
+    }
+
+    int diffMinutes = endMinutes - startMinutes;
+    if (diffMinutes < 0) diffMinutes = 0;
+
+    int hours = diffMinutes ~/ 60;
+    int mins = diffMinutes % 60;
+
+    if (hours > 0 && mins > 0) {
+      return '$hours hr $mins min';
+    } else if (hours > 0) {
+      return '$hours hr';
+    } else {
+      return '$mins min';
+    }
+  }
+
   void _scrollToAndFocusField({
     required int step,
     GlobalKey? fieldKey,
@@ -493,11 +627,11 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
         return false;
       }
       return true;
-    } else if (step == 5) {
+    } else if (step == 4) {
       final hasWorkingDay = _weeklySchedule.any((d) => d.isWorking);
       if (!hasWorkingDay) {
         CustomSnackbar.showError('Please enable at least one working day in the weekly schedule');
-        _scrollToAndFocusField(step: 5, fieldKey: _scheduleKey);
+        _scrollToAndFocusField(step: 4, fieldKey: _scheduleKey);
         return false;
       }
       return true;
@@ -522,12 +656,14 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
       _scrollToAndFocusField(step: 0, fieldKey: _shiftCodeKey, focusNode: _shiftCodeFocusNode);
     } else if (lower.contains('type')) {
       _scrollToAndFocusField(step: 0, fieldKey: _shiftTypeKey);
-    } else if (lower.contains('time') || lower.contains('timing')) {
+    } else if (lower.contains('time') || lower.contains('timing') || lower.contains('grace') || lower.contains('late') || lower.contains('half')) {
       _scrollToAndFocusField(step: 1, fieldKey: _timingKey);
     } else if (lower.contains('break')) {
       _scrollToAndFocusField(step: 2, fieldKey: _breaksKey);
+    } else if (lower.contains('overtime') || lower.contains('ot')) {
+      _scrollToAndFocusField(step: 3);
     } else if (lower.contains('working') || lower.contains('schedule') || lower.contains('day')) {
-      _scrollToAndFocusField(step: 5, fieldKey: _scheduleKey);
+      _scrollToAndFocusField(step: 4, fieldKey: _scheduleKey);
     }
   }
 
@@ -553,10 +689,11 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
     return _allEmployees.where((emp) {
       final matchesQuery = query.isEmpty ||
           emp.name.toLowerCase().contains(query) ||
-          emp.department.toLowerCase().contains(query);
+          emp.department.toLowerCase().contains(query) ||
+          emp.designation.toLowerCase().contains(query);
       final matchesDept = _selectedDepartment == 'All' || emp.department == _selectedDepartment;
-      final matchesTeam = _selectedTeam == 'All' || emp.team == _selectedTeam;
-      return matchesQuery && matchesDept && matchesTeam;
+      final matchesDesig = _selectedDesignation == 'All' || emp.designation == _selectedDesignation;
+      return matchesQuery && matchesDept && matchesDesig;
     }).toList();
   }
 
@@ -607,7 +744,6 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
                 _buildStep1BasicInfo(),
                 _buildStep2ShiftTiming(),
                 _buildStep3BreakSettings(),
-                _buildStep4AttendanceRules(),
                 _buildStep5OvertimeSettings(),
                 _buildStep6WeeklySchedule(),
                 _buildStep7EmployeeAssignment(),
@@ -822,19 +958,23 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildFieldLabel('Status', isRequired: false),
-                        const SizedBox(height: 4),
-                        const AppText(
-                          'Shift will be active and assignable',
-                          fontSize: 12,
-                          color: AppColors.textColorHint,
-                        ),
-                      ],
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildFieldLabel('Status', isRequired: false),
+                          const SizedBox(height: 4),
+                          const AppText(
+                            'Shift will be active and assignable',
+                            fontSize: 12,
+                            color: AppColors.textColorHint,
+                          ),
+                        ],
+                      ),
                     ),
+                    const SizedBox(width: 8),
                     Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -843,6 +983,7 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               CircleAvatar(
                                 radius: 4,
@@ -907,7 +1048,7 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
   }
 
   // ----------------------------------------------------
-  // STEP 2: Shift Timing (Panel 3)
+  // STEP 2: Shift Timing & Attendance Rules
   // ----------------------------------------------------
   Widget _buildStep2ShiftTiming() {
     final workingHoursText = _calculateWorkingHours(_startTime, _endTime, _crossMidnight);
@@ -919,8 +1060,8 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
         children: [
           _buildStepHeader(
             stepNumber: '2',
-            title: 'Shift Timing',
-            subtitle: 'Define the operational start and end hours for this work shift.',
+            title: 'Timing & Attendance Rules',
+            subtitle: 'Define shift timings, punctuality rules, and working hours.',
           ),
           _buildCardContainer(
             child: Column(
@@ -964,6 +1105,7 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
                                 for (var day in _weeklySchedule) {
                                   day.endTime = newTime;
                                 }
+                                _otStartsAfterController.text = _formatTimeOfDay(newTime);
                               });
                             },
                           ),
@@ -986,30 +1128,35 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: AppColors.primaryColor.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Icon(Iconsax.moon, size: 20, color: AppColors.primaryColor),
-                          ),
-                          const SizedBox(width: 12),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: const [
-                              AppText('Cross Midnight', fontSize: 13, fontWeight: FontWeight.bold),
-                              AppText(
-                                'Shift extends to the next calendar day',
-                                fontSize: 11,
-                                color: AppColors.textColorHint,
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: AppColors.primaryColor.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(8),
                               ),
-                            ],
-                          ),
-                        ],
+                              child: const Icon(Iconsax.moon, size: 20, color: AppColors.primaryColor),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: const [
+                                  AppText('Cross Midnight', fontSize: 13, fontWeight: FontWeight.bold),
+                                  AppText(
+                                    'Shift extends to the next calendar day',
+                                    fontSize: 11,
+                                    color: AppColors.textColorHint,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
+                      const SizedBox(width: 8),
                       CupertinoSwitch(
                         value: _crossMidnight,
                         activeTrackColor: AppColors.primaryColor,
@@ -1019,70 +1166,162 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
                   ),
                 ),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
 
-                // Working Hours (Auto Calculated) Stat Box
+                // Working Hours (Field with auto-calculated value)
+                _buildFieldLabel('Working Hours', isRequired: false),
+                const SizedBox(height: 8),
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        AppColors.primaryColor.withValues(alpha: 0.08),
-                        AppColors.primaryColor.withValues(alpha: 0.02),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.primaryColor.withValues(alpha: 0.2)),
+                    color: AppColors.slate50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.slate200),
                   ),
                   child: Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryColor,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.primaryColor.withValues(alpha: 0.3),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: const Icon(Iconsax.timer_1, color: Colors.white, size: 26),
+                      const Icon(Iconsax.timer_1, size: 18, color: AppColors.primaryColor),
+                      const SizedBox(width: 10),
+                      AppText(
+                        workingHoursText,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primaryColor,
                       ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const AppText(
-                              'Working Hours (Auto Calculated)',
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.textColorSecondary,
-                            ),
-                            const SizedBox(height: 4),
-                            AppText(
-                              workingHoursText,
-                              fontSize: 22,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.primaryColor,
-                            ),
-                            const SizedBox(height: 2),
-                            AppText(
-                              '${_formatTimeOfDay(_startTime)} to ${_formatTimeOfDay(_endTime)}${_crossMidnight ? ' (+1 day)' : ''}',
-                              fontSize: 11,
-                              color: AppColors.textColorHint,
-                            ),
-                          ],
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryLight,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const AppText(
+                          'Auto-Calculated',
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primaryColor,
                         ),
                       ),
                     ],
                   ),
+                ),
+
+                const SizedBox(height: 24),
+                const Divider(color: AppColors.slate200, height: 1),
+                const SizedBox(height: 20),
+
+                // Attendance Rules Header inside Card
+                const AppText(
+                  'Attendance Rules & Punctuality',
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textColorPrimary,
+                ),
+                const SizedBox(height: 14),
+
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildFieldLabel('Grace Period', isRequired: false),
+                          const SizedBox(height: 8),
+                          _buildDropdownField<String>(
+                            value: _gracePeriod,
+                            items: _gracePeriodOptions,
+                            onChanged: (val) {
+                              if (val != null) setState(() => _gracePeriod = val);
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildFieldLabel('Late After', isRequired: false),
+                          const SizedBox(height: 8),
+                          _buildDropdownField<String>(
+                            value: _lateAfter,
+                            items: _lateAfterOptions,
+                            onChanged: (val) {
+                              if (val != null) setState(() => _lateAfter = val);
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 20),
+
+                // Rule Toggles List
+                _buildToggleRow(
+                  title: 'Early Leaving Allowed',
+                  subtitle: 'Permit employees to punch out slightly before shift ends',
+                  value: _earlyLeavingAllowed,
+                  onChanged: (val) => setState(() => _earlyLeavingAllowed = val),
+                ),
+                const Divider(height: 24, color: AppColors.slate200),
+
+                _buildToggleRow(
+                  title: 'Auto Mark Late',
+                  subtitle: 'Automatically flag attendance as late if check-in exceeds grace time',
+                  value: _autoMarkLate,
+                  onChanged: (val) => setState(() => _autoMarkLate = val),
+                ),
+                const Divider(height: 24, color: AppColors.slate200),
+
+                _buildToggleRow(
+                  title: 'Auto Mark Half Day',
+                  subtitle: 'Trigger half-day status if minimum work hours are not fulfilled',
+                  value: _autoMarkHalfDay,
+                  onChanged: (val) => setState(() => _autoMarkHalfDay = val),
+                ),
+
+                const SizedBox(height: 20),
+
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildFieldLabel('Late Threshold', isRequired: false),
+                          const SizedBox(height: 8),
+                          _buildDropdownField<String>(
+                            value: _lateThreshold,
+                            items: _lateThresholdOptions,
+                            onChanged: (val) {
+                              if (val != null) setState(() => _lateThreshold = val);
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildFieldLabel('Half Day After', isRequired: false),
+                          const SizedBox(height: 8),
+                          _buildDropdownField<String>(
+                            value: _halfDayAfter,
+                            items: _halfDayOptions,
+                            onChanged: (val) {
+                              if (val != null) setState(() => _halfDayAfter = val);
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -1124,9 +1363,24 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
                 ? Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Break Type & Duration
+                      // Break Name & Break Type
                       Row(
                         children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildFieldLabel('Break Name', isRequired: true),
+                                const SizedBox(height: 8),
+                                _buildTextInput(
+                                  controller: _breakNameController,
+                                  hint: 'e.g. Lunch Break / Tea Break',
+                                  prefixIcon: Iconsax.coffee,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 14),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1138,23 +1392,6 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
                                   items: const ['Paid', 'Unpaid'],
                                   onChanged: (val) {
                                     if (val != null) setState(() => _breakType = val);
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _buildFieldLabel('Duration', isRequired: true),
-                                const SizedBox(height: 8),
-                                _buildDropdownField<String>(
-                                  value: _breakDuration,
-                                  items: _breakDurations,
-                                  onChanged: (val) {
-                                    if (val != null) setState(() => _breakDuration = val);
                                   },
                                 ),
                               ],
@@ -1198,25 +1435,57 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
                         ],
                       ),
 
+                      const SizedBox(height: 12),
+
+                      // Calculated duration display preview
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: AppColors.slate50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: AppColors.slate200),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Iconsax.timer_1, size: 16, color: AppColors.primaryColor),
+                            const SizedBox(width: 6),
+                            AppText(
+                              'Calculated Duration: ${_calculateBreakDuration(_breakStartTime, _breakEndTime)}',
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textColorSecondary,
+                            ),
+                          ],
+                        ),
+                      ),
+
                       const SizedBox(height: 18),
 
                       // Add Break Button
                       OutlinedButton.icon(
                         onPressed: () {
+                          final name = _breakNameController.text.trim();
+                          if (name.isEmpty) {
+                            CustomSnackbar.showError('Please enter break name');
+                            return;
+                          }
+                          final calculatedDuration = _calculateBreakDuration(_breakStartTime, _breakEndTime);
                           setState(() {
                             _breaks.add(
                               BreakItem(
-                                name: _newBreakName.isEmpty ? 'Break ${_breaks.length + 1}' : _newBreakName,
+                                name: name,
                                 type: _breakType,
-                                duration: _breakDuration,
+                                duration: calculatedDuration,
                                 startTime: _breakStartTime,
                                 endTime: _breakEndTime,
                               ),
                             );
+                            _breakNameController.clear();
                           });
                           Get.snackbar(
                             'Break Added',
-                            'New break period added to this shift.',
+                            '$name ($calculatedDuration) added to this shift.',
                             snackPosition: SnackPosition.BOTTOM,
                             backgroundColor: Colors.black87,
                             colorText: Colors.white,
@@ -1224,7 +1493,7 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
                           );
                         },
                         icon: const Icon(Icons.add_circle_outline, size: 18, color: AppColors.primaryColor),
-                        label: const AppText('+ Add Another Break', fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.primaryColor),
+                        label: const AppText('+ Add Break', fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.primaryColor),
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                           side: const BorderSide(color: AppColors.primaryColor),
@@ -1337,149 +1606,7 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
   }
 
   // ----------------------------------------------------
-  // STEP 4: Attendance Rules (Panel 5)
-  // ----------------------------------------------------
-  Widget _buildStep4AttendanceRules() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildStepHeader(
-            stepNumber: '4',
-            title: 'Attendance Rules',
-            subtitle: 'Establish strict or flexible policies for punctuality, grace times, and half-day deductions.',
-          ),
-          _buildCardContainer(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildFieldLabel('Grace Period', isRequired: false),
-                          const SizedBox(height: 8),
-                          _buildDropdownField<String>(
-                            value: _gracePeriod,
-                            items: _gracePeriodOptions,
-                            onChanged: (val) {
-                              if (val != null) setState(() => _gracePeriod = val);
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildFieldLabel('Late After', isRequired: false),
-                          const SizedBox(height: 8),
-                          _buildDropdownField<String>(
-                            value: _lateAfter,
-                            items: _lateAfterOptions,
-                            onChanged: (val) {
-                              if (val != null) setState(() => _lateAfter = val);
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 20),
-
-                _buildFieldLabel('Minimum Working Hours', isRequired: false),
-                const SizedBox(height: 8),
-                _buildDropdownField<String>(
-                  value: _minWorkingHours,
-                  items: _minHoursOptions,
-                  onChanged: (val) {
-                    if (val != null) setState(() => _minWorkingHours = val);
-                  },
-                ),
-
-                const SizedBox(height: 20),
-
-                // Rule Toggles List
-                _buildToggleRow(
-                  title: 'Early Leaving Allowed',
-                  subtitle: 'Permit employees to punch out slightly before shift ends',
-                  value: _earlyLeavingAllowed,
-                  onChanged: (val) => setState(() => _earlyLeavingAllowed = val),
-                ),
-                const Divider(height: 24, color: AppColors.slate200),
-
-                _buildToggleRow(
-                  title: 'Auto Mark Late',
-                  subtitle: 'Automatically flag attendance as late if check-in exceeds grace time',
-                  value: _autoMarkLate,
-                  onChanged: (val) => setState(() => _autoMarkLate = val),
-                ),
-                const Divider(height: 24, color: AppColors.slate200),
-
-                _buildToggleRow(
-                  title: 'Auto Mark Half Day',
-                  subtitle: 'Trigger half-day status if minimum work hours are not fulfilled',
-                  value: _autoMarkHalfDay,
-                  onChanged: (val) => setState(() => _autoMarkHalfDay = val),
-                ),
-
-                const SizedBox(height: 20),
-
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildFieldLabel('Late Threshold', isRequired: false),
-                          const SizedBox(height: 8),
-                          _buildDropdownField<String>(
-                            value: _lateThreshold,
-                            items: _lateThresholdOptions,
-                            onChanged: (val) {
-                              if (val != null) setState(() => _lateThreshold = val);
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildFieldLabel('Half Day After', isRequired: false),
-                          const SizedBox(height: 8),
-                          _buildDropdownField<String>(
-                            value: _halfDayAfter,
-                            items: _halfDayOptions,
-                            onChanged: (val) {
-                              if (val != null) setState(() => _halfDayAfter = val);
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 40),
-        ],
-      ),
-    );
-  }
-
-  // ----------------------------------------------------
-  // STEP 5: Overtime Settings (Panel 6)
+  // STEP 4: Overtime Settings (Panel 5)
   // ----------------------------------------------------
   Widget _buildStep5OvertimeSettings() {
     return SingleChildScrollView(
@@ -1488,7 +1615,7 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildStepHeader(
-            stepNumber: '5',
+            stepNumber: '4',
             title: 'Overtime Settings',
             subtitle: 'Define conditions and pay multipliers for additional hours worked beyond regular schedule.',
             trailing: Row(
@@ -1516,12 +1643,10 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
                               children: [
                                 _buildFieldLabel('OT Starts After', isRequired: true),
                                 const SizedBox(height: 8),
-                                _buildDropdownField<String>(
-                                  value: _otStartsAfter,
-                                  items: _otStartsOptions,
-                                  onChanged: (val) {
-                                    if (val != null) setState(() => _otStartsAfter = val);
-                                  },
+                                _buildTextInput(
+                                  controller: _otStartsAfterController,
+                                  hint: 'e.g. 06:00 PM',
+                                  prefixIcon: Iconsax.clock,
                                 ),
                               ],
                             ),
@@ -1531,14 +1656,13 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                _buildFieldLabel('Minimum OT', isRequired: true),
+                                _buildFieldLabel('Minimum OT (Minutes)', isRequired: true),
                                 const SizedBox(height: 8),
-                                _buildDropdownField<String>(
-                                  value: _minimumOT,
-                                  items: _minOtOptions,
-                                  onChanged: (val) {
-                                    if (val != null) setState(() => _minimumOT = val);
-                                  },
+                                _buildTextInput(
+                                  controller: _minimumOTController,
+                                  hint: 'e.g. 30',
+                                  prefixIcon: Iconsax.timer_1,
+                                  keyboardType: TextInputType.number,
                                 ),
                               ],
                             ),
@@ -1592,7 +1716,7 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
   }
 
   // ----------------------------------------------------
-  // STEP 6: Weekly Schedule (Panel 7)
+  // STEP 5: Weekly Schedule (Panel 6)
   // ----------------------------------------------------
   Widget _buildStep6WeeklySchedule() {
     return SingleChildScrollView(
@@ -1601,7 +1725,7 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildStepHeader(
-            stepNumber: '6',
+            stepNumber: '5',
             title: 'Weekly Schedule',
             subtitle: 'Specify active working days and customize timings for weekends or specific shifts.',
             trailing: TextButton.icon(
@@ -1641,103 +1765,325 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
                 ..._weeklySchedule.map((schedule) {
                   final isWorking = schedule.isWorking;
 
+                  final isAltOff = _enableAlternateOff && schedule.dayName == _alternateOffDay;
+
                   return Container(
                     margin: const EdgeInsets.only(bottom: 10),
-                    padding: const EdgeInsets.all(14),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                     decoration: BoxDecoration(
                       color: isWorking ? Colors.white : AppColors.slate50,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: isWorking ? AppColors.slate200 : AppColors.slate200.withValues(alpha: 0.6),
+                        color: isAltOff
+                            ? const Color(0xFFFDE68A)
+                            : isWorking
+                                ? AppColors.slate200
+                                : AppColors.slate200.withValues(alpha: 0.6),
                       ),
                     ),
-                    child: Row(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Working Toggle
-                        CupertinoSwitch(
-                          value: isWorking,
-                          activeTrackColor: AppColors.primaryColor,
-                          onChanged: (val) {
-                            setState(() {
-                              schedule.isWorking = val;
-                            });
-                          },
-                        ),
-                        const SizedBox(width: 12),
+                        Row(
+                          children: [
+                            // Working Toggle
+                            Transform.scale(
+                              scale: 0.8,
+                              child: CupertinoSwitch(
+                                value: isWorking,
+                                activeTrackColor: AppColors.primaryColor,
+                                onChanged: (val) {
+                                  setState(() {
+                                    schedule.isWorking = val;
+                                  });
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 6),
 
-                        // Day Name
-                        SizedBox(
-                          width: 80,
-                          child: AppText(
-                            schedule.dayName,
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: isWorking ? AppColors.textColorPrimary : AppColors.textColorHint,
-                          ),
+                            // Day Name
+                            Expanded(
+                              child: AppText(
+                                schedule.dayName,
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: isWorking ? AppColors.textColorPrimary : AppColors.textColorHint,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+
+                            // Status Badge
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: isAltOff
+                                    ? const Color(0xFFF59E0B).withValues(alpha: 0.12)
+                                    : isWorking
+                                        ? AppColors.successColor.withValues(alpha: 0.1)
+                                        : AppColors.slate200,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: AppText(
+                                isAltOff
+                                    ? 'Alt Off ($_selectedAlternateWeek)'
+                                    : isWorking
+                                        ? 'Working'
+                                        : 'Weekly Off',
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                color: isAltOff
+                                    ? const Color(0xFFD97706)
+                                    : isWorking
+                                        ? AppColors.successColor
+                                        : AppColors.textColorSecondary,
+                              ),
+                            ),
+                          ],
                         ),
 
-                        // Shift Timing (Clickable to edit if working)
-                        Expanded(
-                          child: isWorking
-                              ? InkWell(
-                                  onTap: () async {
-                                    _showCustomDayTimingDialog(schedule);
-                                  },
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.slate50,
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(color: AppColors.slate200),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        const Icon(Iconsax.clock, size: 14, color: AppColors.primaryColor),
-                                        const SizedBox(width: 6),
-                                        Flexible(
-                                          child: AppText(
-                                            '${_formatTimeOfDay(schedule.startTime)} - ${_formatTimeOfDay(schedule.endTime)}',
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 4),
-                                        const Icon(Icons.edit_outlined, size: 12, color: AppColors.textColorHint),
-                                      ],
+                        // Shift Timing Row (Clickable if working)
+                        if (isWorking) ...[
+                          const SizedBox(height: 8),
+                          InkWell(
+                            borderRadius: BorderRadius.circular(8),
+                            onTap: () async {
+                              _showCustomDayTimingDialog(schedule);
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: AppColors.slate50,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: AppColors.slate200),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Iconsax.clock, size: 13, color: AppColors.primaryColor),
+                                  const SizedBox(width: 6),
+                                  Flexible(
+                                    child: AppText(
+                                      '${_formatTimeOfDay(schedule.startTime)} - ${_formatTimeOfDay(schedule.endTime)}',
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.textColorPrimary,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
-                                )
-                              : const Center(
-                                  child: AppText(
-                                    'No hours assigned',
-                                    fontSize: 12,
-                                    color: AppColors.textColorHint,
-                                  ),
-                                ),
-                        ),
-
-                        const SizedBox(width: 10),
-
-                        // Status Badge
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: isWorking ? AppColors.successColor.withValues(alpha: 0.1) : AppColors.slate200,
-                            borderRadius: BorderRadius.circular(16),
+                                  const SizedBox(width: 6),
+                                  const Icon(Icons.edit_outlined, size: 12, color: AppColors.textColorHint),
+                                ],
+                              ),
+                            ),
                           ),
-                          child: AppText(
-                            isWorking ? 'Working' : 'Weekly Off',
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: isWorking ? AppColors.successColor : AppColors.textColorSecondary,
-                          ),
-                        ),
+                        ],
                       ],
                     ),
                   );
                 }),
+
+                const SizedBox(height: 16),
+                const Divider(color: AppColors.slate200, height: 1),
+                const SizedBox(height: 16),
+
+                // ── Alternate Off Day Setting Card ──
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: _enableAlternateOff ? const Color(0xFFFEF3C7).withValues(alpha: 0.3) : AppColors.slate50,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: _enableAlternateOff ? const Color(0xFFFDE68A) : AppColors.slate200,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: _enableAlternateOff ? const Color(0xFFF59E0B).withValues(alpha: 0.15) : AppColors.slate200,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(
+                              Iconsax.calendar_tick,
+                              size: 18,
+                              color: _enableAlternateOff ? const Color(0xFFD97706) : AppColors.textColorSecondary,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const AppText(
+                                  'Alternate Off Day',
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                const SizedBox(height: 2),
+                                AppText(
+                                  _enableAlternateOff
+                                      ? '$_alternateOffDay is off on $_selectedAlternateWeek weeks'
+                                      : 'Configure alternating weekly offs (e.g. 2nd & 4th Saturday)',
+                                  fontSize: 11,
+                                  color: AppColors.textColorHint,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Transform.scale(
+                            scale: 0.85,
+                            child: CupertinoSwitch(
+                              value: _enableAlternateOff,
+                              activeTrackColor: const Color(0xFFF59E0B),
+                              onChanged: (val) {
+                                setState(() {
+                                  _enableAlternateOff = val;
+                                  if (val) {
+                                    // Automatically mark the alternate day as working base so it can be enabled
+                                    final dayIdx = _weeklySchedule.indexWhere((d) => d.dayName == _alternateOffDay);
+                                    if (dayIdx != -1) {
+                                      _weeklySchedule[dayIdx].isWorking = true;
+                                    }
+                                  }
+                                });
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      if (_enableAlternateOff) ...[
+                        const SizedBox(height: 16),
+                        const Divider(color: Color(0xFFFDE68A), height: 1),
+                        const SizedBox(height: 14),
+
+                        // Select Day Chips
+                        const AppText('Select Day for Alternate Off:', fontSize: 12, fontWeight: FontWeight.bold),
+                        const SizedBox(height: 10),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: _weekDaysList.map((day) {
+                            final isSelected = _alternateOffDay == day;
+                            return InkWell(
+                              borderRadius: BorderRadius.circular(10),
+                              onTap: () {
+                                setState(() {
+                                  _alternateOffDay = day;
+                                  final dayIdx = _weeklySchedule.indexWhere((d) => d.dayName == day);
+                                  if (dayIdx != -1) {
+                                    _weeklySchedule[dayIdx].isWorking = true;
+                                  }
+                                });
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: isSelected ? const Color(0xFFF59E0B) : Colors.white,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: isSelected ? const Color(0xFFF59E0B) : AppColors.slate300,
+                                  ),
+                                  boxShadow: isSelected
+                                      ? [
+                                          BoxShadow(
+                                            color: const Color(0xFFF59E0B).withValues(alpha: 0.25),
+                                            blurRadius: 6,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ]
+                                      : null,
+                                ),
+                                child: AppText(
+                                  day,
+                                  fontSize: 12,
+                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                  color: isSelected ? Colors.white : AppColors.textColorPrimary,
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // Select Alternate Pattern (2nd & 4th vs 1st & 3rd)
+                        const AppText('Alternate Off Pattern:', fontSize: 12, fontWeight: FontWeight.bold),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: _alternateWeeks.map((pattern) {
+                            final isSelected = _selectedAlternateWeek == pattern;
+                            return Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(10),
+                                  onTap: () {
+                                    setState(() {
+                                      _selectedAlternateWeek = pattern;
+                                    });
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(vertical: 10),
+                                    decoration: BoxDecoration(
+                                      color: isSelected ? const Color(0xFFF59E0B) : Colors.white,
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                        color: isSelected ? const Color(0xFFF59E0B) : AppColors.slate300,
+                                      ),
+                                    ),
+                                    alignment: Alignment.center,
+                                    child: AppText(
+                                      '$pattern Week Off',
+                                      fontSize: 12,
+                                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                                      color: isSelected ? Colors.white : AppColors.textColorPrimary,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFFFDE68A)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.info_outline_rounded, size: 16, color: Color(0xFFD97706)),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: AppText(
+                                  'Employees will work on odd weeks (1st, 3rd, 5th $_alternateOffDay) and get off on $_selectedAlternateWeek $_alternateOffDay.',
+                                  fontSize: 11,
+                                  color: const Color(0xFF92400E),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
@@ -1834,7 +2180,7 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
   }
 
   // ----------------------------------------------------
-  // STEP 7: Employee Assignment (Panel 8)
+  // STEP 6: Employee Assignment (Panel 7)
   // ----------------------------------------------------
   Widget _buildStep7EmployeeAssignment() {
     final filtered = _filteredEmployees;
@@ -1846,7 +2192,7 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildStepHeader(
-            stepNumber: '7',
+            stepNumber: '6',
             title: 'Assign Employees',
             subtitle: 'Select workforce members to be initially assigned to this newly created shift.',
           ),
@@ -1864,44 +2210,58 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
 
                 const SizedBox(height: 14),
 
-                // Department & Team Filters
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const AppText('Department', fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textColorSecondary),
-                          const SizedBox(height: 6),
-                          _buildDropdownField<String>(
-                            value: _selectedDepartment,
-                            items: _departments,
-                            onChanged: (val) {
-                              if (val != null) setState(() => _selectedDepartment = val);
-                            },
-                          ),
-                        ],
+                // Department & Designation Filters (Reactive with real data only)
+                Obx(() {
+                  final deptCtrl = Get.isRegistered<DepartmentsController>()
+                      ? Get.find<DepartmentsController>()
+                      : null;
+                  final desigCtrl = Get.isRegistered<DesignationController>()
+                      ? Get.find<DesignationController>()
+                      : null;
+                  // Observe list changes
+                  final _ = (deptCtrl?.apiDepartments.length ?? 0) +
+                      (deptCtrl?.departments.length ?? 0) +
+                      (desigCtrl?.designations.length ?? 0);
+                  _loadDepartmentsAndDesignations();
+
+                  return Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const AppText('Department', fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textColorSecondary),
+                            const SizedBox(height: 6),
+                            _buildDropdownField<String>(
+                              value: _selectedDepartment,
+                              items: _departments,
+                              onChanged: (val) {
+                                if (val != null) setState(() => _selectedDepartment = val);
+                              },
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const AppText('Team', fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textColorSecondary),
-                          const SizedBox(height: 6),
-                          _buildDropdownField<String>(
-                            value: _selectedTeam,
-                            items: _teams,
-                            onChanged: (val) {
-                              if (val != null) setState(() => _selectedTeam = val);
-                            },
-                          ),
-                        ],
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const AppText('Designation', fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textColorSecondary),
+                            const SizedBox(height: 6),
+                            _buildDropdownField<String>(
+                              value: _selectedDesignation,
+                              items: _designations,
+                              onChanged: (val) {
+                                if (val != null) setState(() => _selectedDesignation = val);
+                              },
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  );
+                }),
 
                 const SizedBox(height: 20),
 
@@ -1916,35 +2276,42 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        children: [
-                          Checkbox(
-                            value: allFilteredSelected,
-                            activeColor: AppColors.primaryColor,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                            onChanged: (val) {
-                              setState(() {
-                                for (var e in filtered) {
-                                  e.isSelected = val ?? false;
-                                }
-                              });
-                            },
-                          ),
-                          AppText(
-                            'Select All (${filtered.length})',
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ],
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Checkbox(
+                              value: allFilteredSelected,
+                              activeColor: AppColors.primaryColor,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                              onChanged: (val) {
+                                setState(() {
+                                  for (var e in filtered) {
+                                    e.isSelected = val ?? false;
+                                  }
+                                });
+                              },
+                            ),
+                            Flexible(
+                              child: AppText(
+                                'Select All (${filtered.length})',
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
+                      const SizedBox(width: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: AppColors.primaryColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: AppText(
-                          'Selected: $_selectedEmployeesCount Employees',
+                          'Selected: $_selectedEmployeesCount',
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
                           color: AppColors.primaryColor,
@@ -1976,7 +2343,7 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
 
                     return Container(
                       margin: const EdgeInsets.only(bottom: 10),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(12),
@@ -1997,21 +2364,22 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
                               });
                             },
                           ),
-                          const SizedBox(width: 4),
+                          const SizedBox(width: 2),
                           CircleAvatar(
-                            radius: 18,
+                            radius: 16,
                             backgroundColor: AppColors.primaryColor.withValues(alpha: 0.12),
                             child: AppText(
                               emp.name.split(' ').map((e) => e.isNotEmpty ? e[0] : '').take(2).join(),
-                              fontSize: 12,
+                              fontSize: 11,
                               fontWeight: FontWeight.bold,
                               color: AppColors.primaryColor,
                             ),
                           ),
-                          const SizedBox(width: 10),
+                          const SizedBox(width: 8),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
                               children: [
                                 AppText(
                                   emp.name,
@@ -2020,41 +2388,53 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
-                                const SizedBox(height: 2),
-                                Row(
+                                const SizedBox(height: 4),
+                                Wrap(
+                                  spacing: 4,
+                                  runSpacing: 4,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
                                   children: [
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.slate100,
-                                        borderRadius: BorderRadius.circular(4),
+                                    if (emp.department.isNotEmpty)
+                                      Container(
+                                        constraints: const BoxConstraints(maxWidth: 100),
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.slate100,
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: AppText(
+                                          emp.department,
+                                          fontSize: 10,
+                                          color: AppColors.textColorSecondary,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
                                       ),
-                                      child: AppText(
-                                        emp.department,
-                                        fontSize: 10,
-                                        color: AppColors.textColorSecondary,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
+                                    if (emp.designation.isNotEmpty)
+                                      Container(
+                                        constraints: const BoxConstraints(maxWidth: 110),
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.primaryLight,
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: AppText(
+                                          emp.designation,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppColors.primaryColor,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Expanded(
-                                      child: AppText(
-                                        'Current: ${emp.currentShift}',
-                                        fontSize: 11,
-                                        color: AppColors.textColorHint,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
                                   ],
                                 ),
                               ],
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 6),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5),
                             decoration: BoxDecoration(
                               color: isAssigned ? Colors.green.withValues(alpha: 0.1) : AppColors.primaryColor.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(6),
@@ -2063,6 +2443,8 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
                               emp.status,
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               color: isAssigned ? Colors.green : AppColors.primaryColor,
                             ),
                           ),
@@ -2162,8 +2544,8 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
                               lateThresholdMinutes: _parseDurationToMinutes(_lateThreshold, defaultValue: 30),
                               halfDayAfterMinutes: _parseDurationToMinutes(_halfDayAfter, defaultValue: 240),
                               overtimeEnabled: _enableOvertime,
-                              overtimeStartsAfterMinutes: _parseDurationToMinutes(_otStartsAfter, defaultValue: 480),
-                              minimumOvertimeMinutes: _parseDurationToMinutes(_minimumOT, defaultValue: 30),
+                              overtimeStartsAfterMinutes: _parseDurationToMinutes(_otStartsAfterController.text.trim(), defaultValue: _parseDurationToMinutes(_formatTimeOfDay(_endTime), defaultValue: 480)),
+                              minimumOvertimeMinutes: _parseDurationToMinutes(_minimumOTController.text.trim(), defaultValue: 30),
                               overtimeCalculation: _otCalculation,
                               overtimeApprovalRequired: _approvalRequired,
                               workingDays: _weeklySchedule
@@ -2303,12 +2685,14 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
     required String hint,
     IconData? prefixIcon,
     ValueChanged<String>? onChanged,
+    TextInputType? keyboardType,
   }) {
     return TextFormField(
       key: key,
       focusNode: focusNode,
       controller: controller,
       onChanged: onChanged,
+      keyboardType: keyboardType,
       style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textColorPrimary),
       decoration: InputDecoration(
         hintText: hint,
@@ -2363,7 +2747,11 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
           items: items.map((T item) {
             return DropdownMenuItem<T>(
               value: item,
-              child: Text(item.toString()),
+              child: Text(
+                item.toString(),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             );
           }).toList(),
         ),

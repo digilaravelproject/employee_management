@@ -64,11 +64,6 @@ class _LeadStatusDetailScreenState extends State<LeadStatusDetailScreen> {
           );
         }),
         actions: [
-          IconButton(
-            icon: const Icon(Iconsax.refresh, size: 18, color: Color(0xFF475569)),
-            tooltip: 'Refresh',
-            onPressed: () => _controller.fetchLeadStatusDetail(widget.statusId),
-          ),
           Obx(() {
             final status = _controller.statusDetail.value ?? widget.initialStatus;
             if (status == null) return const SizedBox.shrink();

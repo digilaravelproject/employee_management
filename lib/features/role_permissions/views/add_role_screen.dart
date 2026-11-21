@@ -64,38 +64,7 @@ class _AddRoleScreenState extends State<AddRoleScreen> {
             ),
           ],
         ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: Obx(() => ElevatedButton.icon(
-              onPressed: controller.isSavingRole.value ? null : () => controller.saveRole(),
-              icon: controller.isSavingRole.value
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const Icon(Icons.check_rounded, size: 16, color: Colors.white),
-              label: AppText(
-                controller.isSavingRole.value ? 'Saving...' : 'Save Role',
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryColor,
-                elevation: 0,
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            )),
-          ),
-        ],
+
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -515,10 +484,13 @@ class _AddRoleScreenState extends State<AddRoleScreen> {
         itemCount: controller.tempPermissionGroups.length,
         itemBuilder: (context, index) {
           final group = controller.tempPermissionGroups[index];
-          return Container(
+          return Material(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            elevation: 0,
+            child: Container(
             margin: const EdgeInsets.only(bottom: 12),
             decoration: BoxDecoration(
-              color: Colors.white,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: group.grantedCount > 0
@@ -666,7 +638,8 @@ class _AddRoleScreenState extends State<AddRoleScreen> {
                 ],
               ),
             ),
-          );
+          ), // Container
+          ); // Material
         },
       );
     });

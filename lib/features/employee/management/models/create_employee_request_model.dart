@@ -29,7 +29,7 @@ class CreateEmployeeRequestModel {
   final String? noticePeriod;
   final String salaryType;
   final String monthlyBaseSalary;
-  final String salesTargetEnabled; // "0" or "1"
+  final String? salesTargetEnabled; // "0" or "1"
   final String? salesTargetMetricType;
   final String? salesTarget;
   final String? salesTargetPeriod;
@@ -71,7 +71,7 @@ class CreateEmployeeRequestModel {
     this.noticePeriod,
     required this.salaryType,
     required this.monthlyBaseSalary,
-    this.salesTargetEnabled = '0',
+    this.salesTargetEnabled,
     this.salesTargetMetricType,
     this.salesTarget,
     this.salesTargetPeriod,
@@ -104,7 +104,6 @@ class CreateEmployeeRequestModel {
       'employment_status': employmentStatus,
       'salary_type': salaryType,
       'monthly_base_salary': monthlyBaseSalary,
-      'sales_target_enabled': salesTargetEnabled,
     };
 
     if (alternateMobileNumber != null && alternateMobileNumber!.trim().isNotEmpty) {
@@ -140,7 +139,8 @@ class CreateEmployeeRequestModel {
     if (noticePeriod != null && noticePeriod!.trim().isNotEmpty) {
       map['notice_period'] = noticePeriod!.trim();
     }
-    if (salesTargetEnabled == '1') {
+    if (salesTargetEnabled == '1' || salesTargetEnabled == 'true') {
+      map['sales_target_enabled'] = '1';
       if (salesTargetMetricType != null && salesTargetMetricType!.trim().isNotEmpty) {
         map['sales_target_metric_type'] = salesTargetMetricType!.trim();
       }

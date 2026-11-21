@@ -86,21 +86,6 @@ class _ClientListScreenState extends State<ClientListScreen> {
         ),
         centerTitle: false,
         actions: [
-          // Refresh Button
-          /*IconButton(
-            tooltip: 'Refresh Clients',
-            icon: const Icon(Iconsax.refresh, color: Color(0xFF3B206A), size: 20),
-            onPressed: () {
-              if (controller.searchQuery.value.trim().isNotEmpty) {
-                controller.searchClientsFromApi(
-                  query: controller.searchQuery.value.trim(),
-                  resetPagination: true,
-                );
-              } else {
-                controller.fetchClientsFromApi(resetPagination: true);
-              }
-            },
-          ),*/
           // Add Client Button
           Padding(
             padding: const EdgeInsets.only(right: 14.0, left: 4.0),

@@ -4,6 +4,7 @@ import 'package:iconsax/iconsax.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../core/services/network/network_settings_helper.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_text.dart';
 import '../controllers/attendance_controller.dart';
@@ -636,18 +637,77 @@ class _EmployeeList extends StatelessWidget {
       }
 
       if (controller.errorMessage.value.isNotEmpty && controller.displayedEmployees.isEmpty) {
+        final isNetworkIssue = controller.errorMessage.value.toLowerCase().contains('internet') ||
+            controller.errorMessage.value.toLowerCase().contains('network') ||
+            controller.errorMessage.value.toLowerCase().contains('connection') ||
+            controller.errorMessage.value.toLowerCase().contains('offline');
+
         return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 30),
+          padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 24),
           child: Center(
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.error_outline_rounded, color: Colors.red, size: 40),
-                const SizedBox(height: 10),
-                AppText(controller.errorMessage.value, fontSize: 13, color: Colors.red),
-                const SizedBox(height: 10),
-                TextButton(
-                  onPressed: controller.fetchAttendance,
-                  child: const AppText('Retry', color: AppColors.primaryColor, fontWeight: FontWeight.w700),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.errorColor.withValues(alpha: 0.08),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    isNetworkIssue ? Icons.wifi_off_rounded : Icons.cloud_off_rounded,
+                    color: AppColors.errorColor,
+                    size: 42,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                AppText(
+                  isNetworkIssue ? 'No Internet Connection' : 'Unable to Load Attendance',
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textColorPrimary,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                AppText(
+                  isNetworkIssue
+                      ? 'Please check your internet connection and turn on Wi-Fi or Mobile Data.'
+                      : controller.errorMessage.value,
+                  fontSize: 13,
+                  color: AppColors.textColorSecondary,
+                  textAlign: TextAlign.center,
+                  height: 1.4,
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (isNetworkIssue) ...[
+                      OutlinedButton.icon(
+                        onPressed: () => NetworkSettingsHelper.openWifiSettings(),
+                        icon: const Icon(Icons.wifi_rounded, size: 16),
+                        label: const Text('Settings', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.primaryColor,
+                          side: BorderSide(color: AppColors.primaryColor.withValues(alpha: 0.4)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                    ],
+                    ElevatedButton.icon(
+                      onPressed: controller.fetchAttendance,
+                      icon: const Icon(Icons.refresh_rounded, size: 16, color: Colors.white),
+                      label: const Text('Retry', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primaryColor,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                        elevation: 0,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),

@@ -251,5 +251,4 @@ class CustomImageWidget extends StatelessWidget {
       ),
     );
   }
-  }
 }

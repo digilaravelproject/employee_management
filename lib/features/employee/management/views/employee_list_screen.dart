@@ -38,12 +38,12 @@ class EmployeeListScreen extends StatelessWidget {
             onPressed: () => _handleExport(context, controller),
           ),*/
           // Add Employee Button
-          IconButton(
-            tooltip: 'Add Employee',
-            icon: const Icon(Iconsax.user_add, color: AppColors.primaryColor, size: 22),
-            onPressed: () => Get.to(() => const AddEmployeeScreen()),
-          ),
-          const SizedBox(width: 6),
+          // IconButton(
+          //   tooltip: 'Add Employee',
+          //   icon: const Icon(Iconsax.user_add, color: AppColors.primaryColor, size: 22),
+          //   onPressed: () => Get.to(() => const AddEmployeeScreen()),
+          // ),
+          // const SizedBox(width: 6),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(

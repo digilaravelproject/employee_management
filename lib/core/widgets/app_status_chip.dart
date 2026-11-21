@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../theme/app_colors.dart';
 import 'app_text.dart';
@@ -14,22 +13,40 @@ class AppStatusChip extends StatelessWidget {
     this.fontSize,
   }) : super(key: key);
 
+  static String formatStatus(String text) {
+    if (text.isEmpty) return '';
+    final cleaned = text.replaceAll('_', ' ').trim();
+    return cleaned.split(' ').where((w) => w.isNotEmpty).map((w) {
+      if (w.length == 1) return w.toUpperCase();
+      return w[0].toUpperCase() + w.substring(1).toLowerCase();
+    }).join(' ');
+  }
+
   @override
   Widget build(BuildContext context) {
     Color color;
     IconData icon;
 
-    switch (status.toLowerCase()) {
+    final normalized = status.toLowerCase().replaceAll('_', ' ').trim();
+
+    switch (normalized) {
       case 'confirmed':
       case 'active':
       case 'paid':
       case 'hot':
+      case 'present':
+      case 'completed':
+      case 'approved':
+      case 'done':
         color = Colors.green;
         icon = Iconsax.tick_circle;
         break;
       case 'pending':
       case 'waiting':
       case 'warm':
+      case 'half day':
+      case 'pending approval':
+      case 'on hold':
         color = Colors.orange;
         icon = Icons.access_time_rounded;
         break;
@@ -37,6 +54,7 @@ class AppStatusChip extends StatelessWidget {
       case 'rejected':
       case 'failed':
       case 'cold':
+      case 'absent':
         color = Colors.red;
         icon = Icons.cancel_outlined;
         break;
@@ -47,8 +65,14 @@ class AppStatusChip extends StatelessWidget {
         break;
       case 'in progress':
       case 'started':
+      case 'working':
         color = AppColors.primaryColor;
         icon = Icons.directions_run_rounded;
+        break;
+      case 'on leave':
+      case 'leave':
+        color = Colors.purple;
+        icon = Icons.beach_access_rounded;
         break;
       case 'inactive':
         color = Colors.grey;
@@ -72,7 +96,7 @@ class AppStatusChip extends StatelessWidget {
           Icon(icon, size: 14, color: color),
           const SizedBox(width: 4),
           AppText(
-            status.toLowerCase().tr,
+            formatStatus(status),
             style: AppTextStyle.caption,
             color: color,
             fontWeight: FontWeight.w700,

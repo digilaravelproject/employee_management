@@ -5,6 +5,9 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/services/network/api_client.dart';
+import '../../../core/services/network/network_info.dart';
+import '../../../core/services/network/api_checker.dart';
+import '../../../core/utils/custom_snackbar.dart';
 import '../../../core/utils/logger.dart';
 import '../models/admin_attendance_model.dart';
 import '../repositories/attendance_repository.dart';
@@ -84,6 +87,19 @@ class AttendanceController extends GetxController {
       errorMessage.value = '';
     }
 
+    final hasNetwork = await NetworkInfo.checkConnectivity();
+    if (!hasNetwork) {
+      if (!isSearch) {
+        isLoading.value = false;
+        errorMessage.value = 'No internet connection. Please turn on Wi-Fi or Mobile Data.';
+      }
+      CustomSnackbar.showError(
+        'Please check your internet connection and turn on Wi-Fi or Mobile Data.',
+        title: 'No Internet Connection',
+      );
+      return;
+    }
+
     final dateStr = DateFormat('yyyy-MM-dd').format(selectedDate.value);
     // Tab 0: all (null), Tab 1: 'present', Tab 2: 'absent', Tab 3: 'on_leave'
     final String? statusStr = selectedTab.value == 0
@@ -125,15 +141,35 @@ class AttendanceController extends GetxController {
         }
       } else {
         if (!isSearch) {
-          errorMessage.value = response.message.isNotEmpty
-              ? response.message
-              : 'Failed to retrieve attendance data.';
+          final isOffline = !(await NetworkInfo.checkConnectivity());
+          if (isOffline) {
+            errorMessage.value = 'No internet connection. Please turn on Wi-Fi or Mobile Data.';
+            CustomSnackbar.showError(
+              'Please check your internet connection and turn on Wi-Fi or Mobile Data.',
+              title: 'No Internet Connection',
+            );
+          } else {
+            final msg = response.message.trim();
+            final isGenericError = msg.isEmpty || msg.toLowerCase().contains('something went wrong');
+            errorMessage.value = isGenericError
+                ? 'Unable to retrieve attendance data. Please check your connection and try again.'
+                : msg;
+          }
         }
       }
     } catch (e) {
       Logger.e('AttendanceController => Error: $e');
       if (!isSearch) {
-        errorMessage.value = e.toString();
+        final isNet = ApiChecker.isNetworkError(e) || !(await NetworkInfo.checkConnectivity());
+        if (isNet) {
+          errorMessage.value = 'No internet connection. Please turn on Wi-Fi or Mobile Data.';
+          CustomSnackbar.showError(
+            'Please check your internet connection and turn on Wi-Fi or Mobile Data.',
+            title: 'No Internet Connection',
+          );
+        } else {
+          errorMessage.value = 'Unable to load attendance. Please check your connection and try again.';
+        }
       }
     } finally {
       if (!isSearch) {

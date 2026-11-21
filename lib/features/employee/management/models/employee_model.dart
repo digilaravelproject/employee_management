@@ -300,7 +300,10 @@ class EmployeeModel {
     String parsedAddress = json['address']?.toString() ?? json['street_address']?.toString() ?? '';
 
     // Mobile fallback
-    String parsedMobile = json['mobile_number']?.toString() ?? json['phone']?.toString() ?? '';
+    String parsedMobile = json['mobile_number']?.toString() ??
+        json['phone']?.toString() ??
+        json['mobile']?.toString() ??
+        '';
 
     // Parse summary
     EmployeeSummaryModel? summaryModel;
@@ -337,15 +340,21 @@ class EmployeeModel {
       employeeId: json['employee_id']?.toString() ?? '',
       name: json['name']?.toString() ?? '',
       mobile: parsedMobile,
-      alternateMobile: json['alternate_mobile_number']?.toString() ?? '',
+      alternateMobile: json['alternate_mobile_number']?.toString() ??
+          json['alternate_mobile']?.toString() ??
+          json['alt_mobile']?.toString() ??
+          '',
       email: json['email']?.toString() ?? '',
       role: json['role']?.toString() ?? 'employee',
       designation: parsedDesig,
       salary: sal,
       skills: parsedSkills,
-      joiningDate: json['date_of_joining']?.toString() ?? '',
+      joiningDate: json['date_of_joining']?.toString() ?? json['joining_date']?.toString() ?? '',
       address: parsedAddress,
-      emergencyContact: json['emergency_contact']?.toString() ?? '',
+      emergencyContact: json['emergency_contact']?.toString() ??
+          json['emergency_contact_number']?.toString() ??
+          json['emergency_phone']?.toString() ??
+          '',
       profilePic: json['avatar']?.toString() ?? json['profile_pic']?.toString(),
       gender: json['gender']?.toString() ?? '',
       dob: json['date_of_birth']?.toString() ?? json['dob']?.toString() ?? '',
@@ -357,7 +366,7 @@ class EmployeeModel {
       isActive: activeFlag,
       city: json['city']?.toString() ?? '',
       state: json['state']?.toString() ?? '',
-      pincode: json['postal_code']?.toString() ?? json['pincode']?.toString() ?? '',
+      pincode: json['postal_code']?.toString() ?? json['pincode']?.toString() ?? json['zip_code']?.toString() ?? '',
       country: json['country']?.toString() ?? '',
       workMode: json['work_mode']?.toString() ?? '',
       employeeType: json['employee_type']?.toString() ?? '',
@@ -367,15 +376,15 @@ class EmployeeModel {
       noticePeriod: json['notice_period']?.toString() ?? '',
       salaryType: json['salary_type']?.toString() ?? 'Monthly',
       hasSalesTarget: salesTarget,
-      targetType: json['sales_target_metric_type']?.toString() ?? 'Revenue',
-      targetAmount: json['sales_target']?.toString() ?? '0',
-      targetPeriod: json['sales_target_period']?.toString() ?? 'Monthly',
-      incentivePercent: json['incentive_commission_percent']?.toString() ?? '0',
-      accountHolderName: json['account_holder_name']?.toString() ?? '',
-      bankName: json['bank_name']?.toString() ?? '',
-      accountNumber: json['account_number']?.toString() ?? '',
-      ifscCode: json['ifsc_code']?.toString() ?? '',
-      branchName: json['branch_name']?.toString() ?? '',
+      targetType: json['sales_target_metric_type']?.toString() ?? json['target_type']?.toString() ?? 'Revenue',
+      targetAmount: json['sales_target']?.toString() ?? json['target_amount']?.toString() ?? '0',
+      targetPeriod: json['sales_target_period']?.toString() ?? json['target_period']?.toString() ?? 'Monthly',
+      incentivePercent: json['incentive_commission_percent']?.toString() ?? json['incentive_percent']?.toString() ?? '0',
+      accountHolderName: json['account_holder_name']?.toString() ?? json['account_holder']?.toString() ?? '',
+      bankName: json['bank_name']?.toString() ?? json['bank']?.toString() ?? '',
+      accountNumber: json['account_number']?.toString() ?? json['account_no']?.toString() ?? '',
+      ifscCode: json['ifsc_code']?.toString() ?? json['ifsc']?.toString() ?? '',
+      branchName: json['branch_name']?.toString() ?? json['branch']?.toString() ?? '',
       summary: summaryModel,
       assignedShift: shiftModel,
       designationDetails: desigDetails,

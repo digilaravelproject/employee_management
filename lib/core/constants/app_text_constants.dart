@@ -65,7 +65,7 @@ class AppTextConstants {
   static const String editPastRecord = 'edit_past_record';
   static const String cancel = 'cancel';
   static const String update = 'update';
-  static const String notMarked = 'not_marked';
+  static const String notMarked = 'Not Marked';
   static const String deleteStaff = 'delete_staff';
   static const String deleteConfirmation = 'delete_confirmation';
   static const String delete = 'delete';
@@ -95,9 +95,9 @@ class AppTextConstants {
   static const String attendanceManagement = 'attendance_management';
   static const String noStaffFoundDate = 'no_staff_found_date';
   static const String saveAttendance = 'save_attendance';
-  static const String present = 'present';
-  static const String absent = 'absent';
-  static const String halfDay = 'half_day';
+  static const String present = 'Present';
+  static const String absent = 'Absent';
+  static const String halfDay = 'Half Day';
   static const String editPastRecordConfirmation =
       'edit_past_record_confirmation';
   static const String staffDetails = 'staff_details';
@@ -328,7 +328,7 @@ class AppTextConstants {
   static const String financeDashboard = 'finance_dashboard';
   static const String trackRevenueExpenses = 'track_revenue_expenses';
   static const String failedLoadData = 'failed_load_data';
-  static const String retry = 'retry';
+  static const String retry = 'Retry';
   static const String revenue = 'revenue';
   static const String expenses = 'expenses';
   static const String profit = 'profit';
@@ -429,17 +429,18 @@ class AppTextConstants {
       'email_address'; // Using email_address
 
   // System
-  static const String error = 'error';
-  static const String somethingWentWrong = 'something_went_wrong';
-  static const String failedToLoadDataMessage = 'failed_to_load_data_message';
-  static const String goBack = 'go_back';
-  static const String noInternetConnection = 'no_internet_connection';
-  static const String checkConnectionMessage = 'check_connection_message';
-  static const String openSettings = 'open_settings';
-  static const String connected = 'connected';
-  static const String connectionRestored = 'connection_restored';
-  static const String stillNoInternet = 'still_no_internet';
-  static const String unableToOpenSettings = 'unable_to_open_settings';
+  static const String error = 'No Internet Connection';
+  static const String somethingWentWrong =
+      'No internet connection. Please check your connection and try again.';
+  static const String failedToLoadDataMessage = 'Failed to load data. Please check your connection and try again.';
+  static const String goBack = 'Go Back';
+  static const String noInternetConnection = 'No Internet Connection';
+  static const String checkConnectionMessage = 'Please check your internet connection and turn on Wi-Fi or Mobile Data.';
+  static const String openSettings = 'Open Network Settings';
+  static const String connected = 'Connected';
+  static const String connectionRestored = 'Internet connection restored successfully.';
+  static const String stillNoInternet = 'Still offline. Please check your network connection.';
+  static const String unableToOpenSettings = 'Unable to open settings. Please open device settings manually.';
 
   // Modules
   static const String exploreAllModules = 'explore_all_modules';
@@ -465,10 +466,10 @@ class AppTextConstants {
   static const String more = 'more';
 
   // Language
-  static const String english = 'english';
-  static const String hindi = 'hindi';
-  static const String marathi = 'marathi';
-  static const String gujarati = 'gujarati';
+  static const String english = 'English';
+  static const String hindi = 'Hindi';
+  static const String marathi = 'Marathi';
+  static const String gujarati = 'Gujarati';
   static const String day = 'day';
 
   // Corporate

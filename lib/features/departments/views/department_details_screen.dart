@@ -61,14 +61,6 @@ class _DepartmentDetailsScreenState extends State<DepartmentDetailsScreen> {
           ],
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: AppColors.textColorPrimary, size: 20),
-            onPressed: () {
-              setState(() {
-                _loadDetails();
-              });
-            },
-          ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert_rounded, color: AppColors.textColorPrimary, size: 20),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

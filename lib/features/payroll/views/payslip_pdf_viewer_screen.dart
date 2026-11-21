@@ -326,17 +326,6 @@ class _PayslipPdfViewerScreenState extends State<PayslipPdfViewerScreen> {
         ),
         actions: [
           IconButton(
-            tooltip: 'Reload',
-            icon: const Icon(Icons.refresh_rounded, color: AppColors.slate700, size: 20),
-            onPressed: () {
-              if (_webViewController != null) {
-                _webViewController!.reload();
-              } else {
-                _initWebView();
-              }
-            },
-          ),
-          IconButton(
             tooltip: 'Share',
             icon: const Icon(Iconsax.share, color: AppColors.slate700, size: 20),
             onPressed: _sharePayslip,

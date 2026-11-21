@@ -139,22 +139,30 @@ class ReportsEmployeesListScreen extends StatelessWidget {
                   );
                 }
 
-                return ListView.separated(
-                  physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                  itemCount: list.length,
-                  separatorBuilder: (context, index) => const SizedBox(height: 10),
-                  itemBuilder: (context, index) {
-                    final employee = list[index];
-                    return _EmployeeListCard(
-                      employee: employee,
-                      onTap: () {
-                        controller.selectEmployee(employee);
-                        Get.to(() => EmployeeOverviewReportScreen(initialCategoryTab: initialTab));
-                      },
-                    );
+                return RefreshIndicator(
+                  onRefresh: () async {
+                    await controller.refreshEmployees();
                   },
+                  child: ListView.separated(
+                    physics: const BouncingScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                    itemCount: list.length,
+                    separatorBuilder: (context, index) => const SizedBox(height: 10),
+                    itemBuilder: (context, index) {
+                      final employee = list[index];
+                      return _EmployeeListCard(
+                        employee: employee,
+                        onTap: () {
+                          controller.selectEmployee(employee);
+                          Get.to(() => EmployeeOverviewReportScreen(initialCategoryTab: initialTab));
+                        },
+                      );
+                    },
+                  ),
                 );
+
+
+
               }),
             ),
           ],

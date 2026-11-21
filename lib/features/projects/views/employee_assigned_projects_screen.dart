@@ -67,14 +67,6 @@ class EmployeeAssignedProjectsScreen extends StatelessWidget {
                 )),
           ],
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Iconsax.refresh, color: AppColors.textColorPrimary, size: 20),
-            tooltip: 'Refresh',
-            onPressed: () => controller.fetchAssignedProjects(isRefresh: true),
-          ),
-          const SizedBox(width: 8),
-        ],
       ),
       body: Column(
         children: [

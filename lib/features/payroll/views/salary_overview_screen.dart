@@ -3,16 +3,28 @@ import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../core/services/network/api_client.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_text.dart';
+import '../../employee/management/models/employee_model.dart';
 import '../controllers/payroll_controller.dart';
+import '../models/payroll_record_model.dart';
 import '../models/salary_detail_model.dart';
+import '../repositories/payroll_repository.dart';
+import '../widgets/salary_month_picker_sheet.dart';
 import 'salary_breakdown_screen.dart';
 import 'create_salary_form_screen.dart';
 import 'payslip_created_screen.dart';
 
 class SalaryOverviewScreen extends StatefulWidget {
-  const SalaryOverviewScreen({super.key});
+  final EmployeeModel? employee;
+  final PayrollRecord? record;
+
+  const SalaryOverviewScreen({
+    super.key,
+    this.employee,
+    this.record,
+  });
 
   @override
   State<SalaryOverviewScreen> createState() => _SalaryOverviewScreenState();
@@ -24,36 +36,112 @@ class _SalaryOverviewScreenState extends State<SalaryOverviewScreen> {
   @override
   void initState() {
     super.initState();
+    if (!Get.isRegistered<PayrollController>()) {
+      Get.put(PayrollController(repository: PayrollRepository(apiClient: Get.find<ApiClient>())));
+    }
     controller = Get.find<PayrollController>();
+
+    if (widget.record != null) {
+      controller.selectedRecord.value = widget.record;
+    } else if (widget.employee != null) {
+      final emp = widget.employee!;
+      final existing = controller.payrollRecords.firstWhereOrNull(
+        (r) => r.employeeId == emp.id || r.employeeId == emp.employeeId,
+      );
+      if (existing != null) {
+        controller.selectedRecord.value = existing;
+      } else {
+        final basic = emp.salary;
+        controller.selectedRecord.value = PayrollRecord(
+          id: emp.id,
+          employeeId: emp.employeeId.isNotEmpty ? emp.employeeId : emp.id,
+          employeeName: emp.name,
+          designation: emp.designation,
+          department: emp.department,
+          profilePic: emp.profilePic,
+          salaryMonth: controller.selectedMonth.value,
+          status: 'Pending',
+          totalWorkingDays: 0,
+          presentDays: 0,
+          absentDays: 0,
+          paidLeaves: 0,
+          unpaidLeaves: 0,
+          halfDays: 0,
+          lateComingDays: 0,
+          overtimeHours: 0,
+          basicSalary: basic,
+          hra: 0,
+          conveyance: 0,
+          specialAllowance: 0,
+          incentive: 0,
+          bonus: 0,
+          overtimeAmount: 0,
+          leaveDeduction: 0,
+          lateDeduction: 0,
+          pf: 0,
+          esi: 0,
+          loanAdvance: 0,
+          otherDeduction: 0,
+        );
+      }
+    }
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadDetailsIfNeeded();
     });
   }
 
   void _loadDetailsIfNeeded() {
-    final record = controller.selectedRecord.value;
-    if (record == null) return;
+    final empId = widget.employee?.employeeId.isNotEmpty == true
+        ? widget.employee!.employeeId
+        : (widget.employee?.id.isNotEmpty == true
+            ? widget.employee!.id
+            : controller.selectedRecord.value?.employeeId);
+    if (empId == null || empId.isEmpty) return;
 
     final currentDetail = controller.selectedSalaryDetail.value;
     final currentEmpId = currentDetail?.employee.employeeId ?? currentDetail?.employee.id.toString();
 
     // Fetch if detail is null or belongs to another employee or different month
     if (currentDetail == null ||
-        currentEmpId != record.employeeId ||
+        currentEmpId != empId ||
         currentDetail.month != controller.selectedMonth.value) {
       controller.fetchEmployeeSalaryDetails(
-        record.employeeId,
+        empId,
         month: controller.selectedMonth.value,
       );
     }
   }
 
   Future<void> _refreshDetails() async {
-    final record = controller.selectedRecord.value;
-    if (record == null) return;
+    final empId = widget.employee?.employeeId.isNotEmpty == true
+        ? widget.employee!.employeeId
+        : (widget.employee?.id.isNotEmpty == true
+            ? widget.employee!.id
+            : controller.selectedRecord.value?.employeeId);
+    if (empId == null || empId.isEmpty) return;
     await controller.fetchEmployeeSalaryDetails(
-      record.employeeId,
+      empId,
       month: controller.selectedMonth.value,
+    );
+  }
+
+  void _showMonthPicker() {
+    showSalaryMonthPickerSheet(
+      context: context,
+      initialMonthCode: controller.selectedMonth.value,
+      onMonthSelected: (code, label) {
+        controller.selectedMonth.value = code;
+        controller.selectedMonthLabel.value = label;
+        final empId = widget.employee?.employeeId.isNotEmpty == true
+            ? widget.employee!.employeeId
+            : (widget.employee?.id.isNotEmpty == true
+                ? widget.employee!.id
+                : controller.selectedRecord.value?.employeeId);
+        if (empId != null && empId.isNotEmpty) {
+          controller.fetchEmployeeSalaryDetails(empId, month: code);
+        }
+      },
     );
   }
 
@@ -91,10 +179,18 @@ class _SalaryOverviewScreenState extends State<SalaryOverviewScreen> {
         centerTitle: false,
         actions: [
           IconButton(
-            icon: const Icon(Iconsax.refresh, color: AppColors.textColorPrimary, size: 20),
-            tooltip: 'Refresh',
-            onPressed: _refreshDetails,
+            tooltip: 'Select Month',
+            onPressed: _showMonthPicker,
+            icon: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.primaryLight,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Iconsax.calendar_1, color: AppColors.primaryColor, size: 18),
+            ),
           ),
+          const SizedBox(width: 8),
         ],
       ),
       body: Obx(() {
@@ -161,7 +257,9 @@ class _SalaryOverviewScreenState extends State<SalaryOverviewScreen> {
         final avatarUrl = detail?.employee.safeAvatarUrl ?? record?.profilePic;
         final joiningDate = _formatDate(detail?.employee.dateOfJoining);
         final salaryType = detail?.employee.salaryType ?? 'Monthly';
-        final monthLabel = detail?.monthLabel.isNotEmpty == true ? detail!.monthLabel : (record?.salaryMonth ?? '');
+        final monthLabel = controller.selectedMonthLabel.value.isNotEmpty
+            ? controller.selectedMonthLabel.value
+            : (detail?.monthLabel.isNotEmpty == true ? detail!.monthLabel : (record?.salaryMonth ?? ''));
 
         // Attendance stats
         final totalWorkingDays = detail?.attendanceSummary.totalWorkingDays ?? record?.totalWorkingDays ?? 0;
@@ -301,29 +399,50 @@ class _SalaryOverviewScreenState extends State<SalaryOverviewScreen> {
                       ),
                       const SizedBox(height: 20),
 
-                      // ── Month & Status Bar ──
+                      // ── Month & Status Bar (Interactive Month Selector) ──
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: AppColors.slate200),
-                                ),
-                                child: const Icon(Iconsax.calendar_1, color: AppColors.primaryColor, size: 16),
+                          InkWell(
+                            borderRadius: BorderRadius.circular(10),
+                            onTap: _showMonthPicker,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: AppColors.primaryColor.withValues(alpha: 0.35)),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.03),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 1),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(width: 10),
-                              AppText(
-                                monthLabel,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.textColorPrimary,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(5),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primaryLight,
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: const Icon(Iconsax.calendar_1, color: AppColors.primaryColor, size: 14),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  AppText(
+                                    monthLabel,
+                                    fontSize: 14.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.textColorPrimary,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  const Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: AppColors.primaryColor),
+                                ],
                               ),
-                            ],
+                            ),
                           ),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -403,46 +522,138 @@ class _SalaryOverviewScreenState extends State<SalaryOverviewScreen> {
                       const SizedBox(height: 20),
 
                       // ── Financial Metrics Summary Card ──
-                      _buildSectionTitle('SALARY SUMMARY'),
+                      // ── E-Commerce Style Salary Bill Details Card ──
+                      _buildSectionTitle('SALARY BILL DETAILS'),
                       const SizedBox(height: 8),
                       Container(
-                        padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(color: AppColors.slate200),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.02),
+                              blurRadius: 10,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
                         ),
                         child: Column(
                           children: [
-                            _buildSummaryRow(
-                              icon: Iconsax.wallet_3,
-                              iconColor: AppColors.successColor,
-                              title: 'Total Earnings',
-                              value: grossVal,
-                              textColor: AppColors.successColor,
+                            // Receipt Header
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(7),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primaryLight,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: const Icon(Iconsax.receipt_2_1, color: AppColors.primaryColor, size: 16),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  const AppText(
+                                    'Bill Details',
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.textColorPrimary,
+                                  ),
+                                  const Spacer(),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: isCreated
+                                          ? AppColors.successColor.withValues(alpha: 0.1)
+                                          : AppColors.slate100,
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: AppText(
+                                      isCreated ? 'Disbursed' : 'Computed',
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.bold,
+                                      color: isCreated ? AppColors.successColor : AppColors.textColorSecondary,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                            const Padding(
-                              padding: EdgeInsets.symmetric(vertical: 12.0),
-                              child: Divider(color: AppColors.slate100),
+                            const Divider(color: AppColors.slate100, height: 1),
+
+                            // Line Items
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+                              child: Column(
+                                children: [
+                                  _buildBillItemRow(
+                                    label: 'Total Gross Earnings',
+                                    value: grossVal,
+                                    isAddition: true,
+                                    subtitle: 'Basic Pay + Allowances & Incentives',
+                                  ),
+                                  const SizedBox(height: 12),
+                                  _buildBillItemRow(
+                                    label: 'Total Deductions',
+                                    value: '- $deductVal',
+                                    isDeduction: true,
+                                    subtitle: 'Leaves, PF, ESI & Statutory Taxes',
+                                  ),
+                                ],
+                              ),
                             ),
-                            _buildSummaryRow(
-                              icon: Iconsax.card_remove,
-                              iconColor: AppColors.errorColor,
-                              title: 'Total Deductions',
-                              value: deductVal,
-                              textColor: AppColors.errorColor,
+
+                            // Dashed Divider
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              child: _buildDashedLine(),
                             ),
-                            const Padding(
-                              padding: EdgeInsets.symmetric(vertical: 12.0),
-                              child: Divider(color: AppColors.slate100),
-                            ),
-                            _buildSummaryRow(
-                              icon: Iconsax.money_3,
-                              iconColor: AppColors.primaryColor,
-                              title: 'Net Payable Salary',
-                              value: netVal,
-                              textColor: AppColors.primaryColor,
-                              isBold: true,
+                            const SizedBox(height: 12),
+
+                            // Total Net Payable Highlight Banner
+                            Container(
+                              margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF5F3FF),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: const Color(0xFFDDD6FE)),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const AppText(
+                                        'Net Take-Home Pay',
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.textColorPrimary,
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Row(
+                                        children: const [
+                                          Icon(Icons.verified_rounded, size: 12, color: Color(0xFF8B5CF6)),
+                                          SizedBox(width: 4),
+                                          AppText(
+                                            'To be credited to bank',
+                                            fontSize: 10.5,
+                                            fontWeight: FontWeight.w500,
+                                            color: AppColors.textColorSecondary,
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                  AppText(
+                                    netVal,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w900,
+                                    color: AppColors.primaryColor,
+                                  ),
+                                ],
+                              ),
                             ),
                           ],
                         ),
@@ -710,39 +921,77 @@ class _SalaryOverviewScreenState extends State<SalaryOverviewScreen> {
     );
   }
 
-  Widget _buildSummaryRow({
-    required IconData icon,
-    required Color iconColor,
-    required String title,
+  Widget _buildBillItemRow({
+    required String label,
     required String value,
-    required Color textColor,
-    bool isBold = false,
+    bool isAddition = false,
+    bool isDeduction = false,
+    String? subtitle,
   }) {
+    Color valColor = AppColors.textColorPrimary;
+    if (isAddition) valColor = const Color(0xFF16A34A);
+    if (isDeduction) valColor = const Color(0xFFDC2626);
+
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: iconColor.withValues(alpha: 0.08),
-            shape: BoxShape.circle,
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AppText(
+                label,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textColorPrimary,
+              ),
+              if (subtitle != null) ...[
+                const SizedBox(height: 2),
+                AppText(
+                  subtitle,
+                  fontSize: 10.5,
+                  color: AppColors.textColorHint,
+                ),
+              ],
+            ],
           ),
-          child: Icon(icon, color: iconColor, size: 18),
         ),
-        const SizedBox(width: 14),
-        AppText(
-          title,
-          fontSize: 14,
-          fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
-          color: AppColors.textColorPrimary,
-        ),
-        const Spacer(),
+        const SizedBox(width: 8),
         AppText(
           value,
-          fontSize: isBold ? 16 : 14,
-          fontWeight: FontWeight.w900,
-          color: textColor,
+          fontSize: 14,
+          fontWeight: FontWeight.w800,
+          color: valColor,
         ),
       ],
+    );
+  }
+
+  Widget _buildDashedLine() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final boxWidth = constraints.constrainWidth();
+        const dashWidth = 5.0;
+        const dashHeight = 1.0;
+        const dashSpace = 4.0;
+        final dashCount = (boxWidth / (dashWidth + dashSpace)).floor();
+        return SizedBox(
+          width: boxWidth,
+          height: dashHeight,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: List.generate(dashCount, (_) {
+              return const SizedBox(
+                width: dashWidth,
+                height: dashHeight,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(color: AppColors.slate300),
+                ),
+              );
+            }),
+          ),
+        );
+      },
     );
   }
 

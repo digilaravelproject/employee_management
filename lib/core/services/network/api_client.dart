@@ -116,10 +116,17 @@ class ApiClient {
     ));
   }
 
+  static bool _isNoInternetScreenOpen = false;
+
   Future<bool> _checkInternetConnection({bool showDialog = false}) async {
     final isConnected = await NetworkInfo.checkConnectivity();
     if (!isConnected && showDialog) {
-      Get.to(() => const NoInternetScreen());
+      if (!_isNoInternetScreenOpen && !Get.currentRoute.contains('NoInternetScreen')) {
+        _isNoInternetScreenOpen = true;
+        Get.to(() => const NoInternetScreen())?.then((_) {
+          _isNoInternetScreenOpen = false;
+        });
+      }
     }
     return isConnected;
   }
@@ -137,7 +144,7 @@ class ApiClient {
       }) async {
 
     if (showInternetScreen && !(await _checkInternetConnection(showDialog: showInternetScreen))) {
-      return const ResponseModel(isSuccess: false, message: 'No internet connection');
+      return const ResponseModel(isSuccess: false, message: 'No internet connection. Please turn on Wi-Fi or Mobile Data.');
     }
 
     try {
@@ -174,7 +181,7 @@ class ApiClient {
         bool showInternetScreen = AppConstants.isHandleInternetScreen,
       }) async {
     if (showInternetScreen && !(await _checkInternetConnection(showDialog: showInternetScreen))) {
-      return const ResponseModel(isSuccess: false, message: 'No internet connection');
+      return const ResponseModel(isSuccess: false, message: 'No internet connection. Please turn on Wi-Fi or Mobile Data.');
     }
 
     try {
@@ -216,7 +223,7 @@ class ApiClient {
         bool showInternetScreen = AppConstants.isHandleInternetScreen,
       }) async {
     if (showInternetScreen && !(await _checkInternetConnection(showDialog: showInternetScreen))) {
-      return const ResponseModel(isSuccess: false, message: 'No internet connection');
+      return const ResponseModel(isSuccess: false, message: 'No internet connection. Please turn on Wi-Fi or Mobile Data.');
     }
 
     try {
@@ -335,7 +342,7 @@ class ApiClient {
         bool showInternetScreen = AppConstants.isHandleInternetScreen,
       }) async {
     if (showInternetScreen && !(await _checkInternetConnection(showDialog: showInternetScreen))) {
-      return const ResponseModel(isSuccess: false, message: 'No internet connection');
+      return const ResponseModel(isSuccess: false, message: 'No internet connection. Please turn on Wi-Fi or Mobile Data.');
     }
 
     try {
@@ -377,7 +384,7 @@ class ApiClient {
         bool showInternetScreen = AppConstants.isHandleInternetScreen,
       }) async {
     if (showInternetScreen && !(await _checkInternetConnection(showDialog: showInternetScreen))) {
-      return const ResponseModel(isSuccess: false, message: 'No internet connection');
+      return const ResponseModel(isSuccess: false, message: 'No internet connection. Please turn on Wi-Fi or Mobile Data.');
     }
 
     try {
@@ -417,7 +424,7 @@ class ApiClient {
         bool showInternetScreen = AppConstants.isHandleInternetScreen,
       }) async {
     if (showInternetScreen && !(await _checkInternetConnection(showDialog: showInternetScreen))) {
-      return const ResponseModel(isSuccess: false, message: 'No internet connection');
+      return const ResponseModel(isSuccess: false, message: 'No internet connection. Please turn on Wi-Fi or Mobile Data.');
     }
 
     try {

@@ -43,13 +43,6 @@ class UpcomingBirthdaysScreen extends StatelessWidget {
             ),
           ),
         ),
-        actions: [
-          IconButton(
-            tooltip: 'Refresh',
-            icon: const Icon(Icons.refresh_rounded, color: AppColors.textColorPrimary, size: 20),
-            onPressed: () => controller.fetchUpcomingBirthdays(isRefresh: true),
-          ),
-        ],
       ),
       body: Obx(() {
         if (controller.isLoading.value) {

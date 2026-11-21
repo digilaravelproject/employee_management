@@ -175,6 +175,251 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
   final GlobalKey _branchNameKey = GlobalKey();
   final GlobalKey _skillsKey = GlobalKey();
 
+  DateTime? _parseDate(String? dateStr) {
+    if (dateStr == null || dateStr.trim().isEmpty) return null;
+    final trimmed = dateStr.trim();
+    final iso = DateTime.tryParse(trimmed);
+    if (iso != null) return iso;
+
+    final formats = [
+      'yyyy-MM-dd',
+      'dd-MM-yyyy',
+      'dd/MM/yyyy',
+      'MM/dd/yyyy',
+      'dd MMM yyyy',
+      'dd MMMM yyyy',
+      'd MMM yyyy',
+      'd MMMM yyyy',
+    ];
+    for (final fmt in formats) {
+      try {
+        return DateFormat(fmt).parse(trimmed);
+      } catch (_) {}
+    }
+    return null;
+  }
+
+  void _populateFromEmployee(EmployeeModel e, {bool overrideNonEmpty = true}) {
+    // Step 1: Personal Details
+    if (overrideNonEmpty || nameController.text.isEmpty) {
+      if (e.name.isNotEmpty) nameController.text = e.name;
+    }
+    if (overrideNonEmpty || empIdController.text.isEmpty) {
+      if (e.employeeId.isNotEmpty) empIdController.text = e.employeeId;
+    }
+    if (e.gender.isNotEmpty) {
+      selectedGender = _genders.firstWhereOrNull(
+            (g) => g.toLowerCase() == e.gender.toLowerCase().trim(),
+          ) ?? e.gender;
+    }
+    if (e.dob.isNotEmpty) {
+      final parsed = _parseDate(e.dob);
+      if (parsed != null) selectedDob = parsed;
+    }
+    if (e.maritalStatus.isNotEmpty) {
+      selectedMaritalStatus = _maritalStatuses.firstWhereOrNull(
+            (m) => m.toLowerCase() == e.maritalStatus.toLowerCase().trim(),
+          ) ?? e.maritalStatus;
+    }
+    if (e.bloodGroup.isNotEmpty) {
+      selectedBloodGroup = _bloodGroups.firstWhereOrNull(
+            (b) => b.toUpperCase() == e.bloodGroup.toUpperCase().trim(),
+          ) ?? e.bloodGroup;
+    }
+
+    // Step 2: Contact & Address
+    if (overrideNonEmpty || mobileController.text.isEmpty) {
+      if (e.mobile.isNotEmpty) mobileController.text = e.mobile;
+    }
+    if (overrideNonEmpty || altMobileController.text.isEmpty) {
+      if (e.alternateMobile.isNotEmpty) altMobileController.text = e.alternateMobile;
+    }
+    if (overrideNonEmpty || emailController.text.isEmpty) {
+      if (e.email.isNotEmpty) emailController.text = e.email;
+    }
+    if (overrideNonEmpty || emergencyContactController.text.isEmpty) {
+      if (e.emergencyContact.isNotEmpty) emergencyContactController.text = e.emergencyContact;
+    }
+    if (overrideNonEmpty || addressController.text.isEmpty) {
+      if (e.address.isNotEmpty) addressController.text = e.address;
+    }
+    if (overrideNonEmpty || cityController.text.isEmpty) {
+      if (e.city.isNotEmpty) cityController.text = e.city;
+    }
+    if (overrideNonEmpty || stateController.text.isEmpty) {
+      if (e.state.isNotEmpty) stateController.text = e.state;
+    }
+    if (overrideNonEmpty || pincodeController.text.isEmpty) {
+      if (e.pincode.isNotEmpty) pincodeController.text = e.pincode;
+    }
+    if (overrideNonEmpty || countryController.text.isEmpty) {
+      if (e.country.isNotEmpty) countryController.text = e.country;
+    }
+
+    // Step 3: Employment, Roles & Placement
+    if (e.workMode.isNotEmpty) {
+      selectedWorkMode = ['Office', 'Remote', 'Hybrid'].firstWhereOrNull(
+            (w) => w.toLowerCase() == e.workMode.toLowerCase().trim(),
+          ) ?? e.workMode;
+    }
+    if (e.employeeType.isNotEmpty) {
+      selectedEmployeeType = controller.employeeTypesList.firstWhereOrNull(
+            (t) => t.toLowerCase() == e.employeeType.toLowerCase().trim(),
+          ) ?? e.employeeType;
+    }
+    if (e.department.isNotEmpty) {
+      selectedDepartment = e.department;
+    }
+    if (e.designation.isNotEmpty) {
+      selectedDesignation = e.designation;
+    }
+    if (e.roles.isNotEmpty) {
+      selectedRole = e.roles.first.name;
+      selectedRoleId = int.tryParse(e.roles.first.id.toString()) ?? 0;
+    } else if (e.role.isNotEmpty) {
+      selectedRole = e.role;
+    }
+    if (e.team.isNotEmpty) {
+      selectedTeam = e.team;
+    }
+    if (e.shift.isNotEmpty) {
+      selectedShift = e.shift;
+    } else if (e.assignedShift != null && e.assignedShift!.name.isNotEmpty) {
+      selectedShift = e.assignedShift!.name;
+    }
+    if (e.reportingManager.isNotEmpty) {
+      selectedReportingManager = e.reportingManager;
+    }
+    if (e.joiningDate.isNotEmpty) {
+      final parsed = _parseDate(e.joiningDate);
+      if (parsed != null) selectedJoiningDate = parsed;
+    }
+    if (e.employmentStatus.isNotEmpty) {
+      selectedEmploymentStatus = controller.employmentStatusesList.firstWhereOrNull(
+            (s) => s.toLowerCase() == e.employmentStatus.toLowerCase().trim(),
+          ) ?? e.employmentStatus;
+    }
+    if (e.probationPeriod.isNotEmpty) {
+      selectedProbationPeriod = controller.probationPeriodsList.firstWhereOrNull(
+            (p) => p.toLowerCase() == e.probationPeriod.toLowerCase().trim(),
+          ) ?? e.probationPeriod;
+    }
+    if (e.noticePeriod.isNotEmpty) {
+      selectedNoticePeriod = controller.noticePeriodsList.firstWhereOrNull(
+            (n) => n.toLowerCase() == e.noticePeriod.toLowerCase().trim(),
+          ) ?? e.noticePeriod;
+    }
+
+    // Step 4: Compensation & Target
+    if (e.salaryType.isNotEmpty) {
+      selectedSalaryType = controller.salaryTypesList.firstWhereOrNull(
+            (s) => s.toLowerCase() == e.salaryType.toLowerCase().trim(),
+          ) ?? e.salaryType;
+    }
+    if (e.salary > 0) {
+      salaryController.text = e.salary % 1 == 0 ? e.salary.toInt().toString() : e.salary.toString();
+    } else if (overrideNonEmpty && salaryController.text.isEmpty) {
+      salaryController.text = '0';
+    }
+    hasSalesTarget = e.hasSalesTarget ||
+        (e.targetAmount.isNotEmpty && e.targetAmount != '0' && e.targetAmount != '0.00') ||
+        selectedDepartment.toLowerCase().contains('sales') ||
+        selectedRole.toLowerCase().contains('sales') ||
+        selectedDesignation.toLowerCase().contains('sales') ||
+        e.role.toLowerCase().contains('sales');
+    if (e.targetType.isNotEmpty) {
+      selectedTargetType = controller.targetTypesList.firstWhereOrNull(
+            (t) => t.toLowerCase() == e.targetType.toLowerCase().trim(),
+          ) ?? e.targetType;
+    }
+    if (e.targetAmount.isNotEmpty && e.targetAmount != '0') {
+      targetAmountController.text = e.targetAmount.replaceAll('.00', '');
+    }
+    if (e.targetPeriod.isNotEmpty) {
+      selectedTargetPeriod = controller.targetPeriodsList.firstWhereOrNull(
+            (p) => p.toLowerCase() == e.targetPeriod.toLowerCase().trim(),
+          ) ?? e.targetPeriod;
+    }
+    if (e.incentivePercent.isNotEmpty && e.incentivePercent != '0') {
+      incentivePercentController.text = e.incentivePercent.replaceAll('.00', '');
+    }
+
+    // Step 5: Bank Details & Skills
+    if (overrideNonEmpty || accountHolderNameController.text.isEmpty) {
+      accountHolderNameController.text = e.accountHolderName.isNotEmpty ? e.accountHolderName : e.name;
+    }
+    if (overrideNonEmpty || bankNameController.text.isEmpty) {
+      if (e.bankName.isNotEmpty) bankNameController.text = e.bankName;
+    }
+    if (overrideNonEmpty || accountNumberController.text.isEmpty) {
+      if (e.accountNumber.isNotEmpty) accountNumberController.text = e.accountNumber;
+    }
+    if (overrideNonEmpty || ifscCodeController.text.isEmpty) {
+      if (e.ifscCode.isNotEmpty) ifscCodeController.text = e.ifscCode;
+    }
+    if (overrideNonEmpty || branchNameController.text.isEmpty) {
+      if (e.branchName.isNotEmpty) branchNameController.text = e.branchName;
+    }
+
+    if (e.skills.isNotEmpty) {
+      _skillsList.clear();
+      _skillsList.addAll(e.skills);
+    } else if (e.designationDetails != null && e.designationDetails!.skills.isNotEmpty) {
+      _skillsList.clear();
+      _skillsList.addAll(e.designationDetails!.skills);
+    }
+  }
+
+  void _syncDropdownSelections() {
+    // 1. Match Role
+    if (selectedRole.isNotEmpty && _rolePermissionsController.roles.isNotEmpty) {
+      final matchedRole = _rolePermissionsController.roles.firstWhereOrNull(
+        (r) => r.name.toLowerCase().trim() == selectedRole.toLowerCase().trim() ||
+               r.id.toString() == selectedRoleId.toString(),
+      );
+      if (matchedRole != null) {
+        selectedRole = matchedRole.name;
+        selectedRoleId = int.tryParse(matchedRole.id) ?? selectedRoleId;
+      }
+      if (selectedRole.toLowerCase().contains('sales')) {
+        hasSalesTarget = true;
+      }
+    }
+
+    // 2. Match Department
+    final allDepts = _departmentsController.apiDepartments.isNotEmpty
+        ? _departmentsController.apiDepartments.map((d) => d.name).toList()
+        : _departmentsController.departments.map((d) => d.name).toList();
+    if (selectedDepartment.isNotEmpty && allDepts.isNotEmpty) {
+      final matchedDept = allDepts.firstWhereOrNull(
+        (d) => d.toLowerCase().trim() == selectedDepartment.toLowerCase().trim(),
+      );
+      if (matchedDept != null) {
+        selectedDepartment = matchedDept;
+      }
+    }
+
+    // 3. Match Designation
+    if (selectedDesignation.isNotEmpty && _designationController.designations.isNotEmpty) {
+      final matchedDesig = _designationController.designations.firstWhereOrNull(
+        (d) => d.name.toLowerCase().trim() == selectedDesignation.toLowerCase().trim(),
+      );
+      if (matchedDesig != null) {
+        selectedDesignation = matchedDesig.name;
+      }
+    }
+
+    // 4. Match Shift
+    if (selectedShift.isNotEmpty && _shiftController.shifts.isNotEmpty) {
+      final matchedShift = _shiftController.shifts.firstWhereOrNull(
+        (s) => s.name.toLowerCase().trim() == selectedShift.toLowerCase().trim(),
+      );
+      if (matchedShift != null) {
+        selectedShift = matchedShift.name;
+      }
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -198,95 +443,80 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
         ? Get.find<RolePermissionsController>()
         : Get.put(RolePermissionsController());
 
-    if (_departmentsController.departments.isEmpty && _departmentsController.apiDepartments.isEmpty) {
-      _departmentsController.fetchDepartments();
-    }
-    if (_designationController.designations.isEmpty) {
-      _designationController.fetchDesignations();
-    }
-    if (_shiftController.shifts.isEmpty) {
-      _shiftController.fetchShifts();
-    }
-    if (_rolePermissionsController.roles.isEmpty) {
-      _rolePermissionsController.fetchRolesFromApi(showLoader: false);
-    }
-
     // Step 1 Controllers
-    nameController = TextEditingController(text: e?.name ?? '');
+    nameController = TextEditingController();
     empIdController = TextEditingController(
-      text: e?.employeeId ??
-          'EMP-${DateFormat('yyyy').format(DateTime.now())}-${(controller.employees.length + 1).toString().padLeft(3, '0')}',
+      text: 'EMP-${DateFormat('yyyy').format(DateTime.now())}-${(controller.employees.length + 1).toString().padLeft(3, '0')}',
     );
-    selectedGender = e != null && e.gender.isNotEmpty ? e.gender : 'Male';
-    if (e != null && e.dob.isNotEmpty) {
-      try {
-        selectedDob = DateTime.tryParse(e.dob) ?? DateFormat('dd MMM yyyy').parse(e.dob);
-      } catch (_) {
-        try {
-          selectedDob = DateFormat('yyyy-MM-dd').parse(e.dob);
-        } catch (_) {}
-      }
-    }
 
     // Step 2 Controllers
-    mobileController = TextEditingController(text: e?.mobile ?? '');
-    altMobileController = TextEditingController(text: e?.alternateMobile ?? '');
-    emailController = TextEditingController(text: e?.email ?? '');
-    emergencyContactController = TextEditingController(text: e?.emergencyContact ?? '');
-    addressController = TextEditingController(text: e?.address ?? '');
-    cityController = TextEditingController(text: e?.city ?? '');
-    stateController = TextEditingController(text: e?.state ?? '');
-    pincodeController = TextEditingController(text: e?.pincode ?? '');
-    countryController = TextEditingController(text: e != null && e.country.isNotEmpty ? e.country : 'India');
+    mobileController = TextEditingController();
+    altMobileController = TextEditingController();
+    emailController = TextEditingController();
+    emergencyContactController = TextEditingController();
+    addressController = TextEditingController();
+    cityController = TextEditingController();
+    stateController = TextEditingController();
+    pincodeController = TextEditingController();
+    countryController = TextEditingController(text: 'India');
 
-    // Step 3 Employment
-    selectedWorkMode = e != null && e.workMode.isNotEmpty ? e.workMode : 'Office';
-    selectedEmployeeType = e != null && e.employeeType.isNotEmpty ? e.employeeType : 'Full-time';
-    selectedDepartment = e != null && e.department.isNotEmpty ? e.department : '';
-    selectedDesignation = e != null && e.designation.isNotEmpty ? e.designation : '';
-    selectedTeam = e != null && e.team.isNotEmpty ? e.team : '';
-    selectedShift = e != null && e.shift.isNotEmpty ? e.shift : '';
-    selectedReportingManager = e != null && e.reportingManager.isNotEmpty ? e.reportingManager : '';
-    selectedEmploymentStatus = e != null && e.employmentStatus.isNotEmpty ? e.employmentStatus : 'Active';
-    selectedProbationPeriod = e != null && e.probationPeriod.isNotEmpty ? e.probationPeriod : '3 Months';
-    selectedNoticePeriod = e != null && e.noticePeriod.isNotEmpty ? e.noticePeriod : '30 Days';
+    // Step 4 Controllers
+    salaryController = TextEditingController(text: '60000');
+    targetAmountController = TextEditingController(text: '0');
+    incentivePercentController = TextEditingController(text: '0');
 
-    if (e != null && e.joiningDate.isNotEmpty) {
-      try {
-        selectedJoiningDate = DateTime.tryParse(e.joiningDate) ?? DateFormat('dd MMMM yyyy').parse(e.joiningDate);
-      } catch (_) {
-        try {
-          selectedJoiningDate = DateFormat('yyyy-MM-dd').parse(e.joiningDate);
-        } catch (_) {}
+    // Step 5 Controllers
+    accountHolderNameController = TextEditingController();
+    bankNameController = TextEditingController();
+    accountNumberController = TextEditingController();
+    ifscCodeController = TextEditingController();
+    branchNameController = TextEditingController();
+
+    if (e != null) {
+      _populateFromEmployee(e);
+
+      // If controller already has detailed model for this employee, populate deeper fields
+      if (controller.employeeDetail.value != null &&
+          controller.employeeDetail.value!.id == e.id) {
+        _populateFromEmployee(controller.employeeDetail.value!, overrideNonEmpty: false);
       }
-    }
 
-    // Step 4 Compensation & Target
-    selectedSalaryType = e != null && e.salaryType.isNotEmpty ? e.salaryType : 'Monthly';
-    salaryController = TextEditingController(
-      text: e != null && e.salary > 0
-          ? (e.salary % 1 == 0 ? e.salary.toInt().toString() : e.salary.toString())
-          : '60000',
-    );
-    hasSalesTarget = e?.hasSalesTarget ?? (selectedDepartment == 'Sales');
-    selectedTargetType = e != null && e.targetType.isNotEmpty ? e.targetType : 'Revenue';
-    targetAmountController = TextEditingController(text: e?.targetAmount ?? '0');
-    selectedTargetPeriod = e != null && e.targetPeriod.isNotEmpty ? e.targetPeriod : 'Monthly';
-    incentivePercentController = TextEditingController(text: e?.incentivePercent ?? '0');
-
-    // Step 5 Bank & Skills
-    accountHolderNameController = TextEditingController(
-      text: e != null && e.accountHolderName.isNotEmpty ? e.accountHolderName : (e?.name ?? ''),
-    );
-    bankNameController = TextEditingController(text: e?.bankName ?? '');
-    accountNumberController = TextEditingController(text: e?.accountNumber ?? '');
-    ifscCodeController = TextEditingController(text: e?.ifscCode ?? '');
-    branchNameController = TextEditingController(text: e?.branchName ?? '');
-
-    if (e != null && e.skills.isNotEmpty) {
-      _skillsList.addAll(e.skills);
+      // Also fetch fresh employee detail from API in background to ensure all fields are 100% up to date
+      if (e.id.isNotEmpty) {
+        controller.fetchEmployeeDetail(e.id, showLoader: false).then((_) {
+          if (mounted && controller.employeeDetail.value != null) {
+            setState(() {
+              _populateFromEmployee(controller.employeeDetail.value!, overrideNonEmpty: false);
+              _syncDropdownSelections();
+            });
+          }
+        });
+      }
     } else {
       _skillsList.addAll(['Flutter', 'Dart', 'Teamwork']);
+    }
+
+    if (_departmentsController.departments.isEmpty && _departmentsController.apiDepartments.isEmpty) {
+      _departmentsController.fetchDepartments().then((_) {
+        if (mounted) setState(() => _syncDropdownSelections());
+      });
+    }
+    if (_designationController.designations.isEmpty) {
+      _designationController.fetchDesignations().then((_) {
+        if (mounted) setState(() => _syncDropdownSelections());
+      });
+    }
+    if (_shiftController.shifts.isEmpty) {
+      _shiftController.fetchShifts().then((_) {
+        if (mounted) setState(() => _syncDropdownSelections());
+      });
+    }
+    if (_rolePermissionsController.roles.isEmpty) {
+      _rolePermissionsController.fetchRolesFromApi(showLoader: false).then((_) {
+        if (mounted) setState(() => _syncDropdownSelections());
+      });
+    } else {
+      _syncDropdownSelections();
     }
   }
 
@@ -957,7 +1187,6 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
         employeeType: selectedEmployeeType,
         department: selectedDepartment,
         designationId: _getSelectedDesignationId(),
-        team: selectedTeam,
         assignedShiftId: _getSelectedShiftId(),
         dateOfJoining: DateFormat('yyyy-MM-dd').format(selectedJoiningDate),
         employmentStatus: selectedEmploymentStatus,
@@ -965,7 +1194,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
         noticePeriod: selectedNoticePeriod,
         salaryType: selectedSalaryType,
         monthlyBaseSalary: salaryVal,
-        salesTargetEnabled: hasSalesTarget ? '1' : '0',
+        salesTargetEnabled: hasSalesTarget ? '1' : null,
         salesTargetMetricType: hasSalesTarget ? selectedTargetType : null,
         salesTarget: hasSalesTarget ? targetAmountController.text.trim() : null,
         salesTargetPeriod: hasSalesTarget ? selectedTargetPeriod : null,
@@ -1029,7 +1258,6 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
         'employee_type': selectedEmployeeType,
         'department': selectedDepartment,
         'designation_id': _getSelectedDesignationId(),
-        'team': selectedTeam,
         'assigned_shift_id': _getSelectedShiftId(),
         'date_of_joining': DateFormat('yyyy-MM-dd').format(selectedJoiningDate),
         'employment_status': selectedEmploymentStatus,
@@ -1039,8 +1267,8 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
         'monthly_base_salary': numericSalary,
         'skills': List<String>.from(_skillsList),
         'role_ids': [_getSelectedRoleId()],
-        'sales_target_enabled': hasSalesTarget ? 1 : 0,
         if (hasSalesTarget) ...{
+          'sales_target_enabled': 1,
           'sales_target_metric_type': selectedTargetType,
           'sales_target': numericSalesTarget,
           'sales_target_period': selectedTargetPeriod,
@@ -1064,7 +1292,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
         dob: DateFormat('yyyy-MM-dd').format(selectedDob),
         designation: selectedDesignation,
         department: selectedDepartment,
-        team: selectedTeam,
+        team: '',
         shift: selectedShift,
         workMode: selectedWorkMode,
         employeeType: selectedEmployeeType,
@@ -1076,10 +1304,10 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
         salaryType: selectedSalaryType,
         salary: sal,
         hasSalesTarget: hasSalesTarget,
-        targetType: selectedTargetType,
-        targetAmount: targetAmountController.text.trim(),
-        targetPeriod: selectedTargetPeriod,
-        incentivePercent: incentivePercentController.text.trim(),
+        targetType: hasSalesTarget ? selectedTargetType : '',
+        targetAmount: hasSalesTarget ? targetAmountController.text.trim() : '0',
+        targetPeriod: hasSalesTarget ? selectedTargetPeriod : '',
+        incentivePercent: hasSalesTarget ? incentivePercentController.text.trim() : '0',
         address: address,
         city: city,
         state: state,
@@ -1428,8 +1656,13 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
                       CircleAvatar(
                         radius: 46,
                         backgroundColor: AppColors.primaryLight,
-                        backgroundImage: _avatarFile != null ? FileImage(_avatarFile!) : null,
-                        child: _avatarFile == null
+                        backgroundImage: _avatarFile != null
+                            ? FileImage(_avatarFile!)
+                            : (widget.employee?.profilePic != null && widget.employee!.profilePic!.isNotEmpty
+                                ? NetworkImage(widget.employee!.profilePic!) as ImageProvider
+                                : null),
+                        child: (_avatarFile == null &&
+                                (widget.employee?.profilePic == null || widget.employee!.profilePic!.isEmpty))
                             ? AppText(
                                 nameController.text.trim().isNotEmpty ? nameController.text.trim()[0].toUpperCase() : 'EMP',
                                 fontSize: 28,
@@ -1903,7 +2136,9 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
               _buildFieldTitle('Department', isRequired: true),
               const SizedBox(height: 6),
               Obx(() {
-                final depts = _departmentsController.departments.map((d) => d.name).where((n) => n.isNotEmpty).toList();
+                final depts = _departmentsController.apiDepartments.isNotEmpty
+                    ? _departmentsController.apiDepartments.map((d) => d.name).where((n) => n.isNotEmpty).toList()
+                    : _departmentsController.departments.map((d) => d.name).where((n) => n.isNotEmpty).toList();
                 return _buildDropdown(
                   key: _departmentKey,
                   value: selectedDepartment,
@@ -1934,7 +2169,14 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
                   value: selectedDesignation,
                   items: desigs,
                   onChanged: (val) {
-                    if (val != null) setState(() => selectedDesignation = val);
+                    if (val != null) {
+                      setState(() {
+                        selectedDesignation = val;
+                        if (val.toLowerCase().contains('sales')) {
+                          hasSalesTarget = true;
+                        }
+                      });
+                    }
                   },
                 );
               }),
@@ -1945,6 +2187,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
               Obx(() {
                 final rolesList = _rolePermissionsController.roles;
                 final roleNames = rolesList.map((r) => r.name).toList();
+                _syncDropdownSelections();
 
                 return _buildDropdown(
                   key: _roleKey,
@@ -1958,22 +2201,11 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
                         if (matched != null) {
                           selectedRoleId = int.tryParse(matched.id) ?? 0;
                         }
+                        if (val.toLowerCase().contains('sales')) {
+                          hasSalesTarget = true;
+                        }
                       });
                     }
-                  },
-                );
-              }),
-              const SizedBox(height: 16),
-
-              _buildFieldTitle('Team / Unit', isRequired: false),
-              const SizedBox(height: 6),
-              Obx(() {
-                final teams = controller.teamsList.where((t) => t != 'All').toList();
-                return _buildDropdown(
-                  value: selectedTeam,
-                  items: teams,
-                  onChanged: (val) {
-                    if (val != null) setState(() => selectedTeam = val);
                   },
                 );
               }),
@@ -2790,7 +3022,11 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
     String hint = 'Select',
   }) {
     final effectiveHint = items.isEmpty ? 'No options available' : hint;
-    final validValue = (value.isNotEmpty && items.contains(value)) ? value : null;
+    final effectiveItems = (value.isNotEmpty && !items.contains(value))
+        ? [value, ...items]
+        : items;
+    final validValue = (value.isNotEmpty && effectiveItems.contains(value)) ? value : null;
+
     return Container(
       key: key,
       padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -2805,13 +3041,19 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
           isExpanded: true,
           hint: AppText(effectiveHint, fontSize: 13, color: AppColors.textColorSecondary),
           icon: const Icon(Icons.arrow_drop_down, color: AppColors.textColorSecondary),
-          items: items.map((item) {
+          items: effectiveItems.map((item) {
             return DropdownMenuItem<String>(
               value: item,
-              child: AppText(item, fontSize: 13, fontWeight: FontWeight.w600),
+              child: AppText(
+                item,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             );
           }).toList(),
-          onChanged: items.isEmpty ? null : onChanged,
+          onChanged: effectiveItems.isEmpty ? null : onChanged,
         ),
       ),
     );

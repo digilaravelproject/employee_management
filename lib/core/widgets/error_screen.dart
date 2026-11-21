@@ -3,6 +3,7 @@ import 'package:iconsax/iconsax.dart';
 import 'package:get/get.dart';
 import '../theme/app_colors.dart';
 import '../constants/app_text_constants.dart';
+import 'app_text.dart';
 
 class ErrorScreen extends StatelessWidget {
   final String? title;
@@ -28,12 +29,17 @@ class ErrorScreen extends StatelessWidget {
       backgroundColor: AppColors.white,
       appBar: showBackButton
           ? AppBar(
-        title: Text(AppTextConstants.error.tr),
-        centerTitle: true,
-        backgroundColor: AppColors.white,
-        elevation: 0,
-        foregroundColor: AppColors.black,
-      )
+              title: const AppText(
+                'Error',
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: AppColors.black,
+              ),
+              centerTitle: true,
+              backgroundColor: AppColors.white,
+              elevation: 0,
+              foregroundColor: AppColors.black,
+            )
           : null,
       body: Center(
         child: Padding(
@@ -41,16 +47,16 @@ class ErrorScreen extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // 🔴 Icon with animation-like feel
+              // 🔴 Icon with soft background
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: AppColors.errorColor.withOpacity(0.1),
+                  color: AppColors.errorColor.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
                   icon,
-                  size: 80,
+                  size: 72,
                   color: AppColors.errorColorAccent,
                 ),
               ),
@@ -58,26 +64,22 @@ class ErrorScreen extends StatelessWidget {
               const SizedBox(height: 24),
 
               // 📝 Title
-              Text(
-                title ?? AppTextConstants.somethingWentWrong.tr,
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.black87,
-                ),
+              AppText(
+                title ?? AppTextConstants.somethingWentWrong,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: AppColors.black87,
                 textAlign: TextAlign.center,
               ),
 
               const SizedBox(height: 12),
 
               // 💬 Message
-              Text(
-                    AppTextConstants.failedToLoadDataMessage.tr,
-                style: TextStyle(
-                  fontSize: 15,
-                  color: Colors.grey[600],
-                  height: 1.4,
-                ),
+              AppText(
+                message ?? AppTextConstants.failedToLoadDataMessage,
+                fontSize: 14,
+                color: Colors.grey[600],
+                height: 1.4,
                 textAlign: TextAlign.center,
               ),
 
@@ -95,12 +97,13 @@ class ErrorScreen extends StatelessWidget {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
+                      elevation: 0,
                     ),
-                    child: Text(
-                      AppTextConstants.retry.tr,
+                    child: const Text(
+                      'Retry',
                       style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
                         color: AppColors.white,
                       ),
                     ),
@@ -123,9 +126,9 @@ class ErrorScreen extends StatelessWidget {
                       ),
                     ),
                     child: Text(
-                      AppTextConstants.goBack.tr,
+                      'Go Back',
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: 15,
                         fontWeight: FontWeight.w600,
                         color: theme.primaryColor,
                       ),

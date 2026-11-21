@@ -64,15 +64,6 @@ class _LeaveApprovalScreenState extends State<LeaveApprovalScreen> {
         ),
         title: const AppText('Leave Details', fontSize: 18, fontWeight: FontWeight.bold),
         centerTitle: false,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh, color: AppColors.textColorPrimary),
-            onPressed: () {
-              final id = resolvedLeaveId;
-              if (id != null) controller.fetchLeaveDetails(id);
-            },
-          ),
-        ],
       ),
       body: Obx(() {
         final isLoading = controller.isDetailLoading.value;

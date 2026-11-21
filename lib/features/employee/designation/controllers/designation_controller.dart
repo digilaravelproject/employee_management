@@ -14,7 +14,6 @@ class DesignationController extends GetxController {
   final RxList<DesignationModel> designations = <DesignationModel>[].obs;
   final RxList<DesignationModel> filteredDesignations = <DesignationModel>[].obs;
   final RxBool isSaving = false.obs;
-
   final RxBool isLoading = false.obs;
 
   @override
@@ -27,11 +26,9 @@ class DesignationController extends GetxController {
 
   Future<void> fetchDesignations() async {
     if (repository == null) return;
-    
     try {
       isLoading.value = true;
       final response = await repository!.getDesignations();
-      
       if (response.status) {
         designations.assignAll(response.data);
         filteredDesignations.assignAll(designations);
@@ -46,9 +43,13 @@ class DesignationController extends GetxController {
     }
   }
 
+  /// Pull‑to‑refresh method
+  Future<void> refreshDesignations() async {
+    await fetchDesignations();
+  }
+
   Future<DesignationModel?> fetchDesignationDetails(String id) async {
     if (repository == null) return null;
-    
     try {
       final response = await repository!.getDesignationDetails(id);
       if (response.status && response.data != null) {
@@ -64,8 +65,6 @@ class DesignationController extends GetxController {
     }
   }
 
-
-
   void searchDesignation(String query) {
     if (query.isEmpty) {
       filteredDesignations.assignAll(designations);
@@ -78,21 +77,16 @@ class DesignationController extends GetxController {
 
   Future<bool> addDesignation(String name, String level, {List<String> skills = const []}) async {
     if (name.isEmpty) return false;
-
     if (repository == null) {
-      // Fallback to local logic if no repository injected (e.g. older screens)
-      designations.add(
-        DesignationModel(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          name: name,
-          hierarchyLevel: level,
-          skills: skills,
-        ),
-      );
+      designations.add(DesignationModel(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        name: name,
+        hierarchyLevel: level,
+        skills: skills,
+      ));
       filteredDesignations.assignAll(designations);
       return true;
     }
-
     try {
       isSaving.value = true;
       final request = DesignationRequestModel(
@@ -100,9 +94,7 @@ class DesignationController extends GetxController {
         hierarchyLevel: level,
         skills: skills,
       );
-
       final response = await repository!.createDesignation(request);
-
       if (response.status && response.data != null) {
         designations.add(response.data!);
         filteredDesignations.assignAll(designations);
@@ -123,7 +115,6 @@ class DesignationController extends GetxController {
   Future<bool> updateDesignation(String id, String name, String level, {List<String> skills = const []}) async {
     final index = designations.indexWhere((d) => d.id == id);
     if (index == -1 || name.isEmpty) return false;
-
     if (repository == null) {
       final oldName = designations[index].name;
       designations[index] = DesignationModel(
@@ -133,7 +124,6 @@ class DesignationController extends GetxController {
         skills: skills,
       );
       filteredDesignations.assignAll(designations);
-
       if (oldName.toLowerCase() != name.toLowerCase()) {
         if (Get.isRegistered<EmployeeController>()) {
           final empController = Get.find<EmployeeController>();
@@ -146,7 +136,6 @@ class DesignationController extends GetxController {
       }
       return true;
     }
-
     try {
       isSaving.value = true;
       final request = DesignationRequestModel(
@@ -154,9 +143,7 @@ class DesignationController extends GetxController {
         hierarchyLevel: level,
         skills: skills,
       );
-
       final response = await repository!.updateDesignation(id, request);
-
       if (response.status && response.data != null) {
         designations[index] = response.data!;
         filteredDesignations.assignAll(designations);
@@ -177,7 +164,6 @@ class DesignationController extends GetxController {
   Future<bool> deleteDesignation(String id) async {
     final designation = designations.firstWhereOrNull((d) => d.id == id);
     if (designation == null) return false;
-
     if (repository == null) {
       if (Get.isRegistered<EmployeeController>()) {
         final empController = Get.find<EmployeeController>();
@@ -191,10 +177,8 @@ class DesignationController extends GetxController {
       filteredDesignations.assignAll(designations);
       return true;
     }
-
     try {
       final response = await repository!.deleteDesignation(id);
-      
       if (response.status) {
         designations.removeWhere((d) => d.id == id);
         filteredDesignations.assignAll(designations);
@@ -205,18 +189,16 @@ class DesignationController extends GetxController {
       }
     } catch (e) {
       Logger.e('DesignationController -> Failed to delete designation: $e');
-      CustomSnackbar.showError('Failed to delete designation');
+      CustomSnackbar.showError('Something went wrong');
       return false;
     }
   }
 
   Future<bool> removeEmployeeFromDesignation(String designationId, String employeeId) async {
     if (repository == null) return false;
-
     try {
       isSaving.value = true;
       final response = await repository!.removeEmployeeFromDesignation(designationId, employeeId);
-      
       if (response.status) {
         return true;
       } else {

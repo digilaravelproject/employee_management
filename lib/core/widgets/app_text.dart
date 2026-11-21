@@ -34,10 +34,51 @@ class AppText extends StatelessWidget {
     this.decoration,
   }) : super(key: key);
 
+  static String cleanText(String input) {
+    if (input.isEmpty) return input;
+    final lower = input.trim().toLowerCase();
+    if (lower == 'something went wrong' ||
+        lower == 'something went wrong.' ||
+        lower == 'something went wrong. please try again.' ||
+        lower == 'something went wrong. please try again' ||
+        lower == 'something_went_wrong' ||
+        lower == 'failed_to_load_data_message') {
+      return 'No internet connection. Please check your connection and try again.';
+    }
+
+    // Don't format emails, URLs, file paths, dates, or expressions with special characters
+    if (input.contains('@') ||
+        input.contains('://') ||
+        input.contains('/') ||
+        input.contains('\\') ||
+        input.contains('.pdf') ||
+        input.contains('.jpg') ||
+        input.contains('.png') ||
+        input.contains('.jpeg') ||
+        input.contains('.doc') ||
+        input.contains('.svg') ||
+        input.contains('{') ||
+        input.contains('}')) {
+      return input;
+    }
+
+    // Check if the string is purely a snake_case identifier like 'leave_type' or 'in_progress' or 'no_internet_connection'
+    final snakeCaseRegex = RegExp(r'^[a-zA-Z]+(_[a-zA-Z0-9]+)+$');
+    if (snakeCaseRegex.hasMatch(input.trim())) {
+      final words = input.trim().split('_');
+      return words.map((w) {
+        if (w.isEmpty) return '';
+        return w[0].toUpperCase() + w.substring(1).toLowerCase();
+      }).join(' ');
+    }
+
+    return input;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Text(
-      text,
+      cleanText(text),
       textAlign: textAlign ?? align,
       maxLines: maxLines,
       overflow: overflow ?? (maxLines != null ? TextOverflow.ellipsis : null),

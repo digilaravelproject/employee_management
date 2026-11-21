@@ -123,14 +123,6 @@ class TasksListScreen extends StatelessWidget {
             ],
           );
         }),
-        actions: [
-          IconButton(
-            tooltip: 'Refresh',
-            icon: const Icon(Icons.refresh_rounded, color: AppColors.textColorSecondary, size: 20),
-            onPressed: () => controller.fetchTasks(isRefresh: true),
-          ),
-          const SizedBox(width: 8),
-        ],
       ),
       body: Column(
         children: [

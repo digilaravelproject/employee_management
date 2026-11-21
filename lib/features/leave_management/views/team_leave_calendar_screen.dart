@@ -36,32 +36,6 @@ class TeamLeaveCalendarScreen extends StatelessWidget {
           color: AppColors.textColorPrimary,
         ),
         centerTitle: false,
-       /* actions: [
-          // Jump to Today button
-          IconButton(
-            tooltip: 'Go to Today',
-            icon: Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: AppColors.primaryLight,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(Iconsax.calendar_tick, color: AppColors.primaryColor, size: 18),
-            ),
-            onPressed: () {
-              final now = DateTime.now();
-              controller.changeMonth(now.year, now.month);
-              controller.selectDate(now);
-            },
-          ),
-          // Refresh Button
-          IconButton(
-            tooltip: 'Refresh Calendar',
-            icon: const Icon(Icons.refresh_rounded, color: AppColors.textColorSecondary, size: 22),
-            onPressed: () => controller.fetchLeavesForMonth(isRefresh: true),
-          ),
-          const SizedBox(width: 6),
-        ],*/
       ),
       body: Obx(() {
         return RefreshIndicator(

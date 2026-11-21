@@ -6,6 +6,7 @@ import 'package:iconsax/iconsax.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../../core/services/network/api_client.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/custom_snackbar.dart';
 import '../../../../core/widgets/app_text.dart';
@@ -13,6 +14,9 @@ import '../controllers/employee_controller.dart';
 import '../models/employee_model.dart';
 import 'add_employee_screen.dart';
 import '../../../attendance/views/attendance_history_screen.dart';
+import '../../../payroll/controllers/payroll_controller.dart';
+import '../../../payroll/repositories/payroll_repository.dart';
+import '../../../payroll/views/salary_overview_screen.dart';
 import '../../../performance/models/performance_model.dart';
 import '../../../performance/views/team_member_performance_screen.dart';
 
@@ -77,45 +81,91 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen>
   }
 
   Future<void> _makePhoneCall(String phoneNumber) async {
-    if (phoneNumber.trim().isEmpty) {
+    final clean = phoneNumber.replaceAll(RegExp(r'[^0-9+]'), '').trim();
+    if (clean.isEmpty) {
       CustomSnackbar.showInfo('Phone number not available');
       return;
     }
-    final uri = Uri.parse('tel:$phoneNumber');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
-    } else {
-      Clipboard.setData(ClipboardData(text: phoneNumber));
-      CustomSnackbar.showSuccess('Phone number copied to clipboard: $phoneNumber');
-    }
-  }
-
-  Future<void> _sendSms(String phoneNumber) async {
-    if (phoneNumber.trim().isEmpty) {
-      CustomSnackbar.showInfo('Phone number not available');
+    final uri = Uri.parse('tel:$clean');
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+        return;
+      }
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
       return;
-    }
-    final uri = Uri.parse('sms:$phoneNumber');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
-    } else {
-      Clipboard.setData(ClipboardData(text: phoneNumber));
-      CustomSnackbar.showSuccess('Phone number copied to clipboard: $phoneNumber');
-    }
+    } catch (_) {}
+    Clipboard.setData(ClipboardData(text: phoneNumber));
+    CustomSnackbar.showSuccess('Phone number copied to clipboard: $phoneNumber');
   }
 
   Future<void> _sendEmail(String email) async {
-    if (email.trim().isEmpty) {
+    final cleanEmail = email.trim();
+    if (cleanEmail.isEmpty) {
       CustomSnackbar.showInfo('Email address not available');
       return;
     }
-    final uri = Uri.parse('mailto:$email');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
-    } else {
-      Clipboard.setData(ClipboardData(text: email));
-      CustomSnackbar.showSuccess('Email address copied to clipboard: $email');
+    final mailUri = Uri.parse('mailto:$cleanEmail');
+    try {
+      if (await canLaunchUrl(mailUri)) {
+        await launchUrl(mailUri, mode: LaunchMode.externalApplication);
+        return;
+      }
+      final launched = await launchUrl(mailUri, mode: LaunchMode.externalApplication);
+      if (launched) return;
+    } catch (_) {}
+
+    Clipboard.setData(ClipboardData(text: email));
+    CustomSnackbar.showSuccess('Email address copied to clipboard: $email');
+  }
+
+  Future<void> _openWhatsApp(String phone, {String text = ''}) async {
+    final trimmed = phone.trim();
+    if (trimmed.isEmpty) {
+      CustomSnackbar.showInfo('Phone number not available');
+      return;
     }
+    String cleanNumber = trimmed.replaceAll(RegExp(r'[^0-9+]'), '');
+    if (!cleanNumber.startsWith('+') && cleanNumber.length == 10) {
+      cleanNumber = '+91$cleanNumber';
+    }
+    final appUri = Uri.parse('whatsapp://send?phone=$cleanNumber&text=${Uri.encodeComponent(text)}');
+    final webUri = Uri.parse('https://wa.me/${cleanNumber.replaceAll('+', '')}?text=${Uri.encodeComponent(text)}');
+
+    try {
+      if (await canLaunchUrl(appUri)) {
+        await launchUrl(appUri, mode: LaunchMode.externalApplication);
+        return;
+      }
+    } catch (_) {}
+
+    try {
+      if (await canLaunchUrl(webUri)) {
+        await launchUrl(webUri, mode: LaunchMode.externalApplication);
+        return;
+      }
+    } catch (_) {}
+
+    try {
+      // Direct intent attempt as fallback
+      final launched = await launchUrl(appUri, mode: LaunchMode.externalApplication);
+      if (launched) return;
+    } catch (_) {}
+
+    try {
+      final launched = await launchUrl(webUri, mode: LaunchMode.externalApplication);
+      if (launched) return;
+    } catch (_) {}
+
+    Clipboard.setData(ClipboardData(text: phone));
+    CustomSnackbar.showInfo('WhatsApp not available, phone number copied: $phone');
+  }
+
+  void _navigateToSalaryScreen(EmployeeModel emp) {
+    if (!Get.isRegistered<PayrollController>()) {
+      Get.put(PayrollController(repository: PayrollRepository(apiClient: Get.find<ApiClient>())));
+    }
+    Get.to(() => SalaryOverviewScreen(employee: emp));
   }
 
   void _showImagePickerSheet(BuildContext context, EmployeeModel emp) {
@@ -241,6 +291,18 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen>
             color: AppColors.textColorPrimary,
           ),
           actions: [
+            IconButton(
+              tooltip: 'Salary Details',
+              onPressed: () => _navigateToSalaryScreen(emp),
+              icon: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF5F3FF),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Iconsax.wallet_money, color: Color(0xFF8B5CF6), size: 18),
+              ),
+            ),
             IconButton(
               onPressed: () async {
                 final res = await Get.to(() => AddEmployeeScreen(employee: emp));
@@ -668,11 +730,11 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen>
                   onTap: () => _makePhoneCall(emp.mobile),
                 ),
                 _buildQuickActionButton(
-                  icon: Iconsax.message,
-                  label: 'Message',
-                  color: AppColors.primaryColor,
-                  bgColor: AppColors.primaryLight,
-                  onTap: () => _sendSms(emp.mobile),
+                  icon: Icons.chat_bubble_rounded,
+                  label: 'WhatsApp',
+                  color: const Color(0xFF16A34A),
+                  bgColor: const Color(0xFFDCFCE7),
+                  onTap: () => _openWhatsApp(emp.mobile),
                 ),
               ],
               if (emp.email.isNotEmpty)
@@ -683,17 +745,13 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen>
                   bgColor: const Color(0xFFFFF7ED),
                   onTap: () => _sendEmail(emp.email),
                 ),
-              if (emp.employeeId.isNotEmpty)
-                _buildQuickActionButton(
-                  icon: Iconsax.copy,
-                  label: 'Copy ID',
-                  color: const Color(0xFF8B5CF6),
-                  bgColor: const Color(0xFFF5F3FF),
-                  onTap: () {
-                    Clipboard.setData(ClipboardData(text: emp.employeeId));
-                    CustomSnackbar.showSuccess('Employee ID copied: ${emp.employeeId}');
-                  },
-                ),
+              _buildQuickActionButton(
+                icon: Iconsax.wallet_money,
+                label: 'Salary',
+                color: const Color(0xFF8B5CF6),
+                bgColor: const Color(0xFFF5F3FF),
+                onTap: () => _navigateToSalaryScreen(emp),
+              ),
             ],
           ),
         ],
@@ -1386,77 +1444,46 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen>
           const SizedBox(height: 16),
         ],
 
-        // Roles & Permissions from API
-        if (emp.roles.isNotEmpty || emp.permissions.isNotEmpty) ...[
+        // Roles from API
+        if (emp.roles.isNotEmpty) ...[
           _buildCardWrapper(
-            title: 'Roles & Direct Permissions',
+            title: 'Assigned Roles',
             icon: Iconsax.shield_tick,
             iconColor: const Color(0xFF0D9488),
-            children: [
-              if (emp.roles.isNotEmpty) ...[
-                const AppText('Assigned Roles', fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.textColorSecondary),
-                const SizedBox(height: 8),
-                ...emp.roles.map((r) => Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AppColors.slate50,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.slate200),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+            children: emp.roles.map((r) => Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.slate50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.slate200),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
                     children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: AppColors.primaryLight,
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: AppText(r.name, fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.primaryColor),
-                          ),
-                          if (r.department.isNotEmpty) ...[
-                            const SizedBox(width: 8),
-                            AppText(r.department, fontSize: 11, color: AppColors.textColorHint, fontWeight: FontWeight.w600),
-                          ],
-                        ],
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryLight,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: AppText(r.name, fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.primaryColor),
                       ),
-                      if (r.description.isNotEmpty) ...[
-                        const SizedBox(height: 6),
-                        AppText(r.description, fontSize: 11.5, color: AppColors.textColorSecondary),
+                      if (r.department.isNotEmpty) ...[
+                        const SizedBox(width: 8),
+                        AppText(r.department, fontSize: 11, color: AppColors.textColorHint, fontWeight: FontWeight.w600),
                       ],
                     ],
                   ),
-                )),
-              ],
-              if (emp.permissions.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                const AppText('Assigned Permissions', fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.textColorSecondary),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: emp.permissions.map((p) => Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF0FDF4),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0xFFBBF7D0)),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.check_circle_rounded, size: 12, color: Color(0xFF16A34A)),
-                        const SizedBox(width: 4),
-                        AppText(p.name, fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0xFF15803D)),
-                      ],
-                    ),
-                  )).toList(),
-                ),
-              ],
-            ],
+                  if (r.description.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    AppText(r.description, fontSize: 11.5, color: AppColors.textColorSecondary),
+                  ],
+                ],
+              ),
+            )).toList(),
           ),
         ],
       ],
@@ -1614,6 +1641,12 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen>
 
     final salaries = emp.summary?.salaries;
 
+    final hasBankDetails = emp.accountHolderName.isNotEmpty ||
+        emp.bankName.isNotEmpty ||
+        emp.accountNumber.isNotEmpty ||
+        emp.ifscCode.isNotEmpty ||
+        emp.branchName.isNotEmpty;
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
       physics: const BouncingScrollPhysics(),
@@ -1632,6 +1665,41 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen>
           title: 'Bank & Payroll Account',
           icon: Iconsax.bank,
           iconColor: AppColors.primaryColor,
+          trailing: hasBankDetails
+              ? InkWell(
+                  borderRadius: BorderRadius.circular(8),
+                  onTap: () {
+                    final sb = StringBuffer();
+                    if (emp.accountHolderName.isNotEmpty) sb.writeln('Account Holder: ${emp.accountHolderName}');
+                    if (emp.bankName.isNotEmpty) sb.writeln('Bank: ${emp.bankName}');
+                    if (emp.accountNumber.isNotEmpty) sb.writeln('Account Number: ${emp.accountNumber}');
+                    if (emp.ifscCode.isNotEmpty) sb.writeln('IFSC Code: ${emp.ifscCode}');
+                    if (emp.branchName.isNotEmpty) sb.writeln('Branch: ${emp.branchName}');
+                    Clipboard.setData(ClipboardData(text: sb.toString().trim()));
+                    CustomSnackbar.showSuccess('All bank details copied to clipboard!');
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryLight,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: const [
+                        Icon(Iconsax.copy, size: 14, color: AppColors.primaryColor),
+                        SizedBox(width: 4),
+                        AppText(
+                          'Copy All',
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primaryColor,
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              : null,
           children: bankTiles.isNotEmpty
               ? bankTiles
               : [

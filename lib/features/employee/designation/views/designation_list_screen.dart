@@ -70,194 +70,207 @@ class DesignationListScreen extends StatelessWidget {
                 return const Center(child: CircularProgressIndicator());
               }
               if (controller.filteredDesignations.isEmpty) {
-                return const Center(child: AppText('No designations found', color: AppColors.textColorSecondary));
+                return RefreshIndicator(
+                  onRefresh: () async => controller.refreshDesignations(),
+                  child: ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    children: const [
+                      SizedBox(height: 120),
+                      Center(child: AppText('No designations found', color: AppColors.textColorSecondary)),
+                    ],
+                  ),
+                );
               }
-              return ListView.separated(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                itemCount: controller.filteredDesignations.length,
-                separatorBuilder: (context, index) => const SizedBox(height: 12),
-                itemBuilder: (context, index) {
-                  final designation = controller.filteredDesignations[index];
+              return RefreshIndicator(
+                onRefresh: () async => controller.refreshDesignations(),
+                child: ListView.separated(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  itemCount: controller.filteredDesignations.length,
+                  separatorBuilder: (context, index) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    final designation = controller.filteredDesignations[index];
 
-                  // Count currently assigned employees
-                  final assignedCount = employeeController.employees
-                      .where((e) => e.designation.toLowerCase() == designation.name.toLowerCase())
-                      .length;
+                    final assignedCount = employeeController.employees
+                        .where((e) => e.designation.toLowerCase() == designation.name.toLowerCase())
+                        .length;
 
-                  // Define levels styling
-                  Color levelColor;
-                  switch (designation.hierarchyLevel) {
-                    case 'Junior':
-                      levelColor = const Color(0xFF10B981); // Emerald
-                      break;
-                    case 'Senior':
-                      levelColor = AppColors.primaryColor; // Blue
-                      break;
-                    case 'Manager':
-                      levelColor = const Color(0xFF8B5CF6); // Purple
-                      break;
-                    default:
-                      levelColor = AppColors.primaryColor;
-                  }
+                    Color levelColor;
+                    switch (designation.hierarchyLevel) {
+                      case 'Junior':
+                        levelColor = const Color(0xFF10B981);
+                        break;
+                      case 'Senior':
+                        levelColor = AppColors.primaryColor;
+                        break;
+                      case 'Manager':
+                        levelColor = const Color(0xFF8B5CF6);
+                        break;
+                      default:
+                        levelColor = AppColors.primaryColor;
+                    }
 
-                  return Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: AppColors.slate200),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.01),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
+                    return Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
                         borderRadius: BorderRadius.circular(20),
-                        onTap: () => _showDesignationDetailsSheet(context, designation, employeeController),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: levelColor.withValues(alpha: 0.08),
-                                  borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppColors.slate200),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.01),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(20),
+                          onTap: () => _showDesignationDetailsSheet(context, designation, employeeController),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: levelColor.withValues(alpha: 0.08),
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: Icon(Iconsax.user_tag, color: levelColor, size: 24),
                                 ),
-                                child: Icon(Iconsax.user_tag, color: levelColor, size: 24),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: AppText(
-                                            designation.name,
-                                            fontSize: 15,
-                                            fontWeight: FontWeight.w800,
-                                            color: AppColors.textColorPrimary,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                          decoration: BoxDecoration(
-                                            color: levelColor.withValues(alpha: 0.08),
-                                            borderRadius: BorderRadius.circular(8),
-                                          ),
-                                          child: AppText(
-                                            designation.hierarchyLevel,
-                                            fontSize: 9,
-                                            fontWeight: FontWeight.w800,
-                                            color: levelColor,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Row(
-                                      children: [
-                                        const Icon(Iconsax.profile_2user, size: 14, color: AppColors.textColorHint),
-                                        const SizedBox(width: 6),
-                                        AppText(
-                                          '$assignedCount assigned employee(s)',
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                          color: AppColors.textColorSecondary,
-                                        ),
-                                      ],
-                                    ),
-                                    if (designation.skills.isNotEmpty) ...[
-                                      const SizedBox(height: 8),
-                                      Wrap(
-                                        spacing: 6,
-                                        runSpacing: 4,
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
                                         children: [
-                                          ...designation.skills.take(3).map((s) => Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                          Expanded(
+                                            child: AppText(
+                                              designation.name,
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.w800,
+                                              color: AppColors.textColorPrimary,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                            decoration: BoxDecoration(
+                                              color: levelColor.withValues(alpha: 0.08),
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: AppText(
+                                              designation.hierarchyLevel.toUpperCase(),
+                                              fontSize: 9,
+                                              fontWeight: FontWeight.w800,
+                                              color: levelColor,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Row(
+                                        children: [
+                                          const Icon(Iconsax.profile_2user, size: 14, color: AppColors.textColorHint),
+                                          const SizedBox(width: 6),
+                                          AppText(
+                                            '$assignedCount Assigned Employee',
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                            color: AppColors.textColorSecondary,
+                                          ),
+                                        ],
+                                      ),
+                                      if (designation.skills.isNotEmpty) ...[
+                                        const SizedBox(height: 8),
+                                        Wrap(
+                                          spacing: 6,
+                                          runSpacing: 4,
+                                          children: [
+                                            ...designation.skills.take(3).map((s) => Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                                  decoration: BoxDecoration(
+                                                    color: AppColors.slate100,
+                                                    borderRadius: BorderRadius.circular(6),
+                                                  ),
+                                                  child: AppText(
+                                                    s.isNotEmpty
+                                                        ? '${s[0].toUpperCase()}${s.substring(1).toLowerCase()}'
+                                                        : s,
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: AppColors.textColorSecondary,
+                                                  ),
+                                                )),
+                                            if (designation.skills.length > 3)
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                                                 decoration: BoxDecoration(
                                                   color: AppColors.slate100,
                                                   borderRadius: BorderRadius.circular(6),
                                                 ),
                                                 child: AppText(
-                                                  s,
+                                                  '+${designation.skills.length - 3}',
                                                   fontSize: 10,
                                                   fontWeight: FontWeight.w600,
                                                   color: AppColors.textColorSecondary,
                                                 ),
-                                              )),
-                                          if (designation.skills.length > 3)
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                                              decoration: BoxDecoration(
-                                                color: AppColors.slate100,
-                                                borderRadius: BorderRadius.circular(6),
                                               ),
-                                              child: AppText(
-                                                '+${designation.skills.length - 3}',
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.w600,
-                                                color: AppColors.textColorSecondary,
-                                              ),
-                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                PopupMenuButton<String>(
+                                  padding: EdgeInsets.zero,
+                                  icon: const Icon(Icons.more_vert_rounded, color: AppColors.textColorHint, size: 20),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                  elevation: 4,
+                                  onSelected: (value) {
+                                    if (value == 'edit') {
+                                      Get.to(() => AddDesignationScreen(designation: designation));
+                                    } else if (value == 'delete') {
+                                      _showDeleteConfirmation(context, controller, designation, assignedCount);
+                                    }
+                                  },
+                                  itemBuilder: (context) => [
+                                    const PopupMenuItem(
+                                      value: 'edit',
+                                      child: Row(
+                                        children: [
+                                          Icon(Iconsax.edit_2, size: 16, color: AppColors.primaryColor),
+                                          SizedBox(width: 10),
+                                          AppText('Edit', fontSize: 13, fontWeight: FontWeight.w600),
                                         ],
                                       ),
-                                    ],
+                                    ),
+                                    const PopupMenuItem(
+                                      value: 'delete',
+                                      child: Row(
+                                        children: [
+                                          Icon(Iconsax.trash, size: 16, color: AppColors.errorColor),
+                                          SizedBox(width: 10),
+                                          AppText('Delete', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.errorColor),
+                                        ],
+                                      ),
+                                    ),
                                   ],
                                 ),
-                              ),
-                              const SizedBox(width: 4),
-                              PopupMenuButton<String>(
-                                padding: EdgeInsets.zero,
-                                icon: const Icon(Icons.more_vert_rounded, color: AppColors.textColorHint, size: 20),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                                elevation: 4,
-                                onSelected: (value) {
-                                  if (value == 'edit') {
-                                    Get.to(() => AddDesignationScreen(designation: designation));
-                                  } else if (value == 'delete') {
-                                    _showDeleteConfirmation(context, controller, designation, assignedCount);
-                                  }
-                                },
-                                itemBuilder: (context) => [
-                                  const PopupMenuItem(
-                                    value: 'edit',
-                                    child: Row(
-                                      children: [
-                                        Icon(Iconsax.edit_2, size: 16, color: AppColors.primaryColor),
-                                        SizedBox(width: 10),
-                                        AppText('Edit', fontSize: 13, fontWeight: FontWeight.w600),
-                                      ],
-                                    ),
-                                  ),
-                                  const PopupMenuItem(
-                                    value: 'delete',
-                                    child: Row(
-                                      children: [
-                                        Icon(Iconsax.trash, size: 16, color: AppColors.errorColor),
-                                        SizedBox(width: 10),
-                                        AppText('Delete', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.errorColor),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               );
-            })
+            }),
           ),
         ],
       ),
@@ -438,7 +451,7 @@ class DesignationListScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
 
-                // Assigned list
+                // Assigned employee list
                 Expanded(
                   child: StatefulBuilder(builder: (context, setState) {
                     final assigned = designation.employees ?? [];
@@ -682,7 +695,7 @@ class DesignationListScreen extends StatelessWidget {
                           name: currentEmp.name,
                           mobile: currentEmp.mobile,
                           email: currentEmp.email,
-                          designation: designation.name, // Set new designation
+                          designation: designation.name,
                           salary: currentEmp.salary,
                           skills: currentEmp.skills,
                           joiningDate: currentEmp.joiningDate,

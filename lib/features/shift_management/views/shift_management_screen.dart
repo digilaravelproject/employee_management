@@ -49,19 +49,19 @@ class _ShiftManagementScreenState extends State<ShiftManagementScreen> {
         ),
         title: const AppText('Shift Management', fontSize: 18, fontWeight: FontWeight.bold),
         centerTitle: false,
-        actions: [
-          IconButton(
-            tooltip: 'Create Shift',
-            icon: const Icon(Iconsax.add_circle, color: AppColors.primaryColor, size: 22),
-            onPressed: () async {
-              final res = await Get.to(() => const CreateShiftScreen());
-              if (res == true) {
-                _controller.fetchShifts();
-              }
-            },
-          ),
-          const SizedBox(width: 6),
-        ],
+        // actions: [
+        //   IconButton(
+        //     tooltip: 'Create Shift',
+        //     icon: const Icon(Iconsax.add_circle, color: AppColors.primaryColor, size: 22),
+        //     onPressed: () async {
+        //       final res = await Get.to(() => const CreateShiftScreen());
+        //       if (res == true) {
+        //         _controller.fetchShifts();
+        //       }
+        //     },
+        //   ),
+        //   const SizedBox(width: 6),
+        // ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
@@ -84,41 +84,41 @@ class _ShiftManagementScreenState extends State<ShiftManagementScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // 1. Quick Action Action Buttons
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildActionCard(
-                      icon: Iconsax.add_circle5,
-                      title: 'Create Shift',
-                      subtitle: 'New schedule & rules',
-                      primaryColor: AppColors.primaryColor, // Indigo
-                      onTap: () async {
-                        final res = await Get.to(() => const CreateShiftScreen());
-                        if (res == true) {
-                          _controller.fetchShifts();
-                        }
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildActionCard(
-                      icon: Iconsax.profile_2user5,
-                      title: 'Assign Shift',
-                      subtitle: 'Allocate to staff',
-                      primaryColor: const Color(0xFF10B981), // Emerald green
-                      onTap: () async {
-                        final res = await Get.to(() => const AssignShiftScreen());
-                        if (res == true) {
-                          _controller.fetchShifts();
-                        }
-                      },
-                    ),
-                  ),
-                ],
-              ),
+              // Row(
+              //   children: [
+              //     Expanded(
+              //       child: _buildActionCard(
+              //         icon: Iconsax.add_circle5,
+              //         title: 'Create Shift',
+              //         subtitle: 'New schedule & rules',
+              //         primaryColor: AppColors.primaryColor, // Indigo
+              //         onTap: () async {
+              //           final res = await Get.to(() => const CreateShiftScreen());
+              //           if (res == true) {
+              //             _controller.fetchShifts();
+              //           }
+              //         },
+              //       ),
+              //     ),
+              //     const SizedBox(width: 12),
+              //     Expanded(
+              //       child: _buildActionCard(
+              //         icon: Iconsax.profile_2user5,
+              //         title: 'Assign Shift',
+              //         subtitle: 'Allocate to staff',
+              //         primaryColor: const Color(0xFF10B981), // Emerald green
+              //         onTap: () async {
+              //           final res = await Get.to(() => const AssignShiftScreen());
+              //           if (res == true) {
+              //             _controller.fetchShifts();
+              //           }
+              //         },
+              //       ),
+              //     ),
+              //   ],
+              // ),
 
-              const SizedBox(height: 18),
+              //const SizedBox(height: 18),
 
               // 2. Stats Dashboard Cards (2x2 Grid)
               Obx(() => Column(

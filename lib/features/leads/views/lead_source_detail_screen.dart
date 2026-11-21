@@ -76,11 +76,6 @@ class _LeadSourceDetailScreenState extends State<LeadSourceDetailScreen> {
               }
             },
           ),
-          IconButton(
-            icon: const Icon(Iconsax.refresh, size: 18, color: Color(0xFF475569)),
-            tooltip: 'Refresh',
-            onPressed: () => _controller.fetchLeadSourceDetail(widget.sourceId),
-          ),
           const SizedBox(width: 4),
         ],
       ),

@@ -5,6 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_text.dart';
 import '../controllers/payroll_controller.dart';
 import '../models/payroll_record_model.dart';
+import '../widgets/salary_month_picker_sheet.dart';
 import 'salary_overview_screen.dart';
 
 class SalaryEmployeeListScreen extends StatelessWidget {
@@ -46,19 +47,22 @@ class SalaryEmployeeListScreen extends StatelessWidget {
           color: AppColors.textColorPrimary,
         ),
         centerTitle: false,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: AppColors.textColorPrimary),
-            tooltip: 'Refresh',
-            onPressed: () => controller.fetchSalaries(isRefresh: true),
-          ),
-        ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(2),
+          child: Obx(() {
+            if (controller.isRefreshing.value) {
+              return const LinearProgressIndicator(
+                minHeight: 2,
+                backgroundColor: Colors.transparent,
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryColor),
+              );
+            }
+            return const SizedBox(height: 2);
+          }),
+        ),
       ),
-      body: RefreshIndicator(
-        onRefresh: () => controller.fetchSalaries(isRefresh: true),
-        color: AppColors.primaryColor,
-        child: Column(
-          children: [
+      body: Column(
+        children: [
             // ── Period Picker Row ──
             Container(
               color: Colors.white,
@@ -95,15 +99,15 @@ class SalaryEmployeeListScreen extends StatelessWidget {
                       );
                     }),
                   ),
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.slate50,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: AppColors.slate200),
-                    ),
-                    child: const Icon(Iconsax.calendar_1, color: AppColors.textColorSecondary, size: 18),
-                  ),
+                  //// Container(
+                  //   padding: const EdgeInsets.all(8),
+                  //   decoration: BoxDecoration(
+                  //     color: AppColors.slate50,
+                  //     borderRadius: BorderRadius.circular(10),
+                  //     border: Border.all(color: AppColors.slate200),
+                  //   ),
+                  //   child: const Icon(Iconsax.calendar_1, color: AppColors.textColorSecondary, size: 18),
+                  // ),
                 ],
               ),
             ),
@@ -189,82 +193,105 @@ class SalaryEmployeeListScreen extends StatelessWidget {
               ),
             ),
             Expanded(
-              child: Obx(() {
-                if (controller.isLoading.value && controller.payrollRecords.isEmpty) {
-                  return const Center(
-                    child: CircularProgressIndicator(color: AppColors.primaryColor),
-                  );
-                }
+              child: RefreshIndicator(
+                color: AppColors.primaryColor,
+                onRefresh: () => controller.fetchSalaries(isRefresh: true),
+                child: Obx(() {
+                  if (controller.isLoading.value && controller.payrollRecords.isEmpty) {
+                    return const Center(
+                      child: CircularProgressIndicator(color: AppColors.primaryColor),
+                    );
+                  }
 
-                if (controller.errorMessage.value.isNotEmpty && controller.payrollRecords.isEmpty) {
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Iconsax.info_circle, size: 48, color: Colors.orange),
-                          const SizedBox(height: 12),
-                          AppText(
-                            controller.errorMessage.value,
-                            fontSize: 14,
-                            color: AppColors.textColorSecondary,
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 16),
-                          ElevatedButton.icon(
-                            onPressed: () => controller.fetchSalaries(),
-                            icon: const Icon(Icons.refresh, size: 16, color: Colors.white),
-                            label: const AppText('Try Again', fontSize: 13, color: Colors.white),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primaryColor,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  if (controller.errorMessage.value.isNotEmpty && controller.payrollRecords.isEmpty) {
+                    return LayoutBuilder(
+                      builder: (context, constraints) => SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                          child: Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(24),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Iconsax.info_circle, size: 48, color: Colors.orange),
+                                  const SizedBox(height: 12),
+                                  AppText(
+                                    controller.errorMessage.value,
+                                    fontSize: 14,
+                                    color: AppColors.textColorSecondary,
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  ElevatedButton.icon(
+                                    onPressed: () => controller.fetchSalaries(),
+                                    icon: const Icon(Icons.refresh, size: 16, color: Colors.white),
+                                    label: const AppText('Try Again', fontSize: 13, color: Colors.white),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppColors.primaryColor,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-                  );
-                }
-
-                final list = controller.filteredPayrollRecords;
-                if (list.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Iconsax.empty_wallet, size: 64, color: AppColors.textColorHint.withValues(alpha: 0.3)),
-                        const SizedBox(height: 16),
-                        const AppText('No Payroll Records Found', fontSize: 16, fontWeight: FontWeight.bold),
-                        const SizedBox(height: 4),
-                        AppText(
-                          controller.searchQuery.value.isNotEmpty
-                              ? 'Try refining your search terms'
-                              : 'No payroll records available for this filter',
-                          fontSize: 12,
-                          color: AppColors.textColorHint,
                         ),
-                      ],
-                    ),
-                  );
-                }
+                      ),
+                    );
+                  }
 
-                return ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                  physics: const BouncingScrollPhysics(),
-                  itemCount: list.length,
-                  itemBuilder: (context, index) {
-                    final record = list[index];
-                    return _EmployeeSalaryListItem(record: record);
-                  },
-                );
-              }),
+                  final list = controller.filteredPayrollRecords;
+                  if (list.isEmpty) {
+                    return LayoutBuilder(
+                      builder: (context, constraints) => SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                          child: Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(24),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Iconsax.empty_wallet, size: 64, color: AppColors.textColorHint.withValues(alpha: 0.3)),
+                                  const SizedBox(height: 16),
+                                  const AppText('No Payroll Records Found', fontSize: 16, fontWeight: FontWeight.bold),
+                                  const SizedBox(height: 4),
+                                  AppText(
+                                    controller.searchQuery.value.isNotEmpty
+                                        ? 'Try refining your search terms'
+                                        : 'No payroll records available for this filter',
+                                    fontSize: 12,
+                                    color: AppColors.textColorHint,
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  }
+
+                  return ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                    physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                    itemCount: list.length,
+                    itemBuilder: (context, index) {
+                      final record = list[index];
+                      return _EmployeeSalaryListItem(record: record);
+                    },
+                  );
+                }),
+              ),
             ),
           ],
         ),
-      ),
-    );
-  }
+      );
+    }
 
   Widget _buildStatCard({
     required String title,
@@ -320,51 +347,11 @@ class SalaryEmployeeListScreen extends StatelessWidget {
   }
 
   void _showMonthPicker(BuildContext context, PayrollController controller) {
-    showModalBottomSheet(
+    showSalaryMonthPickerSheet(
       context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.slate300,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 16),
-              const AppText('Select Salary Month', fontSize: 16, fontWeight: FontWeight.bold),
-              const SizedBox(height: 12),
-              ...controller.availableMonthOptions.map((opt) {
-                final isSelected = controller.selectedMonth.value == opt.code;
-                return ListTile(
-                  title: AppText(
-                    opt.label,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: isSelected ? AppColors.primaryColor : AppColors.textColorPrimary,
-                  ),
-                  trailing: isSelected
-                      ? const Icon(Icons.check_circle, color: AppColors.primaryColor)
-                      : null,
-                  onTap: () {
-                    controller.changeMonth(opt.code, opt.label);
-                    Get.back();
-                  },
-                );
-              }),
-            ],
-          ),
-        );
+      initialMonthCode: controller.selectedMonth.value,
+      onMonthSelected: (code, label) {
+        controller.changeMonth(code, label);
       },
     );
   }

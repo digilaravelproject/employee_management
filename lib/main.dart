@@ -6,6 +6,7 @@ import 'package:get/get_navigation/src/routes/transitions_type.dart';
 import 'core/bindings/initial_bindings.dart';
 import 'core/constants/app_constants.dart';
 import 'core/services/storage/shared_prefs.dart';
+import 'core/services/translations/app_translations.dart';
 import 'core/theme/light_theme.dart';
 import 'core/utils/custom_snackbar.dart';
 import 'init_app.dart';
@@ -30,9 +31,9 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       scaffoldMessengerKey: CustomSnackbar.messengerKey,
       initialBinding: InitialBindings(),
-     // translations: Messages(languages: languages),
-      //locale: localizationController.locale,
-     // fallbackLocale: const Locale('en', 'US'),
+      translations: AppTranslations(),
+      locale: const Locale('en', 'US'),
+      fallbackLocale: const Locale('en', 'US'),
       theme: lightTheme,
       themeMode: ThemeMode.light,
       initialRoute: RouteHelper.getSplashRoute(),

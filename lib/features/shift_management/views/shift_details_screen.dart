@@ -214,20 +214,20 @@ class _ShiftDetailsScreenState extends State<ShiftDetailsScreen> with SingleTick
             overflow: TextOverflow.ellipsis,
           ),
           actions: [
-            IconButton(
-              tooltip: 'Assign Employees',
-              icon: const Icon(Iconsax.profile_2user, color: AppColors.primaryColor, size: 20),
-              onPressed: () async {
-                final res = await Get.to(() => AssignShiftScreen(
-                      preSelectedShift: widget.shift,
-                      preSelectedShiftData: details,
-                    ));
-                if (res == true) {
-                  _controller.fetchShiftDetails(widget.shift.id);
-                  _controller.fetchShifts();
-                }
-              },
-            ),
+            // IconButton(
+            //   tooltip: 'Assign Employees',
+            //   icon: const Icon(Iconsax.profile_2user, color: AppColors.primaryColor, size: 20),
+            //   onPressed: () async {
+            //     final res = await Get.to(() => AssignShiftScreen(
+            //           preSelectedShift: widget.shift,
+            //           preSelectedShiftData: details,
+            //         ));
+            //     if (res == true) {
+            //       _controller.fetchShiftDetails(widget.shift.id);
+            //       _controller.fetchShifts();
+            //     }
+            //   },
+            // ),
             IconButton(
               tooltip: 'Edit Shift',
               icon: const Icon(Iconsax.edit, color: AppColors.textColorSecondary, size: 20),

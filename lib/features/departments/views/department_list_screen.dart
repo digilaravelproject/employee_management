@@ -51,46 +51,7 @@ class DepartmentListScreen extends StatelessWidget {
             ),
           ],
         )),
-        actions: [
-          // Refresh button
-          Obx(() => controller.isLoading.value
-              ? const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primaryColor),
-                  ),
-                )
-              : IconButton(
-                  icon: const Icon(Icons.refresh_rounded, color: AppColors.primaryColor),
-                  onPressed: () => controller.fetchDepartments(),
-                )),
-          Padding(
-            padding: const EdgeInsets.only(right: 12, top: 10, bottom: 10),
-            child: ElevatedButton.icon(
-              onPressed: () {
-                controller.clearForm();
-                Get.toNamed('/add-department');
-              },
-              icon: const Icon(Iconsax.add, size: 14, color: Colors.white),
-              label: const AppText(
-                'Add',
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryColor,
-                elevation: 0,
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
-          ),
-        ],
+
       ),
       body: Column(
         children: [
@@ -176,6 +137,14 @@ class DepartmentListScreen extends StatelessWidget {
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          controller.clearForm();
+          Get.toNamed('/add-department');
+        },
+        backgroundColor: AppColors.primaryColor,
+        child: const Icon(Icons.add_rounded, color: Colors.white, size: 28),
+      ),
     );
   }
 }
@@ -246,8 +215,8 @@ class _ApiDepartmentCard extends StatelessWidget {
                           Row(
                             children: [
                               _statChip(Iconsax.people, '${dept.employeesCount} Employees', AppColors.primaryColor),
-                              const SizedBox(width: 8),
-                              _statChip(Iconsax.element_3, '${dept.teamCount} Teams', const Color(0xFF8B5CF6)),
+                            //  const SizedBox(width: 8),
+                              //_statChip(Iconsax.element_3, '${dept.teamCount} Teams', const Color(0xFF8B5CF6)),
                             ],
                           ),
                         ],
@@ -311,20 +280,20 @@ class _ApiDepartmentCard extends StatelessWidget {
                   ],
                 ),
 
-                if (dept.description != null && dept.description!.isNotEmpty) ...[
-                  const SizedBox(height: 10),
-                  AppText(
-                    dept.description!,
-                    fontSize: 12,
-                    color: AppColors.textColorSecondary,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
+                // if (dept.description != null && dept.description!.isNotEmpty) ...[
+                //   const SizedBox(height: 10),
+                //   AppText(
+                //     dept.description!,
+                //     fontSize: 12,
+                //     color: AppColors.textColorSecondary,
+                //     maxLines: 2,
+                //     overflow: TextOverflow.ellipsis,
+                //   ),
+                // ],
 
-                const SizedBox(height: 14),
+               // const SizedBox(height: 5),
                 const Divider(height: 1, color: Color(0xFFF1F5F9)),
-                const SizedBox(height: 12),
+                const SizedBox(height: 6),
 
                 // Head of Department row
                 Row(

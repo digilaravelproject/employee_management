@@ -91,20 +91,6 @@ class _AssignedProjectsScreenState extends State<AssignedProjectsScreen>
           color: AppColors.textColorPrimary,
         ),
         centerTitle: false,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: AppColors.textColorPrimary),
-            tooltip: 'Refresh',
-            onPressed: () {
-              if (effectiveClientId.isNotEmpty) {
-                controller.fetchClientProjects(
-                  effectiveClientId,
-                  status: _currentTabStatus,
-                );
-              }
-            },
-          ),
-        ],
       ),
       body: Obx(() {
         final clientInfo = controller.clientProjectsClientInfo.value;

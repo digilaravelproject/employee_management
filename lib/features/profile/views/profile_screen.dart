@@ -51,14 +51,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               fontWeight: FontWeight.bold,
             )),
         centerTitle: false,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded,
-                color: AppColors.textColorPrimary, size: 22),
-            tooltip: 'Refresh Profile',
-            onPressed: () => controller.fetchProfile(),
-          ),
-        ],
       ),
       body: Obx(() {
         if (controller.isLoading.value && controller.currentUser.value == null) {

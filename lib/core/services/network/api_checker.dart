@@ -12,6 +12,35 @@ import 'response_model.dart';
 import '../../widgets/error_screen.dart';
 
 class ApiChecker {
+  static bool isNetworkError(dynamic error) {
+    if (error == null) return false;
+    final str = error.toString().toLowerCase();
+    if (str.contains('socket') ||
+        str.contains('failed host lookup') ||
+        str.contains('network') ||
+        str.contains('connection') ||
+        str.contains('timed out') ||
+        str.contains('timeout') ||
+        str.contains('clientexception') ||
+        str.contains('handshake') ||
+        str.contains('offline') ||
+        str.contains('no internet') ||
+        str.contains('unreachable')) {
+      return true;
+    }
+    if (error is DioException) {
+      if (error.type == DioExceptionType.connectionError ||
+          error.type == DioExceptionType.connectionTimeout ||
+          error.type == DioExceptionType.sendTimeout ||
+          error.type == DioExceptionType.receiveTimeout) {
+        return true;
+      }
+      if (error.error != null && isNetworkError(error.error)) {
+        return true;
+      }
+    }
+    return false;
+  }
   static Response checkResponse(Response response, {bool showToaster = false}) {
     switch (response.statusCode) {
       case 200:
@@ -23,7 +52,7 @@ class ApiChecker {
             requestOptions: response.requestOptions,
             response: response,
             type: DioExceptionType.badResponse,
-            error: response.data['msg'] ?? 'Something went wrong',
+            error: response.data['msg'] ?? 'Unable to complete request. Please try again.',
           );
         }
         return response;
@@ -81,7 +110,7 @@ class ApiChecker {
           requestOptions: response.requestOptions,
           response: response,
           type: DioExceptionType.badResponse,
-          error: 'Something went wrong',
+          error: 'Unable to complete request. Please try again.',
         );
     }
   }
@@ -90,47 +119,22 @@ class ApiChecker {
     if (error is DioException) {
       switch (error.type) {
         case DioExceptionType.connectionTimeout:
-          if (showErrorScreen) {
-            _showErrorScreen(
-              title: 'Connection Timeout',
-              message: 'The connection has timed out. Please try again.',
-            );
-          } else {
-            CustomSnackbar.showError('Connection timeout');
-          }
-          return const ResponseModel(
-            isSuccess: false,
-            message: 'Connection timeout',
-            statusCode: 408,
-          );
-
         case DioExceptionType.sendTimeout:
-          if (showErrorScreen) {
-            _showErrorScreen(
-              title: 'Send Timeout',
-              message: 'Request sending timed out. Please try again.',
-            );
-          } else {
-            CustomSnackbar.showError('Send timeout');
-          }
-          return const ResponseModel(
-            isSuccess: false,
-            message: 'Send timeout',
-            statusCode: 408,
-          );
-
         case DioExceptionType.receiveTimeout:
           if (showErrorScreen) {
             _showErrorScreen(
-              title: 'Receive Timeout',
-              message: 'Server response timed out. Please try again.',
+              title: 'Connection Timeout',
+              message: 'Connection timed out. Please check your internet connection and try again.',
             );
           } else {
-            CustomSnackbar.showError('Receive timeout');
+            CustomSnackbar.showError(
+              'Connection timed out. Please check your internet connection and try again.',
+              title: 'No Internet Connection',
+            );
           }
           return const ResponseModel(
             isSuccess: false,
-            message: 'Receive timeout',
+            message: 'Connection timed out. Please check your internet connection and try again.',
             statusCode: 408,
           );
 
@@ -234,26 +238,34 @@ class ApiChecker {
           );
 
         case DioExceptionType.connectionError:
-        // Don't show error screen for connection errors,
-        // NoInternetScreen handles this
-          CustomSnackbar.showError('No internet connection');
+          CustomSnackbar.showError(
+            'Please check your internet connection and turn on Wi-Fi or Mobile Data.',
+            title: 'No Internet Connection',
+          );
           return const ResponseModel(
             isSuccess: false,
-            message: 'No internet connection',
+            message: 'No internet connection. Please turn on your Wi-Fi or Mobile Data.',
+            statusCode: 408,
           );
 
         case DioExceptionType.unknown:
+          final isNet = isNetworkError(error);
+          final title = isNet ? 'No Internet Connection' : 'Connection Error';
+          final msg = isNet
+              ? 'Please check your internet connection and turn on Wi-Fi or Mobile Data.'
+              : 'Unable to connect to server. Please check your internet connection and try again.';
+
           if (showErrorScreen) {
             _showErrorScreen(
-              title: 'Unknown Error',
-              message: 'An unexpected error occurred. Please try again.',
+              title: title,
+              message: msg,
             );
           } else {
-            CustomSnackbar.showError('Something went wrong');
+            CustomSnackbar.showError(msg, title: title);
           }
-          return const ResponseModel(
+          return ResponseModel(
             isSuccess: false,
-            message: 'Something went wrong',
+            message: msg,
             statusCode: 500,
           );
       }
@@ -261,19 +273,30 @@ class ApiChecker {
       Logger.e('DioError: ${error.message}');
     } else {
       Logger.e('Error: $error');
+      final isNet = isNetworkError(error);
+      final title = isNet ? 'No Internet Connection' : 'Connection Error';
+      final msg = isNet
+          ? 'Please check your internet connection and turn on Wi-Fi or Mobile Data.'
+          : 'Unable to load data. Please check your internet connection and try again.';
+
       if (showErrorScreen) {
         _showErrorScreen(
-          title: 'Error',
-          message: 'Something went wrong. Please try again.',
+          title: title,
+          message: msg,
         );
       } else {
-        CustomSnackbar.showError('Something went wrong');
+        CustomSnackbar.showError(msg, title: title);
       }
+      return ResponseModel(
+        isSuccess: false,
+        message: msg,
+        statusCode: 500,
+      );
     }
 
     return const ResponseModel(
       isSuccess: false,
-      message: 'Something went wrong',
+      message: 'Unable to connect to server. Please check your internet connection and try again.',
       statusCode: 500,
     );
   }
@@ -303,7 +326,7 @@ class ApiChecker {
           if (showToaster) {
             if (responseModel.errors != null && responseModel.errors!.isNotEmpty) {
               CustomSnackbar.showError(
-                responseModel.errors!.first.message ?? 'Something went wrong',
+                responseModel.errors!.first.message ?? 'Unable to complete request. Please try again.',
               );
             } else {
               CustomSnackbar.showError(responseModel.message);
@@ -313,21 +336,21 @@ class ApiChecker {
           return responseModel;
         } catch (e) {
           if (showToaster) {
-            CustomSnackbar.showError('Something went wrong');
+            CustomSnackbar.showError('Unable to process response. Please try again.');
           }
           return ResponseModel(
             isSuccess: false,
-            message: 'Something went wrong',
+            message: 'Unable to process response. Please try again.',
             statusCode: statusCode,
           );
         }
       } else {
         if (showToaster) {
-          CustomSnackbar.showError('Something went wrong');
+          CustomSnackbar.showError('Unable to connect to server. Please try again.');
         }
         return ResponseModel(
           isSuccess: false,
-          message: 'Something went wrong',
+          message: 'Unable to connect to server. Please try again.',
           statusCode: statusCode,
         );
       }
@@ -351,7 +374,7 @@ class ApiChecker {
       if (!isSuccess && res != null) {
         final message = response.data['msg']?.toString() ?? 
                        response.data['message']?.toString() ?? 
-                       'Something went wrong';
+                       'Unable to process request. Please try again.';
         if (showToaster) CustomSnackbar.showError(message);
 
         return ResponseModel(
@@ -367,7 +390,7 @@ class ApiChecker {
   }
 
   static void _showErrorMessage(Response response, [String? defaultMessage]) {
-    final message = response.data['msg'] ?? defaultMessage ?? 'Something went wrong';
+    final message = response.data['msg'] ?? defaultMessage ?? 'Unable to process request. Please try again.';
     CustomSnackbar.showError(message);
   }
 

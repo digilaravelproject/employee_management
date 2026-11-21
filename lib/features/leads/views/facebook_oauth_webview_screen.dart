@@ -234,17 +234,6 @@ class _FacebookOAuthWebViewScreenState extends State<FacebookOAuthWebViewScreen>
           ),
           actions: [
             IconButton(
-              icon: const Icon(Icons.refresh_rounded, color: Color(0xFF475569), size: 20),
-              tooltip: 'Reload',
-              onPressed: () {
-                setState(() {
-                  _hasError = false;
-                  _isLoading = true;
-                });
-                _webViewController.reload();
-              },
-            ),
-            IconButton(
               icon: const Icon(Iconsax.export_3, color: Color(0xFF475569), size: 18),
               tooltip: 'Open in Browser',
               onPressed: () async {

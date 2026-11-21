@@ -42,7 +42,7 @@ class LeaveReportsScreen extends StatelessWidget {
             if (controller.hasActiveFilters) {
               return TextButton.icon(
                 onPressed: controller.resetAllFilters,
-                icon: const Icon(Icons.refresh_rounded, size: 16, color: AppColors.errorColor),
+                icon: const Icon(Icons.filter_alt_off_rounded, size: 16, color: AppColors.errorColor),
                 label: const Text(
                   'Reset',
                   style: TextStyle(
@@ -55,12 +55,6 @@ class LeaveReportsScreen extends StatelessWidget {
             }
             return const SizedBox.shrink();
           }),
-          IconButton(
-            tooltip: 'Refresh Report',
-            icon: const Icon(Icons.refresh_rounded, color: AppColors.textColorSecondary, size: 22),
-            onPressed: () => controller.fetchLeaveReport(isRefresh: true),
-          ),
-          const SizedBox(width: 4),
         ],
       ),
       body: Obx(() {

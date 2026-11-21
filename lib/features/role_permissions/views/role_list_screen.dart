@@ -51,39 +51,14 @@ class RoleListScreen extends StatelessWidget {
             ),
           ],
         ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            child: ElevatedButton.icon(
-              onPressed: () {
-                controller.clearForm();
-                Get.to(() => const AddRoleScreen());
-              },
-              icon: const Icon(Iconsax.add, size: 14, color: Colors.white),
-              label: const AppText(
-                'Add Role',
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryColor,
-                elevation: 0,
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
-          ),
-        ],
+
       ),
       body: Column(
         children: [
           // ── Search & Filter Section ──
           Container(
             color: Colors.white,
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
             child: Row(
               children: [
                 Expanded(
@@ -94,15 +69,19 @@ class RoleListScreen extends StatelessWidget {
                       hintStyle: const TextStyle(color: AppColors.textColorHint, fontSize: 13),
                       prefixIcon: const Icon(Iconsax.search_normal, color: AppColors.textColorHint, size: 18),
                       filled: true,
-                      fillColor: AppColors.slate50,
+                      fillColor: const Color(0xFFF8FAFC),
                       contentPadding: const EdgeInsets.symmetric(vertical: 12),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide.none,
+                        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide.none,
+                        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(color: AppColors.primaryColor, width: 1.5),
                       ),
                     ),
                   ),
@@ -161,6 +140,14 @@ class RoleListScreen extends StatelessWidget {
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          controller.clearForm();
+          Get.to(() => const AddRoleScreen());
+        },
+        backgroundColor: AppColors.primaryColor,
+        child: const Icon(Icons.add_rounded, color: Colors.white, size: 28),
+      ),
     );
   }
 }
@@ -198,16 +185,16 @@ class _RoleCard extends StatelessWidget {
     }
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 14),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFF1F5F9)),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
           BoxShadow(
-            color: iconColor.withValues(alpha: 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -219,7 +206,7 @@ class _RoleCard extends StatelessWidget {
             controller.fetchRoleDetails(role.id);
             Get.to(() => const RoleDetailsScreen());
           },
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -233,12 +220,12 @@ class _RoleCard extends StatelessWidget {
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: iconColor.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(14),
                       ),
                       child: Icon(
                         roleIcon,
                         color: iconColor,
-                        size: 24,
+                        size: 22,
                       ),
                     ),
                     const SizedBox(width: 14),
@@ -260,7 +247,7 @@ class _RoleCard extends StatelessWidget {
                               
                               // Active / Inactive badge
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                 decoration: BoxDecoration(
                                   color: role.isActive 
                                       ? const Color(0xFFECFDF5) 
@@ -269,7 +256,7 @@ class _RoleCard extends StatelessWidget {
                                 ),
                                 child: AppText(
                                   role.isActive ? 'Active' : 'Inactive',
-                                  fontSize: 9,
+                                  fontSize: 10,
                                   fontWeight: FontWeight.bold,
                                   color: role.isActive 
                                       ? const Color(0xFF10B981) 
@@ -278,15 +265,18 @@ class _RoleCard extends StatelessWidget {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 4),
-                          AppText(
-                            role.description,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: AppColors.textColorSecondary,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                          if (role.description.isNotEmpty &&
+                              role.description.toLowerCase() != 'no description provided') ...[
+                            const SizedBox(height: 3),
+                            AppText(
+                              role.description,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.textColorSecondary,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
                           const SizedBox(height: 6),
                           Wrap(
                             spacing: 6,
@@ -294,15 +284,15 @@ class _RoleCard extends StatelessWidget {
                             children: [
                               if (role.departmentName != null && role.departmentName!.isNotEmpty)
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                   decoration: BoxDecoration(
-                                    color: AppColors.primaryColor.withValues(alpha: 0.08),
+                                    color: AppColors.primaryLight,
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      const Icon(Iconsax.hierarchy_2, size: 10, color: AppColors.primaryColor),
+                                      const Icon(Iconsax.hierarchy_2, size: 11, color: AppColors.primaryColor),
                                       const SizedBox(width: 4),
                                       AppText(
                                         role.departmentName!,
@@ -315,7 +305,7 @@ class _RoleCard extends StatelessWidget {
                                 ),
                               if (role.designationName != null && role.designationName!.isNotEmpty)
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                   decoration: BoxDecoration(
                                     color: AppColors.slate100,
                                     borderRadius: BorderRadius.circular(6),
@@ -323,7 +313,7 @@ class _RoleCard extends StatelessWidget {
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      const Icon(Iconsax.briefcase, size: 10, color: AppColors.textColorSecondary),
+                                      const Icon(Iconsax.briefcase, size: 11, color: AppColors.textColorSecondary),
                                       const SizedBox(width: 4),
                                       AppText(
                                         role.designationName!,
@@ -342,7 +332,7 @@ class _RoleCard extends StatelessWidget {
                     const SizedBox(width: 8),
                     // Navigation Chevron
                     const Padding(
-                      padding: EdgeInsets.only(top: 12),
+                      padding: EdgeInsets.only(top: 10),
                       child: Icon(
                         Icons.chevron_right_rounded,
                         color: AppColors.textColorHint,
@@ -352,38 +342,56 @@ class _RoleCard extends StatelessWidget {
                   ],
                 ),
                 
-                const SizedBox(height: 14),
-                const Divider(height: 1, color: Color(0xFFF1F5F9)),
                 const SizedBox(height: 12),
+                const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                const SizedBox(height: 10),
                 
-                // Bottom row showing Modules count and Granular Permissions count
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                // Bottom row showing Permissions count & progress
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Icon(Iconsax.category, size: 13, color: AppColors.textColorHint),
-                        const SizedBox(width: 5),
-                        AppText(
-                          '${role.permissionGroups.length} Modules',
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textColorSecondary,
+                        Row(
+                          children: [
+                            Icon(Iconsax.shield_tick, size: 14, color: iconColor),
+                            const SizedBox(width: 6),
+                            const AppText(
+                              'Permissions Allowed',
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textColorSecondary,
+                            ),
+                          ],
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: iconColor.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: AppText(
+                            '${role.totalPermissionsCount} / ${role.maxPermissionsCount}',
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: iconColor,
+                          ),
                         ),
                       ],
                     ),
-                    Row(
-                      children: [
-                        const Icon(Iconsax.shield_tick, size: 13, color: AppColors.primaryColor),
-                        const SizedBox(width: 5),
-                        AppText(
-                          '${role.totalPermissionsCount} / ${role.maxPermissionsCount} Allowed',
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primaryColor,
+                    if (role.maxPermissionsCount > 0) ...[
+                      const SizedBox(height: 8),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: LinearProgressIndicator(
+                          value: (role.totalPermissionsCount / role.maxPermissionsCount).clamp(0.0, 1.0),
+                          backgroundColor: const Color(0xFFF1F5F9),
+                          valueColor: AlwaysStoppedAnimation<Color>(iconColor),
+                          minHeight: 4,
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ],
                 ),
               ],

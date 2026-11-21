@@ -5028,20 +5028,6 @@ class _AdminLeadFullDetailScreenState extends State<AdminLeadFullDetailScreen> {
           color: const Color(0xFF0F172A),
         ),
         centerTitle: true,
-        actions: [
-          if (widget.leadId != null || apiLead != null || widget.lead != null)
-            IconButton(
-              icon: const Icon(Icons.refresh_rounded, color: Color(0xFF475569), size: 20),
-              tooltip: 'Refresh',
-              onPressed: () {
-                final id = widget.leadId ??
-                    apiLead?.id ??
-                    widget.lead?.rawId ??
-                    int.tryParse(widget.lead?.id.replaceAll(RegExp(r'[^0-9]'), '') ?? '');
-                if (id != null) _loadLeadDetail(id);
-              },
-            ),
-        ],
       ),
       body: _isLoading && apiLead == null
           ? const Center(
