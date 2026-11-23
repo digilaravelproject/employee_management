@@ -53,6 +53,7 @@ class DashboardController extends GetxController {
       ever(Get.find<AppController>().userRole, (role) {
         if (role == 'admin') {
           fetchAdminDashboard();
+          fetchEmployeeDashboard();
         } else {
           fetchEmployeeDashboard();
         }
@@ -65,11 +66,13 @@ class DashboardController extends GetxController {
       final role = Get.find<AppController>().userRole.value;
       if (role == 'admin') {
         fetchAdminDashboard();
+        fetchEmployeeDashboard();
       } else {
         fetchEmployeeDashboard();
       }
     } else {
       fetchAdminDashboard();
+      fetchEmployeeDashboard();
     }
   }
 

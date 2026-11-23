@@ -52,7 +52,9 @@ void showSalaryMonthPickerSheet({
           final isCurrentYear = viewYear == now.year;
           final canGoForward = viewYear < now.year;
 
+          final screenHeight = MediaQuery.of(context).size.height;
           return Container(
+            constraints: BoxConstraints(maxHeight: screenHeight * 0.85),
             decoration: const BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -60,9 +62,11 @@ void showSalaryMonthPickerSheet({
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
             child: SafeArea(
               top: false,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
                   // Drag Handle
                   Container(
                     width: 36,
@@ -253,7 +257,8 @@ void showSalaryMonthPickerSheet({
                 ],
               ),
             ),
-          );
+          ),
+        );
         },
       );
     },

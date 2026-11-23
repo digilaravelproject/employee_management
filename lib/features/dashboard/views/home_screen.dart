@@ -57,7 +57,10 @@ class HomeScreen extends StatelessWidget {
             } catch (_) {}
 
             if (appController.userRole.value == 'admin') {
-              await dashboardController.fetchAdminDashboard();
+              await Future.wait([
+                dashboardController.fetchAdminDashboard(),
+                dashboardController.fetchEmployeeDashboard(),
+              ]);
             } else {
               await dashboardController.fetchEmployeeDashboard();
             }
@@ -87,6 +90,10 @@ class HomeScreen extends StatelessWidget {
                       _CurrentShiftCard(),
                       SizedBox(height: 24),
 
+                      // ── Today's Birthday Card ──
+                      _TodayBirthdayCard(),
+                      SizedBox(height: 24),
+
                       // ── Quick Actions ──
                       AppText(
                         'Quick Actions',
@@ -95,7 +102,6 @@ class HomeScreen extends StatelessWidget {
                       ),
                       SizedBox(height: 16),
                       _QuickActionsGrid(),
-                      SizedBox(height: 24),
                     ],
                   );
                 } else {
@@ -650,6 +656,7 @@ class _ShiftDetail extends StatelessWidget {
   }
 }
 
+
 // ── QUICK ACTIONS GRID ────────────────────────────────────────────────────────
 class _QuickActionsGrid extends StatelessWidget {
   const _QuickActionsGrid();
@@ -730,35 +737,65 @@ class _QuickActionsGrid extends StatelessWidget {
 
       if (filteredActions.isEmpty) return const SizedBox.shrink();
 
-      return Wrap(
-        spacing: 12,
-        runSpacing: 16,
-        children: filteredActions.map((item) {
-          return GestureDetector(
-            onTap: item['onTap'] as VoidCallback?,
-            child: SizedBox(
-              width: (MediaQuery.of(context).size.width - 64) / 3,
-              child: Column(
+      return GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          childAspectRatio: 2.2,
+        ),
+        itemCount: filteredActions.length,
+        itemBuilder: (context, index) {
+          final item = filteredActions[index];
+          return InkWell(
+            onTap: item['onTap'] as VoidCallback,
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.slate200),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.02),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    width: 36,
+                    height: 36,
                     decoration: BoxDecoration(
                       color: (item['color'] as Color).withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Icon(item['icon'] as IconData,
-                        color: item['color'] as Color, size: 24),
+                    child: Icon(
+                      item['icon'] as IconData,
+                      color: item['color'] as Color,
+                      size: 18,
+                    ),
                   ),
-                  const SizedBox(height: 8),
-                  AppText(item['label'] as String,
-                      fontSize: 10,
-                      textAlign: TextAlign.center,
-                      fontWeight: FontWeight.w600),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: AppText(
+                      item['label'] as String,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                 ],
               ),
             ),
           );
-        }).toList(),
+        },
       );
     });
   }

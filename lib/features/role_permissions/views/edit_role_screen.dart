@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_text.dart';
+import '../../../core/utils/custom_snackbar.dart';
 import '../../departments/controllers/departments_controller.dart';
 import '../../departments/widgets/department_picker_bottom_sheet.dart';
 import '../controllers/role_permissions_controller.dart';
@@ -20,6 +21,13 @@ class _EditRoleScreenState extends State<EditRoleScreen> {
   @override
   void initState() {
     super.initState();
+    if (!RolePermissionsController.canEditRole(widget.role)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        CustomSnackbar.showError('You cannot edit your own role or permissions.');
+        Get.back();
+      });
+      return;
+    }
     final controller = Get.find<RolePermissionsController>();
     controller.populateForEdit(widget.role);
   }

@@ -33,6 +33,9 @@ class RoleDetailsScreen extends StatelessWidget {
           Obx(() {
             final role = controller.selectedRole.value;
             if (role == null) return const SizedBox();
+            if (!RolePermissionsController.canEditRole(role)) {
+              return const SizedBox();
+            }
             return PopupMenuButton<String>(
               icon: const Icon(Icons.more_vert, color: AppColors.textColorPrimary),
               onSelected: (value) {
@@ -349,17 +352,18 @@ class RoleDetailsScreen extends StatelessWidget {
                     fontWeight: FontWeight.bold,
                     color: AppColors.textColorPrimary,
                   ),
-                  TextButton.icon(
-                    onPressed: () => Get.to(() => EditRoleScreen(role: role)),
-                    icon: const Icon(Iconsax.edit,
-                        size: 14, color: AppColors.primaryColor),
-                    label: const AppText(
-                      'Modify',
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primaryColor,
+                  if (RolePermissionsController.canEditRole(role))
+                    TextButton.icon(
+                      onPressed: () => Get.to(() => EditRoleScreen(role: role)),
+                      icon: const Icon(Iconsax.edit,
+                          size: 14, color: AppColors.primaryColor),
+                      label: const AppText(
+                        'Modify',
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primaryColor,
+                      ),
                     ),
-                  ),
                 ],
               ),
 

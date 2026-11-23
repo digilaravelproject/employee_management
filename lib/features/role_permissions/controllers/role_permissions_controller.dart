@@ -5,6 +5,10 @@ import '../repositories/role_permissions_repository.dart';
 import '../../../core/services/network/api_client.dart';
 import '../../../core/utils/logger.dart';
 import '../../../core/utils/custom_snackbar.dart';
+import '../../../core/controllers/app_controller.dart';
+import '../../../core/services/permission/permission_constant.dart';
+import '../../../core/services/permission/permission_service.dart';
+import '../../../core/services/storage/shared_prefs.dart';
 
 class RolePermissionsController extends GetxController {
   late final RolePermissionsRepository _repository;
@@ -449,5 +453,91 @@ class RolePermissionsController extends GetxController {
       Logger.e('RolePermissionsController => Failed to delete role: $e');
       CustomSnackbar.showError('An error occurred while deleting the role');
     }
+  }
+
+  /// Checks whether [role] belongs to the currently logged-in user (or admin viewing Admin role).
+  /// A user cannot edit their own role or its permissions.
+  static bool isOwnRole(Role role) {
+    final user = SharedPrefs.getUserData();
+    final roleId = SharedPrefs.getRoleId() ?? user?.primaryRoleId;
+    final roleIdStr = roleId?.toString().trim();
+    final targetRoleIdStr = role.id.trim();
+
+    // 1. Match by stored primary role ID
+    if (roleIdStr != null && roleIdStr.isNotEmpty && roleIdStr == targetRoleIdStr) {
+      return true;
+    }
+
+    // 2. Match by user's assigned roleIds array
+    if (user?.roleIds != null && user!.roleIds!.isNotEmpty) {
+      final targetIdInt = int.tryParse(targetRoleIdStr);
+      if (targetIdInt != null && user.roleIds!.contains(targetIdInt)) {
+        return true;
+      }
+    }
+
+    final targetRoleName = role.name.trim().toLowerCase();
+    final userRoleStr = (user?.role ?? '').trim().toLowerCase();
+
+    // 3. Match by direct user role name string
+    if (userRoleStr.isNotEmpty && userRoleStr == targetRoleName) {
+      return true;
+    }
+
+    // 4. Match in user's roles objects array
+    if (user?.roles != null && user!.roles!.isNotEmpty) {
+      for (final r in user.roles!) {
+        if (r.id.toString() == targetRoleIdStr ||
+            (r.name != null && r.name!.trim().toLowerCase() == targetRoleName)) {
+          return true;
+        }
+      }
+    }
+
+    // 5. Admin role check:
+    // If admin is logged in, admin cannot edit any admin role
+    final appController = Get.isRegistered<AppController>() ? Get.find<AppController>() : null;
+    final isAppAdmin = appController?.userRole.value.toLowerCase() == 'admin';
+    final isPermAdmin = Get.isRegistered<PermissionService>() && PermissionService.to.isAdmin.value;
+    final isUserAdmin = userRoleStr == 'admin' ||
+        userRoleStr == 'superadmin' ||
+        userRoleStr == 'super_admin' ||
+        userRoleStr == 'administrator';
+
+    final isLoggedInAdmin = isAppAdmin || isPermAdmin || isUserAdmin;
+
+    if (isLoggedInAdmin) {
+      if (targetRoleName == 'admin' ||
+          targetRoleName == 'superadmin' ||
+          targetRoleName == 'super admin' ||
+          targetRoleName == 'administrator' ||
+          targetRoleName.contains('admin')) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /// Checks whether the logged-in user can edit [role].
+  /// Returns false if it's the user's own role (or admin viewing Admin role),
+  /// or if the user lacks the permission to edit roles.
+  static bool canEditRole(Role role) {
+    if (isOwnRole(role)) {
+      return false;
+    }
+
+    if (Get.isRegistered<PermissionService>() && PermissionService.to.isAdmin.value) {
+      return true;
+    }
+
+    if (Get.isRegistered<PermissionService>()) {
+      return PermissionService.to.isAllowed(
+        PermissionConstant.editRolePermissions,
+        moduleSlug: PermissionConstant.moduleRolesPermissionsRbac,
+      );
+    }
+
+    return true;
   }
 }

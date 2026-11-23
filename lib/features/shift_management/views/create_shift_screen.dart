@@ -2434,6 +2434,7 @@ class _CreateShiftScreenState extends State<CreateShiftScreen> {
                           ),
                           const SizedBox(width: 6),
                           Container(
+                            constraints: const BoxConstraints(maxWidth: 80),
                             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5),
                             decoration: BoxDecoration(
                               color: isAssigned ? Colors.green.withValues(alpha: 0.1) : AppColors.primaryColor.withValues(alpha: 0.1),
